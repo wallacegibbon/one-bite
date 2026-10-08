@@ -73,5 +73,6 @@ const path = require('path');
 
   console.log(out.join('\n'));
   console.log(errs.length ? 'ERRORS: ' + errs.slice(0, 5).join(' | ') : 'no errors');
+  process.exitCode = errs.length ? 1 : 0;
   await browser.close();
 })();

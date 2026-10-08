@@ -72,5 +72,6 @@ const path = require('path');
   console.log(JSON.stringify(perf));
   if (errs.length) console.log(errs.slice(0, 12).join('\n')); else console.log('no console errors');
   console.log('-> ' + out);
+  process.exitCode = errs.length ? 1 : 0;
   await browser.close();
 })();

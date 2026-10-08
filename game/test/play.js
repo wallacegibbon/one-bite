@@ -215,5 +215,6 @@ const path = require('path');
 
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
+  process.exitCode = errs.length ? 1 : 0;
   await browser.close();
 })();

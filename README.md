@@ -70,7 +70,16 @@ game/
 ## 测试
 
 ```bash
-node game/test/node-smoke.js   # 无浏览器：生成 + 网格化
-node game/test/play.js         # 玩法闭环（headless Chrome）
-node game/test/shots.js a      # 14 张区域截图 → .shots/
+./game/test/all.sh             # 跑全部非截图测试，任一失败即非零退出
+
+node game/test/node-smoke.js   # 无浏览器：数据 → 生成 → 网格化（假 GL）
+node game/test/probe.js        # 各区域/POI 的取景点与水深
+node game/test/docs-sync.js    # 文档 ↔ 数据一致性（不一致 exit 1）
+node game/test/play.js         # 玩法闭环：采集→重生→容量→变形→存取→窖树→掠夺→邮递→存档
+node game/test/upgrade.js      # 背包升级与果格数学
+node game/test/input.js        # 真实按键：走/跳/飞/时间/灰雾墙边界
+node game/test/shots.js g      # 14 张区域截图 → .shots/
+node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # 单张，肉眼检查
 ```
+
+后 5 个需要 headless Chrome（`/usr/bin/google-chrome`）与 `puppeteer-core`；SwiftShader 软渲染已验证可用。

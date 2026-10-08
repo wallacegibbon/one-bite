@@ -89,5 +89,6 @@ const SHOTS = [
     console.log(name.padEnd(11), info.zone.padEnd(8), JSON.stringify(st));
   }
   console.log(errs.length ? errs.slice(0, 10).join('\n') : 'no errors');
+  process.exitCode = errs.length ? 1 : 0;
   await browser.close();
 })();

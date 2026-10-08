@@ -57,5 +57,6 @@ const path = require('path');
   });
   console.log(JSON.stringify(r, null, 1));
   console.log(errs.length ? errs.slice(0, 8).join('\n') : 'no console errors');
+  process.exitCode = errs.length ? 1 : 0;
   await browser.close();
 })();
