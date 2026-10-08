@@ -1,60 +1,16 @@
 #!/usr/bin/env bash
-# Rewrite the 4 initial commit messages from Chinese to English.
-# git filter-branch passes the original commit's message on stdin and sets $GIT_COMMIT
-# to the ORIGINAL hash, so mapping by original hash is stable.
+# Rewrite the initial commit messages from Chinese to English.
+# filter-branch feeds the original message on stdin and sets $GIT_COMMIT to the
+# ORIGINAL hash, so tools/msg-filter.sh can map old hash -> new message.
 set -e
 cd "$(dirname "$0")/.."
+chmod +x tools/msg-filter.sh
 
-msg() {
-  case "$GIT_COMMIT" in
-    031aef8*) cat <<'EOF'
-FRUTARIA: design documents + voxel prototype
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter 'bash tools/msg-filter.sh' -- --all
 
-docs/: nine design documents (worldview, map, characters & creatures,
-       fruit & transformation, backpack & storage, quests, tech plan)
-game/: WebGL1 voxel engine, 160x48x160 world, 15 fruits / 14 forms / 14 creatures
-       backpack slots scale with rarity; main cellar + cellar trees
-EOF
-      ;;
-    5b74299*) cat <<'EOF'
-Rarity-scaled fruit regrowth, cellar-tree raids, probe.js fixes
-
-- RARITY.regrow: 1/1.5/2/2.5/3 in-game days (+/-20%), queue persisted in save
-- Game.dailyRolls(): 30% per game day, steals 1-3 items; player within 45 m
-  always drives it off. The main cellar (guarded by Old Mei) is exempt.
-- probe.js: resolve zone centres by kind (rect/circle/sky/border);
-  fix open-water detection
-EOF
-      ;;
-    2386129*) cat <<'EOF'
-Implement owl post (docs/05 section 5.2)
-
-- Game.postItem/updatePosts: cellar tree -> main cellar, 1 fruit per send,
-  3 in-game days, 10% lost, decays at x0.1 in transit
-- Unlocked by storing an owlberry in the main cellar; the main cellar itself
-  cannot post. Max 3 in flight; if the cellar is full on arrival the owl
-  carries the fruit back instead of dropping it.
-- Storage panel shows the in-transit row and the P hint; up/down arrows
-  select storage items
-EOF
-      ;;
-    b586ff4*) cat <<'EOF'
-Docs-data consistency checker; make the test suite scriptable
-
-- game/test/docs-sync.js parses the tables in docs/02 (zones, POIs, isles),
-  docs/04 (rarity) and docs/05 (storage, cellar rules) and diffs them against
-  game/data/; exits 1 on drift. Verified by injecting drift (slots 12->11,
-  cellar 96->90), both caught.
-- Fix docs/05 planting key (R -> F; R is now "end transformation")
-- Browser tests now set process.exitCode on error; add game/test/all.sh
-EOF
-      ;;
-    *) cat ;;   # leave anything else untouched
-  esac
-}
-
-export -f msg
-git filter-branch -f --msg-filter 'msg' -- --all >/dev/null 2>&1
 git for-each-ref --format='%(refname)' refs/original | xargs -r -n1 git update-ref -d
-git reflog expire --expire=now --all 2>/dev/null || true
-git log --oneline
+git reflog expire --expire=now --all
+git gc --prune=now --quiet || true
+
+echo "--- rewritten history ---"
+git log --format='%h  %s'
