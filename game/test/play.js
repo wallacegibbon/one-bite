@@ -119,6 +119,28 @@ const path = require('path');
   });
 
   // 8. 存档 / 读档
+  // 窖树掠夺：远离必被偷、靠近必保住、主果窖永不被偷
+  await step('raidFar', () => {
+    const g = window.game;
+    const tree = g.stashes.find(s => s.kind === 'tree');
+    if (!tree) return 'no cellar tree';
+    const cellar = g.stashes[0];
+    for (let i = 0; i < 6; i++) tree.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
+    for (let i = 0; i < 4; i++) cellar.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
+    g.player.x = tree.x + 400; g.player.z = tree.z + 400;   // 远离
+    let guard = 0;
+    while (tree.items.length > 0 && guard++ < 60) g.dailyRolls();
+    return { treeLeft: tree.items.length, cellarLeft: cellar.items.length, rolls: guard, lost: g.stats.raidsLost };
+  });
+  await step('raidNear', () => {
+    const g = window.game;
+    const tree = g.stashes.find(s => s.kind === 'tree');
+    for (let i = 0; i < 6; i++) tree.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
+    g.player.x = tree.x + 5; g.player.z = tree.z + 5;       // 靠近
+    const before = tree.items.length, scared0 = g.stats.raidsScared || 0;
+    for (let i = 0; i < 40; i++) g.dailyRolls();
+    return { before, after: tree.items.length, scared: (g.stats.raidsScared || 0) - scared0 };
+  });
   await step('save', () => { window.game.save(); const s = localStorage.getItem('frutaria.save.v1'); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
   await step('load', () => { const ok = window.game.load(); return { ok, inv: window.game.inv.map(i => i.id), stashes: window.game.stashes.length }; });
 

@@ -439,6 +439,33 @@
       if (this.ui) this.ui.showDead(true);
     }
 
+    /* ------------------------- 每游戏日判定 ------------------------- */
+    /* docs/05：窖树是活的仓库——它会招贼。主果窖有老梅守着，不被抢。 */
+    dailyRolls() {
+      for (let i = 1; i < this.stashes.length; i++) {
+        const s = this.stashes[i];
+        if (!s.items.length) continue;
+        if (Math.random() >= 0.30) continue;
+        const near = Math.hypot(this.player.x - s.x, this.player.z - s.z) < 45;
+        const who = Math.random() < 0.6 ? '獾' : '灰手套的人';
+        const where = s.kind === 'tree' ? '你的窖树' : s.cn;
+        if (near) {
+          this.logMsg('夜里' + who + '摸到' + where + '，你把它赶走了。', 'good');
+          this.stats.raidsScared = (this.stats.raidsScared || 0) + 1;
+        } else {
+          const n = Math.min(s.items.length, 1 + ((Math.random() * 3) | 0));
+          const taken = [];
+          for (let k = 0; k < n; k++) {
+            const j = (Math.random() * s.items.length) | 0;
+            const it = s.items.splice(j, 1)[0];
+            taken.push(it ? (FRU[it.id] ? FRU[it.id].cn : it.id) : '?');
+          }
+          this.logMsg(who + '偷走了' + where + '里的 ' + taken.join('、') + '——下次回来也许就没了。', 'bad');
+          this.stats.raidsLost = (this.stats.raidsLost || 0) + n;
+        }
+      }
+    }
+
     /* ------------------------- 任务 ------------------------- */
     checkQuests() {
       const p = this.player;
@@ -508,7 +535,7 @@
       this._fpsT = (this._fpsT || 0) + dt; this._fpsN = (this._fpsN || 0) + 1;
       if (this._fpsT > 1) { this.fps = this._fpsN / this._fpsT; this._fpsT = 0; this._fpsN = 0; }
       this.time += dt;
-      if (this.hour < 0.01 && this.lastHour !== undefined && this.lastHour > 20) this.day++;
+      if (this.hour < 0.01 && this.lastHour !== undefined && this.lastHour > 20) { this.day++; this.dailyRolls(); }
       this.lastHour = this.hour;
       this.updateEnv();
 
