@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 跑全部测试；任一失败即非零退出
+# Run every non-screenshot test; exits non-zero if any of them fails.
 cd "$(dirname "$0")/../.."
 fail=0
 run() {
@@ -13,6 +13,7 @@ run() {
 run node-smoke 60
 run probe 60
 run docs-sync 60
+run docs-drift 180
 run play 300
 run upgrade 220
 run input 300

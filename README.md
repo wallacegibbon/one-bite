@@ -1,85 +1,89 @@
-# 万灵果园 · FRUTARIA
+# FRUTARIA · 万灵果园
 
-哈利波特式的**体素**魔法探索游戏 —— 但这个世界**没有魔杖**。
+**English** · [中文: README.zh.md](README.zh.md)
 
-魔法来自**果实**：吃下它，你会变成它所记得的动物，一段时间后复原。每种动物的果实只长在它自己的地盘上。你的魔法背包只有 **24 个果格**，而越稀有的果实越大颗——**你带不走所有魔法**。
+A Harry-Potter-like **voxel** magic exploration game — except this world has **no wands**.
 
-- 完整设定文档：[`docs/`](docs/README.md)
-- 可玩原型：[`game/index.html`](game/index.html)
+Magic comes from **fruit**: eat it and you become the animal the fruit remembers, reverting after a while. Each animal's fruit only grows on its own ground. Your magic backpack holds **24 fruit slots**, and the rarer the fruit the bigger it is — **you cannot carry all the magic with you**.
 
-## 运行原型
+- Full setting documents: [`docs/`](docs/en/README.md) (English) · [`docs/`](docs/README.md) (中文)
+- Playable prototype: [`game/index.html`](game/index.html)
 
-零依赖，直接双击 `game/index.html`（或）：
+## Running the prototype
+
+Zero dependencies — double-click `game/index.html`, or:
 
 ```bash
-cd game && python3 -m http.server 8000   # 然后打开 http://localhost:8000/
+cd game && python3 -m http.server 8000   # then open http://localhost:8000/
 ```
 
-需要支持 WebGL 1.0 的浏览器。首次加载会分帧生成 100 个区块（约 1–3 秒）。
+Requires a browser with WebGL 1.0. On first load, 100 chunks are generated across frames (about 1–3 s).
 
-## 操作
+## Controls
 
-| 键 | 动作 |
+| Key | Action |
 |---|---|
-| `WASD` | 移动 |
-| `Space` | 跳 / 飞（上升）/ 游（上浮） |
-| `Shift` | 疾跑 |
-| `Ctrl` / `C` | 潜行 / 下降 |
-| `E` | 交互（采集 / 开仓库 / 观察生物） |
-| `F` | 使用选中物品（吃果实 / 种果核 / 用植物） |
-| `R` | 提前结束变形 |
-| `V` | 第一 / 第三人称 |
-| `J` | 图鉴（果实 / 生物 / 任务） |
-| `H` | 帮助 |
-| `1`–`9` / 滚轮 | 选择物品 |
-| `F5` | 保存（localStorage） |
-| `Esc` | 关闭面板 |
-| 仓库面板：`E` / `Tab` | 存入 / 取回 |
-| 仓库面板：`←` `→` | 选择背包物品；`↑` `↓` 选择仓库物品 |
-| 仓库面板：`P` | 让猫头鹰把选中的 1 颗叼回主果窖（仅窖树） |
+| `WASD` | Move |
+| `Space` | Jump / fly (ascend) / swim (surface) |
+| `Shift` | Sprint |
+| `Ctrl` / `C` | Sneak / descend |
+| `E` | Interact (harvest / open storage / observe a creature) |
+| `F` | Use selected item (eat fruit / plant a pit / use a plant) |
+| `R` | End the transformation early |
+| `V` | First / third person |
+| `J` | Codex (fruits / creatures / quests) |
+| `H` | Help |
+| `1`–`9` / mouse wheel | Select item |
+| `F5` | Save (localStorage) |
+| `Esc` | Close panel |
+| Storage panel: `E` / `Tab` | Store / retrieve |
+| Storage panel: `←` `→` | Select a backpack item; `↑` `↓` select a storage item |
+| Storage panel: `P` | Have the owl carry the 1 selected fruit back to the main cellar (cellar trees only) |
 
-## 原型已实现
+## Implemented in the prototype
 
-- 160×48×160 体素世界：星坠堡（城堡）、低语林、蘑菇圈、蝙蝠洞、圣林、北岭、镜湖（含水下/沉塔/人鱼村）、灯笼镇、果园遗迹、6 座云顶浮岛、灰雾墙边界
-- 15 种果实（5 档稀有度 → 1/2/4/7/12 果格）、腐坏 → 果核 → 种植
-- 变形系统：14 种形态，能力切换（体型/速度/跳/游/飞/滑翔/夜视/爬/发光/威吓/水下呼吸…）+ 副作用
-- 24 果格背包 + 主果窖（96 格，腐坏 ×0.1）+ 窖树（24 格，×0.33，上限 3）
-- 背包升级 3 件：副果袋 +6（q1 奖励）、深果袋 +6（沉塔）、银丝隔层（稀有及以上占格 −1，温室）→ 满级 36 格
-- 果实方块按稀有度重新结果（1 / 1.5 / 2 / 2.5 / 3 游戏日，±20%），重生队列入档
-- 窖树掠夺：每游戏日 30% 判定，獾或灰手套偷走 1–3 颗；玩家在 45 m 内必定赶走（主果窖由老梅看守，不被抢）
-- 猫头鹰邮递：窖树 → 主果窖，1 颗 / 3 游戏日 / 10% 丢失，途中按 ×0.1 衰减，在途最多 3 颗
-- 14 种生物，态度驱动 AI（对"你现在的形状"反应）
-- 日夜循环（420 s/天）、自发光果实与植物、粒子、旋转小地图、图鉴、7 条任务、死亡掉落与捡回、存档
+- 160×48×160 voxel world: Starfall Keep (castle), Whisperwood, Glowglade, Echo Hollow, the Hoar Grove, Ashscale Ridge, Mirrorlake (underwater / sunken tower / merrow village), Lanternrow, the Old Orchard, 6 Cloudspire isles, Grey Veil border
+- 15 fruits (5 rarity tiers → 1/2/4/7/12 slots), spoilage → pit → planting
+- Transformation: 14 forms, ability switching (size/speed/jump/swim/fly/glide/night vision/climb/glow/intimidate/underwater breathing…) + side effects
+- 24-slot backpack + main cellar (96 slots, decay ×0.1) + cellar trees (24 slots, ×0.33, max 3)
+- 3 backpack upgrades: Pouch +6 (q1 reward), Deep Pouch +6 (sunken tower), Silver Divider (rare and above occupy −1 slot, greenhouse) → 36 slots at full upgrade
+- Fruit blocks regrow by rarity (1 / 1.5 / 2 / 2.5 / 3 game days, ±20%); the regrow queue is saved
+- Cellar-tree raids: 30% roll per game day, a badger or a fruit thief steals 1–3 fruits; the player within 45 m always scares them off (the main cellar is guarded by Old Mei and is never raided)
+- Owl post: cellar tree → main cellar, 1 fruit / 3 game days / 10% lost, decays at ×0.1 in flight, at most 3 in transit
+- 14 creatures, attitude-driven AI (they react to *the shape you are in right now*)
+- Day/night cycle (420 s per day), self-lit fruit and plants, particles, rotating minimap, codex, 7 quests, death drops and retrieval, save game
 
-## 原型未实现（文档已设计）
+## Not implemented (but designed in the docs)
 
-混合形态、魔力胃完整规则、兽化残留、NPC 对话树、灰雾兽偷格、人鱼归还系统、凤凰/母树化身形态、窖树被熊/龙摧毁、音频。
+Mixed forms, the full magic-stomach rules, beast residue, NPC dialogue trees, veilbeast slot theft, the merrow restitution system, phoenix/mother-tree avatar forms, cellar trees destroyed by bear or dragon, audio.
 
-## 目录
+## Layout
 
 ```
-docs/            设定文档（8 篇）
+docs/            setting documents (8 + index; English copies in docs/en/)
+docs/en/         English translations of the same documents
 game/
-  index.html     入口
-  css/ui.css     HUD 样式
-  data/          设定真源：fruits.js / creatures.js / world.js
+  index.html     entry point
+  css/ui.css     HUD styles
+  data/          source of truth: fruits.js / creatures.js / world.js
   src/           engine / world / worldgen / models / entities / game / ui / main
-  test/          node-smoke / heightmap / probe / shots / play / input
+  test/          node-smoke / heightmap / probe / docs-sync / shots / play / input / upgrade
 ```
 
-## 测试
+## Tests
 
 ```bash
-./game/test/all.sh             # 跑全部非截图测试，任一失败即非零退出
+./game/test/all.sh             # run every non-screenshot test; non-zero exit on any failure
 
-node game/test/node-smoke.js   # 无浏览器：数据 → 生成 → 网格化（假 GL）
-node game/test/probe.js        # 各区域/POI 的取景点与水深
-node game/test/docs-sync.js    # 文档 ↔ 数据一致性（不一致 exit 1）
-node game/test/play.js         # 玩法闭环：采集→重生→容量→变形→存取→窖树→掠夺→邮递→存档
-node game/test/upgrade.js      # 背包升级与果格数学
-node game/test/input.js        # 真实按键：走/跳/飞/时间/灰雾墙边界
-node game/test/shots.js g      # 14 张区域截图 → .shots/
-node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # 单张，肉眼检查
+node game/test/node-smoke.js   # no browser: data → generation → meshing (fake GL)
+node game/test/probe.js        # camera spots and water depth for each zone / POI
+node game/test/docs-sync.js    # docs ↔ data consistency (exit 1 on drift, both languages)
+node game/test/docs-drift.js   # self-test: injects 10 errors into docs/en/, confirms docs-sync catches them
+node game/test/play.js         # gameplay loop: harvest → respawn → capacity → transform → storage → cellar tree → raid → post → save
+node game/test/upgrade.js      # backpack upgrades and slot maths
+node game/test/input.js        # real key events: walk / jump / fly / time / Grey Veil border
+node game/test/shots.js g      # 14 zone screenshots → .shots/
+node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # single shot, for eyeballing
 ```
 
-后 5 个需要 headless Chrome（`/usr/bin/google-chrome`）与 `puppeteer-core`；SwiftShader 软渲染已验证可用。
+The last five need headless Chrome (`/usr/bin/google-chrome`) and `puppeteer-core`; SwiftShader software rendering is verified to work.
