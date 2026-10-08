@@ -6,7 +6,7 @@ set -e
 cd "$(dirname "$0")/.."
 chmod +x tools/msg-filter.sh
 
-FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter 'bash tools/msg-filter.sh' -- --all
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter "bash '$(pwd)/tools/msg-filter.sh'" -- --all
 
 git for-each-ref --format='%(refname)' refs/original | xargs -r -n1 git update-ref -d
 git reflog expire --expire=now --all
