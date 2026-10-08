@@ -39,6 +39,9 @@
       if (k === 'tab') { game.moveItem('out'); game.stashSel = Math.max(0, game.stashSel - 1); ui.renderCellar(); e.preventDefault(); }
       if (k === 'arrowleft') { game.invSel = Math.max(0, game.invSel - 1); ui.renderCellar(); }
       if (k === 'arrowright') { game.invSel = Math.min(game.inv.length - 1, game.invSel + 1); ui.renderCellar(); }
+      if (k === 'arrowup') { game.stashSel = Math.max(0, game.stashSel - 1); ui.renderCellar(); }
+      if (k === 'arrowdown') { game.stashSel = Math.min((game.openStash.items || []).length - 1, game.stashSel + 1); ui.renderCellar(); }
+      if (k === 'p') { game.postItem(); ui.renderCellar(); }
     }
   });
   document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; keys['control'] = e.key === 'Control' ? false : keys['control']; setKeys(); });

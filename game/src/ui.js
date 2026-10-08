@@ -182,6 +182,17 @@
       el('cellarSub').textContent = '容量 ' + s.slots + ' 果格 · 腐坏速度 ×' + s.decay + ' · 已用 ' + g.used(s.items);
       el('stashItems').innerHTML = s.items.map((it, i) => this.itemHTML(it, i, i === g.stashSel)).join('') || '<div class="empty">空架子。</div>';
       el('packItems').innerHTML = g.inv.map((it, i) => this.itemHTML(it, i, i === g.invSel)).join('') || '<div class="empty">背包空。</div>';
+      // 猫头鹰邮递
+      const pr = el('postRow');
+      const transit = g.posts.map(p => (FRU[p.it.id] ? FRU[p.it.id].cn : p.it.id) + '（' + Math.max(1, Math.ceil(p.t / 420)) + ' 天后到）').join('、');
+      let txt = '';
+      if (g.posts.length) txt += '🕊 在途：' + transit;
+      if (s.kind === 'tree') {
+        if (g.owlUnlocked()) txt += (txt ? ' · ' : '') + '<b>P</b> — 让钟摆叼走选中的 1 颗（3 个游戏日送达主果窖，10% 会丢）';
+        else txt += (txt ? ' · ' : '') + '钟摆还没来：先在主果窖存一颗猫头鹰果。';
+      }
+      pr.innerHTML = txt;
+      pr.classList.toggle('hidden', !txt);
     }
 
     /* ---------------- 图鉴 ---------------- */

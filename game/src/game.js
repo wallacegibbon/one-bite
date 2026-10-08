@@ -22,6 +22,7 @@
       this.stashes = [];                   // 仓库（第一个是主果窖）
       this.growQueue = [];                 // 种植生长
       this.regrow = [];                    // 果实重生
+      this.posts = [];                     // 猫头鹰邮递在途
       this.diffs = [];                     // 方块改动（存档用）
       this.seen = {};                      // 图鉴
       this.dexFruit = {};
@@ -405,6 +406,47 @@
       if (this.quests) this.checkQuests();
     }
 
+    /* ------------------------- 猫头鹰邮递（docs/05 §5.2） ------------------------- */
+    /* 窖树 → 主果窖，一次 1 颗，3 游戏日送达，10% 丢失。
+       前提：主果窖里存过至少 1 颗猫头鹰果（解锁"钟摆"）。 */
+    owlUnlocked() { return this.stashes[0].items.some(i => i.id === 'owlberry') || this._owlUnlocked; }
+    postItem() {
+      const s = this.openStash;
+      if (!s) return;
+      if (s.kind !== 'tree') { this.logMsg('钟摆只肯从窖树叼东西——果窖里有老梅。', 'warn'); return; }
+      if (!this.owlUnlocked()) { this.logMsg('主果窖里还没有猫头鹰果。先存一颗，钟摆才会来。', 'warn'); return; }
+      if (this.posts.length >= 3) { this.logMsg('钟摆一次只能叼 3 颗。', 'warn'); return; }
+      const it = s.items[this.stashSel || 0];
+      if (!it) { this.logMsg('先选中一颗果实。', 'warn'); return; }
+      s.items.splice(this.stashSel || 0, 1);
+      this.stashSel = Math.max(0, (this.stashSel || 0) - 1);
+      this.posts.push({ it, t: 3 * DAY_LEN, from: s.cn });
+      this._owlUnlocked = true;
+      this.logMsg('钟摆叼着 ' + (FRU[it.id] ? FRU[it.id].cn : it.id) + ' 飞走了。三天后到。', 'good');
+      if (this.ui) this.ui.renderCellar();
+    }
+    updatePosts(dt) {
+      for (let i = this.posts.length - 1; i >= 0; i--) {
+        const po = this.posts[i];
+        po.t -= dt;
+        po.it.fresh -= dt * STO.cellar.decay;      // 路上按主果窖的腐坏率走
+        if (po.t > 0) continue;
+        this.posts.splice(i, 1);
+        const name = FRU[po.it.id] ? FRU[po.it.id].cn : po.it.id;
+        if (Math.random() < 0.10) {
+          this.logMsg('钟摆没有回来。第四天它自己飞回来了，嘴里是空的——丢了 ' + name + '。', 'bad');
+          this.stats.postLost = (this.stats.postLost || 0) + 1;
+        } else if (this.used(this.stashes[0].items) + this.slotOf(po.it) > this.stashes[0].slots) {
+          this.logMsg('钟摆来了，但主果窖放不下 ' + name + '，它给叼回去了。', 'warn');
+          this.stashes.find(s => s.cn === po.from) ? this.stashes.find(s => s.cn === po.from).items.push(po.it) : this.stashes[0].items.push(po.it);
+        } else {
+          this.stashes[0].items.push(po.it);
+          this.logMsg('钟摆把 ' + name + ' 送到了主果窖。', 'good');
+          this.stats.postSent = (this.stats.postSent || 0) + 1;
+        }
+      }
+    }
+
     /* ------------------------- 伤害 / 状态 ------------------------- */
     damage(a, cause) {
       const p = this.player;
@@ -571,6 +613,8 @@
         const r = this.regrow[i]; r.t -= dt;
         if (r.t <= 0) { if (!this.world.get(r.x, r.y, r.z)) this.setBlock(r.x, r.y, r.z, r.b); this.regrow.splice(i, 1); }
       }
+      // 猫头鹰邮递
+      if (this.posts.length) this.updatePosts(dt);
       // 种植生长
       for (let i = this.growQueue.length - 1; i >= 0; i--) {
         const g = this.growQueue[i]; g.t -= dt;
@@ -780,7 +824,7 @@
           time: this.time, day: this.day, seed: this.seed,
           p: { x: this.player.x, y: this.player.y, z: this.player.z, yaw: this.player.yaw, pitch: this.player.pitch, vital: this.player.vital, form: this.player.form, formT: this.player.formT },
           inv: this.inv, stashes: this.stashes.map(s2 => ({ id: s2.id, cn: s2.cn, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind })),
-          diffs: this.diffs, seen: this.seen, dex: this.dexFruit, regrow: this.regrow,
+          diffs: this.diffs, seen: this.seen, dex: this.dexFruit, regrow: this.regrow, posts: this.posts, owl: this._owlUnlocked || false,
           quests: this.quests.map(q => [q.id, q.done]), stats: this.stats, upg: this.upg
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(s));
@@ -797,6 +841,7 @@
       for (const d of s.diffs) this.world.set(d[0], d[1], d[2], d[3]);
       this.diffs = s.diffs;
       this.regrow = s.regrow || [];
+      this.posts = s.posts || []; this._owlUnlocked = !!s.owl;
       Object.assign(this.player, { x: s.p.x, y: s.p.y, z: s.p.z, yaw: s.p.yaw, pitch: s.p.pitch, vital: s.p.vital, form: s.p.form, formT: s.p.formT });
       for (const q of s.quests || []) { const qq = this.quests.find(x => x.id === q[0]); if (qq) qq.done = q[1]; }
       Object.assign(this.upg, s.upg || {});

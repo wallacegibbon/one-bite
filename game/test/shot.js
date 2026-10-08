@@ -37,6 +37,18 @@ const path = require('path');
     if (c.time) g.time = +c.time;
     if (c.inv) { for (const id of c.inv.split(',')) g.addItem('fruit', id); }
     if (c.tp) g.thirdPerson = true;
+    if (c.cellar) {
+      // 建一棵窖树、塞几颗果实、解锁钟摆、寄出 1 颗，然后打开面板
+      const F = window.FRUTARIA;
+      g.player.x = 130; g.player.z = 128;
+      g.buildCellarTree();
+      const tree = g.stashes[g.stashes.length - 1];
+      for (const id of ['embercore', 'merrow', 'owlberry']) tree.items.push({ kind: 'fruit', id, fresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh, maxFresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh });
+      g.stashes[0].items.push({ kind: 'fruit', id: 'owlberry', fresh: 1500, maxFresh: 1500 });
+      g.openStashUI(tree);
+      g.stashSel = 0; g.postItem();
+      g.posts[0].t = 420 * 2.4;
+    }
     g.updateEnv();
     window.startGame();
   }, cfg);

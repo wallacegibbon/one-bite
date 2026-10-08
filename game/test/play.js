@@ -141,6 +141,61 @@ const path = require('path');
     for (let i = 0; i < 40; i++) g.dailyRolls();
     return { before, after: tree.items.length, scared: (g.stats.raidsScared || 0) - scared0 };
   });
+  // 猫头鹰邮递
+  await step('postLocked', () => {
+    const g = window.game;
+    const tree = g.stashes.find(s => s.kind === 'tree');
+    g._owlUnlocked = false; g.stashes[0].items.length = 0;
+    g.openStashUI(tree); g.stashSel = 0;
+    for (let i = 0; i < 3; i++) tree.items.push({ kind: 'fruit', id: 'merrow', fresh: 900, maxFresh: 900 });
+    const before = tree.items.length;
+    g.postItem();
+    return { unlocked: g.owlUnlocked(), refused: tree.items.length === before, posts: g.posts.length };
+  });
+  await step('postUnlockAndSend', () => {
+    const g = window.game;
+    const tree = g.stashes.find(s => s.kind === 'tree'), cellar = g.stashes[0];
+    cellar.items.push({ kind: 'fruit', id: 'owlberry', fresh: 1500, maxFresh: 1500 });   // 解锁钟摆
+    g.openStashUI(tree); g.stashSel = 0;
+    const before = tree.items.length;
+    g.postItem();
+    return { unlocked: g.owlUnlocked(), treeBefore: before, treeAfter: tree.items.length, posts: g.posts.length, eta: +(g.posts[0].t / 420).toFixed(2) + '天' };
+  });
+  await step('postFromCellarRefused', () => {
+    const g = window.game;
+    g.openStashUI(g.stashes[0]); g.stashSel = 0;
+    const n = g.stashes[0].items.length;
+    g.postItem();
+    return { refused: g.stashes[0].items.length === n };
+  });
+  await step('postArrive', () => {
+    const g = window.game;
+    for (const p of g.posts) p.t = 0.05;
+    return { inTransit: g.posts.length };
+  });
+  await new Promise(r => setTimeout(r, 500));
+  await step('postDone', () => {
+    const g = window.game;
+    return { inTransit: g.posts.length, cellar: g.stashes[0].items.map(i => i.id), sent: g.stats.postSent || 0, lost: g.stats.postLost || 0 };
+  });
+  await step('postDecayInTransit', () => {
+    const g = window.game;
+    const tree = g.stashes.find(s => s.kind === 'tree');
+    g.openStashUI(tree); g.stashSel = 0;
+    tree.items.push({ kind: 'fruit', id: 'embercore', fresh: 420, maxFresh: 420 });
+    g.stashSel = tree.items.length - 1;
+    g.postItem();
+    const p = g.posts[g.posts.length - 1];
+    const f0 = p.it.fresh;
+    p.t = 0.05;
+    return { freshStart: f0, note: '送达时按 ×0.1 衰减 3 游戏日 = −126' };
+  });
+  await new Promise(r => setTimeout(r, 500));
+  await step('postArrivedFresh', () => {
+    const g = window.game;
+    const e = g.stashes[0].items.filter(i => i.id === 'embercore').pop();
+    return { arrived: !!e, fresh: e ? +e.fresh.toFixed(1) : null, lost: g.stats.postLost || 0 };
+  });
   await step('save', () => { window.game.save(); const s = localStorage.getItem('frutaria.save.v1'); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
   await step('load', () => { const ok = window.game.load(); return { ok, inv: window.game.inv.map(i => i.id), stashes: window.game.stashes.length }; });
 
