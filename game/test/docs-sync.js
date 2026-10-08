@@ -1,7 +1,7 @@
 /* ==========================================================================
- *  docs-sync.js —— 校验 docs/ 里的数字是否与 game/data/ 一致
- *  README 声称「data 是唯一真源」，这个脚本就是那句话的可执行版本。
- *  用法: node game/test/docs-sync.js
+ *  docs-sync.js -- checks that the numbers in docs/ match game/data/
+ *  The README claims data/ is the single source of truth; this script makes that claim executable.
+ *  Usage: node game/test/docs-sync.js
  * ========================================================================== */
 const fs = require('fs');
 const path = require('path');
@@ -17,7 +17,7 @@ const ok = [];
 const bad = (what, a, b) => problems.push(`${what}: 文档=${JSON.stringify(a)} 数据=${JSON.stringify(b)}`);
 const good = s => ok.push(s);
 
-/* ---- markdown 表格解析 ---- */
+/* ---- markdown table parsing ---- */
 function tableAfter(md, heading) {
   const i = md.indexOf(heading);
   if (i < 0) return null;
@@ -28,14 +28,14 @@ function tableAfter(md, heading) {
     if (/^\|\s*[-|:\s]+\|/.test(l.trim())) continue;
     rows.push(l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim()));
   }
-  return rows.length > 1 ? rows.slice(1) : [];   // 去掉表头
+  return rows.length > 1 ? rows.slice(1) : [];   // drop the header row
 }
 const unbacktick = s => s.replace(/`/g, '');
 const norm = s => (s || '').replace(/\s+/g, '').replace(/（.*?）/g, '').replace(/[·・]/g, '');
 const num = s => { const m = String(s).match(/-?\d+(\.\d+)?/); return m ? +m[0] : null; };
 const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.startsWith(y) || y.startsWith(x); };
 
-/* ================= 1. 区域表 (docs/02 §2) ================= */
+/* ================= 1. zone table (docs/02 s2) ================= */
 {
   const rows = tableAfter(read('02-地图与场景.md'), '## 2. 区域表');
   if (!rows) bad('docs/02 区域表', '缺失', '—');
@@ -65,7 +65,7 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
   }
 }
 
-/* ================= 2. POI 表 (docs/02 §3) ================= */
+/* ================= 2. POI table (docs/02 s3) ================= */
 {
   const rows = tableAfter(read('02-地图与场景.md'), '## 3. 兴趣点（POI）');
   if (!rows) bad('docs/02 POI 表', '缺失', '—');
@@ -86,7 +86,7 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
   }
 }
 
-/* ================= 3. 浮岛表 (docs/02 §5.7) ================= */
+/* ================= 3. isle table (docs/02 s5.7) ================= */
 {
   const rows = tableAfter(read('02-地图与场景.md'), '### 5.7 云顶浮岛');
   if (!rows) bad('docs/02 浮岛表', '缺失', '—');
@@ -107,7 +107,7 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
   }
 }
 
-/* ================= 4. 稀有度表 (docs/04 §1) ================= */
+/* ================= 4. rarity table (docs/04 s1) ================= */
 {
   const rows = tableAfter(read('04-果实与变形系统.md'), '| 稀有度 | 中文 | 占果格');
   if (!rows) bad('docs/04 稀有度表', '缺失', '—');
@@ -129,7 +129,7 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
   }
 }
 
-/* ================= 5. 三层存储表 (docs/05 §3) ================= */
+/* ================= 5. three-tier storage table (docs/05 s3) ================= */
 {
   const rows = tableAfter(read('05-背包与仓库.md'), '| 层 | 名称 | 格数 | 腐坏倍率 | 数量 | 位置 |');
   const STO = N.STORAGE;
@@ -148,7 +148,7 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
     });
     good('三层存储（24/96/24，×1.0/×0.1/×0.33）对上');
   }
-  // 窖树规则
+  // cellar tree rules
   const md = read('05-背包与仓库.md');
   const rules = [
     [/\|\s*上限\s*\|\s*(\d+)\s*棵/, STO.treestash.max, '窖树上限'],
@@ -164,12 +164,12 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
   good('窖树规则（上限/间距/掠夺/赶走）对上');
 }
 
-/* ================= 6. 键位一致性 ================= */
+/* ================= 6. key binding consistency ================= */
 {
   const main = fs.readFileSync(path.join(base, 'src', 'main.js'), 'utf8');
   const docs = ['05-背包与仓库.md', '04-果实与变形系统.md'].map(read).join('\n');
   const bound = k => new RegExp(`k === '${k.toLowerCase()}'`).test(main);
-  // 文档里凡是「按 X」的说法，X 必须是真实绑定的键
+  // every "press X" claim in the docs must refer to a key that is actually bound
   const claims = [...docs.matchAll(/按\s*([A-Z])\s*(?:种|使用|打开|交互|吃|存)/g)].map(m => m[1]);
   for (const k of new Set(claims)) {
     if (!bound(k)) bad(`docs 里的按键「${k}」`, '文档声称可按', 'main.js 未绑定');
@@ -178,7 +178,7 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
   if (!claims.length) bad('docs 按键扫描', '没找到任何「按 X」表述', '—');
 }
 
-/* ================= 7. 数量与 id 覆盖 ================= */
+/* ================= 7. counts and id coverage ================= */
 {
   const all = fs.readdirSync(DOCS).filter(f => f.endsWith('.md')).map(read).join('\n');
   const missF = N.FRUITS.filter(f => !all.includes(f.cn));
@@ -192,7 +192,7 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
   else good(`全部 ${N.PLANTS.length} 种植物都在文档里出现`);
 }
 
-/* ================= 输出 ================= */
+/* ================= report ================= */
 console.log('docs ↔ data 一致性检查');
 for (const s of ok) console.log('  ✔ ' + s);
 if (problems.length) {

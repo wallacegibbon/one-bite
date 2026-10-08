@@ -1,10 +1,10 @@
 /* ==========================================================================
- *  game.js —— 游戏状态：时间/昼夜、果实背包、仓库、变形、任务、交互
+ *  game.js -- game state: time/day-night, fruit backpack, storage, transformation, quests, interaction
  * ========================================================================== */
 (function (N) {
   const RAR = N.RARITY, FRU = N.FRUIT_BY_ID, PLANT = N.PLANT_BY_ID, STO = N.STORAGE;
 
-  const DAY_LEN = 420;          // 一个游戏日 = 7 分钟真实时间
+  const DAY_LEN = 420;          // one in-game day = 7 minutes of real time
   const SAVE_KEY = 'frutaria.save.v1';
 
   class Game {
@@ -15,21 +15,21 @@
       this.player = new N.Player(this.world);
       this.creatures = [];
       this.particles = null;
-      this.time = DAY_LEN * (7 / 24);      // 从早上 7 点开始
+      this.time = DAY_LEN * (7 / 24);      // start at 07:00
       this.day = 1;
       this.log = [];
-      this.inv = [];                       // 背包
-      this.stashes = [];                   // 仓库（第一个是主果窖）
-      this.growQueue = [];                 // 种植生长
-      this.regrow = [];                    // 果实重生
-      this.posts = [];                     // 猫头鹰邮递在途
-      this.diffs = [];                     // 方块改动（存档用）
-      this.seen = {};                      // 图鉴
+      this.inv = [];                       // backpack
+      this.stashes = [];                   // storage (the first entry is the main fruit cellar)
+      this.growQueue = [];                 // planting growth
+      this.regrow = [];                    // fruit regrowth
+      this.posts = [];                     // owl post in transit
+      this.diffs = [];                     // block edits (for saving)
+      this.seen = {};                      // codex
       this.dexFruit = {};
       this.quests = [];
       this.mode = 'play';                  // play | cellar | journal | dead
       this.openStash = null;
-      this.hover = null;                   // 射线指向的方块
+      this.hover = null;                   // the block the crosshair ray points at
       this.msgTimer = 0;
       this.prompt = '';
       this.thirdPerson = false;
@@ -49,21 +49,21 @@
       this.seed = 20261008;
     }
 
-    /* ------------------------- 初始化 ------------------------- */
+    /* ------------------------- init ------------------------- */
     init(seed) {
       this.seed = seed || 20261008;
       const t0 = performance.now();
       N.generate(this.world, this.seed);
       this.particles = new N.Particles(this.R.gl, 900);
-      // 仓库
+      // storage
       this.stashes.push({ id: 'cellar', cn: STO.cellar.label, slots: STO.cellar.slots, decay: STO.cellar.decay, items: [], x: 136, y: 21, z: 134, kind: 'cellar' });
-      // 出生
+      // spawn
       const sp = N.spawn;
       this.player.x = sp.x; this.player.y = sp.y; this.player.z = sp.z;
       this.player.yaw = Math.PI; this.player.pitch = -0.1;
-      // 生物
+      // creatures
       this.spawnCreatures();
-      // 任务
+      // quests
       this.quests = [
         { id: 'q1', cn: '认识主果窖', hint: '去灯笼镇的果窖（按 E 打开），把任意果实存进去', done: false },
         { id: 'q2', cn: '三颗猫头鹰果', hint: '低语林的橡树洞里找 3 颗猫头鹰果', done: false },
@@ -80,7 +80,7 @@
       return this;
     }
 
-    /* 渐进网格化（加载时调用） */
+    /* progressive meshing (called while loading) */
     buildSomeChunks(budgetMs) {
       const t0 = performance.now();
       while (this.meshDone < this.meshTotal) {
@@ -143,12 +143,12 @@
       return null;
     }
 
-    /* ------------------------- 时间 / 环境 ------------------------- */
+    /* ------------------------- time / environment ------------------------- */
     get hour() { return (this.time / DAY_LEN * 24) % 24; }
     updateEnv() {
       const h = this.hour;
       const ang = (h / 24) * Math.PI * 2 - Math.PI / 2;
-      const el = Math.sin(ang);                       // 太阳高度
+      const el = Math.sin(ang);                       // sun elevation
       const day = Math.max(0, Math.min(1, el * 1.6 + 0.22));
       const dusk = Math.max(0, 1 - Math.abs(el) * 4);
       this.daylight = 0.16 + day * 0.84;
@@ -165,7 +165,7 @@
       horizon = mix(horizon, duskHor, dusk * 0.75);
       let fogCol = mix(horizon, zenith, 0.35);
       let fogDen = 0.0075 + this.night * 0.006;
-      // 灰雾墙
+      // the Grey Veil
       const W = this.world, p = this.player;
       const edge = Math.min(p.x, p.z, W.w - p.x, W.d - p.z);
       if (edge < 22) { fogDen += (22 - edge) * 0.004; fogCol = mix(fogCol, [0.55, 0.57, 0.62], (22 - edge) / 22 * 0.8); }
@@ -178,15 +178,15 @@
       };
     }
 
-    /* ------------------------- 日志 ------------------------- */
+    /* ------------------------- log ------------------------- */
     logMsg(text, kind) {
       this.log.push({ text, kind: kind || '', t: 0 });
       if (this.log.length > 40) this.log.shift();
       if (this.ui) this.ui.onLog();
     }
 
-    /* ------------------------- 背包 / 仓库 ------------------------- */
-    /* 背包容量 = 基础 24 + 已获得的果袋；银丝隔层让稀有及以上果实占用 −1 */
+    /* ------------------------- backpack / storage ------------------------- */
+    /* capacity = base 24 + pouches earned; the silver divider makes rare-and-above cost 1 slot less */
     cap() {
       let c = STO.backpack.slots;
       for (const u of STO.backpack.upgrades) if (this.upg[u.id]) c += u.slots;
@@ -234,7 +234,7 @@
       function d2cn(id) { return (FRU[id] || PLANT[id] || { cn: id }).cn; }
     }
 
-    /* ------------------------- 交互 ------------------------- */
+    /* ------------------------- interaction ------------------------- */
     rayTarget() {
       const p = this.player;
       const cp = Math.cos(p.pitch), sp = Math.sin(p.pitch);
@@ -252,14 +252,14 @@
     }
     interact() {
       const p = this.player;
-      // 1. 仓库
+      // 1. storage
       for (const s of this.stashes) {
         if (Math.hypot(s.x + 0.5 - p.x, s.y + 1 - p.y, s.z + 0.5 - p.z) < 3.2) { this.openStashUI(s); return; }
       }
-      // 2. 生物
+      // 2. creatures
       const c = this.nearestCreature(4.5);
       if (c) { this.observe(c); return; }
-      // 3. 方块
+      // 3. blocks
       const t = this.rayTarget();
       if (!t) return;
       const b = this.world.get(t.x, t.y, t.z);
@@ -288,7 +288,7 @@
       this.diffs.push([x, y, z, b]);
     }
 
-    /* 观察生物 → 图鉴 */
+    /* observe a creature -> codex */
     observe(c) {
       const first = !this.seen[c.sp.id];
       this.seen[c.sp.id] = true;
@@ -298,7 +298,7 @@
       if (first && this.ui) this.ui.onLog();
     }
 
-    /* ------------------------- 变形 ------------------------- */
+    /* ------------------------- transformation ------------------------- */
     useSelected() {
       const p = this.player;
       const it = this.inv[this.sel || 0];
@@ -311,7 +311,7 @@
       const f = FRU[fruitId];
       if (!f || !f.duration) { this.logMsg('这个不能吃。', 'warn'); return; }
       const p = this.player;
-      // 魔力胃：短时间连吃 → 混乱
+      // magic stomach: eating several in quick succession causes confusion
       this.gastric = (this.gastric || 0) + 1;
       if (this.gastricTime === undefined || this.time - this.gastricTime > 90) { this.gastric = 1; }
       this.gastricTime = this.time;
@@ -345,7 +345,7 @@
     usePlant(it, slotIdx) {
       const p = this.player, pl = PLANT[it.id];
       if (pl.effect === 'plant') {
-        // 种在地面
+        // plant it in the ground
         const t = this.world;
         const bx = Math.floor(p.x), bz = Math.floor(p.z);
         const by = N.groundY(t, bx, bz, Math.floor(p.y + 3));
@@ -387,7 +387,7 @@
       this.logMsg('窖树长成了：' + STO.treestash.slots + ' 果格，腐坏速度 1/3。獾会来偷，记得常回来看。', 'good');
     }
 
-    /* ------------------------- 仓库 UI ------------------------- */
+    /* ------------------------- storage UI ------------------------- */
     openStashUI(s) {
       this.openStash = s; this.mode = 'cellar';
       this.logMsg('打开 ' + s.cn + '（存进去的果实腐坏速度 ×' + s.decay + '）', 'good');
@@ -406,9 +406,9 @@
       if (this.quests) this.checkQuests();
     }
 
-    /* ------------------------- 猫头鹰邮递（docs/05 §5.2） ------------------------- */
-    /* 窖树 → 主果窖，一次 1 颗，3 游戏日送达，10% 丢失。
-       前提：主果窖里存过至少 1 颗猫头鹰果（解锁"钟摆"）。 */
+    /* ------------------------- owl post (docs/05 section 5.2) ------------------------- */
+    /* cellar tree -> main cellar, one fruit at a time, delivered after 3 in-game days, 10% lost.
+       Requires at least one owlberry stored in the main cellar (unlocks "Pendulum"). */
     owlUnlocked() { return this.stashes[0].items.some(i => i.id === 'owlberry') || this._owlUnlocked; }
     postItem() {
       const s = this.openStash;
@@ -429,7 +429,7 @@
       for (let i = this.posts.length - 1; i >= 0; i--) {
         const po = this.posts[i];
         po.t -= dt;
-        po.it.fresh -= dt * STO.cellar.decay;      // 路上按主果窖的腐坏率走
+        po.it.fresh -= dt * STO.cellar.decay;      // decays in flight at the main cellar's rate
         if (po.t > 0) continue;
         this.posts.splice(i, 1);
         const name = FRU[po.it.id] ? FRU[po.it.id].cn : po.it.id;
@@ -447,7 +447,7 @@
       }
     }
 
-    /* ------------------------- 伤害 / 状态 ------------------------- */
+    /* ------------------------- damage / status ------------------------- */
     damage(a, cause) {
       const p = this.player;
       if (p.formDef.fireImmune && cause === '火焰') return;
@@ -470,7 +470,7 @@
       const p = this.player;
       this.stats.deaths++;
       this.logMsg('你在' + this.zoneName() + '倒下（' + cause + '）。果实散落在原地。', 'bad');
-      // 果实散落
+      // fruit scatters
       const sx = Math.floor(p.x), sy = Math.floor(p.y), sz = Math.floor(p.z);
       for (const it of this.inv) this.drops.push({ x: sx + (Math.random() * 3 - 1.5), y: sy + 1, z: sz + (Math.random() * 3 - 1.5), item: it, t: 600 });
       this.inv = [];
@@ -481,8 +481,8 @@
       if (this.ui) this.ui.showDead(true);
     }
 
-    /* ------------------------- 每游戏日判定 ------------------------- */
-    /* docs/05：窖树是活的仓库——它会招贼。主果窖有老梅守着，不被抢。 */
+    /* ------------------------- per-game-day rolls ------------------------- */
+    /* docs/05: a cellar tree is a living store -- it attracts thieves. The main cellar is guarded by Old Mei and is never robbed. */
     dailyRolls() {
       for (let i = 1; i < this.stashes.length; i++) {
         const s = this.stashes[i];
@@ -508,14 +508,14 @@
       }
     }
 
-    /* ------------------------- 任务 ------------------------- */
+    /* ------------------------- quests ------------------------- */
     checkQuests() {
       const p = this.player;
       const q = (id) => this.quests.find(x => x.id === id);
       const done = (qq, msg) => { if (qq && !qq.done) { qq.done = true; this.logMsg('✔ 完成：' + qq.cn + (msg ? ' — ' + msg : ''), 'good'); } };
       const nFruit = id => this.inv.filter(i => i.kind === 'fruit' && i.id === id).length;
       const nStash = id => this.stashes.reduce((a, s) => a + s.items.filter(i => i.id === id).length, 0);
-      // 背包扩容道具：获得后 cap() 立刻变化，并提示一次
+      // backpack upgrades: cap() changes the moment one is granted, and it is announced once
       const grant = (uid) => {
         if (this.upg[uid]) return;
         const u = STO.backpack.upgrades.find(x => x.id === uid);
@@ -529,7 +529,7 @@
       if (nFruit('merrow') + nStash('merrow') >= 1) { done(q('q4')); grant('pouch2'); }
       if (nFruit('unicorncherry') + nStash('unicorncherry') >= 1) done(q('q5'));
       if (nFruit('embercore') + nStash('embercore') >= 1) done(q('q6'));
-      // q7：走到星坠堡果实温室（地窖门口）
+      // q7: walk to the Starfall fruit greenhouse (cellar door)
       const gh = N.POIS.find(x => x.id === 'greenhouse');
       if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q7'), '银丝网叠在果筐上，正好能隔开稀有果实。'); grant('divider'); }
     }
@@ -560,7 +560,7 @@
       }
     }
 
-    /* ------------------------- 模型缓存 ------------------------- */
+    /* ------------------------- model cache ------------------------- */
     ensureModel(id) {
       if (!this.creatureMeshes[id]) this.creatureMeshes[id] = N.buildModelMeshes(this.R.gl, N.MODELS[id]);
       return this.creatureMeshes[id];
@@ -570,7 +570,7 @@
       return this.handMeshes[id];
     }
 
-    /* ------------------------- 主循环 ------------------------- */
+    /* ------------------------- main loop ------------------------- */
     update(dt) {
       if (!this.ready) return;
       this.frames = (this.frames || 0) + 1;
@@ -585,13 +585,13 @@
       if (playing) this.player.update(dt, this.input || {}, this);
       else this.player.moveAmt = 0;
 
-      // 形态计时
+      // form timer
       const p = this.player;
       if (p.form) {
         let rate = 1;
         const f = FRU[p.form].form;
-        if (f.breatheAir === false && !this.player.headWater) rate = 2;      // 离水虚弱
-        if (p.fright > 0.3) rate += p.fright;                                 // 受惊掉时
+        if (f.breatheAir === false && !this.player.headWater) rate = 2;      // weakened out of water
+        if (p.fright > 0.3) rate += p.fright;                                 // fright drains the timer
         p.formT -= dt * rate;
         if (p.formT <= 0) this.revert();
       }
@@ -599,23 +599,23 @@
       for (const k in this.buffs) { this.buffs[k] -= dt; if (this.buffs[k] <= 0) delete this.buffs[k]; }
       this.playerStealth = (this.buffs.stealth ? 0.3 : 1);
 
-      // 生物
+      // creatures
       for (const c of this.creatures) {
         const d = Math.hypot(c.x - p.x, c.z - p.z);
         if (d < 160) c.update(dt, p, this.world, this);
       }
-      // 粒子（萤火虫 / 余烬 / 水花）
+      // particles (fireflies / embers / splashes)
       this.ambient(dt);
       this.particles.update(dt, this.world);
 
-      // 果实重生
+      // fruit regrowth
       for (let i = this.regrow.length - 1; i >= 0; i--) {
         const r = this.regrow[i]; r.t -= dt;
         if (r.t <= 0) { if (!this.world.get(r.x, r.y, r.z)) this.setBlock(r.x, r.y, r.z, r.b); this.regrow.splice(i, 1); }
       }
-      // 猫头鹰邮递
+      // owl post
       if (this.posts.length) this.updatePosts(dt);
-      // 种植生长
+      // planting growth
       for (let i = this.growQueue.length - 1; i >= 0; i--) {
         const g = this.growQueue[i]; g.t -= dt;
         if (g.t <= 0) {
@@ -628,7 +628,7 @@
           this.logMsg('你种下的果核长成了一棵小树。', 'good');
         }
       }
-      // 散落果实拾取
+      // picking up scattered fruit
       if (this.drops) {
         for (let i = this.drops.length - 1; i >= 0; i--) {
           const d = this.drops[i]; d.t -= dt;
@@ -640,7 +640,7 @@
       }
       this.decayItems(dt);
 
-      // 交互提示
+      // interaction prompt
       this.prompt = '';
       if (playing) {
         for (const s of this.stashes) {
@@ -671,30 +671,30 @@
       if (this.ambTimer > 0) return;
       this.ambTimer = 0.12;
       const n = this.night;
-      // 萤火虫（夜里森林）
+      // fireflies (forest at night)
       if (n > 0.4 && Math.random() < 0.7) {
         const a = Math.random() * 6.283, r = 4 + Math.random() * 14;
         const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
         const y = N.groundY(this.world, Math.floor(x), Math.floor(z), Math.floor(p.y + 6)) + 0.6;
         P.spawn(x, y, z, (Math.random() - 0.5) * 0.6, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6, 3 + Math.random() * 3, [0.7, 1, 0.45], 0.16);
       }
-      // 水母/水下气泡
+      // jellyfish / underwater bubbles
       if (p.headWater && Math.random() < 0.6) {
         const a = Math.random() * 6.283, r = 1 + Math.random() * 6;
         P.spawn(p.x + Math.cos(a) * r, p.y + Math.random() * 2, p.z + Math.sin(a) * r, 0, 0.8 + Math.random(), 0, 2.5, [0.5, 0.85, 1], 0.14);
       }
-      // 龙巢余烬
+      // dragon nest embers
       const nest = N.POIS.find(q => q.id === 'nest');
       if (Math.hypot(nest.x - p.x, nest.z - p.z) < 40 && Math.random() < 0.8) {
         P.spawn(nest.x + (Math.random() - 0.5) * 10, nest.y + 1, nest.z + (Math.random() - 0.5) * 10,
           (Math.random() - 0.5) * 0.4, 0.8 + Math.random() * 1.2, (Math.random() - 0.5) * 0.4, 2 + Math.random() * 2, [1, 0.5, 0.15], 0.2);
       }
-      // 玩家形态发光
+      // player form glow
       const g = p.formDef.glow;
       if (g && Math.random() < 0.5) P.spawn(p.x + (Math.random() - 0.5), p.y + 0.5 + Math.random(), p.z + (Math.random() - 0.5), 0, 0.4, 0, 1.2, g, 0.18);
     }
 
-    /* ------------------------- 渲染 ------------------------- */
+    /* ------------------------- render ------------------------- */
     render() {
       const R = this.R, p = this.player, env = this.env;
       const cam = {
@@ -711,7 +711,7 @@
       R.begin(cam, env);
 
       const IDENT = N.M4.create();
-      // 世界
+      // world
       const W = this.world;
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const ci = cz * W.cx + cx;
@@ -724,15 +724,15 @@
         R.drawMesh(m[3], IDENT, {});
         R.drawMesh(m[4], IDENT, { emisBoost: 0.2 });
       }
-      // 高亮（线框，不是实心块）
+      // highlight (wireframe, not a solid cube)
       if (this.hover && this.mode === 'play') {
         const mb = new N.MeshBuilder();
         const t = this.hover, e = 0.05, h = e / 2, L = 1 + e, S = 1 - e;
         const c = [1, 0.92, 0.62];
         for (const a of [0, 1]) for (const b of [0, 1]) {
-          mb.box(t.x - h, t.y + a - h, t.z + b - h, L, e, e, c, true, 1);   // 沿 X（含角）
-          mb.box(t.x + a - h, t.y + h, t.z + b - h, e, S, e, c, true, 1);   // 沿 Y（缩进，不重叠）
-          mb.box(t.x + a - h, t.y + b - h, t.z + h, e, e, S, c, true, 1);   // 沿 Z（缩进）
+          mb.box(t.x - h, t.y + a - h, t.z + b - h, L, e, e, c, true, 1);   // along X (includes the corners)
+          mb.box(t.x + a - h, t.y + h, t.z + b - h, e, S, e, c, true, 1);   // along Y (inset, so edges never overlap)
+          mb.box(t.x + a - h, t.y + b - h, t.z + h, e, e, S, c, true, 1);   // along Z (inset)
         }
         if (!this._hl || this._hlAt !== (t.x * 10000 + t.y * 100 + t.z)) {
           if (this._hl) { R.gl.deleteBuffer(this._hl.pos); R.gl.deleteBuffer(this._hl.col); R.gl.deleteBuffer(this._hl.dat); }
@@ -740,7 +740,7 @@
         }
         R.drawMesh(this._hl, IDENT, { noCull: true });
       }
-      // 散落果实（死亡掉落，可捡回）
+      // scattered fruit (dropped on death, can be recovered)
       if (this.drops.length) {
         if (!this._dropMesh) {
           const mb0 = new N.MeshBuilder();
@@ -754,7 +754,7 @@
           R.drawMesh(this._dropMesh, m, { tint: col, tintA: 1, emisBoost: 0.5, day: Math.max(0.6, this.daylight) });
         }
       }
-      // 生物
+      // creatures
       for (const c of this.creatures) {
         const d = Math.hypot(c.x - cam.x, c.y - cam.y, c.z - cam.z);
         if (d > 90) continue;
@@ -773,7 +773,7 @@
           R.drawMesh(e.mesh, m, {});
         }
       }
-      // 水
+      // water
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const ci = cz * W.cx + cx;
         const m = W.chunks[ci];
@@ -782,9 +782,9 @@
         if (!R.visible(mx, W.h / 2, mz, 15)) continue;
         R.drawMesh(m[2], IDENT, { blend: true, alpha: 0.62, wave: true });
       }
-      // 粒子
+      // particles
       this.particles.draw(R);
-      // 第一人称手
+      // first-person hand
       if (!this.thirdPerson && this.mode !== 'dead') {
         const hand = this.ensureHand(p.formDef.hand || 'hand');
         const m = N.M4.create();
@@ -801,7 +801,7 @@
         R.drawMesh(hand, m, { day: Math.max(0.55, this.daylight) });
         R.gl.enable(R.gl.DEPTH_TEST);
       }
-      // 第三人称身体
+      // third-person body
       if (this.thirdPerson) {
         const parts = this.ensureModel(p.modelId);
         const md = N.MODELS[p.modelId];
@@ -817,7 +817,7 @@
       }
     }
 
-    /* ------------------------- 存档 ------------------------- */
+    /* ------------------------- save ------------------------- */
     save() {
       try {
         const s = {

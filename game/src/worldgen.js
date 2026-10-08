@@ -1,12 +1,12 @@
 /* ==========================================================================
- *  worldgen.js —— 谷地生成：地形 / 镜湖 / 星坠堡 / 低语林 / 蝙蝠洞 /
- *                  灯笼镇 / 果园遗迹 / 云顶浮岛 / 果实与植物分布
+ *  worldgen.js -- valley generation: terrain / Mirrorlake / Starfall Keep / Whisperwood / bat cave /
+ *                  Lanternrow / the old orchard / Cloudspire isles / fruit and plant distribution
  * ========================================================================== */
 (function (N) {
   const D = N.BLOCKS;
   let W, seed;
 
-  /* ---------------- 噪声 ---------------- */
+  /* ---------------- noise ---------------- */
   function h2(x, z, s) {
     let n = Math.imul(x | 0, 374761393) ^ Math.imul(z | 0, 668265263) ^ Math.imul(s | 0, 1013904223);
     n = Math.imul(n ^ (n >>> 13), 1274126177);
@@ -40,34 +40,34 @@
   function terrainH(x, z) {
     let h = 19 + fbm(x * 0.035, z * 0.035, seed, 4) * 7;
     h += fbm(x * 0.11, z * 0.11, seed + 5, 2) * 2.2;
-    // 北岭
+    // Ashscale Ridge
     const dm = dist(x, z, MTN.x, MTN.z);
     if (dm < MTN.r) h += Math.pow(1 - dm / MTN.r, 1.5) * 21;
-    // 回声丘
+    // Echo Hollow
     const dh = dist(x, z, HILL.x, HILL.z);
     if (dh < HILL.r) h += Math.pow(1 - dh / HILL.r, 1.4) * 8;
-    // 镜湖（碗形：岸边浅、湖心深）
+    // Mirrorlake (bowl shaped: shallow at the shore, deep in the middle)
     const dl = dist(x, z, LAKE.x, LAKE.z);
     if (dl < LAKE.r) {
       const t = Math.min(1, (1 - dl / LAKE.r) * 1.9);
       h -= 18 * Math.pow(t, 0.6);
-      if (dl > LAKE.r - 5) h += (dl - (LAKE.r - 5)) * 0.6;   // 湖岸略抬
+      if (dl > LAKE.r - 5) h += (dl - (LAKE.r - 5)) * 0.6;   // raise the shoreline slightly
     }
-    // 湖心岛
+    // the island at the lake centre
     const di = dist(x, z, ISLE.x, ISLE.z);
     if (di < ISLE.r + 3) h = Math.max(h, 21 + (1 - ss(8, 14, di)) * 2.5);
-    // 灯笼镇平地
+    // Lanternrow flat ground
     if (x > VILL.x0 - 6 && x < VILL.x1 + 6 && z > VILL.z0 - 6 && z < VILL.z1 + 6) {
       const w = Math.min(1, Math.min(x - (VILL.x0 - 6), (VILL.x1 + 6) - x, z - (VILL.z0 - 6), (VILL.z1 + 6) - z) / 6);
       h = h * (1 - w) + 20 * w;
     }
-    // 果园遗迹平地
+    // orchard ruins flat ground
     const doo = dist(x, z, ORCH.x, ORCH.z);
     if (doo < ORCH.r + 4) { const w = 1 - ss(ORCH.r - 2, ORCH.r + 4, doo); h = h * (1 - w) + 20 * w; }
     return Math.max(3, Math.min(W.h - 12, Math.round(h)));
   }
 
-  /* ---------------- 基础工具 ---------------- */
+  /* ---------------- basic helpers ---------------- */
   const set = (x, y, z, b) => W.set(x, y, z, b);
   const get = (x, y, z) => W.get(x, y, z);
   function box(x0, y0, z0, x1, y1, z1, b, hollow) {
@@ -94,7 +94,7 @@
     }
   }
   function columnTop(x, z) { for (let y = W.h - 1; y >= 0; y--) if (get(x, y, z)) return y; return 0; }
-  /* 地面高度（跳过树、植物、果实） */
+  /* ground height (skips trees, plants and fruit) */
   const TREELIKE = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
   function gy(x, z) {
     for (let y = W.h - 1; y > 0; y--) {
@@ -107,7 +107,7 @@
     return 0;
   }
 
-  /* ---------------- 树 ---------------- */
+  /* ---------------- trees ---------------- */
   function tree(x, z, kind) {
     const y = gy(x, z);
     if (get(x, y, z) !== 1 && get(x, y, z) !== 23 && get(x, y, z) !== 4) return;
@@ -150,7 +150,7 @@
     }
   }
 
-  /* 在树干的侧面挂果实（区域扫描 + 乱序） */
+  /* hang fruit on the sides of a trunk (region scan + shuffled order) */
   function onTrunk(fruitId, x0, z0, x1, z1, trunkBlock, count) {
     const cols = [];
     for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) cols.push((z << 8) | x);
@@ -176,65 +176,65 @@
     return placed;
   }
 
-  /* ---------------- 星坠堡 ---------------- */
+  /* ---------------- Starfall Keep ---------------- */
   function castle() {
     const cx = 78, cz = 106, base = 22;
-    // 岛基
+    // island base
     for (let z = cz - 13; z <= cz + 13; z++) for (let x = cx - 13; x <= cx + 13; x++) {
       const d = dist(x, z, cx, cz);
       if (d > 13) continue;
       const top = 21 + (1 - ss(8, 13, d)) * 2;
       for (let y = 6; y <= top; y++) set(x, y, z, y > top - 2 ? (y === top ? 1 : 3) : 3);
     }
-    // 城墙
+    // curtain walls
     for (let a = 0; a < 6.283; a += 0.02) {
       const x = Math.round(cx + Math.cos(a) * 9.5), z = Math.round(cz + Math.sin(a) * 9.5);
-      if (a > 1.1 && a < 2.0) continue;              // 南门缺口
+      if (a > 1.1 && a < 2.0) continue;              // gap for the south gate
       for (let y = base; y <= base + 5; y++) set(x, y, z, 11);
-      if ((Math.round(a * 10) % 6) < 3) set(x, base + 6, z, 11);   // 城齿
+      if ((Math.round(a * 10) % 6) < 3) set(x, base + 6, z, 11);   // battlements
     }
-    // 院内地面
+    // courtyard floor
     for (let z = cz - 9; z <= cz + 9; z++) for (let x = cx - 9; x <= cx + 9; x++) {
       if (dist(x, z, cx, cz) > 9.5) continue;
       const y = gy(x, z);
       if (y < base) { set(x, y, z, 17); for (let yy = y + 1; yy < base; yy++) set(x, yy, z, 3); }
     }
-    // 四塔
+    // the four towers
     for (const [tx, tz] of [[cx - 8, cz - 8], [cx + 8, cz - 8], [cx - 8, cz + 8], [cx + 8, cz + 8]]) {
       cyl(tx, tz, 0, 3.2, base, base + 11, 11, true);
-      for (let y = base; y <= base + 11; y++) set(tx, y, tz, 0);       // 中空
+      for (let y = base; y <= base + 11; y++) set(tx, y, tz, 0);       // hollow interior
       for (let r = 0; r <= 3; r++) for (let a = 0; a < 6.283; a += 0.2)
         set(Math.round(tx + Math.cos(a) * r), base + 12 + r, Math.round(tz + Math.sin(a) * r), 13);
       for (let y = base + 2; y <= base + 10; y += 3) {
         set(tx + 3, y, tz, 14); set(tx - 3, y, tz, 14); set(tx, y, tz + 3, 14); set(tx, y, tz - 3, 14);
       }
     }
-    // 主塔（钟塔）
+    // the keep tower (bell tower)
     box(cx - 4, base, cz - 4, cx + 4, base + 14, cz + 4, 11, true);
     for (let y = base + 1; y <= base + 13; y++) for (let z = cz - 3; z <= cz + 3; z++) for (let x = cx - 3; x <= cx + 3; x++) set(x, y, z, 0);
     box(cx - 3, base, cz - 3, cx + 3, base, cz + 3, 17);
-    box(cx - 3, base + 7, cz - 3, cx + 3, base + 7, cz + 3, 17);   // 楼层
+    box(cx - 3, base + 7, cz - 3, cx + 3, base + 7, cz + 3, 17);   // storeys
     for (let r = 0; r <= 5; r++) for (let a = 0; a < 6.283; a += 0.18)
       set(Math.round(cx + Math.cos(a) * r), base + 15 + r, Math.round(cz + Math.sin(a) * r), 13);
-    set(cx, base + 20, cz, 14); set(cx, base + 19, cz, 19);        // 钟（金 + 辉石）
+    set(cx, base + 20, cz, 14); set(cx, base + 19, cz, 19);        // the bell (gold + glowstone)
     for (let y = base + 2; y <= base + 13; y += 3) {
       for (let z = cz - 4; z <= cz + 4; z += 4) { set(cx - 4, y, z, 14); set(cx + 4, y, z, 14); }
       for (let x = cx - 4; x <= cx + 4; x += 4) { set(x, y, cz - 4, 14); set(x, y, cz + 4, 14); }
     }
-    // 桥（南门 → 南岸）
+    // bridge (south gate -> south shore)
     for (let z = cz + 9; z <= cz + 24; z++) for (let x = cx - 2; x <= cx + 2; x++) { set(x, base - 1, z, 11); set(x, base, z, 17); }
     for (let z = cz + 9; z <= cz + 24; z++) { set(cx - 2, base, z, 0); set(cx + 2, base, z, 0); set(cx - 2, base + 1, z, 12); set(cx + 2, base + 1, z, 12); }
-    // 温室（东南）
+    // greenhouse (south-east)
     const gx = cx + 6, gz = cz + 6;
     box(gx - 2, base, gz - 2, gx + 2, base + 4, gz + 2, 21, true);
     set(gx, base + 1, gz, 14);
     set(gx - 1, base + 1, gz - 1, N.FRUIT_BLOCK_REV['owlberry']);
     set(gx + 1, base + 1, gz + 1, N.FRUIT_BLOCK_REV['unicorncherry']);
-    // 地窖入口（标记）
+    // cellar entrance (marked)
     set(cx, base, cz + 4, 78);
   }
 
-  /* ---------------- 灯笼镇 + 主果窖 ---------------- */
+  /* ---------------- Lanternrow + the main cellar ---------------- */
   function village() {
     const spots = [[124, 122], [132, 120], [142, 124], [148, 134], [144, 144], [132, 146], [122, 138]];
     for (const [hx, hz] of spots) {
@@ -243,31 +243,31 @@
       box(hx - 2, y + 1, hz - 2, hx + 2, y + 1, hz + 2, 26);
       for (let r = 0; r <= 4; r++) for (let a = 0; a < 6.283; a += 0.25)
         set(Math.round(hx + Math.cos(a) * r), y + 5 + r, Math.round(hz + Math.sin(a) * r), 13);
-      // 门 + 窗 + 灯
+      // doors + windows + lamps
       const dx = hx < 136 ? 1 : -1;
       set(hx + dx * 3, y + 2, hz, 0); set(hx + dx * 3, y + 3, hz, 0);
       set(hx, y + 3, hz + 3, 21); set(hx + 3, y + 3, hz, 21);
       set(hx + dx * 5, y + 1, hz, 6); set(hx + dx * 5, y + 2, hz, 6); set(hx + dx * 5, y + 3, hz, 14);
-      // 屋内灯
+      // interior lamps
       set(hx, y + 4, hz, 14);
     }
-    // 主果窖
+    // the main fruit cellar
     const cx = 136, cz = 134, y = 20;
     box(cx - 4, y, cz - 4, cx + 4, y + 4, cz + 4, 12, true);
     box(cx - 3, y, cz - 3, cx + 3, y, cz + 3, 17);
     for (let r = 0; r <= 5; r++) for (let a = 0; a < 6.283; a += 0.22)
       set(Math.round(cx + Math.cos(a) * r), y + 5 + Math.round(r * 0.8), Math.round(cz + Math.sin(a) * r), 11);
     set(cx, y + 2, cz - 4, 0); set(cx, y + 3, cz - 4, 0);
-    set(cx, y + 1, cz, 78);                       // ★ 果窖箱（交互点）
+    set(cx, y + 1, cz, 78);                       // * the cellar chest (interaction point)
     set(cx - 2, y + 2, cz - 4, 14); set(cx + 2, y + 2, cz - 4, 14);
     set(cx, y + 4, cz, 14);
-    // 灯笼路
+    // the lantern road
     for (let x = 118; x <= 150; x += 6) {
       const z = 128;
       set(x, 21, z, 6); set(x, 22, z, 6); set(x, 23, z, 14);
       for (let xx = x; xx < x + 6 && xx <= 150; xx++) set(xx, 21, z, 17);
     }
-    // 镇外果园
+    // orchards outside town
     for (let i = 0; i < 40; i++) {
       const x = 116 + (rnd() * 36 | 0), z = 106 + (rnd() * 22 | 0);
       if (dist(x, z, LAKE.x, LAKE.z) < LAKE.r + 2) continue;
@@ -276,7 +276,7 @@
     }
   }
 
-  /* ---------------- 果园遗迹 / 母树 ---------------- */
+  /* ---------------- orchard ruins / the mother tree ---------------- */
   function orchard() {
     const cx = 24, cz = 104;
     for (let a = 0; a < 6.283; a += 0.06) {
@@ -285,48 +285,48 @@
       const hgt = 20 + (rnd() < 0.4 ? 0 : (rnd() * 3 | 0));
       for (let y = 19; y <= hgt; y++) set(x, y, z, rnd() < 0.5 ? 11 : 3);
     }
-    // 母树
+    // the mother tree
     for (let y = 21; y <= 30; y++) { set(cx, y, cz, 6); set(cx + 1, y, cz, 6); set(cx, y, cz + 1, 6); }
     blob(cx, 32, cz, 6, 3.5, 6, 7);
     blob(cx - 3, 30, cz + 2, 3, 2, 3, 27);
     set(cx, 26, cz + 1, 14);
-    // 遗迹里的树与丝莓
+    // trees and silkberries among the ruins
     for (let i = 0; i < 14; i++) {
       const a = rnd() * 6.28, r = rnd() * 10;
       tree(Math.round(cx + Math.cos(a) * r), Math.round(cz + Math.sin(a) * r), rnd() < 0.3 ? 'pine' : 'oak');
     }
   }
 
-  /* ---------------- 蝙蝠洞 ---------------- */
+  /* ---------------- bat cave ---------------- */
   function cave() {
     const cx = 28, cz = 32;
-    blob(cx, 19, cz, 9, 4.5, 8, 0);                 // 掏空
+    blob(cx, 19, cz, 9, 4.5, 8, 0);                 // hollow it out
     blob(cx - 4, 18, cz + 3, 4, 3, 4, 0);
-    // 洞口（东南侧）
+    // cave mouth (south-east side)
     for (let y = 17; y <= 22; y++) for (let z = cz + 6; z <= cz + 12; z++) for (let x = cx - 1; x <= cx + 2; x++)
       if (get(x, y, z)) set(x, y, z, 0);
-    // 地面
+    // floor
     for (let z = cz - 8; z <= cz + 8; z++) for (let x = cx - 9; x <= cx + 9; x++) {
       if (dist(x, z, cx, cz) > 9.2) continue;
       for (let y = 15; y <= 17; y++) if (!get(x, y, z)) set(x, y, z, 3);
     }
-    // 顶上的蝙蝠果（从洞内向上找洞顶）
+    // batfruit on the ceiling (scan up from inside to find the roof)
     for (let i = 0; i < 34; i++) {
       const a = rnd() * 6.28, r = rnd() * 7;
       const x = Math.round(cx + Math.cos(a) * r), z = Math.round(cz + Math.sin(a) * r);
       let y = 18; while (y < 30 && !get(x, y, z)) y++;
       if (get(x, y, z) && y > 19 && y < 28 && !get(x, y - 1, z)) set(x, y - 1, z, N.FRUIT_BLOCK_REV['batfruit']);
     }
-    // 丝莓（洞深处）
+    // silkberries (deep in the cave)
     for (let i = 0; i < 5; i++) {
       const x = cx - 8 + (rnd() * 4 | 0), z = cz - 6 + (rnd() * 6 | 0), y = 19 + (rnd() * 3 | 0);
       if (!get(x, y, z)) set(x, y, z, N.FRUIT_BLOCK_REV['silkberry']);
     }
   }
 
-  /* ---------------- 湖底：沉塔 / 人鱼村 ---------------- */
+  /* ---------------- lakebed: sunken tower / mermaid village ---------------- */
   function lakebed() {
-    // 沉塔
+    // sunken tower
     const tx = 66, tz = 118;
     box(tx - 3, 6, tz - 3, tx + 3, 15, tz + 3, 12, true);
     for (let y = 7; y <= 14; y += 3) { set(tx - 3, y, tz, 21); set(tx + 3, y, tz, 21); set(tx, y, tz - 3, 21); set(tx, y, tz + 3, 21); }
@@ -335,12 +335,12 @@
       set(tx + dx, 10, tz + dz, N.FRUIT_BLOCK_REV['merrow']);
       set(tx + dx, 13, tz + dz, N.FRUIT_BLOCK_REV['merrow']);
     }
-    // 人鱼村
+    // mermaid village
     for (const [hx, hz] of [[90, 120], [96, 116], [94, 124], [88, 126]]) {
       box(hx - 2, 7, hz - 2, hx + 2, 10, hz + 2, 3, true);
       set(hx, 11, hz, 22); set(hx - 2, 9, hz, 21);
     }
-    // 水草 / 水母田
+    // kelp / jellyfish fields
     for (let i = 0; i < 260; i++) {
       const a = rnd() * 6.28, r = rnd() * LAKE.r;
       const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
@@ -353,7 +353,7 @@
       const y = gy(x, z);
       if (y < SEA - 2 && !get(x, y + 1, z)) set(x, y + 1, z, N.FRUIT_BLOCK_REV['jellybloom']);
     }
-    // 岸边水獭果灌木
+    // otterkin bushes on the shore
     for (let i = 0; i < 22; i++) {
       const a = rnd() * 6.28, r = LAKE.r - 1 + rnd() * 3;
       const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
@@ -361,7 +361,7 @@
     }
   }
 
-  /* ---------------- 云顶浮岛 ---------------- */
+  /* ---------------- Cloudspire isles ---------------- */
   function sky() {
     for (const isle of N.SKY_ISLES) {
       const { x, z, r, top } = isle;
@@ -374,7 +374,7 @@
       }
       if (isle.nest) {
         for (let i = 0; i < 5; i++) tree(x - 4 + (rnd() * 8 | 0), z - 4 + (rnd() * 8 | 0), 'pine');
-        // 龙巢：骨堆 + 余烬 + 焰心果
+        // dragon nest: bone heap + embers + embercore fruit
         for (let a = 0; a < 6.283; a += 0.2) {
           const rr = 4 + rnd() * 2;
           const bx = Math.round(x + Math.cos(a) * rr), bz = Math.round(z + Math.sin(a) * rr);
@@ -388,7 +388,7 @@
         for (let i = 0; i < (r > 5 ? 5 : 2); i++) tree(x - r + 2 + (rnd() * (2 * r - 4) | 0), z - r + 2 + (rnd() * (2 * r - 4) | 0), 'pine');
       }
     }
-    // 云：多团叠加的蓬松云，位于树冠之上
+    // clouds: several overlapping puffy blobs, above the canopy
     for (let i = 0; i < 16; i++) {
       const x = 10 + rnd() * 140, z = 10 + rnd() * 140, y = 38 + rnd() * 5;
       if (dist(x, z, ISLE.x, ISLE.z) < 20) continue;
@@ -401,9 +401,9 @@
     }
   }
 
-  /* ---------------- 森林 / 植物 / 果实 ---------------- */
+  /* ---------------- forest / plants / fruit ---------------- */
   function forest() {
-    /* 网格 + 抖动种树：保证树冠之间仍能看到地面 */
+    /* jittered grid planting: ground stays visible between canopies */
     for (let z = 7; z < 74; z += 3) for (let x = 7; x < 154; x += 3) {
       if (dist(x, z, LAKE.x, LAKE.z) < LAKE.r + 2) continue;
       if (dist(x, z, 78, 106) < 16) continue;
@@ -420,14 +420,14 @@
         else tree(tx, tz, rnd() < 0.28 ? 'pine' : 'oak');
       }
     }
-    // 湖边柳树
+    // willows by the lake
     for (let a = 0; a < 6.283; a += 0.22) {
       const r = LAKE.r + 1.5 + rnd();
       const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
       if (z < 74 || x < 6 || x > 153) continue;
       if (rnd() < 0.55) tree(x, z, 'willow');
     }
-    // 蘑菇圈
+    // the mushroom ring
     const gx = 60, gz = 56;
     for (let a = 0; a < 6.283; a += 0.13) {
       const x = Math.round(gx + Math.cos(a) * 9), z = Math.round(gz + Math.sin(a) * 9);
@@ -440,7 +440,7 @@
       const y = gy(x, z);
       if (get(x, y, z) === 1 && !get(x, y + 1, z)) set(x, y + 1, z, rnd() < 0.6 ? 60 : 61);
     }
-    // 森林地面：荧光菇 / 发光种子 / 弹弹菇
+    // forest floor: glowcaps / glowseeds / leapers
     for (let i = 0; i < 900; i++) {
       const x = 8 + (rnd() * 144 | 0), z = 8 + (rnd() * 66 | 0);
       if (dist(x, z, LAKE.x, LAKE.z) < LAKE.r + 1) continue;
@@ -449,7 +449,7 @@
       const r = rnd();
       set(x, y + 1, z, r < 0.35 ? 60 : r < 0.72 ? 62 : r < 0.88 ? 64 : 61);
     }
-    // 倒木 + 鹿茸菌果
+    // fallen logs + stagcap fruit
     for (let i = 0; i < 16; i++) {
       const x = 14 + (rnd() * 130 | 0), z = 12 + (rnd() * 56 | 0);
       if (dist(x, z, LAKE.x, LAKE.z) < LAKE.r + 3) continue;
@@ -462,28 +462,28 @@
         if (rnd() < 0.4) set(xx, y + 2, zz, N.FRUIT_BLOCK_REV['stagcap']);
       }
     }
-    // 猫头鹰果：老橡树洞旁
+    // owlberry: beside hollow old oaks
     onTrunk('owlberry', 10, 10, 150, 70, 6, 24);
-    // 银角樱：圣林
+    // unicorn cherry: the Hoar Grove
     onTrunk('unicorncherry', GROVE.x - 17, GROVE.z - 17, GROVE.x + 17, GROVE.z + 17, 22, 20);
-    // 萤蛾果：蘑菇圈与林间
+    // mothpear: the mushroom ring and woodland edges
     for (let i = 0; i < 70; i++) {
       const a = rnd() * 6.28, r = rnd() * 12;
       const x = Math.round(gx + Math.cos(a) * r), z = Math.round(gz + Math.sin(a) * r);
       const y = gy(x, z);
       if (get(x, y, z) === 1 && !get(x, y + 1, z)) set(x, y + 1, z, N.FRUIT_BLOCK_REV['glowmoth']);
     }
-    // 狐李：镇外果园 + 果园遗迹
+    // vulpine plum: orchards outside town + the old orchard
     onTrunk('vulpine', 110, 100, 152, 150, 6, 10);
     onTrunk('vulpine', 14, 94, 38, 116, 6, 6);
-    // 灰熊无花果：北岭
+    // bruin fig: Ashscale Ridge
     for (let i = 0; i < 26; i++) {
       const a = rnd() * 6.28, r = rnd() * 18;
       const x = Math.round(MTN.x + Math.cos(a) * r), z = Math.round(MTN.z + Math.sin(a) * r);
       const y = gy(x, z);
       if (y > SEA + 6 && !get(x, y + 1, z) && [3, 15, 24, 2, 1].indexOf(get(x, y, z)) >= 0) set(x, y + 1, z, N.FRUIT_BLOCK_REV['bruinfig']);
     }
-    // 灰雾果：边界
+    // veilberry: the boundary
     for (let i = 0; i < 10; i++) {
       const side = i % 4;
       let x, z;
@@ -494,17 +494,17 @@
       const y = gy(x, z);
       if (y > SEA && !get(x, y + 1, z)) set(x, y + 1, z, N.FRUIT_BLOCK_REV['veilberry']);
     }
-    // 窖树种：母树下一颗 + 镇子附近一颗
+    // cellar stones: one under the mother tree + one near town
     for (const [x, z] of [[ORCH.x + 2, ORCH.z + 2], [116, 112]]) {
       const y = gy(x, z);
       if (get(x, y, z) === 1 && !get(x, y + 1, z)) set(x, y + 1, z, 65);
     }
   }
 
-  /* ---------------- 主入口 ---------------- */
+  /* ---------------- entry point ---------------- */
   function generate(world, s) {
     W = world; seed = s | 0; rngS = seed + 12345;
-    // 地形
+    // terrain
     for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) {
       const h = terrainH(x, z);
       const nearWater = h <= SEA + 1;
@@ -518,14 +518,14 @@
       for (let y = h + 1; y <= SEA; y++) set(x, y, z, 5);
     }
     cave(); castle(); village(); orchard(); lakebed(); sky(); forest();
-    // 边界：把最外圈压平并立起“灰雾”石柱
+    // boundary: flatten the outermost ring and raise the Grey Veil pillars
     for (let i = 0; i < W.w; i += 7) {
       for (const [x, z] of [[i, 4], [i, W.d - 5], [4, i], [W.w - 5, i]]) {
         const y = gy(x, z);
         for (let yy = y; yy <= y + 6; yy++) set(x, yy, z, 16);
       }
     }
-    // 出生点：灯笼镇空地
+    // spawn: the Lanternrow clearing
     let sx = 133, sz = 129;
     for (let i = 0; i < 400; i++) {
       const y = gy(sx, sz);

@@ -1,4 +1,4 @@
-/* 一次启动，多张截图。用法: node test/shots.js [tag] */
+/* one boot, many screenshots. Usage: node test/shots.js [tag] */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
@@ -53,7 +53,7 @@ const SHOTS = [
         g.player.x = a[0]; g.player.z = a[2];
         g.player.y = a[1];
         if (c.safe !== undefined) {
-          // 螺旋搜索一块“头顶无树”的空地
+          // spiral-search for a clearing with no canopy overhead
           const TREE = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
           const topSolid = (x, z) => { for (let k = 46; k > 0; k--) { const b = g.world.get(x, k, z); if (b && b < 40 && g.world.solidAt(x, k, z)) return k; } return -1; };
           const ground = (x, z) => { for (let k = 46; k > 0; k--) { const b = g.world.get(x, k, z); if (b && b < 40 && !TREE[b] && g.world.solidAt(x, k, z)) return k; } return -1; };

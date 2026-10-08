@@ -1,4 +1,4 @@
-/* 地形高度图 ASCII 检查 */
+/* ASCII inspection of the terrain heightmap */
 const path = require('path');
 global.window = {};
 for (const f of ['data/fruits.js', 'data/world.js', 'data/creatures.js', 'src/world.js', 'src/worldgen.js']) {

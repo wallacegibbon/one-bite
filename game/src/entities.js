@@ -1,12 +1,12 @@
 /* ==========================================================================
- *  entities.js —— 玩家（体素 AABB 物理 + 变形形态）/ 生物 AI / 粒子
+ *  entities.js -- player (voxel AABB physics + transformed forms) / creature AI / particles
  * ========================================================================== */
 (function (N) {
   const M4 = N.M4;
 
   const HUMAN = { cn: '人形', size: [0.62, 1.8], speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55 };
 
-  /* ============================ 玩家 ============================ */
+  /* ============================ player ============================ */
   class Player {
     constructor(world) {
       this.world = world;
@@ -15,13 +15,13 @@
       this.yaw = 0; this.pitch = 0;
       this.grounded = false;
       this.form = null;            // fruitId
-      this.formT = 0;              // 剩余时间
+      this.formT = 0;              // time remaining
       this.formMax = 1;
       this.air = 18;
-      this.vital = 5;              // 活力
-      this.fright = 0;             // 惊惧 0..1
+      this.vital = 5;              // vitality
+      this.fright = 0;             // fright 0..1
       this.inWater = false; this.headWater = false;
-      this.moveAmt = 0;            // 本帧水平位移（动画用）
+      this.moveAmt = 0;            // horizontal movement this frame (drives animation)
       this.bob = 0;
       this.lastRevert = 0;
       this.stamina = 1;
@@ -51,7 +51,7 @@
             if (this.world.solidAt(xx, yy, zz)) return true;
       return false;
     }
-    /* 沿单轴移动，返回是否撞墙 */
+    /* move along one axis; returns whether it hit a wall */
     axis(a, amt) {
       if (!amt) return false;
       const nx = a === 'x' ? this.x + amt : this.x;
@@ -59,7 +59,7 @@
       const nz = a === 'z' ? this.z + amt : this.z;
       if (!this.hits(nx, ny, nz)) { this.x = nx; this.y = ny; this.z = nz; return false; }
       const s = this.size(), hw = s[0] / 2;
-      // 贴面：按移动方向找接触面
+      // snap to face: find the contact plane along the movement direction
       if (a === 'y') {
         if (amt < 0) {
           let best = this.y;
@@ -100,7 +100,7 @@
       this.inWater = W.liquidAt(cx, cyMid, cz) || W.liquidAt(cx, cyFeet, cz);
       const canBreathe = f.breatheAir === false;
 
-      // ---- 呼吸 ----
+      // ---- breathing ----
       if (this.headWater && !canBreathe) {
         this.air -= dt * (this.fright > 0.4 ? 1.6 : 1);
         if (this.air <= 0) { this.air = 0; game.damage(0.55 * dt, '溺水'); }
@@ -108,7 +108,7 @@
         this.air = Math.min(canBreathe ? 999 : 18, this.air + dt * (canBreathe ? 999 : 6));
       }
 
-      // ---- 意图速度 ----
+      // ---- intended velocity ----
       const sprint = inp.sprint && this.air > 0 && !this.inWater;
       let speed = 4.7 * (f.speed || 1) * (sprint ? 1.45 : 1);
       if (this.inWater) speed *= (f.swim || 0.62);
@@ -128,7 +128,7 @@
       this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt / Math.max(speed, 1));
       this.vz += (dz * speed - this.vz) * Math.min(1, accel * dt / Math.max(speed, 1));
 
-      // ---- 垂直 ----
+      // ---- vertical ----
       if (fly) {
         const up = inp.jump ? f.fly : 0, down = inp.sneak ? f.fly * 0.75 : 0;
         this.vy += (up - down) * dt * 1.9;
@@ -150,7 +150,7 @@
         if (inp.jump && this.grounded) { this.vy = 8.3 * (f.jump || 1); this.grounded = false; }
       }
 
-      // ---- 位移（分步 + 自动登阶）----
+      // ---- displacement (sub-stepped + auto step-up) ----
       const step = f.step || 0;
       const wasGrounded = this.grounded;
       this.grounded = false;
@@ -158,7 +158,7 @@
       const steps = Math.max(1, Math.ceil((Math.hypot(this.vx, this.vz) * dt) / 0.25));
       for (let i = 0; i < steps; i++) {
         const sdt = dt / steps;
-        // 自动登阶
+        // auto step-up
         if (step > 0 && (wasGrounded || this.grounded) && !fly && !this.inWater) {
           const ox = this.x, oz = this.z;
           let hit = this.axis('x', this.vx * sdt);
@@ -186,7 +186,7 @@
       this.moveAmt = moved;
       this.bob += moved * 1.6;
 
-      // ---- 边界：灰雾墙 ----
+      // ---- boundary: the Grey Veil ----
       const B = 6;
       if (this.x < B || this.x > W.w - B || this.z < B || this.z > W.d - B) {
         game.onVeil(this);
@@ -196,12 +196,12 @@
       }
       if (this.y < -2) { game.damage(1.2, '坠落'); this.y = 30; this.vy = 0; }
 
-      // ---- 惊惧衰减 ----
+      // ---- fright decay ----
       this.fright = Math.max(0, this.fright - dt * 0.12);
     }
   }
 
-  /* ============================ 生物 ============================ */
+  /* ============================ creatures ============================ */
   function groundY(w, x, z, from) {
     for (let y = from; y > 0; y--) if (w.solidAt(x, y, z)) return y + 1;
     return 1;
@@ -245,7 +245,7 @@
       const dxp = pl.x - this.x, dzp = pl.z - this.z, dyp = pl.y - this.y;
       const dp = Math.sqrt(dxp * dxp + dzp * dzp + dyp * dyp);
 
-      // 时段
+      // time of day
       const night = game.night;
       const nocturnal = sp.active === 'night';
       const sleeping = nocturnal && night < 0.35;
@@ -279,7 +279,7 @@
       }
       this.alarm = Math.max(0, this.alarm - dt * 0.3);
 
-      // 移动
+      // movement
       const dx = tgtX - this.x, dz = tgtZ - this.z;
       const d = Math.hypot(dx, dz);
       let spd = 0;
@@ -296,7 +296,7 @@
         if (this.isAquatic()) {
           if (world.liquidAt(Math.floor(mx), Math.floor(this.y), Math.floor(mz))) { this.x = mx; this.z = mz; }
           else {
-            // 朝湖心
+            // towards the lake centre
             const lk = N.POIS.find(p => p.id === 'sunktower');
             const ax = lk.x - this.x, az = lk.z - this.z, al = Math.hypot(ax, az) || 1;
             this.x += ax / al * spd * dt; this.z += az / al * spd * dt;
@@ -311,7 +311,7 @@
       }
       this.speed = spd;
 
-      // 高度
+      // altitude
       if (this.isFlyer()) {
         const base = sleeping ? groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 6)) + 1.2
           : (sp.id === 'dragon' || sp.id === 'phoenix' ? this.flyY : this.flyY);
@@ -319,7 +319,7 @@
         const target = base + bob;
         this.y += (target - this.y) * Math.min(1, dt * 2.2);
         if (sp.id === 'dragon') {
-          // 绕巢飞行
+          // circling the nest
           const nest = N.POIS.find(p => p.id === 'nest');
           const ang = this.t * 0.16 + this.phase;
           const rr = 22 + Math.sin(this.t * 0.2 + this.phase) * 8;
@@ -339,12 +339,12 @@
         this.y += (gy - this.y) * Math.min(1, dt * 9);
       }
 
-      // 接触效果
+      // contact effects
       if (dp < (this.sp.scale || 0.2) * 8 + 0.8) {
         if (this.state === 'chase') game.onCreatureTouch(this, dt);
-        else if (this.sp.aura && (pl.formDef.aura || 0) > 0) { /* 互不干涉 */ }
+        else if (this.sp.aura && (pl.formDef.aura || 0) > 0) { /* they ignore each other */ }
       }
-      // 威吓：玩家形态 aura 让低级生物逃开
+      // intimidation: the player's form aura makes lesser creatures flee
       const aura = pl.formDef.aura || 0;
       if (aura > 0 && dp < aura && att !== 'hostile' && att !== 'self' && this.state !== 'flee' && !this.isFlyer()) {
         this.state = 'flee'; this.alarm = 1;
@@ -352,7 +352,7 @@
     }
   }
 
-  /* ============================ 粒子 ============================ */
+  /* ============================ particles ============================ */
   class Particles {
     constructor(gl, max) {
       this.gl = gl; this.max = max || 900; this.n = 0;

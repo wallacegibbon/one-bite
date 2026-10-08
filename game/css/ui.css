@@ -1,4 +1,4 @@
-/* ============ 万灵果园 · UI ============ */
+/* ============ FRUTARIA · UI ============ */
 :root {
   --gold: #f0dcae;
   --gold-dim: rgba(240, 220, 174, .55);
@@ -101,7 +101,7 @@ button.ghost { background: transparent; }
 #btnRow { position: absolute; right: 16px; bottom: 14px; display: flex; gap: 6px; align-items: center; }
 #btnRow span { margin-left: 8px; font-size: 11px; }
 
-/* ---------- 模态 ---------- */
+/* ---------- modals ---------- */
 #modalRoot { position: absolute; inset: 0; background: rgba(4,5,8,.62); opacity: 0; pointer-events: none; transition: opacity .2s; }
 #modalRoot.on { opacity: 1; pointer-events: auto; }
 .modal {
@@ -134,7 +134,7 @@ button.ghost { background: transparent; }
 .card .lore { font-size: 12px; line-height: 1.6; color: #ded0b4; }
 .card .side { font-size: 11px; color: #d9a08c; margin-top: 4px; }
 
-/* ---------- 开始 ---------- */
+/* ---------- start screen ---------- */
 #start { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, #1b2436 0%, #07090e 70%); z-index: 9; }
 .sInner { text-align: center; width: 520px; }
 .title { font-size: 46px; letter-spacing: .34em; text-indent: .34em; color: #ffe9bd; text-shadow: 0 0 40px rgba(255,210,130,.35); }

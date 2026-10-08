@@ -1,4 +1,4 @@
-/* 真实按键测试：走路 / 跳跃 / 飞行 / 变形计时 / 交互键 */
+/* real key-press test: walk / jump / fly / form timer / interact key */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -15,7 +15,7 @@ const path = require('path');
   await page.waitForFunction('window.game && window.game.ready', { timeout: 120000 });
   await page.evaluate(() => {
     const g = window.game;
-    // 站在灯笼镇空地上
+    // stand on the Lanternrow clearing
     g.player.x = 136.5; g.player.z = 128.5;
     for (let k = 46; k > 0; k--) if (g.world.solidAt(136, k, 128)) { g.player.y = k + 1; break; }
     g.player.yaw = 3.14; g.player.pitch = 0;
@@ -41,7 +41,7 @@ const path = require('path');
   await new Promise(r => setTimeout(r, 900));
   out.push('land ' + JSON.stringify(await P()));
 
-  // 变形为猫头鹰并飞行
+  // transform into an owl and fly
   await page.evaluate(() => {
     const g = window.game;
     g.inv.length = 0; g.addItem('fruit', 'owlberry'); g.sel = 0; g.useSelected();
@@ -54,17 +54,17 @@ const path = require('path');
   await new Promise(r => setTimeout(r, 1200));
   out.push('flyHover ' + JSON.stringify(await P()));
 
-  // 变形计时衰减
+  // the form timer drains
   const t1 = await page.evaluate(() => window.game.player.formT);
   await new Promise(r => setTimeout(r, 1000));
   const t2 = await page.evaluate(() => window.game.player.formT);
   out.push('formT ' + t1.toFixed(1) + ' → ' + t2.toFixed(1));
 
-  // 时间流速：一天多长
+  // time scale: how long a day lasts
   const day = await page.evaluate(() => ({ hour: window.game.hour, len: window.game.constructor.DAY_LEN || 420 }));
   out.push('clock ' + JSON.stringify(day));
 
-  // 灰雾墙边界
+  // the Grey Veil boundary
   await page.evaluate(() => { window.game.player.x = 3; window.game.player.y = 25; window.game.player.z = 80; });
   await page.keyboard.down('w');
   await new Promise(r => setTimeout(r, 1500));

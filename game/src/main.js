@@ -1,5 +1,5 @@
 /* ==========================================================================
- *  main.js —— 引导、输入、主循环
+ *  main.js -- bootstrap, input, main loop
  * ========================================================================== */
 (function (N) {
   const canvas = document.getElementById('view');
@@ -7,7 +7,7 @@
   const ui = new N.UI(game);
   let started = false, last = 0, fpsT = 0, fpsN = 0, fps = 0;
 
-  /* ---------------- 输入 ---------------- */
+  /* ---------------- input ---------------- */
   const keys = {};
   const inp = game.input;
   function setKeys() {
@@ -61,7 +61,7 @@
     e.preventDefault();
   }, { passive: false });
 
-  /* ---------------- 仓库面板点击 ---------------- */
+  /* ---------------- storage panel clicks ---------------- */
   document.getElementById('packItems').addEventListener('click', e => {
     const t = e.target.closest('.item'); if (!t) return;
     game.invSel = +t.dataset.i; game.moveItem('in'); ui.renderCellar();
@@ -78,16 +78,16 @@
   document.getElementById('btnHelp').onclick = () => { game.mode = 'help'; ui.showHelp(true); };
   document.getElementById('btnSave').onclick = () => game.save();
 
-  /* ---------------- 开始 ---------------- */
+  /* ---------------- start ---------------- */
   document.getElementById('btnStart').onclick = () => {
     document.getElementById('start').classList.add('hidden');
     started = true;
     canvas.requestPointerLock();
-    if (localStorage.getItem('frutaria.save.v1')) { /* 自动读档在 init 后 */ }
+    if (localStorage.getItem('frutaria.save.v1')) { /* autoload happens after init */ }
   };
   document.getElementById('btnFresh').onclick = () => { localStorage.removeItem('frutaria.save.v1'); location.reload(); };
 
-  /* ---------------- 启动 ---------------- */
+  /* ---------------- boot ---------------- */
   const QS = new URLSearchParams(location.search);
   const AUTO = QS.has('auto');
   game.init(20261008);

@@ -1,7 +1,7 @@
 /* ==========================================================================
- *  生物数据 —— 对应 docs/03-角色与生物.md
- *  attitude: 对玩家当前形态的态度  self=同种, default=默认
- *  active  : 活动时段  day / night / both / dusk
+ *  Creature data -- mirrors docs/03 (characters & creatures)
+ *  attitude: reaction to the player's current form; self=same species, default=fallback
+ *  active  : active period; day / night / both / dusk
  * ========================================================================== */
 (function (N) {
 

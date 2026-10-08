@@ -1,4 +1,4 @@
-/* 无浏览器冒烟测试：数据 → 生成 → 网格化（假 GL） */
+/* browser-free smoke test: data -> generation -> meshing (fake GL) */
 global.window = global;
 const path = require('path');
 const base = path.join(__dirname, '..');
@@ -44,10 +44,10 @@ console.log('出生点脚下方块', below, '身上方块', at, at === 0 ? 'OK' 
 
 for (const p of F.POIS) console.log('POI', p.cn, 'topY=', w.topAt(p.x, p.z));
 
-// 关键交互点
+// key interaction points
 const chest = w.get(136, 21, 134);
 console.log('果窖箱(136,21,134) =', chest, chest === 78 ? 'OK' : '!!');
 
-// 水检查
+// water check
 let water = 0; for (let i = 0; i < w.blocks.length; i++) if (w.blocks[i] === 5) water++;
 console.log('水方块', water);

@@ -1,19 +1,16 @@
 /* ==========================================================================
- *  万灵果园 · FRUTARIA
- *  果实 / 植物 / 稀有度 数据 —— 这是「设定文档」与「游戏」共用的唯一数据源
- *  对应文档: docs/04-果实与变形系统.md  docs/05-背包与仓库.md
+ *  FRUTARIA
+ *  Fruit / plant / rarity data -- the single source of truth shared by the design docs and the game
+ *  Mirrors: docs/04 (fruit & transformation) and docs/05 (backpack & storage)
  * ========================================================================== */
 (function (N) {
 
   /* ------------------------------------------------------------------
-   * 稀有度：决定背包占用（果格）、腐坏速度
-   * slots  = 一个果实单位占用的“果格”数
-   * fresh  = 采摘后的“失活”时间（秒）；入仓后衰减 ×0.1
+   * Rarity: decides backpack footprint (slots), spoilage and regrowth.
+   * slots  = number of slots one unit of this fruit occupies
+   * fresh  = seconds before a picked fruit goes dormant; in storage it decays at x0.1
+   * regrow = in-game days before the mother tree's roots fruit again (docs/04, docs/07)
    * ------------------------------------------------------------------ */
-  /* slots  = 一个果实单位占用的“果格”数
-   * fresh  = 采摘后的“失活”时间（秒）；入仓后衰减 ×0.1
-   * regrow = 采摘后母树根系重新结果所需的游戏日（docs/04、docs/07）
-   */
   const RARITY = {
     common:    { id: 'common',    cn: '常见', tier: 1, slots: 1,  fresh: 1500, regrow: 1.0, color: [0.60, 0.74, 0.52], ring: '#9ab97e' },
     uncommon:  { id: 'uncommon',  cn: '少见', tier: 2, slots: 2,  fresh: 1200, regrow: 1.5, color: [0.42, 0.70, 0.94], ring: '#6cb4f0' },
@@ -23,31 +20,31 @@
   };
 
   /* ------------------------------------------------------------------
-   * 变形形态能力（form）字段说明
-   *   size        : 碰撞盒 [宽, 高]（米）
-   *   speed       : 陆地移动速度倍率
-   *   jump        : 跳跃力倍率
-   *   swim        : 水中移动倍率
-   *   fly         : 飞行推力（0/undefined = 不能飞）
-   *   glide       : 无动力滑翔（下落速度上限）
-   *   breatheAir  : 是否需要呼吸空气（false = 水下可呼吸）
-   *   airBonus    : 额外闭气秒数
-   *   nightVision : 0~1 暗处提亮
-   *   glow        : 自身发光 [r,g,b]
-   *   stealth     : 生物警觉半径倍率（<1 更不易被发现）
-   *   aura        : 威吓半径（>0 会吓跑低级生物 / 触发警戒）
-   *   climb       : 可爬墙
-   *   dig         : 可破坏软质方块
-   *   fire        : 可喷吐火焰 / 免疫火焰
-   *   purify      : 可净化毒水、治愈
-   *   talk        : 可与某类生物交流（图鉴/任务）
-   *   step        : 自动登阶高度（米）
-   *   fov         : 视野角
-   *   hand        : 第一人称手部模型 id
+   * Form ability fields
+   *   size        : collision box [width, height] in metres
+   *   speed       : land movement multiplier
+   *   jump        : jump force multiplier
+   *   swim        : underwater movement multiplier
+   *   fly         : flight thrust (0 / undefined = cannot fly)
+   *   glide       : unpowered gliding (max fall speed)
+   *   breatheAir  : whether air is required (false = can breathe underwater)
+   *   airBonus    : extra seconds of held breath
+   *   nightVision : 0..1 brightening in the dark
+   *   glow        : self-illumination [r,g,b]
+   *   stealth     : creature alert-radius multiplier (<1 = harder to spot)
+   *   aura        : intimidation radius (>0 scares off lesser creatures / raises alert)
+   *   climb       : can climb walls
+   *   dig         : can break soft blocks
+   *   fire        : can breathe fire / is immune to fire
+   *   purify      : can purify poisoned water and heal
+   *   talk        : can communicate with certain creatures (codex / quests)
+   *   step        : auto step-up height in metres
+   *   fov         : field of view
+   *   hand        : first-person hand model id
    * ------------------------------------------------------------------ */
 
   const FRUITS = [
-    /* ============ 常见 ============ */
+    /* ============ common ============ */
     {
       id: 'owlberry', cn: '猫头鹰果', en: 'Owlberry', rarity: 'common', creature: 'owl',
       habitat: ['whisperwood', 'starfall'], habitatCn: '低语林 · 钟塔树洞',
@@ -82,7 +79,7 @@
       lore: '由发光种子长成的果实。它不给你力量，只给你一小片会飞的灯。'
     },
 
-    /* ============ 少见 ============ */
+    /* ============ uncommon ============ */
     {
       id: 'otterkin', cn: '水獭果', en: 'Otterkin', rarity: 'uncommon', creature: 'otter',
       habitat: ['mirrorlake', 'orchard'], habitatCn: '镜湖浅滩 · 瀑布水潭',
@@ -128,7 +125,7 @@
       lore: '它把毒变成灯。湖底最亮的一圈，就是水母花苞的田。'
     },
 
-    /* ============ 稀有 ============ */
+    /* ============ rare ============ */
     {
       id: 'merrow', cn: '人鱼梨', en: 'Merrow Pear', rarity: 'rare', creature: 'merfolk',
       habitat: ['mirrorlake'], habitatCn: '镜湖 · 沉塔与人鱼村',
@@ -174,7 +171,7 @@
       lore: '熊会把它埋起来，忘了它，然后在春天被它找到。'
     },
 
-    /* ============ 极稀 ============ */
+    /* ============ epic ============ */
     {
       id: 'veilberry', cn: '灰雾果', en: 'Veilwalker Ash-berry', rarity: 'epic', creature: 'veilbeast',
       habitat: ['veil'], habitatCn: '灰雾墙之内',
@@ -198,7 +195,7 @@
       lore: '它不是长出来的，是烧出来的。凤凰死后原处会有一枚温热的核，七天后发芽。'
     },
 
-    /* ============ 传说 ============ */
+    /* ============ legendary ============ */
     {
       id: 'embercore', cn: '焰心果', en: 'Embercore', rarity: 'legendary', creature: 'dragon',
       habitat: ['cloudspire'], habitatCn: '云顶 · 灰烬龙巢',
@@ -223,7 +220,7 @@
   ];
 
   /* ------------------------------------------------------------------
-   * 神奇植物（不改变形态，只做临时增益 / 工具）
+   * Wondrous plants (no form change; temporary buffs / tools)
    * ------------------------------------------------------------------ */
   const PLANTS = [
     { id: 'glowcap', cn: '荧光菇', en: 'Glowcap', rarity: 'common', slots: 1, effect: 'light',
@@ -241,7 +238,7 @@
   ];
 
   /* ------------------------------------------------------------------
-   * 腐坏 / 仓库 / 背包 参数（对应 docs/05-背包与仓库.md）
+   * Spoilage / storage / backpack parameters (mirrors docs/05)
    * ------------------------------------------------------------------ */
   const STORAGE = {
     backpack: { slots: 24, decay: 1.0, upgrades: [
@@ -251,7 +248,7 @@
     ] },
     cellar:    { slots: 96, decay: 0.1, label: '灯笼镇 · 主果窖' },
     treestash: { slots: 24, decay: 0.33, max: 3, label: '窖树（野外仓库）' },
-    pitToSeed: true   // 果实失活后变成“果核”，可种成果实树
+    pitToSeed: true   // a dormant fruit becomes a pit, which can be planted into a fruit tree
   };
 
   N.RARITY = RARITY;

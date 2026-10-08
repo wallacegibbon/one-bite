@@ -1,4 +1,4 @@
-/* 玩法闭环验证：采集 → 背包容量 → 吃果变形 → 复原 → 果窖存取 → 窖树 → 存档 → 任务 */
+/* gameplay loop: harvest -> capacity -> eat & transform -> revert -> cellar in/out -> cellar tree -> save -> quests */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -24,7 +24,7 @@ const path = require('path');
     return r;
   };
 
-  // 1. 采集：把玩家传送到一颗猫头鹰浆果旁边并直接调用 harvest
+  // 1. harvest: teleport next to an owlberry and call harvest directly
   await step('harvest', () => {
     const g = window.game, W = g.world;
     let found = null;
@@ -36,7 +36,7 @@ const path = require('path');
     return { at: found, inv: g.inv.map(i => i.id), used: g.used(), cap: g.cap() };
   });
 
-  // 1b. 重生：把重生计时压到 0，跑一帧后果实方块应长回来
+  // 1b. regrow: force the regrow timer to 0; the fruit block should grow back
   const rg = await step('regrowQueued', () => {
     const g = window.game;
     const r = g.regrow[g.regrow.length - 1];
@@ -51,7 +51,7 @@ const path = require('path');
     return { blockAfter: g.world.get(x, y, z), expect: b, restored: g.world.get(x, y, z) === b, queueLen: g.regrow.length };
   });
 
-  // 2. 容量：塞满背包，验证稀有果占格
+  // 2. capacity: fill the backpack and verify rarity slot costs
   await step('capacity', () => {
     const g = window.game;
     g.inv.length = 0;
@@ -62,7 +62,7 @@ const path = require('path');
     return { added, used: g.used(), cap: g.cap(), slots: g.inv.map(i => i.id + ':' + g.slotOf(i)) };
   });
 
-  // 3. 吃果变形
+  // 3. eat a fruit and transform
   await step('eat', () => {
     const g = window.game;
     g.inv.length = 0;
@@ -72,7 +72,7 @@ const path = require('path');
     return { form: p.form, model: p.modelId, formT: +p.formT.toFixed(1), fly: !!p.formDef.fly, size: p.size(), fov: p.fov() };
   });
 
-  // 4. 变形后能飞：给一个向上的输入跑 1.5 秒
+  // 4. flight after transforming: hold up for 1.5 seconds
   const flyY = await step('fly', () => {
     const g = window.game;
     g.input.jump = true;
@@ -81,7 +81,7 @@ const path = require('path');
   await new Promise(r => setTimeout(r, 1500));
   await step('flyAfter', () => { window.game.input.jump = false; return { y1: +window.game.player.y.toFixed(2), grounded: window.game.player.grounded }; });
 
-  // 5. 复原
+  // 5. revert
   await step('revert', () => {
     const g = window.game;
     g.player.formT = 0.05;
@@ -93,7 +93,7 @@ const path = require('path');
     return { form: p.form, model: p.modelId, size: p.size() };
   });
 
-  // 6. 果窖存取
+  // 6. cellar in / out
   await step('cellar', () => {
     const g = window.game;
     g.inv.length = 0;
@@ -105,7 +105,7 @@ const path = require('path');
     return { inv: g.inv.map(i => i.id), cellar: g.stashes[0].items.map(i => i.id) };
   });
 
-  // 7. 果核 → 种窖树
+  // 7. pit -> plant a cellar tree
   await step('cellartree', () => {
     const g = window.game;
     g.inv.length = 0;
@@ -118,8 +118,8 @@ const path = require('path');
     return { pitCount: pits.length, added: g.stashes.length - before, stashes: g.stashes.map(s => s.id + '@' + [s.x, s.y, s.z].join(',')) };
   });
 
-  // 8. 存档 / 读档
-  // 窖树掠夺：远离必被偷、靠近必保住、主果窖永不被偷
+  // 8. save / load
+  // cellar raids: far away always loses, nearby always defends, the main cellar is never robbed
   await step('raidFar', () => {
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree');
@@ -127,7 +127,7 @@ const path = require('path');
     const cellar = g.stashes[0];
     for (let i = 0; i < 6; i++) tree.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
     for (let i = 0; i < 4; i++) cellar.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
-    g.player.x = tree.x + 400; g.player.z = tree.z + 400;   // 远离
+    g.player.x = tree.x + 400; g.player.z = tree.z + 400;   // far away
     let guard = 0;
     while (tree.items.length > 0 && guard++ < 60) g.dailyRolls();
     return { treeLeft: tree.items.length, cellarLeft: cellar.items.length, rolls: guard, lost: g.stats.raidsLost };
@@ -136,12 +136,12 @@ const path = require('path');
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree');
     for (let i = 0; i < 6; i++) tree.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
-    g.player.x = tree.x + 5; g.player.z = tree.z + 5;       // 靠近
+    g.player.x = tree.x + 5; g.player.z = tree.z + 5;       // standing close
     const before = tree.items.length, scared0 = g.stats.raidsScared || 0;
     for (let i = 0; i < 40; i++) g.dailyRolls();
     return { before, after: tree.items.length, scared: (g.stats.raidsScared || 0) - scared0 };
   });
-  // 猫头鹰邮递
+  // owl post
   await step('postLocked', () => {
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree');
@@ -155,7 +155,7 @@ const path = require('path');
   await step('postUnlockAndSend', () => {
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree'), cellar = g.stashes[0];
-    cellar.items.push({ kind: 'fruit', id: 'owlberry', fresh: 1500, maxFresh: 1500 });   // 解锁钟摆
+    cellar.items.push({ kind: 'fruit', id: 'owlberry', fresh: 1500, maxFresh: 1500 });   // unlock Pendulum
     g.openStashUI(tree); g.stashSel = 0;
     const before = tree.items.length;
     g.postItem();
@@ -199,13 +199,13 @@ const path = require('path');
   await step('save', () => { window.game.save(); const s = localStorage.getItem('frutaria.save.v1'); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
   await step('load', () => { const ok = window.game.load(); return { ok, inv: window.game.inv.map(i => i.id), stashes: window.game.stashes.length }; });
 
-  // 9. 任务
+  // 9. quests
   await step('quests', () => {
     const g = window.game;
     return { quests: g.quests.map(q => q.id + (q.done ? '✔' : '·')), log: g.log.slice(-5).map(l => l.text) };
   });
 
-  // 10. 生物生态：数量 / 阵营
+  // 10. ecology: population / species mix
   await step('ecology', () => {
     const g = window.game;
     const by = {};

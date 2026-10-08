@@ -1,13 +1,13 @@
 /* ==========================================================================
- *  世界数据 —— 对应 docs/02-地图与场景.md
- *  世界尺寸 160 x 160 x 48（原型），正式设定为 1024 x 1024 x 128
- *  坐标: x 向东, z 向南, y 向上。海平面(镜湖面) y = 14
+ *  World data -- mirrors docs/02 (map & scenes)
+ *  World size 160 x 160 x 48 (prototype); the full setting is 1024 x 1024 x 128
+ *  Coordinates: x east, z south, y up. Sea level (Mirrorlake surface) is y = 14
  * ========================================================================== */
 (function (N) {
 
   const WORLD = { w: 160, h: 48, d: 160, sea: 14 };
 
-  /* 区域：kind = rect | circle ；用于地形生成、小地图着色、所在区域提示 */
+  /* Zones: kind = rect | circle; drives terrain, minimap tint and the location label */
   const ZONES = [
     {
       id: 'veil', cn: '灰雾墙', en: 'The Grey Veil', kind: 'border',
@@ -75,7 +75,7 @@
     }
   ];
 
-  /* 兴趣点：小地图标记 + 区域提示 + 任务锚点 */
+  /* Points of interest: minimap marker + location hint + quest anchors */
   const POIS = [
     { id: 'cellar',      cn: '主果窖',     x: 136, z: 134, y: 20, icon: 'chest',  zone: 'lanternrow' },
     { id: 'belltower',   cn: '星坠堡钟塔', x: 78,  z: 104, y: 34, icon: 'tower',  zone: 'starfall' },
@@ -89,7 +89,7 @@
     { id: 'mushring',    cn: '荧光菇环',   x: 60,  z: 56,  y: 20, icon: 'shroom', zone: 'glowglade' }
   ];
 
-  /* 云顶浮岛：x,z,半径,顶面高度 */
+  /* Cloudspire isles: x, z, radius, top surface height */
   const SKY_ISLES = [
     { id: 'nestisle',  x: 40,  z: 20, r: 11, top: 37, nest: true },
     { id: 'phoenix',   x: 96,  z: 12, r: 7,  top: 40 },

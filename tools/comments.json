@@ -1,0 +1,2132 @@
+[
+ {
+  "file": "game/css/ui.css",
+  "line": 1,
+  "text": "/* ============ 万灵果园 · UI ============ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/css/ui.css",
+  "line": 104,
+  "text": "/* ---------- 模态 ---------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/css/ui.css",
+  "line": 137,
+  "text": "/* ---------- 开始 ---------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/creatures.js",
+  "line": 2,
+  "text": "*  生物数据 —— 对应 docs/03-角色与生物.md",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/creatures.js",
+  "line": 3,
+  "text": "*  attitude: 对玩家当前形态的态度  self=同种, default=默认",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/creatures.js",
+  "line": 4,
+  "text": "*  active  : 活动时段  day / night / both / dusk",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 2,
+  "text": "*  万灵果园 · FRUTARIA",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 3,
+  "text": "*  果实 / 植物 / 稀有度 数据 —— 这是「设定文档」与「游戏」共用的唯一数据源",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 4,
+  "text": "*  对应文档: docs/04-果实与变形系统.md  docs/05-背包与仓库.md",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 9,
+  "text": "* 稀有度：决定背包占用（果格）、腐坏速度",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 10,
+  "text": "* slots  = 一个果实单位占用的“果格”数",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 11,
+  "text": "* fresh  = 采摘后的“失活”时间（秒）；入仓后衰减 ×0.1",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 13,
+  "text": "/* slots  = 一个果实单位占用的“果格”数",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 15,
+  "text": "* regrow = 采摘后母树根系重新结果所需的游戏日（docs/04、docs/07）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 26,
+  "text": "* 变形形态能力（form）字段说明",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 27,
+  "text": "*   size        : 碰撞盒 [宽, 高]（米）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 28,
+  "text": "*   speed       : 陆地移动速度倍率",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 29,
+  "text": "*   jump        : 跳跃力倍率",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 30,
+  "text": "*   swim        : 水中移动倍率",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 31,
+  "text": "*   fly         : 飞行推力（0/undefined = 不能飞）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 32,
+  "text": "*   glide       : 无动力滑翔（下落速度上限）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 33,
+  "text": "*   breatheAir  : 是否需要呼吸空气（false = 水下可呼吸）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 34,
+  "text": "*   airBonus    : 额外闭气秒数",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 35,
+  "text": "*   nightVision : 0~1 暗处提亮",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 36,
+  "text": "*   glow        : 自身发光 [r,g,b]",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 37,
+  "text": "*   stealth     : 生物警觉半径倍率（<1 更不易被发现）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 38,
+  "text": "*   aura        : 威吓半径（>0 会吓跑低级生物 / 触发警戒）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 39,
+  "text": "*   climb       : 可爬墙",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 40,
+  "text": "*   dig         : 可破坏软质方块",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 41,
+  "text": "*   fire        : 可喷吐火焰 / 免疫火焰",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 42,
+  "text": "*   purify      : 可净化毒水、治愈",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 43,
+  "text": "*   talk        : 可与某类生物交流（图鉴/任务）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 44,
+  "text": "*   step        : 自动登阶高度（米）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 45,
+  "text": "*   fov         : 视野角",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 46,
+  "text": "*   hand        : 第一人称手部模型 id",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 50,
+  "text": "/* ============ 常见 ============ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 85,
+  "text": "/* ============ 少见 ============ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 131,
+  "text": "/* ============ 稀有 ============ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 177,
+  "text": "/* ============ 极稀 ============ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 201,
+  "text": "/* ============ 传说 ============ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 226,
+  "text": "* 神奇植物（不改变形态，只做临时增益 / 工具）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 244,
+  "text": "* 腐坏 / 仓库 / 背包 参数（对应 docs/05-背包与仓库.md）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/fruits.js",
+  "line": 254,
+  "text": "// 果实失活后变成“果核”，可种成果实树",
+  "kind": "line"
+ },
+ {
+  "file": "game/data/world.js",
+  "line": 2,
+  "text": "*  世界数据 —— 对应 docs/02-地图与场景.md",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/world.js",
+  "line": 3,
+  "text": "*  世界尺寸 160 x 160 x 48（原型），正式设定为 1024 x 1024 x 128",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/world.js",
+  "line": 4,
+  "text": "*  坐标: x 向东, z 向南, y 向上。海平面(镜湖面) y = 14",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/data/world.js",
+  "line": 10,
+  "text": "/* 区域：kind = rect | circle ；用于地形生成、小地图着色、所在区域提示 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/world.js",
+  "line": 78,
+  "text": "/* 兴趣点：小地图标记 + 区域提示 + 任务锚点 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/data/world.js",
+  "line": 92,
+  "text": "/* 云顶浮岛：x,z,半径,顶面高度 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/index.html",
+  "line": 62,
+  "text": "<!-- ============ 仓库 ============ -->",
+  "kind": "html"
+ },
+ {
+  "file": "game/index.html",
+  "line": 84,
+  "text": "<!-- ============ 图鉴 ============ -->",
+  "kind": "html"
+ },
+ {
+  "file": "game/index.html",
+  "line": 90,
+  "text": "<!-- ============ 帮助 ============ -->",
+  "kind": "html"
+ },
+ {
+  "file": "game/index.html",
+  "line": 121,
+  "text": "<!-- ============ 死亡 ============ -->",
+  "kind": "html"
+ },
+ {
+  "file": "game/index.html",
+  "line": 130,
+  "text": "<!-- ============ 开始 ============ -->",
+  "kind": "html"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 2,
+  "text": "*  engine.js —— 自研体素渲染器（WebGL1，零依赖）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 3,
+  "text": "*  · 分块网格 + 面剔除 + 视锥剔除",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 4,
+  "text": "*  · 顶点色 + 烘焙面光照/AO + 自发光层 + 水层 + 粒子 + 程序化天空",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 32,
+  "text": "// 视图矩阵：先绕 Y(yaw) 再绕 X(pitch)，再平移",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 34,
+  "text": "// 相机基向量（世界空间）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 37,
+  "text": "// up = u x f? 计算",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 38,
+  "text": "// 视图矩阵 = R^T * T(-e)",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 59,
+  "text": "/* ------------------------------ GL 工具 ------------------------------ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 78,
+  "text": "/* ------------------------------ 网格构建 ------------------------------ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 81,
+  "text": "/* 一个顶点：位置、颜色[ r,g,b ]、shade(0..1 亮度*AO)、emis(0/1) */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 88,
+  "text": "/* 四边形：4 点 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 97,
+  "text": "/* 带逐顶点 AO 的四边形 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 133,
+  "text": "/* ------------------------------ 着色器 ------------------------------ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 183,
+  "text": "// 月亮",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 188,
+  "text": "// 星星",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 218,
+  "text": "/* ------------------------------ 渲染器 ------------------------------ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 250,
+  "text": "/* ---- 相机 & 环境 ---- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 268,
+  "text": "// 视锥平面",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 271,
+  "text": "// 列主序矩阵的第 i 行 = [m[i], m[4+i], m[8+i], m[12+i]]",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 317,
+  "text": "/* ---- 通用网格绘制 ---- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/engine.js",
+  "line": 376,
+  "text": "/* ---- 粒子 ---- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 2,
+  "text": "*  entities.js —— 玩家（体素 AABB 物理 + 变形形态）/ 生物 AI / 粒子",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 9,
+  "text": "/* ============================ 玩家 ============================ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 18,
+  "text": "// 剩余时间",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 21,
+  "text": "// 活力",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 22,
+  "text": "// 惊惧 0..1",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 24,
+  "text": "// 本帧水平位移（动画用）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 54,
+  "text": "/* 沿单轴移动，返回是否撞墙 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 62,
+  "text": "// 贴面：按移动方向找接触面",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 103,
+  "text": "// ---- 呼吸 ----",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 111,
+  "text": "// ---- 意图速度 ----",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 131,
+  "text": "// ---- 垂直 ----",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 153,
+  "text": "// ---- 位移（分步 + 自动登阶）----",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 161,
+  "text": "// 自动登阶",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 189,
+  "text": "// ---- 边界：灰雾墙 ----",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 199,
+  "text": "// ---- 惊惧衰减 ----",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 204,
+  "text": "/* ============================ 生物 ============================ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 248,
+  "text": "// 时段",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 282,
+  "text": "// 移动",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 299,
+  "text": "// 朝湖心",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 314,
+  "text": "// 高度",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 322,
+  "text": "// 绕巢飞行",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 342,
+  "text": "// 接触效果",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 345,
+  "text": "/* 互不干涉 */ }",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 347,
+  "text": "// 威吓：玩家形态 aura 让低级生物逃开",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/entities.js",
+  "line": 355,
+  "text": "/* ============================ 粒子 ============================ */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 2,
+  "text": "*  game.js —— 游戏状态：时间/昼夜、果实背包、仓库、变形、任务、交互",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 7,
+  "text": "// 一个游戏日 = 7 分钟真实时间",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 18,
+  "text": "// 从早上 7 点开始",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 21,
+  "text": "// 背包",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 22,
+  "text": "// 仓库（第一个是主果窖）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 23,
+  "text": "// 种植生长",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 24,
+  "text": "// 果实重生",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 25,
+  "text": "// 猫头鹰邮递在途",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 26,
+  "text": "// 方块改动（存档用）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 27,
+  "text": "// 图鉴",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 32,
+  "text": "// 射线指向的方块",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 52,
+  "text": "/* ------------------------- 初始化 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 58,
+  "text": "// 仓库",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 60,
+  "text": "// 出生",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 64,
+  "text": "// 生物",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 66,
+  "text": "// 任务",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 83,
+  "text": "/* 渐进网格化（加载时调用） */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 146,
+  "text": "/* ------------------------- 时间 / 环境 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 151,
+  "text": "// 太阳高度",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 168,
+  "text": "// 灰雾墙",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 181,
+  "text": "/* ------------------------- 日志 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 188,
+  "text": "/* ------------------------- 背包 / 仓库 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 189,
+  "text": "/* 背包容量 = 基础 24 + 已获得的果袋；银丝隔层让稀有及以上果实占用 −1 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 237,
+  "text": "/* ------------------------- 交互 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 255,
+  "text": "// 1. 仓库",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 259,
+  "text": "// 2. 生物",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 262,
+  "text": "// 3. 方块",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 291,
+  "text": "/* 观察生物 → 图鉴 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 301,
+  "text": "/* ------------------------- 变形 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 314,
+  "text": "// 魔力胃：短时间连吃 → 混乱",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 348,
+  "text": "// 种在地面",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 390,
+  "text": "/* ------------------------- 仓库 UI ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 409,
+  "text": "/* ------------------------- 猫头鹰邮递（docs/05 §5.2） ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 410,
+  "text": "/* 窖树 → 主果窖，一次 1 颗，3 游戏日送达，10% 丢失。",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 411,
+  "text": "前提：主果窖里存过至少 1 颗猫头鹰果（解锁\"钟摆\"）。 */",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 432,
+  "text": "// 路上按主果窖的腐坏率走",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 450,
+  "text": "/* ------------------------- 伤害 / 状态 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 473,
+  "text": "// 果实散落",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 484,
+  "text": "/* ------------------------- 每游戏日判定 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 485,
+  "text": "/* docs/05：窖树是活的仓库——它会招贼。主果窖有老梅守着，不被抢。 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 511,
+  "text": "/* ------------------------- 任务 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 518,
+  "text": "// 背包扩容道具：获得后 cap() 立刻变化，并提示一次",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 532,
+  "text": "// q7：走到星坠堡果实温室（地窖门口）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 563,
+  "text": "/* ------------------------- 模型缓存 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 573,
+  "text": "/* ------------------------- 主循环 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 588,
+  "text": "// 形态计时",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 593,
+  "text": "// 离水虚弱",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 594,
+  "text": "// 受惊掉时",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 607,
+  "text": "// 粒子（萤火虫 / 余烬 / 水花）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 616,
+  "text": "// 猫头鹰邮递",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 631,
+  "text": "// 散落果实拾取",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 643,
+  "text": "// 交互提示",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 674,
+  "text": "// 萤火虫（夜里森林）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 681,
+  "text": "// 水母/水下气泡",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 686,
+  "text": "// 龙巢余烬",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 692,
+  "text": "// 玩家形态发光",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 697,
+  "text": "/* ------------------------- 渲染 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 714,
+  "text": "// 世界",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 727,
+  "text": "// 高亮（线框，不是实心块）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 733,
+  "text": "// 沿 X（含角）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 734,
+  "text": "// 沿 Y（缩进，不重叠）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 735,
+  "text": "// 沿 Z（缩进）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 743,
+  "text": "// 散落果实（死亡掉落，可捡回）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 776,
+  "text": "// 水",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 785,
+  "text": "// 粒子",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 787,
+  "text": "// 第一人称手",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 804,
+  "text": "// 第三人称身体",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/game.js",
+  "line": 820,
+  "text": "/* ------------------------- 存档 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/main.js",
+  "line": 2,
+  "text": "*  main.js —— 引导、输入、主循环",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/main.js",
+  "line": 10,
+  "text": "/* ---------------- 输入 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/main.js",
+  "line": 64,
+  "text": "/* ---------------- 仓库面板点击 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/main.js",
+  "line": 81,
+  "text": "/* ---------------- 开始 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/main.js",
+  "line": 86,
+  "text": "/* 自动读档在 init 后 */ }",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/main.js",
+  "line": 90,
+  "text": "/* ---------------- 启动 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 2,
+  "text": "*  models.js —— 体素生物模型（部件 + 动画）",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 3,
+  "text": "*  模型坐标：模型单位（scale 换算成米），+Z 为朝向，y 向上，脚在 y=0",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 4,
+  "text": "*  部件动画：flap(翅) / walk(腿) / wag(尾) / bob(身) / sway(鳍·羽)",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 12,
+  "text": "/* 部件写法： { pivot:[x,y,z], anim:'walk'|'flap'|'wag'|'bob'|'sway', sign:+-1, boxes:[[x,y,z,w,h,d,'#hex'],...] } */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 14,
+  "text": "/* ---------------- 人形（未变形） ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 28,
+  "text": "/* ---------------- 猫头鹰 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 42,
+  "text": "/* ---------------- 蝙蝠 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 55,
+  "text": "/* ---------------- 萤蛾 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 67,
+  "text": "/* ---------------- 水獭 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 81,
+  "text": "/* ---------------- 赤狐 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 95,
+  "text": "/* ---------------- 白尾鹿 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 110,
+  "text": "/* ---------------- 独角兽 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 125,
+  "text": "/* ---------------- 人鱼 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 137,
+  "text": "/* ---------------- 水母 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 149,
+  "text": "/* ---------------- 巨蛛 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 161,
+  "text": "/* ---------------- 灰熊 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 174,
+  "text": "/* ---------------- 灰鳞龙 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 191,
+  "text": "/* ---------------- 凤凰 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 203,
+  "text": "/* ---------------- 灰雾兽 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 217,
+  "text": "/* ---------------- 第一人称手部（贴在屏幕右下） ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 230,
+  "text": "/* ---------------- 构建网格 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/models.js",
+  "line": 247,
+  "text": "/* 部件动画矩阵 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 2,
+  "text": "*  ui.js —— HUD / 背包条 / 仓库面板 / 图鉴 / 小地图 / 帮助 / 死亡",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 21,
+  "text": "/* ---------------- 小地图底图 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 42,
+  "text": "// POI 标记",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 54,
+  "text": "// 半径（世界格）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 84,
+  "text": "// 玩家朝向",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 100,
+  "text": "// 活力 / 空气 / 惊惧",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 109,
+  "text": "// 形态条",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 122,
+  "text": "// 提示",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 125,
+  "text": "// 日志",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 132,
+  "text": "// 统计",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 170,
+  "text": "/* ---------------- 仓库面板 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/ui.js",
+  "line": 198,
+  "text": "/* ---------------- 图鉴 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 2,
+  "text": "*  world.js —— 体素存储 / 方块定义 / 分块网格化（含 AO）/ 射线拾取",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 7,
+  "text": "/* ------------------------- 方块表 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 8,
+  "text": "// c=[r,g,b]  ct=顶面色  cb=底面色  solid=碰撞  opaque=遮面  liquid  alpha  emis  micro=[[x,y,z,w,h,d]...]",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 44,
+  "text": "/* ---- 果实方块（micro：格内小盒，自发光） ---- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 60,
+  "text": "/* ---- 植物方块 ---- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 87,
+  "text": "/* ------------------------- 面表（含 AO 轴） ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 98,
+  "text": "/* ------------------------- 世界 ------------------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 133,
+  "text": "/* ---- 网格化 ---- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 156,
+  "text": "// 水面/侧面",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 173,
+  "text": "// 被遮挡",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 174,
+  "text": "// 同种透明方块相邻（玻璃）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/world.js",
+  "line": 208,
+  "text": "/* ---- DDA 射线 ---- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 2,
+  "text": "*  worldgen.js —— 谷地生成：地形 / 镜湖 / 星坠堡 / 低语林 / 蝙蝠洞 /",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 3,
+  "text": "*                  灯笼镇 / 果园遗迹 / 云顶浮岛 / 果实与植物分布",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 9,
+  "text": "/* ---------------- 噪声 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 43,
+  "text": "// 北岭",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 46,
+  "text": "// 回声丘",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 49,
+  "text": "// 镜湖（碗形：岸边浅、湖心深）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 54,
+  "text": "// 湖岸略抬",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 56,
+  "text": "// 湖心岛",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 59,
+  "text": "// 灯笼镇平地",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 64,
+  "text": "// 果园遗迹平地",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 70,
+  "text": "/* ---------------- 基础工具 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 97,
+  "text": "/* 地面高度（跳过树、植物、果实） */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 110,
+  "text": "/* ---------------- 树 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 153,
+  "text": "/* 在树干的侧面挂果实（区域扫描 + 乱序） */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 179,
+  "text": "/* ---------------- 星坠堡 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 182,
+  "text": "// 岛基",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 189,
+  "text": "// 城墙",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 192,
+  "text": "// 南门缺口",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 194,
+  "text": "// 城齿",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 196,
+  "text": "// 院内地面",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 202,
+  "text": "// 四塔",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 205,
+  "text": "// 中空",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 212,
+  "text": "// 主塔（钟塔）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 216,
+  "text": "// 楼层",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 219,
+  "text": "// 钟（金 + 辉石）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 224,
+  "text": "// 桥（南门 → 南岸）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 227,
+  "text": "// 温室（东南）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 233,
+  "text": "// 地窖入口（标记）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 237,
+  "text": "/* ---------------- 灯笼镇 + 主果窖 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 246,
+  "text": "// 门 + 窗 + 灯",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 251,
+  "text": "// 屋内灯",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 254,
+  "text": "// 主果窖",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 261,
+  "text": "// ★ 果窖箱（交互点）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 264,
+  "text": "// 灯笼路",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 270,
+  "text": "// 镇外果园",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 279,
+  "text": "/* ---------------- 果园遗迹 / 母树 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 288,
+  "text": "// 母树",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 293,
+  "text": "// 遗迹里的树与丝莓",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 300,
+  "text": "/* ---------------- 蝙蝠洞 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 303,
+  "text": "// 掏空",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 305,
+  "text": "// 洞口（东南侧）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 308,
+  "text": "// 地面",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 313,
+  "text": "// 顶上的蝙蝠果（从洞内向上找洞顶）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 320,
+  "text": "// 丝莓（洞深处）",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 327,
+  "text": "/* ---------------- 湖底：沉塔 / 人鱼村 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 329,
+  "text": "// 沉塔",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 338,
+  "text": "// 人鱼村",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 343,
+  "text": "// 水草 / 水母田",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 356,
+  "text": "// 岸边水獭果灌木",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 364,
+  "text": "/* ---------------- 云顶浮岛 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 377,
+  "text": "// 龙巢：骨堆 + 余烬 + 焰心果",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 391,
+  "text": "// 云：多团叠加的蓬松云，位于树冠之上",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 404,
+  "text": "/* ---------------- 森林 / 植物 / 果实 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 406,
+  "text": "/* 网格 + 抖动种树：保证树冠之间仍能看到地面 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 423,
+  "text": "// 湖边柳树",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 430,
+  "text": "// 蘑菇圈",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 443,
+  "text": "// 森林地面：荧光菇 / 发光种子 / 弹弹菇",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 452,
+  "text": "// 倒木 + 鹿茸菌果",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 465,
+  "text": "// 猫头鹰果：老橡树洞旁",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 467,
+  "text": "// 银角樱：圣林",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 469,
+  "text": "// 萤蛾果：蘑菇圈与林间",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 476,
+  "text": "// 狐李：镇外果园 + 果园遗迹",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 479,
+  "text": "// 灰熊无花果：北岭",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 486,
+  "text": "// 灰雾果：边界",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 497,
+  "text": "// 窖树种：母树下一颗 + 镇子附近一颗",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 504,
+  "text": "/* ---------------- 主入口 ---------------- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 507,
+  "text": "// 地形",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 521,
+  "text": "// 边界：把最外圈压平并立起“灰雾”石柱",
+  "kind": "line"
+ },
+ {
+  "file": "game/src/worldgen.js",
+  "line": 528,
+  "text": "// 出生点：灯笼镇空地",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 2,
+  "text": "*  docs-sync.js —— 校验 docs/ 里的数字是否与 game/data/ 一致",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 3,
+  "text": "*  README 声称「data 是唯一真源」，这个脚本就是那句话的可执行版本。",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 4,
+  "text": "*  用法: node game/test/docs-sync.js",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 20,
+  "text": "/* ---- markdown 表格解析 ---- */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 31,
+  "text": "// 去掉表头",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 38,
+  "text": "/* ================= 1. 区域表 (docs/02 §2) ================= */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 68,
+  "text": "/* ================= 2. POI 表 (docs/02 §3) ================= */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 89,
+  "text": "/* ================= 3. 浮岛表 (docs/02 §5.7) ================= */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 110,
+  "text": "/* ================= 4. 稀有度表 (docs/04 §1) ================= */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 132,
+  "text": "/* ================= 5. 三层存储表 (docs/05 §3) ================= */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 151,
+  "text": "// 窖树规则",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 167,
+  "text": "/* ================= 6. 键位一致性 ================= */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 172,
+  "text": "// 文档里凡是「按 X」的说法，X 必须是真实绑定的键",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 181,
+  "text": "/* ================= 7. 数量与 id 覆盖 ================= */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/docs-sync.js",
+  "line": 195,
+  "text": "/* ================= 输出 ================= */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/heightmap.js",
+  "line": 1,
+  "text": "/* 地形高度图 ASCII 检查 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/input.js",
+  "line": 1,
+  "text": "/* 真实按键测试：走路 / 跳跃 / 飞行 / 变形计时 / 交互键 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/input.js",
+  "line": 18,
+  "text": "// 站在灯笼镇空地上",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/input.js",
+  "line": 44,
+  "text": "// 变形为猫头鹰并飞行",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/input.js",
+  "line": 57,
+  "text": "// 变形计时衰减",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/input.js",
+  "line": 63,
+  "text": "// 时间流速：一天多长",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/input.js",
+  "line": 67,
+  "text": "// 灰雾墙边界",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/node-smoke.js",
+  "line": 1,
+  "text": "/* 无浏览器冒烟测试：数据 → 生成 → 网格化（假 GL） */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/node-smoke.js",
+  "line": 47,
+  "text": "// 关键交互点",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/node-smoke.js",
+  "line": 51,
+  "text": "// 水检查",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 1,
+  "text": "/* 玩法闭环验证：采集 → 背包容量 → 吃果变形 → 复原 → 果窖存取 → 窖树 → 存档 → 任务 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 27,
+  "text": "// 1. 采集：把玩家传送到一颗猫头鹰浆果旁边并直接调用 harvest",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 39,
+  "text": "// 1b. 重生：把重生计时压到 0，跑一帧后果实方块应长回来",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 54,
+  "text": "// 2. 容量：塞满背包，验证稀有果占格",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 65,
+  "text": "// 3. 吃果变形",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 75,
+  "text": "// 4. 变形后能飞：给一个向上的输入跑 1.5 秒",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 84,
+  "text": "// 5. 复原",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 96,
+  "text": "// 6. 果窖存取",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 108,
+  "text": "// 7. 果核 → 种窖树",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 121,
+  "text": "// 8. 存档 / 读档",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 122,
+  "text": "// 窖树掠夺：远离必被偷、靠近必保住、主果窖永不被偷",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 130,
+  "text": "// 远离",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 139,
+  "text": "// 靠近",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 158,
+  "text": "// 解锁钟摆",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 202,
+  "text": "// 9. 任务",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/play.js",
+  "line": 208,
+  "text": "// 10. 生物生态：数量 / 阵营",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 1,
+  "text": "/* 为各区域找合适的取景/出生点（纯 node，无浏览器） */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 10,
+  "text": "// 树叶/植物等不可站立",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 13,
+  "text": "// 最上方的可站立实心方块",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 22,
+  "text": "// 开阔水面：水底在浪面之下",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 26,
+  "text": "// 有地面戳到/高出水面 → 不是开阔水",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 30,
+  "text": "/* 区域中心：rect 取中点，circle 用 cx/cz，sky 用浮岛，border 跳过 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 57,
+  "text": "/* 湖中开阔水面：离湖心越远越好，且要有足够水深 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 66,
+  "text": "// 必须在湖内",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/probe.js",
+  "line": 67,
+  "text": "// 优先深水，其次离湖心近",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/shot.js",
+  "line": 1,
+  "text": "/* headless 截图 + 控制台错误检查",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/shot.js",
+  "line": 2,
+  "text": "用法: node test/shot.js out.png \"pos=136,22,128 yaw=3.6 pitch=-0.1 form=owlberry time=210\" */",
+  "kind": "block-cont"
+ },
+ {
+  "file": "game/test/shot.js",
+  "line": 41,
+  "text": "// 建一棵窖树、塞几颗果实、解锁钟摆、寄出 1 颗，然后打开面板",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/shot.js",
+  "line": 55,
+  "text": "// 让游戏真实跑若干帧",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/shots.js",
+  "line": 1,
+  "text": "/* 一次启动，多张截图。用法: node test/shots.js [tag] */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/shots.js",
+  "line": 56,
+  "text": "// 螺旋搜索一块“头顶无树”的空地",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 1,
+  "text": "/* 背包升级 / 果格占用 验证 */",
+  "kind": "block"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 22,
+  "text": "// 1) 基础占用",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 27,
+  "text": "// 2) 传说果（12 格）在 24 格下应放不进",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 29,
+  "text": "// 3) 副果袋 +6",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 33,
+  "text": "// 4) 深果袋 +6",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 36,
+  "text": "// 5) 银丝隔层：稀有及以上 −1",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 42,
+  "text": "// 6) 常见果实不受影响",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 44,
+  "text": "// 7) 果核减半 + 隔层",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 46,
+  "text": "// 8) q7 走到温室门口应触发并给隔层",
+  "kind": "line"
+ },
+ {
+  "file": "game/test/upgrade.js",
+  "line": 52,
+  "text": "// 9) 存档往返保留升级",
+  "kind": "line"
+ }
+]

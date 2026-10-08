@@ -1,11 +1,11 @@
 /* ==========================================================================
- *  world.js —— 体素存储 / 方块定义 / 分块网格化（含 AO）/ 射线拾取
+ *  world.js -- voxel storage / block definitions / chunk meshing (with AO) / ray picking
  * ========================================================================== */
 (function (N) {
   const MB = N.MeshBuilder;
 
-  /* ------------------------- 方块表 ------------------------- */
-  // c=[r,g,b]  ct=顶面色  cb=底面色  solid=碰撞  opaque=遮面  liquid  alpha  emis  micro=[[x,y,z,w,h,d]...]
+  /* ------------------------- block table ------------------------- */
+  // c=[r,g,b]  ct=top colour  cb=bottom colour  solid=collides  opaque=culls faces  liquid  alpha  emis  micro=[[x,y,z,w,h,d]...]
   const B = [];
   function def(id, o) { B[id] = Object.assign({ id, solid: true, opaque: true, alpha: 1, emis: 0, c: [0.8, 0.8, 0.8] }, o); }
 
@@ -41,7 +41,7 @@
   def(29, { cn: '干草', c: [0.72, 0.66, 0.36] });
   def(30, { cn: '地毯苔', c: [0.20, 0.38, 0.24] });
 
-  /* ---- 果实方块（micro：格内小盒，自发光） ---- */
+  /* ---- fruit blocks (micro: small in-cell boxes, emissive) ---- */
   const FRUIT_BLOCK = {};   // blockId -> fruitId
   const FRUIT_BLOCK_REV = {};
   N.FRUITS.forEach((f, i) => {
@@ -57,7 +57,7 @@
     FRUIT_BLOCK[id] = f.id; FRUIT_BLOCK_REV[f.id] = id;
   });
 
-  /* ---- 植物方块 ---- */
+  /* ---- plant blocks ---- */
   const PLANT_BLOCK = {}, PLANT_BLOCK_REV = {};
   N.PLANTS.forEach((p, i) => {
     const id = 60 + i;
@@ -84,7 +84,7 @@
 
   const AIR = 0, WATER = 5;
 
-  /* ------------------------- 面表（含 AO 轴） ------------------------- */
+  /* ------------------------- face table (with AO axes) ------------------------- */
   const FACES = [
     { n: [0, 1, 0], c: [[0, 1, 0], [0, 1, 1], [1, 1, 1], [1, 1, 0]], u: [1, 0, 0], v: [0, 0, 1], s: 1.00 },
     { n: [0, -1, 0], c: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]], u: [1, 0, 0], v: [0, 0, 1], s: 0.42 },
@@ -95,7 +95,7 @@
   ];
   const AO_L = [1.0, 0.78, 0.60, 0.46];
 
-  /* ------------------------- 世界 ------------------------- */
+  /* ------------------------- world ------------------------- */
   class World {
     constructor(w, h, d) {
       this.w = w; this.h = h; this.d = d;
@@ -130,7 +130,7 @@
     }
     topAt(x, z) { return this.maxY[z * this.w + x]; }
 
-    /* ---- 网格化 ---- */
+    /* ---- meshing ---- */
     buildChunk(gl, ci) {
       const cx = ci % this.cx, cz = (ci / this.cx) | 0;
       const x0 = cx * this.cs, z0 = cz * this.cs, y0 = 0, y1 = this.h;
@@ -153,7 +153,7 @@
               continue;
             }
             if (bd.liquid) {
-              // 水面/侧面
+              // water surface / sides
               for (const f of FACES) {
                 const nb = at(x + f.n[0], y + f.n[1], z + f.n[2]);
                 if (nb === b) continue;
@@ -170,8 +170,8 @@
               const nx = x + f.n[0], ny = y + f.n[1], nz = z + f.n[2];
               const nb = at(nx, ny, nz);
               const nbd = B[nb];
-              if (nb && nbd && nbd.opaque) continue;           // 被遮挡
-              if (nb && nbd && !nbd.liquid && bd.id === nb) continue; // 同种透明方块相邻（玻璃）
+              if (nb && nbd && nbd.opaque) continue;           // occluded
+              if (nb && nbd && !nbd.liquid && bd.id === nb) continue; // adjacent blocks of the same transparent kind (glass)
               const tgt = bd.emis ? em : op;
               // AO
               const sh = [];
@@ -205,7 +205,7 @@
       return this.chunks[ci];
     }
 
-    /* ---- DDA 射线 ---- */
+    /* ---- DDA raycast ---- */
     raycast(ox, oy, oz, dx, dy, dz, maxD) {
       let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
       const sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1, sz = dz > 0 ? 1 : -1;

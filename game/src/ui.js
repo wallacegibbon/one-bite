@@ -1,5 +1,5 @@
 /* ==========================================================================
- *  ui.js —— HUD / 背包条 / 仓库面板 / 图鉴 / 小地图 / 帮助 / 死亡
+ *  ui.js -- HUD / backpack bar / storage panel / codex / minimap / help / death
  * ========================================================================== */
 (function (N) {
   const FRU = N.FRUIT_BY_ID, PLANT = N.PLANT_BY_ID, RAR = N.RARITY, STO = N.STORAGE;
@@ -18,7 +18,7 @@
       this.show = { cellar: false, journal: false, help: false, dead: false };
     }
 
-    /* ---------------- 小地图底图 ---------------- */
+    /* ---------------- minimap base ---------------- */
     buildMinimap() {
       const W = this.g.world, S = W.w, D = W.d;
       this.mmBase.width = S; this.mmBase.height = D;
@@ -39,7 +39,7 @@
         img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = bl; img.data[i + 3] = 255;
       }
       ctx.putImageData(img, 0, 0);
-      // POI 标记
+      // POI markers
       ctx.font = '7px sans-serif';
       for (const p of N.POIS) {
         ctx.fillStyle = 'rgba(255,240,190,0.95)';
@@ -51,7 +51,7 @@
       const S = this.mm.width, D = this.mm.height, W = this.g.world;
       const ctx = this.mmCtx;
       const p = this.g.player;
-      const R2 = 62;                       // 半径（世界格）
+      const R2 = 62;                       // radius (world cells)
       ctx.clearRect(0, 0, S, D);
       ctx.save();
       ctx.beginPath(); ctx.arc(S / 2, D / 2, S / 2 - 1, 0, 6.283); ctx.clip();
@@ -70,7 +70,7 @@
         ctx.fillStyle = 'rgba(255,236,170,0.95)';
         ctx.beginPath(); ctx.arc(rx * scale, rz * scale, 2.2, 0, 6.283); ctx.fill();
       }
-      // 生物
+      // creatures
       for (const c of this.g.creatures) {
         const dx = (c.x - p.x), dz = (c.z - p.z);
         if (Math.hypot(dx, dz) > R2) continue;
@@ -81,7 +81,7 @@
         ctx.fillRect(rx * scale - 1, rz * scale - 1, 2, 2);
       }
       ctx.restore();
-      // 玩家朝向
+      // player heading
       ctx.strokeStyle = '#ffe6a8'; ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.moveTo(S / 2, D / 2 - 6); ctx.lineTo(S / 2 - 4, D / 2 + 4); ctx.lineTo(S / 2 + 4, D / 2 + 4); ctx.closePath(); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,230,168,0.35)';
@@ -97,7 +97,7 @@
       el('clock').innerHTML = '<b>' + pad(h) + ':' + pad(m) + '</b> · 第 ' + g.day + ' 天 ' + icon +
         ' <span class="dim">' + (g.night > 0.55 ? '夜' : g.night > 0.25 ? '黄昏' : '昼') + '</span>';
 
-      // 活力 / 空气 / 惊惧
+      // vitality / air / fright
       let v = '';
       for (let i = 0; i < 5; i++) v += '<span class="hp' + (p.vital > i + 0.5 ? ' on' : '') + '">✦</span>';
       el('vitals').innerHTML = v;
@@ -106,7 +106,7 @@
       el('fright').style.width = (p.fright * 100) + '%';
       el('frightWrap').style.opacity = p.fright > 0.02 ? 1 : 0;
 
-      // 形态条
+      // form bar
       const fb = el('formbar');
       if (p.form) {
         const f = FRU[p.form];
@@ -117,19 +117,19 @@
           (p.formT / p.formMax < 0.25 ? ' <span class="warn">归心</span>' : '');
       } else fb.classList.add('hidden');
 
-      // 背包
+      // backpack
       this.renderInv();
-      // 提示
+      // prompt
       const pr = el('prompt');
       pr.textContent = g.prompt || '';
-      // 日志
+      // log
       if (this.g.log.length !== this.logLen) {
         this.logLen = g.log.length;
         const box = el('log');
         box.innerHTML = g.log.slice(-7).map(l => '<div class="l ' + l.kind + '">' + l.text + '</div>').join('');
         box.scrollTop = box.scrollHeight;
       }
-      // 统计
+      // stats
       el('stats').innerHTML = '采 ' + g.stats.harvested + ' · 食 ' + g.stats.eaten + ' · 复原 ' + g.stats.reverted +
         ' · 倒下 ' + g.stats.deaths + ' <span class="dim">| ' + g.creatures.length + ' 只生物</span>';
       if (this.show.cellar) this.renderCellar();
@@ -167,7 +167,7 @@
       el('upgTxt').textContent = owned.length ? owned.map(u => u.slots ? '+' + u.slots : '稀−1').join(' · ') : '';
     }
 
-    /* ---------------- 仓库面板 ---------------- */
+    /* ---------------- storage panel ---------------- */
     showCellar(on) {
       this.show.cellar = on;
       el('cellar').classList.toggle('hidden', !on);
@@ -182,7 +182,7 @@
       el('cellarSub').textContent = '容量 ' + s.slots + ' 果格 · 腐坏速度 ×' + s.decay + ' · 已用 ' + g.used(s.items);
       el('stashItems').innerHTML = s.items.map((it, i) => this.itemHTML(it, i, i === g.stashSel)).join('') || '<div class="empty">空架子。</div>';
       el('packItems').innerHTML = g.inv.map((it, i) => this.itemHTML(it, i, i === g.invSel)).join('') || '<div class="empty">背包空。</div>';
-      // 猫头鹰邮递
+      // owl post
       const pr = el('postRow');
       const transit = g.posts.map(p => (FRU[p.it.id] ? FRU[p.it.id].cn : p.it.id) + '（' + Math.max(1, Math.ceil(p.t / 420)) + ' 天后到）').join('、');
       let txt = '';
@@ -195,7 +195,7 @@
       pr.classList.toggle('hidden', !txt);
     }
 
-    /* ---------------- 图鉴 ---------------- */
+    /* ---------------- codex ---------------- */
     showJournal(on) {
       this.show.journal = on;
       el('journal').classList.toggle('hidden', !on);

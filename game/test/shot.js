@@ -1,5 +1,5 @@
-/* headless 截图 + 控制台错误检查
-   用法: node test/shot.js out.png "pos=136,22,128 yaw=3.6 pitch=-0.1 form=owlberry time=210" */
+/* headless screenshot + console error check
+   Usage: node test/shot.js out.png "pos=136,22,128 yaw=3.6 pitch=-0.1 form=owlberry time=210" */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -38,7 +38,7 @@ const path = require('path');
     if (c.inv) { for (const id of c.inv.split(',')) g.addItem('fruit', id); }
     if (c.tp) g.thirdPerson = true;
     if (c.cellar) {
-      // 建一棵窖树、塞几颗果实、解锁钟摆、寄出 1 颗，然后打开面板
+      // build a cellar tree, stock it, unlock Pendulum, post one fruit, then open the panel
       const F = window.FRUTARIA;
       g.player.x = 130; g.player.z = 128;
       g.buildCellarTree();
@@ -52,7 +52,7 @@ const path = require('path');
     g.updateEnv();
     window.startGame();
   }, cfg);
-  // 让游戏真实跑若干帧
+  // let the game actually run a few frames
   await new Promise(r => setTimeout(r, 2500));
   await page.screenshot({ path: out });
   const perf = await page.evaluate(() => {

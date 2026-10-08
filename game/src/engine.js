@@ -1,7 +1,7 @@
 /* ==========================================================================
- *  engine.js —— 自研体素渲染器（WebGL1，零依赖）
- *  · 分块网格 + 面剔除 + 视锥剔除
- *  · 顶点色 + 烘焙面光照/AO + 自发光层 + 水层 + 粒子 + 程序化天空
+ *  engine.js -- in-house voxel renderer (WebGL1, zero dependencies)
+ *  - chunk meshing + face culling + frustum culling
+ *  - vertex colour + baked face lighting/AO + emissive layer + water + particles + procedural sky
  * ========================================================================== */
 (function (N) {
 
@@ -29,13 +29,13 @@
       return o;
     },
     lookYaw(o, ex, ey, ez, yaw, pitch) {
-      // 视图矩阵：先绕 Y(yaw) 再绕 X(pitch)，再平移
+      // view matrix: rotate about Y (yaw), then X (pitch), then translate
       const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-      // 相机基向量（世界空间）
+      // camera basis vectors (world space)
       const fx = sy * cp, fy = sp, fz = -cy * cp;      // forward
       const rx = cy, ry = 0, rz = sy;                   // right
-      const ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx; // up = u x f? 计算
-      // 视图矩阵 = R^T * T(-e)
+      const ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx; // derive up = u x f
+      // view matrix = R^T * T(-e)
       o[0] = rx; o[1] = ux; o[2] = -fx; o[3] = 0;
       o[4] = ry; o[5] = uy; o[6] = -fy; o[7] = 0;
       o[8] = rz; o[9] = uz; o[10] = -fz; o[11] = 0;
@@ -56,7 +56,7 @@
   };
   const tmp16 = new Float32Array(16);
 
-  /* ------------------------------ GL 工具 ------------------------------ */
+  /* ------------------------------ GL helpers ------------------------------ */
   function sh(gl, type, src) {
     const s = gl.createShader(type);
     gl.shaderSource(s, src); gl.compileShader(s);
@@ -75,17 +75,17 @@
     return o;
   }
 
-  /* ------------------------------ 网格构建 ------------------------------ */
+  /* ------------------------------ mesh building ------------------------------ */
   class MeshBuilder {
     constructor() { this.pos = []; this.col = []; this.dat = []; this.n = 0; }
-    /* 一个顶点：位置、颜色[ r,g,b ]、shade(0..1 亮度*AO)、emis(0/1) */
+    /* one vertex: position, colour [r,g,b], shade (0..1 brightness*AO), emis (0/1) */
     v(x, y, z, c, shade, emis) {
       this.pos.push(x, y, z);
       this.col.push((c[0] * 255) | 0, (c[1] * 255) | 0, (c[2] * 255) | 0, c.length > 3 ? (c[3] * 255) | 0 : 255);
       this.dat.push((Math.min(1, shade) * 255) | 0, emis ? 255 : 0);
       this.n++;
     }
-    /* 四边形：4 点 */
+    /* quad: 4 points */
     quad(p, c, shade, emis) {
       this.v(p[0], p[1], p[2], c, shade, emis);
       this.v(p[3], p[4], p[5], c, shade, emis);
@@ -94,7 +94,7 @@
       this.v(p[6], p[7], p[8], c, shade, emis);
       this.v(p[9], p[10], p[11], c, shade, emis);
     }
-    /* 带逐顶点 AO 的四边形 */
+    /* quad with per-vertex AO */
     quadAO(p, c, sh, emis) {
       const put = (i) => this.v(p[i * 3], p[i * 3 + 1], p[i * 3 + 2], c, sh[i], emis);
       put(0); put(1); put(2); put(0); put(2); put(3);
@@ -130,7 +130,7 @@
     }
   }
 
-  /* ------------------------------ 着色器 ------------------------------ */
+  /* ------------------------------ shaders ------------------------------ */
   const VS_WORLD = `
   precision highp float;
   attribute vec3 aPos; attribute vec4 aCol; attribute vec2 aData;
@@ -180,12 +180,12 @@
     float sd = dot(d, uSunDir);
     col += uSunCol * pow(max(sd,0.0), 220.0) * 3.0;
     col += uSunCol * pow(max(sd,0.0), 8.0) * 0.22;
-    // 月亮
+    // moon
     vec3 md = -uSunDir;
     float mdot = dot(d, md);
     col += vec3(0.85,0.88,0.95) * smoothstep(0.9993, 0.9997, mdot) * uNight * 2.0;
     col += vec3(0.35,0.4,0.55) * pow(max(mdot,0.0), 60.0) * uNight * 0.5;
-    // 星星
+    // stars
     if (uNight > 0.05 && d.y > 0.02) {
       vec3 g = floor(d*160.0);
       float h = hash(g);
@@ -215,7 +215,7 @@
     gl_FragColor = vec4(vC.rgb, vC.a * a);
   }`;
 
-  /* ------------------------------ 渲染器 ------------------------------ */
+  /* ------------------------------ renderer ------------------------------ */
   class Renderer {
     constructor(canvas) {
       const gl = this.gl = canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
@@ -247,7 +247,7 @@
       this.aspect = c.width / Math.max(1, c.height);
     }
 
-    /* ---- 相机 & 环境 ---- */
+    /* ---- camera & environment ---- */
     begin(cam, env) {
       const gl = this.gl;
       this.resize();
@@ -265,10 +265,10 @@
                  this.fwd[0] * this.right[1] - this.fwd[1] * this.right[0]];
       this.cam = cam; this.env = env;
 
-      // 视锥平面
+      // frustum planes
       M4.mul(this.mvp, this.proj, this.view);
       const m = this.mvp, P = this.planes;
-      // 列主序矩阵的第 i 行 = [m[i], m[4+i], m[8+i], m[12+i]]
+      // row i of a column-major matrix = [m[i], m[4+i], m[8+i], m[12+i]]
       const rows = [[m[0], m[4], m[8], m[12]], [m[1], m[5], m[9], m[13]], [m[2], m[6], m[10], m[14]], [m[3], m[7], m[11], m[15]]];
       const put = (i, v) => { const L = Math.hypot(v[0], v[1], v[2]) || 1; const p = P[i]; for (let k = 0; k < 4; k++) p[k] = v[k] / L; };
       const R3 = rows[3];
@@ -314,7 +314,7 @@
       gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
     }
 
-    /* ---- 通用网格绘制 ---- */
+    /* ---- generic mesh draw ---- */
     setWorldUniforms(P, opts) {
       const gl = this.gl, e = this.env, u = P.u;
       if (!u._done) {
@@ -373,7 +373,7 @@
       this.stats.draws++; this.stats.tris += mesh.count / 3;
     }
 
-    /* ---- 粒子 ---- */
+    /* ---- particles ---- */
     drawParticles(buf, count) {
       if (!count) return;
       const gl = this.gl, P = this.pPart;
