@@ -406,7 +406,7 @@
       if (this.quests) this.checkQuests();
     }
 
-    /* ------------------------- owl post (docs/05 section 5.2) ------------------------- */
+    /* ------------------------- owl post (docs/en/05 section 5.2) ------------------------- */
     /* cellar tree -> main cellar, one fruit at a time, delivered after 3 in-game days, 10% lost.
        Requires at least one owlberry stored in the main cellar (unlocks "Pendulum"). */
     owlUnlocked() { return this.stashes[0].items.some(i => i.id === 'owlberry') || this._owlUnlocked; }
@@ -482,7 +482,7 @@
     }
 
     /* ------------------------- per-game-day rolls ------------------------- */
-    /* docs/05: a cellar tree is a living store -- it attracts thieves. The main cellar is guarded by Old Mei and is never robbed. */
+    /* docs/en/05: a cellar tree is a living store -- it attracts thieves. The main cellar is guarded by Old Mei and is never robbed. */
     dailyRolls() {
       for (let i = 1; i < this.stashes.length; i++) {
         const s = this.stashes[i];

@@ -1,6 +1,6 @@
 # 06 · Quests and Progression
 
-[中文: ../06-任务与进程.md](../06-任务与进程.md)
+[中文: ../cn/06-任务与进程.md](../cn/06-任务与进程.md)
 
 ## 1. Progression philosophy
 

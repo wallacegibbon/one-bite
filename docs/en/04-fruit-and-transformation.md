@@ -1,6 +1,6 @@
 # 04 · Fruit and Transformation
 
-[中文: ../04-果实与变形系统.md](../04-果实与变形系统.md)
+[中文: ../cn/04-果实与变形系统.md](../cn/04-果实与变形系统.md)
 
 Source of truth: `game/data/fruits.js`. Every number in this document comes straight from that file.
 

@@ -1,6 +1,6 @@
 # 02 · Map and Scenes
 
-[中文: ../02-地图与场景.md](../02-地图与场景.md)
+[中文: ../cn/02-地图与场景.md](../cn/02-地图与场景.md)
 
 World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** The prototype world is 160×48×160 voxels (the full setting is 1024×128×1024).
 

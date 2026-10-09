@@ -1,6 +1,6 @@
 # 03 · Characters and Creatures
 
-[中文: ../03-角色与生物.md](../03-角色与生物.md)
+[中文: ../cn/03-角色与生物.md](../cn/03-角色与生物.md)
 
 Source of truth: `game/data/creatures.js` (14 species + the attitude matrix + codex text).
 

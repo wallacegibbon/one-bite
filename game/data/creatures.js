@@ -1,5 +1,5 @@
 /* ==========================================================================
- *  Creature data -- mirrors docs/03 (characters & creatures)
+ *  Creature data -- mirrors docs/en/03-characters-and-creatures.md
  *  attitude: reaction to the player's current form; self=same species, default=fallback
  *  active  : active period; day / night / both / dusk
  * ========================================================================== */

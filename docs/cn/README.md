@@ -1,6 +1,6 @@
 # 万灵果园 · FRUTARIA
 
-**中文** · [English: en/README.md](en/README.md)
+**中文** · [English: ../en/README.md](../en/README.md)
 
 > 一个没有魔杖的魔法世界。魔法不在手上，在嘴里。
 
@@ -41,7 +41,7 @@
 | [06-任务与进程.md](06-任务与进程.md) | 七章主线、支线、图鉴、进程门控表 |
 | [07-美术·音频·技术方案.md](07-美术·音频·技术方案.md) | 体素美术规范、调色板、音频、渲染与数据结构 |
 
-以上每一篇都有英文对照版，位于 [`docs/en/`](en/README.md)（同名编号，文件名已译）。`game/test/docs-sync.js` 会同时校验中英文两套文档与 `game/data/` 的一致性。
+以上每一篇都有英文对照版，位于同级的 [`docs/en/`](../en/README.md)（编号相同，文件名已译）：`docs/cn/` 中文、`docs/en/` 英文。`game/test/docs-sync.js` 会同时校验两套文档与 `game/data/` 的一致性。
 
 ## 原型
 

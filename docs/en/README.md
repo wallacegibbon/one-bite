@@ -1,6 +1,6 @@
 # FRUTARIA · 万灵果园
 
-**English** · [中文: ../README.md](../README.md)
+**English** · [中文: ../cn/README.md](../cn/README.md)
 
 > A magic world without wands. The magic is not in your hand, it is in your mouth.
 
@@ -41,7 +41,7 @@ Three tensions that mesh into each other:
 | [06-quests-and-progression.md](06-quests-and-progression.md) | Seven-chapter main line, side quests, codex, progression gating table |
 | [07-art-audio-technical.md](07-art-audio-technical.md) | Voxel art rules, palette, audio, rendering and data structures |
 
-The Chinese originals live one level up: [`docs/`](../README.md).
+The Chinese originals sit in the sibling folder [`docs/cn/`](../cn/README.md): `docs/cn/` is Chinese, `docs/en/` is English, same numbering, same table column order. `game/test/docs-sync.js` validates both sets against `game/data/`.
 
 ## Prototype
 

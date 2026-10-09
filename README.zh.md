@@ -6,7 +6,7 @@
 
 魔法来自**果实**：吃下它，你会变成它所记得的动物，一段时间后复原。每种动物的果实只长在它自己的地盘上。你的魔法背包只有 **24 个果格**，而越稀有的果实越大颗——**你带不走所有魔法**。
 
-- 完整设定文档：[`docs/`](docs/README.md)（中文）· [`docs/en/`](docs/en/README.md)（English）
+- 完整设定文档：[`docs/cn/`](docs/cn/README.md)（中文）· [`docs/en/`](docs/en/README.md)（English）
 - 可玩原型：[`game/index.html`](game/index.html)
 
 ## 运行原型
@@ -60,8 +60,8 @@ cd game && python3 -m http.server 8000   # 然后打开 http://localhost:8000/
 ## 目录
 
 ```
-docs/            设定文档（8 篇 + 索引）
-docs/en/         上述文档的英文对照版
+docs/cn/         设定文档（中文，8 篇 + 索引）
+docs/en/         同一套文档的英文版（编号相同）
 game/
   index.html     入口
   css/ui.css     HUD 样式
@@ -78,7 +78,7 @@ game/
 node game/test/node-smoke.js   # 无浏览器：数据 → 生成 → 网格化（假 GL）
 node game/test/probe.js        # 各区域/POI 的取景点与水深
 node game/test/docs-sync.js    # 文档 ↔ 数据一致性（中英文两套，不一致 exit 1）
-node game/test/docs-drift.js   # 自检：向 docs/en/ 注入 10 处错误，确认 docs-sync 全部能抓到
+node game/test/docs-drift.js   # 自检：向 docs/en/ 与 docs/ 注入 11 处错误，确认 docs-sync 全部能抓到
 node game/test/play.js         # 玩法闭环：采集→重生→容量→变形→存取→窖树→掠夺→邮递→存档
 node game/test/upgrade.js      # 背包升级与果格数学
 node game/test/input.js        # 真实按键：走/跳/飞/时间/灰雾墙边界

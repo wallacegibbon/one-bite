@@ -1,5 +1,5 @@
 /* ==========================================================================
- *  World data -- mirrors docs/02 (map & scenes)
+ *  World data -- mirrors docs/en/02-map-and-scenes.md
  *  World size 160 x 160 x 48 (prototype); the full setting is 1024 x 1024 x 128
  *  Coordinates: x east, z south, y up. Sea level (Mirrorlake surface) is y = 14
  * ========================================================================== */

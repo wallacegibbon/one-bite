@@ -1,8 +1,8 @@
 /* ==========================================================================
  *  docs-sync.js -- checks that the numbers in docs/ match game/data/
  *  The README claims data/ is the single source of truth; this script makes that claim executable.
- *  Both document sets are checked: the Chinese originals in docs/ and the English
- *  translations in docs/en/. Table column order must stay identical across languages.
+ *  Both document sets are checked: docs/cn/ (Chinese) and docs/en/ (English),
+ *  which are sibling folders. Table column order must stay identical across languages.
  *  Usage: node game/test/docs-sync.js
  * ========================================================================== */
 const fs = require('fs');
@@ -42,8 +42,8 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
  * ------------------------------------------------------------------------ */
 const LANGS = [
   {
-    tag: 'zh',
-    dir: DOCS,
+    tag: 'cn',
+    dir: path.join(DOCS, 'cn'),
     files: { zones: '02-地图与场景.md', fruits: '04-果实与变形系统.md', storage: '05-背包与仓库.md' },
     heads: {
       zones: '## 2. 区域表',
@@ -244,19 +244,24 @@ for (const L of LANGS) {
 
 /* ================= 8. every Chinese doc has an English counterpart ================= */
 {
-  const zh = fs.readdirSync(DOCS).filter(f => f.endsWith('.md'));
-  const en = new Set(fs.readdirSync(path.join(DOCS, 'en')).filter(f => f.endsWith('.md')));
+  const CN = path.join(DOCS, 'cn'), EN = path.join(DOCS, 'en');
+  const cn = fs.readdirSync(CN).filter(f => f.endsWith('.md'));
+  const en = new Set(fs.readdirSync(EN).filter(f => f.endsWith('.md')));
   // pair by the numeric prefix instead of the (translated) file name
   const numPrefix = f => (f.match(/^(\d+)/) || [null, 'README'])[1];
   const enPrefix = new Set([...en].map(numPrefix));
-  const missing = zh.map(numPrefix).filter(p => !enPrefix.has(p));
-  if (missing.length) bad('docs/en missing', missing, 'one file per Chinese doc');
-  else good(`docs/en has an English counterpart for all ${zh.length} Chinese docs`);
-  if (en.size !== zh.length) bad('docs/en file count', en.size, zh.length);
+  const missing = cn.map(numPrefix).filter(p => !enPrefix.has(p));
+  if (missing.length) bad('docs/en missing', missing, 'one file per doc in docs/cn');
+  else good(`docs/en has an English counterpart for all ${cn.length} docs in docs/cn`);
+  if (en.size !== cn.length) bad('docs/en file count', en.size, cn.length);
+  // docs/ itself must hold nothing but the two language folders
+  const loose = fs.readdirSync(DOCS).filter(f => f.endsWith('.md'));
+  if (loose.length) bad('docs/ loose files', loose, 'only docs/cn/ and docs/en/ may hold .md');
+  else good('docs/ holds only the sibling folders cn/ and en/');
 }
 
 /* ================= report ================= */
-console.log('docs ↔ data 一致性检查 (docs/ + docs/en/)');
+console.log('docs ↔ data 一致性检查 (docs/cn/ + docs/en/)');
 for (const s of ok) console.log('  ✔ ' + s);
 if (problems.length) {
   console.log('\n✘ ' + problems.length + ' 处不一致：');

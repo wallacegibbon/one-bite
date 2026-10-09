@@ -1,4 +1,4 @@
-/* Drift test: inject known errors into docs/en/ and confirm docs-sync.js reports each one. */
+/* Drift test: inject known errors into docs/en/ (and docs/ itself) and confirm docs-sync.js reports each one. */
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -55,6 +55,16 @@ fs.unlinkSync(path.join(EN, '07-art-audio-technical.md'));
   else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
 }
 restore();
+
+// a stray markdown file left directly in docs/ (the two language folders must be the only ones)
+fs.writeFileSync(path.join(ROOT, 'docs', 'README.md'), '# stray\n');
+{
+  const r = run();
+  console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [loose md in docs/] exit=${r.code}`);
+  if (r.code === 0) missed++;
+  else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
+}
+fs.unlinkSync(path.join(ROOT, 'docs', 'README.md'));
 fs.rmSync(BAK, { recursive: true, force: true });
 
 const clean = run();

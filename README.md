@@ -6,7 +6,7 @@ A Harry-Potter-like **voxel** magic exploration game — except this world has *
 
 Magic comes from **fruit**: eat it and you become the animal the fruit remembers, reverting after a while. Each animal's fruit only grows on its own ground. Your magic backpack holds **24 fruit slots**, and the rarer the fruit the bigger it is — **you cannot carry all the magic with you**.
 
-- Full setting documents: [`docs/`](docs/en/README.md) (English) · [`docs/`](docs/README.md) (中文)
+- Full setting documents: [`docs/en/`](docs/en/README.md) (English) · [`docs/cn/`](docs/cn/README.md) (中文)
 - Playable prototype: [`game/index.html`](game/index.html)
 
 ## Running the prototype
@@ -60,8 +60,8 @@ Mixed forms, the full magic-stomach rules, beast residue, NPC dialogue trees, ve
 ## Layout
 
 ```
-docs/            setting documents (8 + index; English copies in docs/en/)
-docs/en/         English translations of the same documents
+docs/cn/         setting documents in Chinese (8 + index)
+docs/en/         the same documents in English, same numbering
 game/
   index.html     entry point
   css/ui.css     HUD styles
@@ -78,7 +78,7 @@ game/
 node game/test/node-smoke.js   # no browser: data → generation → meshing (fake GL)
 node game/test/probe.js        # camera spots and water depth for each zone / POI
 node game/test/docs-sync.js    # docs ↔ data consistency (exit 1 on drift, both languages)
-node game/test/docs-drift.js   # self-test: injects 10 errors into docs/en/, confirms docs-sync catches them
+node game/test/docs-drift.js   # self-test: injects 11 errors into docs/en/ and docs/, confirms docs-sync catches them
 node game/test/play.js         # gameplay loop: harvest → respawn → capacity → transform → storage → cellar tree → raid → post → save
 node game/test/upgrade.js      # backpack upgrades and slot maths
 node game/test/input.js        # real key events: walk / jump / fly / time / Grey Veil border
