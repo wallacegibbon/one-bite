@@ -7,8 +7,8 @@
  *  Why identity is split in three layers:
  *    id      -- stable machine identity, generated once per save/account.
  *               The world stores this (cellar-tree ownership, owl post, the
- *               lake's memory, beast residue). It is the only layer that
- *               survives a move to multiple players.
+ *               lake's memory). It is the only layer that survives a move to
+ *               multiple players.
  *    epithet -- what the valley calls you. World-given, changes with deeds,
  *               never chosen by the player. All fiction text quotes this.
  *    name    -- the player's own, mutable, not unique, and by worldview

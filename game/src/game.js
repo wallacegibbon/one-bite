@@ -375,18 +375,10 @@
       const f = FRU[fruitId];
       if (!f || !f.duration) { this.logMsg(N.t('log.notEdible'), 'warn'); return; }
       const p = this.player;
-      // magic stomach: eating several in quick succession causes confusion
-      this.gastric = (this.gastric || 0) + 1;
-      if (this.gastricTime === undefined || this.time - this.gastricTime > 90) { this.gastric = 1; }
-      this.gastricTime = this.time;
-      if (this.gastric >= 3) {
-        this.gastric = 0;
-        this.logMsg(N.t('log.churn'), 'bad');
-        this.particleBurst(p.x, p.y + 1, p.z, [0.9, 0.4, 0.9], 26);
-        this.damage(0.8, N.t('log.causeOverload'));
-        this.inv.splice(slotIdx, 1);
-        return;
-      }
+      // One body at a time: a second fruit simply replaces the body you are
+      // wearing. There is no organ that holds two magics, so there is nothing
+      // to churn and no counter of how many you have swallowed -- the cost is
+      // the body you end early and the fruit you spent (docs/en/00 P3).
       if (p.form) this.logMsg(N.t('log.overwrite', { a: N.disp(FRU[p.form].form), b: N.disp(f.form) }), 'warn');
       p.form = fruitId;
       p.formT = f.duration; p.formMax = f.duration;
@@ -1042,8 +1034,7 @@
           stashes: this.stashes.map(s2 => ({ id: s2.id, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
           diffs: this.diffs, seen: this.seen, dex: this.dexFruit,
           regrow: this.regrow, growQueue: this.growQueue, posts: this.posts, drops: this.drops,
-          buffs: this.buffs, gastric: this.gastric || 0,
-          gastricTime: this.gastricTime === undefined ? null : this.gastricTime,
+          buffs: this.buffs,
           owl: this._owlUnlocked || false,
           quests: this.quests.map(q => [q.id, q.done]), stats: this.stats, upg: this.upg
         };
@@ -1067,8 +1058,6 @@
       this.growQueue = s.growQueue || [];      // a planted pit must still be growing after a reload
       this.drops = s.drops || [];              // fruit scattered on death stays recoverable
       this.buffs = s.buffs || {};
-      this.gastric = s.gastric || 0;
-      if (s.gastricTime !== null && s.gastricTime !== undefined) this.gastricTime = s.gastricTime;
       this.posts = s.posts || []; this._owlUnlocked = !!s.owl;
       const p = this.player;
       Object.assign(p, { x: s.p.x, y: s.p.y, z: s.p.z, yaw: s.p.yaw, pitch: s.p.pitch,

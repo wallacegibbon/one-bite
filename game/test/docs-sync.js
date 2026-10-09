@@ -69,7 +69,7 @@ const LANGS = [
     ],
     keyRe: /按\s*([A-Z])\s*(?:种|使用|打开|交互|吃|存|寄)/g,
     nameOf: x => x.cn,
-    cut: ['混合形态', '混胃']
+    cut: ['混合形态', '混胃', '魔力胃', '兽化残留']
   },
   {
     tag: 'en',
@@ -96,7 +96,7 @@ const LANGS = [
     ],
     keyRe: /press\s+`?([A-Z])\b/gi,
     nameOf: x => x.en,
-    cut: ['mixed form', 'mixed stomach']
+    cut: ['mixed form', 'mixed stomach', 'magic stomach', 'beast residue']
   }
 ];
 

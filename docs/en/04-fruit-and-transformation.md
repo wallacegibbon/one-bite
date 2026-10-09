@@ -135,29 +135,11 @@ The one exception is a **body reflex**: this body startles before you have decid
 ### 5.1 The time bar
 
 - The countdown starts when you eat it; the bottom of the HUD shows the form name and the remaining time.
-- Time out → you revert to human shape, and the side effect's "aftertaste" is announced.
+- Time out → you revert to human shape.
 - Revert deliberately: press `R` (ends early, no time refunded).
+- **Eat another fruit while you are already in a body and you simply change into that one.** The body you were in ends now, and the fruit you ate does exactly what it says. There is no organ that holds two magics, no counter of how many you have swallowed, and no penalty for the order you eat them in. The cost is the body you ended early and the fruit you spent — which P3 has already priced for you.
 
-### 5.2 The magic stomach (prototype: overwrite + warning)
-
-- Eating a second fruit while already transformed → the second overwrites the first and deals **1.5 vitality damage** + "Magic-stomach churn — two magics are fighting inside you!"
-- Full design (not implemented):
-  - The "magic residue" of two forms coexists in the stomach for 90 seconds, during which every action check is −30%.
-  - If the two forms differ in body size by ≥ 1.0 m, the churn damage doubles (**human → bear → jellyfish** is the most dangerous combination: 1.5 m against 0.8 m).
-- **One body at a time.** Two magics never share a body: the second fruit always overwrites the first, and no talent, plant or tool makes them coexist. This is a law of the world, not a difficulty setting — the moment one backpack could carry two bodies, every door in the valley stops being a decision about *which body to arrive in* and becomes a shopping list.
-
-### 5.3 Beast residue (not implemented, full design)
-
-Repeatedly transforming into the same form leaves traces on the human shape:
-
-| Cumulative transformations | Residue |
-|---|---|
-| 5 | night vision +0.15 (owl line) |
-| 10 | that species' alertness toward you −20% |
-| 20 | the codex entry for that species gains a line: "it recognises you" |
-| 30 | **irreversible**: human `size` permanently +0.1 m (some caves become harder to enter) |
-
-Design intent: make transformation a costless tool never — it is a kind of **identity drift**.
+**One body at a time is a law of the world, not a difficulty setting.** No talent, plant or tool makes two bodies coexist. The moment one backpack could carry two bodies, every door in the valley stops being a decision about *which body to arrive in* and becomes a shopping list.
 
 ## 6. Empty fruit (not implemented, full design)
 
@@ -165,8 +147,8 @@ Nothing in the prototype bears empty fruit: there is no such state on an item,
 no "This fruit has no taste." line in either language table, and no replant
 roll. The section below is the design, kept whole because it is cheap to build
 (one flag on the item, one log line, one roll in the planting path) and because
-it is the only mechanic that makes the codex gap in §5.3 something the player
-can push on.
+it is the only mechanic that makes the gap between the list's 26 fruits and the
+valley's 4 something the player can push on.
 
 Some fruit trees bear **empty fruit**: identical in appearance, slot cost and dormancy, but eating one does nothing and only announces "This fruit has no taste."
 

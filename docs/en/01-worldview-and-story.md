@@ -44,7 +44,7 @@ A grey band of fog around the valley, roughly 400 m thick and too tall to see th
 
 - Eat the fruit → become the animal it remembers → the time bar runs out → you are human again.
 - **You inherit the whole body**: everything it can do, and everything it cannot. Claws cannot open storage, antlers will not fit a low hole, skin dries out of water. **The mind is untouched** — inside a bear's body you are still you (04 §5.0).
-- Only one magic at a time. Eating a second fruit before the first is gone causes **churn**: vitality drops and the current form is overwritten. Experienced foragers wait until their stomach is empty.
+- **One body at a time.** Eating a second fruit while you are still in a body simply changes you into that one — the body you were in ends immediately. There is no penalty and no organ that holds two magics; the cost is the body you ended early and the fruit you spent (04 §5.1).
 - A fruit starts spoiling the moment it leaves the tree. A dormant fruit becomes a pit; a pit can be planted, and in a hundred years or so there may be a new fruit tree where it was.
 
 ## 5. Voice and style

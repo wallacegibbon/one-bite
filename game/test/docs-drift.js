@@ -29,7 +29,12 @@ const DRIFTS = [
   ['02-map-and-scenes.md', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r34 | (78,106) |', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r30 | (78,106) |', 'zone radius'],
   ['03-characters-and-creatures.md', '| `thorn` | 刺刺菇 | Thorncap |', '| `thorn` | 刺刺菇 | Thorny Cap |', 'plant name coverage'],
   ['05-backpack-and-storage.md', 'press F to use', 'press Q to use', 'unbound key claim'],
-  ['04-fruit-and-transformation.md', '### 5.2 The magic stomach', '### 5.2 The magic stomach (mixed forms: see 5.3)', 'cut design back in (mixed forms)'],
+  // each phrase in the docs-sync `cut` list gets its own injection, so deleting
+  // one entry from that list makes exactly one of these four go MISSED
+  ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nThe magic stomach also applies.', 'cut design back in (magic stomach)'],
+  ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed stomach lets both bodies act at once.', 'cut design back in (mixed stomach)'],
+  ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed form is possible with the right talent.', 'cut design back in (mixed form)'],
+  ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nBeast residue accumulates per form.', 'cut design back in (beast residue)'],
   ['00-overview-and-design-pillars.md', '| Fruits | 4 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count']
 ];
 
@@ -82,16 +87,19 @@ fs.unlinkSync(path.join(ROOT, 'docs', 'README.md'));
   fs.writeFileSync(p, bak);
 }
 
-// a design that was cut must stay out of the Chinese docs as well
+// a design that was cut must stay out of the Chinese docs as well: one
+// injection per phrase in the cn `cut` list
 {
   const CN = path.join(ROOT, 'docs', 'cn'), f = '04-果实与变形系统.md', p = path.join(CN, f);
   const bak = fs.readFileSync(p, 'utf8');
-  fs.writeFileSync(p, bak.replace('### 5.2 魔力胃（原型：覆盖 + 警告）', '### 5.2 魔力胃（原型：覆盖 + 警告）\n\n有 `混胃` 天赋者可得混合形态。'));
-  const r = run();
-  console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [cut design back in, cn] exit=${r.code}`);
-  if (r.code === 0) missed++;
-  else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
-  fs.writeFileSync(p, bak);
+  for (const [phrase, label] of [['混胃', 'mixed stomach'], ['混合形态', 'mixed form'], ['魔力胃', 'magic stomach'], ['兽化残留', 'beast residue']]) {
+    fs.writeFileSync(p, bak.replace('### 5.1 时间条', `### 5.1 时间条\n\n有 \`${phrase}\` 者可得两种身体共存。`));
+    const r = run();
+    console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [cut design back in, cn: ${label}] exit=${r.code}`);
+    if (r.code === 0) missed++;
+    else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
+    fs.writeFileSync(p, bak);
+  }
 }
 
 // identity numbers in the English docs must match IDENTITY
