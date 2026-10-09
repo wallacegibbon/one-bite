@@ -58,7 +58,7 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 **Three design intentions you can read off the matrix:**
 
 1. **The diagonal is all `calm`** — becoming that species is the pass. It is not a disguise: the grove, the lake and the ridge read the body.
-2. **No row contains `hostile`** — there are no monsters in the valley. Nothing here attacks the player on its own initiative any more: the two animals the bear used to hunt are gone, and what is left of danger is the weather, the water, the height, and what your own body cannot do.
+2. **No row contains `hostile`** — there are no monsters in the valley. Nothing here attacks the player on its own initiative any more: the two animals the bear used to hunt are gone, and what is left of danger is the weather, the water, the height, what your own body cannot do, and what an animal's body does to yours when you push through it. The lamp jellyfish is the last one: it never chases, it simply is stinging, and `poisonImmune` is the answer to it.
 3. **Frogs fear owls, owls are curious about frogs** — a complete predator chain you can read straight out of the table: whatever you become, you receive both that species' pass and that species' predator. And an owl leaves the moment a bear walks in.
 
 ## 3. Creature table
@@ -81,7 +81,7 @@ Distribution of the 28 individuals in the prototype: owl 6, jelly 8, frog 12, be
 One entry per species, always written as "verifiable fact + unverifiable rumour":
 
 - **Screech Owl**: by day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and form Lanternrow's volunteer patrol.
-- **Lamp Jellyfish**: the lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows.
+- **Lamp Jellyfish**: the lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; push through them and they sting you.
 - **Mirrorlake Frog**: after rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.
 - **Brown Bear**: the bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.
 

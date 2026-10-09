@@ -84,6 +84,8 @@ The valley is not a floor, it is four:
 
 **Mirrorlake depth**: surface y14, bottom y5 — nine blocks down. A human holds breath for 18 seconds, exactly enough to reach the tower windows and come back up, not enough to pick a fruit off the sill. That is the whole argument for "become the frog first": in this water exactly one animal breathes for you.
 
+**The ridge is not on that ladder.** Ashscale's own ground is y33–45, above the canopy, and its cold starts at y26 — you are already cold before you get near the top, and it reaches its full bite at y36, which is where every bruin fig grows. A human can cross the ridge and come back with a fig if it hurries; a bear body simply is not cold.
+
 ## 5. Scene detail
 
 ### 5.1 Starfall Keep (the castle)
@@ -126,7 +128,7 @@ Radius 34, deepest at the centre.
 
 - **Sunken Tower** (66,118): top at y12 (two blocks under the surface), base at y5. The window sills carry **frog pear**. Picking it requires breathing underwater.
 - **Frogshall** (92,120): y9, a ring of sunken huts. The frogs' place; after rain their chorus drowns the bell.
-- **Jelly fields**: their outline is exactly the sunken tower's — from the surface, the tower is what glows.
+- **Jelly fields**: their outline is exactly the sunken tower's — from the surface, the tower is what glows. They neither chase nor flee: wade into one and it stings you (0.25 vitality a second, and it stops the moment you are out of it). A jellyfish body stands in the middle of the field and picks the fruit.
 
 ### 5.6 The Deep Grove and the Old Orchard
 
@@ -165,7 +167,7 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
     │
     ├─ Cloudspire isles ────────→ owl (fly) or stepping isles + Leaper (jump)
     │
-    └─ Ashscale Ridge ledges ───→ bear (step 1.1 m: it walks up what you must jump)
+    └─ Ashscale Ridge ledges ───→ bear (step 1.1 m: it walks up what you must jump, and the cold never touches it)
            └─ rock face, y>20 ──→ bruin fig (q6)
 ```
 
@@ -181,7 +183,7 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
 | Echo Hollow | 2 | darkness (needs night vision / glow), falls |
 | Old Orchard | 2 | broken ground and low wall; nothing that hunts you |
 | Deep Grove | 3 | nothing that hunts you: dense silver trunks, and a bear standing in the path you came in by |
-| Ashscale Ridge | 3 | the height, the cold (a bear body is immune — not implemented yet), a brown bear that ignores you and will not step aside |
-| Mirrorlake | 3 | drowning (18 s for a human, 58 s in a jellyfish body), a frog drying out on land |
+| Ashscale Ridge | 3 | the height, the cold (it starts above y26 and reaches its full bite at y36; a bear body never feels it), a brown bear that ignores you and will not step aside |
+| Mirrorlake | 3 | drowning (18 s for a human, 58 s in a jellyfish body), a frog drying out on land, and the lamp jellyfish: swim into one and it stings you, which a jellyfish body does not mind |
 | Cloudspire | 4 | falling |
 | The Grey Veil | 5 | vitality drains, no sense of direction (minimap off) |

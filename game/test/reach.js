@@ -44,16 +44,10 @@ const SRC = fs.readdirSync(path.join(ROOT, 'game', 'src'))
   .filter(f => f.endsWith('.js')).map(f => read(`game/src/${f}`)).join('\n');
 
 /* Fields the prototype declares but does not act on. Each one is a promise the
-   docs make that the renderer or the rules do not keep -- see TODO D1 / F1. */
-const NOT_YET_IMPLEMENTED = {
-  'form': {
-    glide: 'no air-drag or glide-distance code; owlberry 0.35 is inert',
-    nightVision: 'the renderer has no per-form brightness; owl 0.75 / frog 0.3 inert',
-    poisonImmune: 'nothing in the world poisons you yet, so jellybloom cannot prove it',
-    tongue: 'harvest reach is a fixed distance; frogpear 4 is inert',
-    coldImmune: 'the Ashscale cold band does no damage yet, so there is nothing to be immune to'
-  }
-};
+   docs make that the renderer or the rules do not keep. The list is empty: every
+   field on the four forms is read. It refills itself the moment a field is added
+   to the data and nothing in game/src reads it, and that failure is the point. */
+const NOT_YET_IMPLEMENTED = {};
 
 const groups = {
   fruit: [...new Set(N.FRUITS.flatMap(f => Object.keys(f)))],

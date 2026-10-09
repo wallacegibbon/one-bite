@@ -17,8 +17,14 @@ const SHOTS = [
   ['glade', 'pos=60,25,56 yaw=0.4 pitch=-0.05 safe'],
   ['cave', 'pos=28,28,34 yaw=1.0 pitch=0 safe'],
   ['sky', 'pos=44,38,24 yaw=2.5 pitch=0.0 safe'],
-  ['night', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe time=620'],
-  ['owl', 'pos=104,30,40 yaw=1.2 pitch=-0.25 form=owlberry tp=1'],
+  // hour 0 is midnight and one day is 420 s, so 385 s is 22:00. (The set used to
+  // ask for time=620 here, which is 11:30 in the morning: a shot called "night"
+  // that showed noon.)
+  ['night', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe time=385'],
+  // the same town, the same hour, an owl's eyes: nightVision is the only change
+  ['nightowl', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe form=owlberry time=385'],
+  // an owl no longer hangs in the air: it glides, so the shot starts high
+  ['owl', 'pos=104,42,40 yaw=1.2 pitch=-0.25 form=owlberry tp=1'],
   ['frog', 'pos=92,11,120 yaw=0.5 pitch=-0.1 form=frogpear tp=1'],
   ['jelly', 'pos=92,11,118 yaw=0.5 pitch=-0.05 form=jellybloom tp=1'],
   ['bear', 'pos=142,32,18 yaw=2.2 pitch=-0.25 form=bruinfig tp=1 safe'],

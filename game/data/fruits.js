@@ -29,21 +29,25 @@
    *   jump        : jump force multiplier
    *   swim        : underwater movement multiplier
    *   fly         : flight thrust (0 / undefined = cannot fly)
-   *   glide       : unpowered gliding (max fall speed)
+   *   glide       : the fraction of the normal fall speed a body accepts when it
+   *                 is not flapping -- 0.35 = it comes down at a third of the
+   *                 speed you do. Unpowered: it buys distance, never height.
    *   breatheAir  : whether air is required (false = can breathe underwater)
    *   airBonus    : extra seconds of held breath
    *   dryTimer    : seconds out of water before the skin starts to dry (amphibian bodies)
-   *   nightVision : 0..1 brightening in the dark
+   *   nightVision : 0..1 brightening in the dark, and the same eye washed out by daylight
    *   glow        : self-illumination [r,g,b]
    *   stealth     : creature alert-radius multiplier (<1 = harder to spot)
    *   aura        : intimidation radius (>0 scares off lesser creatures / raises alert)
-   *   tongue      : metres of reach when plucking / grabbing
+   *   coldImmune  : the altitude cold of the northern ridge does not bite
+   *   poisonImmune: the lamp jellyfish sting does not bite
    *   step        : auto step-up height in metres
    *   fov         : field of view
    *   hand        : first-person hand model id
    * Fields that no body in the valley uses any more (climb, dig, armor, web,
-   * herd) were deleted with the animals that had them. A field comes back when
-   * a fruit asks for it, not before.
+   * herd) were deleted with the animals that had them, and `tongue` went with
+   * them: the frog's niche is swimming and breathing water, not reaching things.
+   * A field comes back when a fruit asks for it, not before.
    * Nothing here is a mental effect: a form inherits a body and the world's
    * reaction to that body, never a mind (docs/en/04 s5.0).
    * ------------------------------------------------------------------ */
@@ -84,7 +88,7 @@
       duration: 420,
       form: {
         cn: '雨蛙', en: 'frog', size: [0.5, 0.5], speed: 0.9, jump: 2.4, swim: 2.4, breatheAir: false,
-        dryTimer: 90, tongue: 4, nightVision: 0.3, stealth: 0.5, fov: 100, hand: 'web', step: 0.3
+        dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, hand: 'web', step: 0.3
       },
       cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '太小：够不到高处的果，也推不开门'],
       costEn: ['the skin must stay wet: after 90 s out of water it dries and vitality keeps draining', 'too small: cannot reach high fruit, cannot push a door open'],

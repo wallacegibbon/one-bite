@@ -28,7 +28,7 @@ There is no mystery to solve, no one to rescue, no villain. You are here for two
 |---|---|
 | Fruit spoils, the backpack has 24 slots, and the valley is bigger than the life of a single fruit — so you arrange, you store, you choose | Fly the night wood as an owl, sink to the bottom of Mirrorlake as a frog, force a path open as a bear: every body shows you a part of the valley you could not otherwise see |
 
-Failing is simple too: hunger, drowning, cold, being chased, time running out. There is no failure cutscene — you wake up in town, and what you were carrying lies where you fell.
+Failing is simple too: drowning, the cold on the northern ridge, a jellyfish sting, a frog body drying out on the shore, the fog at the edge, and time running out. There is no failure cutscene — you wake up in town, and what you were carrying lies where you fell.
 
 ## 3. The Grey Fog (the edge of the world)
 

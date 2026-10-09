@@ -42,6 +42,10 @@
       id: 'mountains', cn: '北岭 · 鹰喙峰', en: 'Ashscale Ridge', kind: 'circle',
       cx: 142, cz: 18, r: 26,
       danger: 3,
+      // the cold is the ridge's own: it depends on height, not on the hour, and
+      // it bites harder the higher you go (rate is reached `ramp` metres above
+      // the line). A bear body is its own weatherproofing.
+      cold: { above: 26, rate: 0.06, ramp: 10 },
       desc: '棕熊的坡，风把雪粒横着吹。山顶能看到云顶浮岛，也能看见灰雾墙在远处缓慢地“呼吸”。'
     },
     {

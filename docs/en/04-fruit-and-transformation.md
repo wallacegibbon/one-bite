@@ -62,7 +62,7 @@ A fruit starts counting down the moment it is picked.
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
 | `jellybloom` | Jellybloom | jellyfish | 360 s | Mirrorlake mid-water | swim 1.6, breath +40 s, self-glow, immune to poison, fov 95 | Almost immobile on land; fish avoid you (no communication with water life) |
-| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 2.4, swim 2.4, **tongue 4 m**, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
+| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 2.4, swim 2.4, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
 
 ### Legendary (12 slots)
 
@@ -70,7 +70,7 @@ A fruit starts counting down the moment it is picked.
 |---|---|---|---|---|---|---|
 | `bruinfig` | Bruin Fig | bear | 480 s | Northern Ridge rock face · hibernation den | cold immune, aura 8, step 1.1, size 1.4×1.5 | **No fine motor control** (cannot pick small fruit, cannot open storage); **weight**: thin ice breaks, wooden bridges collapse |
 
-**Which of those costs the prototype enforces**: only the frog's skin. `dryTimer` is wired up — 90 s out of water and vitality drains — and it is the one cost in this table a player can die from today. Everything else in the Cost column is still design: talons and claws "cannot open storage" (every body opens it), a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body), thin ice does not break, no bridge collapses, and the owl's daylight blindness never happens because there is no night vision to invert. The Key abilities column carries the same caveat — see §4 for the five fields that are declared and inert.
+**Which of those costs the prototype enforces**: the frog's skin, the owl's daylight and the ridge cold. `dryTimer` drains vitality 90 s after a frog body leaves the water; `nightVision` brightens the dark for the body that has it and washes that same body's daylight out; the Ashscale cold takes vitality above y26 and a bear body never feels it. What is still only written down: talons and claws "cannot open storage" (every body opens it), a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body), thin ice does not break, no bridge collapses. Every ability in the Key abilities column is read by the code — see §4.
 
 **Why there is no fifth**: the fruit table is a mirror of the animal table. Adding a fruit means adding a niche, a row in the attitude matrix and a new set of gates (03 §3). Four is what can be read in ten seconds; the next one has to earn that.
 
@@ -87,29 +87,35 @@ sit here looking implemented while nothing reads it.
 | `jump` | jump force multiplier | frog 2.4 / bear 0.9 | live |
 | `swim` | underwater movement multiplier | frog 2.4 / jellyfish 1.6 | live |
 | `fly` | flight thrust (0 = cannot fly) | only the owl, 5.2 | live |
-| `glide` | unpowered gliding (fall speed cap) | owl 0.35 | **not implemented** |
+| `glide` | unpowered gliding: the fall speed cap, as a fraction of normal | owl 0.35 — let go of the key and the owl stops hanging in the air: it comes down at a third of the speed you do, keeping the ground speed it had | live |
 | `breatheAir:false` | breathe underwater | only the frog | live |
 | `airBonus` | extra seconds of held breath | jellyfish +40 | live |
 | `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 | live |
-| `nightVision` | brightening in the dark, 0–1 | owl 0.75 / frog 0.3 | **not implemented** |
+| `nightVision` | brightening in the dark, 0–1, and the same eye overwhelmed by daylight | owl 0.75 / frog 0.3 | live |
 | `glow[r,g,b]` | self-illumination | jellyfish | live |
 | `stealth` | creature alert-radius multiplier | owl 0.45 / frog 0.5 = hard to spot | live |
 | `aura` | intimidation radius | bear 8 = small animals scatter as you approach | live |
-| `tongue` | metres of reach when plucking / grabbing | frog 4 | **not implemented** |
+| `coldImmune` | the altitude cold of the northern ridge does not bite | bear | live |
+| `poisonImmune` | the lamp jellyfish sting does not bite | jellyfish | live |
 | `step` | auto step-up height in metres | bear 1.1 = walks up any stair | live |
 | `fov` | field of view | frog 100 / bear 68 | live |
 | `hand` | first-person hand model | hand/talon/web/claw/tentacle | live |
 
-There are two further pure boolean switches, which change checks rather than
-numbers: `poisonImmune` and `coldImmune`. **Neither is implemented either**, and
-neither is `glide`, `nightVision` or `tongue` — five of the twenty-one fields on
-the four forms are declared and inert.
+Two of those fields are switches rather than numbers: `coldImmune` and
+`poisonImmune` change what can hurt you at all, not how much. They are also the
+two the valley advertises hardest — the Ashscale text promises a bear body
+shrugs off the cold, and the Mirrorlake text puts a field of stinging jellyfish
+on the lakebed exactly where the fruit grows. Both are rules the code runs now.
 
-That is the honest list, and it matters more than it looks, because one of them
-is load-bearing on content the valley already advertises: the Ashscale Ridge
-text promises that a bear body shrugs off the cold (`coldImmune`). Until that is
-built, the bear's advertised difference from a human is its collision box, its
-speed and its intimidation radius.
+`tongue` used to sit on this table (frog, 4 m of plucking reach). It is gone: the
+frog's niche is swimming and breathing water, and a second way of reaching
+things would have made the size gate — a frog fits a 1×1 gap a bear will not —
+one door among several instead of the only one.
+
+All twenty fields on the four forms are read by the code. `game/test/reach.js`
+re-asks that question on every run and fails if a field is added to the data and
+nothing in `game/src/` reads it, so this column cannot quietly rot back into
+advertising.
 
 **Note that `size` is a hard gate**: a frog at 0.5×0.5 fits a 1×1 root hole and the gaps between reeds; a bear at 1.4×1.5 does not — that is the physical implementation of "weight collapses the bridge" and "this body will not fit that door", not just flavour text.
 

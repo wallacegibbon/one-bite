@@ -121,7 +121,7 @@
       'help.f2': '你继承那具身体的全部——它能做的一切，也做不到的一切。爪子开不了仓库，角进不了窄洞。脑子不受影响。',
       'help.f3': '受惊会让时间条掉得更快；已有形态时再吃一颗，就直接换成那一种身体——当前形态立刻结束。',
       'help.dieH': '倒下',
-      'help.die': '活力归零会在果窖醒来，背包里的果实散落在原地（限时可捡回）。',
+      'help.die': '活力归零会在果窖醒来，背包里的果实散落在原地（限时可捡回）。会要命的是：水下的闭气、雨蛙的身体离水太久、北岭 y26 以上的冷、挤过水母田——变成棕熊就不会冷，变成水母就不怕蜇。',
       'dead.title': '你在谷地里倒下了',
       'dead.body': '你在原地留下了背包里的一切。它们正在失活。',
 
@@ -196,6 +196,11 @@
       'log.causeDry': '脱水',
       'log.causeDrown': '溺水',
       'log.causeFall': '坠落',
+      'log.causeCold': '失温',
+      'log.coldIn': '北岭的冷开始咬人了——越高越狠。变成棕熊就感觉不到这个。',
+      'log.coldOff': '冷松开了。',
+      'log.causeSting': '水母蜇伤',
+      'log.stung': '{n}的触须蜇进来了——变成水母就不怕它。',
       'log.nameAsk': '给自己起个名字（留空 = 不要名字）：',
       'log.nameTooLong': '名字最多 {n} 个字。',
       'log.langTo': '界面语言：{n}'
@@ -297,7 +302,7 @@
       'help.f2': 'You inherit the whole body — everything it can do and everything it cannot. Claws cannot open storage; antlers will not fit a low hole. The mind is untouched.',
       'help.f3': 'Fright drains the time bar faster; eat a second fruit while transformed and you simply switch to that body — the one you were in ends now.',
       'help.dieH': 'Falling',
-      'help.die': 'When vitality reaches zero you wake in the cellar, and everything you carried lies where you fell (retrievable for a while).',
+      'help.die': 'When vitality reaches zero you wake in the cellar, and everything you carried lies where you fell (retrievable for a while). What can kill you: held breath underwater, a frog body out of the water too long, the cold above y26 on the northern ridge, and pushing through the jelly field — a bear body is never cold, and a jellyfish body is never stung.',
       'dead.title': 'You went down in the valley',
       'dead.body': 'You left everything you were carrying where you fell. It is going dormant.',
 
@@ -372,6 +377,11 @@
       'log.causeDry': 'drying out',
       'log.causeDrown': 'drowning',
       'log.causeFall': 'a fall',
+      'log.causeCold': 'exposure',
+      'log.coldIn': 'The ridge cold starts biting — harder the higher you go. A bear body never feels this.',
+      'log.coldOff': 'The cold lets go.',
+      'log.causeSting': 'a jellyfish sting',
+      'log.stung': '{n} tentacles sting you — only a jellyfish body shrugs this off.',
       'log.nameAsk': 'Choose a name (leave empty = no name):',
       'log.nameTooLong': 'A name is {n} characters at most.',
       'log.langTo': 'Interface language: {n}'

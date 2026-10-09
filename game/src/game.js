@@ -209,8 +209,22 @@
       const edge = Math.min(p.x, p.z, W.w - p.x, W.d - p.z);
       if (edge < 22) { fogDen += (22 - edge) * 0.004; fogCol = mix(fogCol, [0.55, 0.57, 0.62], (22 - edge) / 22 * 0.8); }
       if (p.headWater) { fogCol = mix(fogCol, [0.06, 0.24, 0.32], 0.85); fogDen = 0.14; }
+      /* Night vision belongs to the eye, not to the sky. `daylight` and `night`
+         stay what the sky is -- animals and the HUD read those -- and only the
+         rendered brightness changes, so an owl and a frog standing in the same
+         dark see two different rooms. The cost the owl's fruit lists is the
+         same eye seen from the other side: one built for the dark is
+         overwhelmed by daylight, so in the sun the world washes out white. */
+      let eyeDay = this.daylight;
+      const nv = p.formDef.nightVision || 0;
+      if (nv > 0) {
+        eyeDay = Math.min(1, eyeDay + this.night * nv * 0.6);
+        const glare = day * nv;
+        fogDen += glare * 0.010;
+        fogCol = mix(fogCol, [0.92, 0.93, 0.96], glare * 0.55);
+      }
       this.env = {
-        time: this.time, day: this.daylight, night: this.night,
+        time: this.time, day: eyeDay, night: this.night,
         fogCol, fogDen, zenith, horizon, ground: mix(horizon, [0.25, 0.22, 0.2], 0.5),
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
         far: 260
@@ -527,6 +541,16 @@
       p.fright = Math.min(1, p.fright + dt * 0.9);
       this.damage(dt * 0.5, N.disp(c.sp));
       if (Math.random() < dt * 2) this.logMsg(N.t('log.chased', { n: N.disp(c.sp) }), 'bad');
+    }
+    /* The lamp jellyfish is not chasing anyone -- you are standing inside it.
+       The warning is throttled so wading through a herd of eight does not fill
+       the log, and it says what the answer is, because the answer is a body. */
+    onSting(c, dt) {
+      this.damage(dt * c.sp.sting, N.t('log.causeSting'));
+      if (this._stungAt === undefined || this.time - this._stungAt > 12) {
+        this._stungAt = this.time;
+        this.logMsg(N.t('log.stung', { n: N.disp(c.sp) }), 'bad');
+      }
     }
     onVeil(p) {
       this.veilWarn = (this.veilWarn || 0) + 1;

@@ -9,6 +9,10 @@
  *              asks this instead of asking "is this the owl?", so a second flying
  *              species would fly without anyone editing the movement code.
  *  active    : active period; day / night / both / dusk
+ *  sting     : vitality per second spent inside this animal, for touching it
+ *              rather than for being attacked by it. Nothing in the valley
+ *              hunts the player; a sting is a property of the animal's body,
+ *              like the cold or the water, and poisonImmune shrugs it off.
  *  dex/dexEn: the codex entry, always "a verifiable fact + an unverifiable rumour"
  * ========================================================================== */
 (function (N) {
@@ -28,11 +32,11 @@
       /* niche: open water -- drifting light */
       id: 'jelly', cn: '灯水母', en: 'Lamp Jellyfish', model: 'jelly', scale: 0.16,
       habitat: ['mirrorlake'], active: 'both',
-      locomotion: 'water', speed: 0.8, swimSpeed: 2.2, alert: 4, herd: 10,
+      locomotion: 'water', speed: 0.8, swimSpeed: 2.2, alert: 4, herd: 10, sting: 0.25,
       fruit: 'jellybloom',
       attitude: { self: 'calm', default: 'ignore', frog: 'ignore' },
-      dex: '镜湖的灯。水母田的位置就是湖底沉塔的轮廓——从水面看下去，塔在发光。',
-      dexEn: 'The lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows.'
+      dex: '镜湖的灯。水母田的位置就是湖底沉塔的轮廓——从水面看下去，塔在发光。它们不追人，也不躲人；你挤进它们中间，它们就蜇你。',
+      dexEn: 'The lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; push through them and they sting you.'
     },
     {
       /* niche: the shallows -- jumping, and breathing through the skin */

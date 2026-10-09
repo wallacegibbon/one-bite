@@ -589,6 +589,99 @@ const path = require('path');
   check('a frog that wanders off hops back to the herd', beasts.herd.after < beasts.herd.before - 3, beasts.herd);
   check('flying comes from the body, not from the species name', beasts.flyFromData === true, beasts);
 
+  /* 10i. the four abilities that used to be declared and inert: glide, night
+     vision, the ridge cold, the jellyfish sting. Each is measured against the
+     body that does not have it, so what is being tested is the number in
+     data/fruits.js and not a coincidence about one particular animal. */
+  const glide = await step('glide', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, vital: p.vital, grounded: p.grounded, air: p.air };
+    // open air over Mirrorlake: nothing to fall onto inside the measurement
+    const drop = (form) => {
+      p.form = form; p.x = 66; p.y = 46; p.z = 118; p.vx = p.vy = p.vz = 0;
+      p.grounded = false; p.vital = 5; p.air = p.maxAir(); p.dry = 0; p.wasCold = false;
+      for (let i = 0; i < 72; i++) p.update(1 / 60, {}, g);      // 1.2 s
+      return { vy: +p.vy.toFixed(2), fell: +(46 - p.y).toFixed(1) };
+    };
+    const owl = drop('owlberry');
+    const human = drop(null);
+    Object.assign(p, was);
+    return { owl, human, cap: -42 * N.FRUIT_BY_ID.owlberry.form.glide };
+  });
+  check('an owl that stops flapping comes down instead of hanging in the air', glide.owl.fell > 5, glide.owl);
+  check('glide caps the fall at the speed the data promises', Math.abs(glide.owl.vy - glide.cap) < 0.5, glide);
+  check('a human keeps accelerating past that speed', glide.human.vy < -25, glide.human);
+  check('glide covers less ground per second of height', glide.owl.fell < glide.human.fell - 3, glide);
+
+  const eyes = await step('nightVision', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const was = { form: p.form, time: g.time, lastHour: g.lastHour };
+    const at = (form, hour) => {
+      g.time = hour / 24 * N.DAY_LEN;
+      p.form = form;
+      g.updateEnv();
+      return { eye: +g.env.day.toFixed(3), sky: +g.daylight.toFixed(3), fogDen: +g.env.fogDen.toFixed(5) };
+    };
+    const out = {
+      midnightHuman: at(null, 0), midnightOwl: at('owlberry', 0), midnightFrog: at('frogpear', 0),
+      noonHuman: at(null, 12), noonOwl: at('owlberry', 12)
+    };
+    p.form = was.form; g.time = was.time; g.lastHour = was.lastHour; g.updateEnv();
+    return out;
+  });
+  check('the same dark is much brighter for an owl', eyes.midnightOwl.eye > eyes.midnightHuman.eye + 0.2, eyes);
+  check('a frog sees a little better in the dark, and less than an owl',
+    eyes.midnightFrog.eye > eyes.midnightHuman.eye + 0.05 && eyes.midnightFrog.eye < eyes.midnightOwl.eye, eyes);
+  check('the sky does not change because of the eye', eyes.midnightOwl.sky === eyes.midnightHuman.sky, eyes);
+  check('daylight washes out an eye built for the dark', eyes.noonOwl.fogDen > eyes.noonHuman.fogDen, eyes);
+
+  const cold = await step('ridgeCold', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, vital: p.vital, wasCold: p.wasCold, air: p.air };
+    const zc = N.ZONE_BY_ID.mountains;
+    const gy = (x, zz) => { for (let y = g.world.h - 1; y >= 0; y--) if (g.world.solidAt(x, y, zz)) return y; return 1; };
+    const stand = (form, x, zz) => {
+      p.form = form; p.x = x + 0.5; p.z = zz + 0.5; p.y = gy(x, zz) + 1;
+      p.vx = p.vy = p.vz = 0; p.vital = 5; p.wasCold = false; p.air = p.maxAir(); p.dry = 0;
+      g.log.length = 0;                                            // the feed is capped at 40, so index math would drift
+      for (let i = 0; i < 300; i++) p.update(1 / 60, {}, g);      // 5 s standing still
+      return { y: +p.y.toFixed(1), vital: +p.vital.toFixed(2), announced: g.log.filter(l => l.text === N.t('log.coldIn')).length };
+    };
+    const on = [zc.cx + 7, zc.cz + 19];                            // a ridge column, well above the line
+    const human = stand(null, on[0], on[1]);
+    const bear = stand('bruinfig', on[0], on[1]);
+    const off = stand(null, zc.cx, zc.cz + zc.r + 3);              // downhill, outside the ridge
+    Object.assign(p, was);
+    return { human, bear, off, cold: zc.cold, r: zc.r };
+  });
+  check('the test column really is above the cold line', cold.human.y > cold.cold.above, cold.human);
+  check('the ridge takes vitality from a human', cold.human.vital < 5 - 0.1, cold.human);
+  check('the cold announces itself once, not every frame', cold.human.announced === 1, cold.human);
+  check('a bear body never feels it', cold.bear.vital === 5 && cold.bear.announced === 0, cold);
+  check('outside the ridge, altitude alone does not bite', cold.off.vital === 5, cold.off);
+
+  const sting = await step('jellySting', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, vital: p.vital, wasCold: p.wasCold };
+    const jelly = g.creatures.find(c => c.sp.id === 'jelly');
+    const inside = (form) => {
+      p.form = form; p.vital = 5; p.wasCold = false; p.fright = 0;
+      g.log.length = 0;
+      for (let i = 0; i < 180; i++) {                              // 3 s standing inside the animal
+        p.x = jelly.x; p.y = jelly.y; p.z = jelly.z;
+        jelly.update(1 / 60, p, g.world, g);
+      }
+      return { vital: +p.vital.toFixed(2), warned: g.log.some(l => l.text === N.t('log.stung', { n: N.disp(jelly.sp) })) };
+    };
+    const human = inside(null);
+    const jellyBody = inside('jellybloom');
+    Object.assign(p, was);
+    return { human, jellyBody, sting: N.CREATURE_BY_ID.jelly.sting };
+  });
+  check('walking into a lamp jellyfish costs vitality', sting.human.vital < 5 - 0.5, sting.human);
+  check('the sting is announced once', sting.human.warned === true, sting.human);
+  check('a jellyfish body stands in the middle of the field untouched', sting.jellyBody.vital === 5, sting.jellyBody);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

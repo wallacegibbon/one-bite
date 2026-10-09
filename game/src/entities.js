@@ -6,6 +6,11 @@
 
   const HUMAN = { cn: '人形', en: 'human', size: [0.62, 1.8], speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55 };
 
+  /* The speed a body that does nothing about it falls at. `glide` is a fraction
+     of this, so the number in the data file is a ratio and not a speed. */
+  const MAX_FALL = 42;
+  const GRAVITY = 23;
+
   /* ============================ player ============================ */
   class Player {
     constructor(world) {
@@ -24,6 +29,7 @@
       this.fright = 0;             // fright 0..1
       this.inWater = false; this.headWater = false;
       this.dry = 0;                // seconds this amphibian body has been out of water
+      this.wasCold = false;        // whether the ridge cold is already biting (drives one log line)
       this.moveAmt = 0;            // horizontal movement this frame (drives animation)
       this.bob = 0;
       this.lastRevert = 0;
@@ -135,6 +141,26 @@
         }
       } else this.dry = 0;
 
+      // ---- the ridge is cold (docs/en/02 s7: Ashscale Ridge -- the cold) ----
+      /* The cold belongs to the ground and the height, not to the sky: it bites
+         the same at noon and at midnight, and it bites harder the higher you
+         get, reaching the full rate `ramp` metres above the line. A bear body
+         is its own weatherproofing, and eating one on the slope is the moment
+         the cold lets go. */
+      const zc = N.ZONE_BY_ID.mountains;
+      if (zc.cold) {
+        const over = this.y - zc.cold.above;
+        const biting = over > 0 && Math.hypot(this.x - zc.cx, this.z - zc.cz) < zc.r && !f.coldImmune;
+        if (biting !== this.wasCold) {
+          this.wasCold = biting;
+          game.logMsg(N.t(biting ? 'log.coldIn' : 'log.coldOff'), biting ? 'warn' : 'good');
+        }
+        if (biting) {
+          game.damage(dt * zc.cold.rate * Math.min(1, over / zc.cold.ramp), N.t('log.causeCold'));
+          if (this.dead) return;
+        }
+      }
+
       // ---- intended velocity ----
       const sprint = inp.sprint && this.air > 0 && !this.inWater;
       let speed = 4.7 * (f.speed || 1) * (sprint ? 1.45 : 1);
@@ -176,10 +202,23 @@
       // ---- vertical ----
       if (fly) {
         const up = inp.jump ? f.fly : 0, down = inp.sneak ? f.fly * 0.75 : 0;
-        this.vy += (up - down) * dt * 1.9;
-        this.vy -= this.vy * Math.min(0.92, 4.2 * dt);
-        this.vy = Math.max(-f.fly * 0.8, Math.min(f.fly * 0.75, this.vy));
-        if (!up && !down && Math.abs(this.vy) < 0.6) this.vy = 0;
+        if (up || down) {
+          this.vy += (up - down) * dt * 1.9;
+          this.vy -= this.vy * Math.min(0.92, 4.2 * dt);
+          this.vy = Math.max(-f.fly * 0.8, Math.min(f.fly * 0.75, this.vy));
+        } else if (f.glide) {
+          /* Wings spread, no flap. A flying body does not hang in the air: let
+             go of the key and it comes down. `glide` is the fraction of normal
+             fall speed it accepts, so an owl descends at about a third of the
+             rate you do and keeps the ground speed it had while it does --
+             height is what pays for distance (docs/en/04 s4). */
+          this.vy -= GRAVITY * dt;
+          this.vy = Math.max(-MAX_FALL * f.glide, this.vy);
+        } else {
+          // wings that cannot glide just fall
+          this.vy -= GRAVITY * dt;
+          this.vy = Math.max(-MAX_FALL, this.vy);
+        }
         this.grounded = false;
       } else if (this.inWater) {
         const buoy = 5.2;
@@ -190,8 +229,10 @@
         this.vy = Math.max(-4.5, Math.min(4.6, this.vy));
         this.grounded = false;
       } else {
-        this.vy -= 23 * dt;
-        this.vy = Math.max(-42, this.vy);
+        this.vy -= GRAVITY * dt;
+        // glide is a property of the body, not of flapping: an owl that walks
+        // off a ledge spreads its wings too
+        this.vy = Math.max(-MAX_FALL * (f.glide || 1), this.vy);
         if (inp.jump && this.grounded) { this.vy = 8.3 * (f.jump || 1); this.grounded = false; }
       }
 
@@ -424,6 +465,10 @@
       // contact effects
       if (dp < (this.sp.scale || 0.2) * 8 + 0.8) {
         if (this.state === 'chase') game.onCreatureTouch(this, dt);
+        /* A sting is not an attack. Nothing in the valley hunts the player; the
+           lamp jellyfish simply is stinging, the way the ridge simply is cold,
+           and a body that is immune to it stands in the middle of the field. */
+        else if (this.sp.sting && !pl.formDef.poisonImmune) game.onSting(this, dt);
         else if (this.sp.aura && (pl.formDef.aura || 0) > 0) { /* they ignore each other */ }
       }
       // intimidation: the player's form aura makes lesser creatures flee.
