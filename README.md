@@ -2,9 +2,9 @@
 
 **English** · [中文: README.zh.md](README.zh.md)
 
-A Harry-Potter-like **voxel** magic exploration game — except this world has **no wands**.
+A **voxel** magic exploration game. This world has exactly one magic, and it is a fruit.
 
-Magic comes from **fruit**: eat it and you become the animal the fruit remembers, reverting after a while. Each animal's fruit only grows on its own ground. Your magic backpack holds **24 fruit slots**, and the rarer the fruit the bigger it is — **you cannot carry all the magic with you**.
+Eat it and you become the animal the fruit remembers, reverting after a while. You inherit that animal's body completely — every ability and every fragility. Each animal's fruit only grows on its own ground. Your magic backpack holds **24 fruit slots**, and the rarer the fruit the bigger it is — **you cannot carry all the magic with you**.
 
 - Full setting documents: [`docs/en/`](docs/en/README.md) (English) · [`docs/cn/`](docs/cn/README.md) (中文)
 - Playable prototype: [`game/index.html`](game/index.html)

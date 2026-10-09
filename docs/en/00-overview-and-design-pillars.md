@@ -2,27 +2,28 @@
 
 [中文: ../cn/00-总览与设计支柱.md](../cn/00-总览与设计支柱.md)
 
-## 1. The original brief (given by the user, must not be violated)
+## 1. The original brief (given by the user, with the revisions from this pass)
 
-1. A Harry-Potter-like magic exploration game, **voxel style**.
+1. A magic exploration game, **voxel style**: the map skeleton of castle / forest / lake / sky.
 2. Scenes: **castle, forest, lake, sky**, freely explorable.
-3. The forest holds **unicorns, owls, bats** and similar animals, plus magic plants such as **mushrooms and glowing seeds**; the lake holds **merrow**; the sky holds **dragons** (rare).
-4. **No wands.** The core magic item is the **magic fruit**: eat it and you become the animal the fruit corresponds to, reverting after a while. Each animal's fruit only appears in its own habitat.
+3. The forest holds **unicorns, owls** and similar animals, plus magic plants such as **mushrooms and glowing seeds**; the lake holds **merrow**; the sky holds isles you can reach by flight. Species are pruned by ecological niche — **one species per niche** (list in 03).
+4. There is exactly one kind of magic: **magic fruit**. Eat it and you become the animal the fruit corresponds to, reverting after a while. Each animal's fruit only appears in its own habitat.
 5. The player has a **magic backpack with limited capacity**; **the rarer the fruit, the more space it occupies**, so you cannot carry many at once.
 6. The player has a **fixed-location warehouse**; warehouses **can be newly built**, but **the exact mechanism was left open** — this is the design this project had to complete.
 
 ## 2. Design Pillars
 
-### P1 · Magic is eaten, not waved
+### P1 · Magic is eaten
 
-No wands, no spells, no gestures. Every supernatural ability comes from "swallowing a piece of someone else's life into your own body".
-This pillar decides directly: the casting animation = a bite; the material component = fruit; the casting cost = side effect + time bar.
+No spells, no gestures, no foci. Every supernatural ability comes from "swallowing a piece of someone else's life into your own body".
+This pillar decides directly: the casting animation = a bite; the material component = fruit; the price = the fragility of that body + the time bar.
 
 ### P2 · The body is the key
 
 Terrain is not opened by blowing it up, it is opened by *becoming the right shape*.
 A low root-hole only a fox can enter; deep water only a merrow can hold; a vertical cave wall only a spider can climb; the cloud tops only a dragon or an owl can reach.
 **Progression = find the fruit + fit the fruit + survive long enough to get there.**
+Transformation is **inheritance**: you get everything that animal can do and everything it cannot. The mind is untouched — you still decide what to do (see 04 §5.0).
 
 ### P3 · Capacity is the only scarce currency
 
@@ -45,7 +46,7 @@ Transformation is not a pure buff, it is **swapping your social identity**.
 |---|---|
 | Combat builds / skill trees | All ability comes from fruit; growth shows up as "where can I go, what can I carry" |
 | Levels and XP | Conflicts with P3: levels would make capacity irrelevant |
-| Wands (even as decoration) | Pillar P1. Outsiders use wands, but wands do not work inside the valley — that is a worldview mystery |
+| Spells, gestures, foci | Pillar P1: magic is eaten. There is no second way to cast |
 | Building houses / free construction | The storage mechanism (see 05) replaces "build" with "grow", keeping the world organic |
 | Numeric death penalties | Death only drops your fruit where you fell, encouraging "go back and get it" instead of "reload" |
 | Time pressure / survival hunger | Only fruit has a shelf life; the player themselves does not |

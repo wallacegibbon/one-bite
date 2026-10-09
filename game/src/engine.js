@@ -396,6 +396,15 @@
   const IDENT = M4.create();
 
   N.M4 = M4;
+  // shortest signed turn from one angle to another, in radians
+  N.angleDelta = (from, to) => {
+    let d = (to - from) % (Math.PI * 2);
+    if (d > Math.PI) d -= Math.PI * 2;
+    if (d < -Math.PI) d += Math.PI * 2;
+    return d;
+  };
+  // frame-rate independent blend factor: approach at `rate` per second
+  N.ease = (rate, dt) => 1 - Math.exp(-rate * dt);
   N.MeshBuilder = MeshBuilder;
   N.Renderer = Renderer;
 

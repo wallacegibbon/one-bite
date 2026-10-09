@@ -107,7 +107,7 @@ Distribution of the 69 individuals in the prototype: owl 6, bat 8, moth 10, otte
 One entry per species, always written as "verifiable fact + unverifiable rumour":
 
 - **Screech Owl**: by day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and form Lanternrow's volunteer patrol.
-- **Grey Bat**: they locate by chorus: a whole cave of bats vocalises at once, drawing the tunnels as a map of sound. Once you are a bat you join the chorus involuntarily.
+- **Grey Bat**: they locate by chorus: a whole cave of bats vocalises at once, drawing the tunnels as a map of sound. Once you are a bat, you hear the whole cave that way.
 - **Lantern Moth**: moths hatched from glowing seeds. They line up in a row pointing at the nearest water — old fruit-hunters call this "the moth road", the most reliable compass when you are lost.
 - **Lake Otter**: keeps a stone under its arm while sleeping. It steals shells from the merrow village and the merrow pretend not to notice — because otters carry things up out of the sunken boats for them.
 - **Ember Fox**: the chicken coops of Lanternrow are never locked, because foxes only steal "what is already on the ground". The town therefore ruled the fox honest — that law has not been overturned in three hundred years.

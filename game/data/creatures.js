@@ -76,7 +76,7 @@
       speed: 7.2, alert: 26, flee: 18, herd: 4,
       fruit: 'unicorncherry',
       attitude: { self: 'calm', default: 'hostile', deer: 'curious', fox: 'hostile', dragon: 'hostile', bear: 'hostile' },
-      dex: '它们攻击的不是人，是“说谎的形状”——任何伪装成独角兽的人形都会被顶穿。所以圣林唯一的通行证，是真的变成独角兽。'
+      dex: '它不容冒犯：任何不是独角兽的东西踏进圣林，都会被顶出去。所以圣林唯一的通行证，是真的变成独角兽。'
     },
     {
       id: 'spider', cn: '梁蛛', en: 'Beamborn Spider', model: 'spider', scale: 0.18,

@@ -54,7 +54,7 @@
       id: 'starfall', cn: '星坠堡', en: 'Starfall Keep', kind: 'circle',
       cx: 78, cz: 106, r: 12,
       color: [0.46, 0.44, 0.50], danger: 1,
-      desc: '湖心岛上的学院。四塔一钟，地窖里是果实温室。这里不用魔杖——这里连“指”的动作都没有。'
+      desc: '湖心岛上的学院。四塔一钟，地窖里是果实温室。学院教的是认果：什么果、占几格、多久失活。'
     },
     {
       id: 'lanternrow', cn: '灯笼镇', en: 'Lanternrow', kind: 'rect',

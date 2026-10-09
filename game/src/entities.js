@@ -13,6 +13,8 @@
       this.x = 0; this.y = 40; this.z = 0;
       this.vx = 0; this.vy = 0; this.vz = 0;
       this.yaw = 0; this.pitch = 0;
+      // what the body actually looks like: facing and bank are eased, never snapped
+      this.faceYaw = 0; this.bank = 0;
       this.grounded = false;
       this.form = null;            // fruitId
       this.formT = 0;              // time remaining
@@ -93,6 +95,7 @@
 
     update(dt, inp, game) {
       const f = this.formDef;
+      const face0 = this.faceYaw;
       const W = this.world;
       const cx = Math.floor(this.x), cz = Math.floor(this.z);
       const cyFeet = Math.floor(this.y + 0.1), cyMid = Math.floor(this.y + this.size()[1] * 0.5), cyHead = Math.floor(this.y + this.size()[1] - 0.12);
@@ -127,6 +130,24 @@
       const accel = fly ? 22 : (this.grounded ? 34 : 12);
       this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt / Math.max(speed, 1));
       this.vz += (dz * speed - this.vz) * Math.min(1, accel * dt / Math.max(speed, 1));
+
+      // ---- the body turns with mass ----
+      // facing never snaps to the mouse: an animal pivots, and the bigger it is
+      // the slower it pivots. That is what makes third person watchable instead
+      // of twitchy (docs/en/07, "camera and comfort").
+      const h = this.size()[1];
+      const spd = Math.hypot(this.vx, this.vz);
+      if (spd > 0.4) {
+        const want = Math.atan2(this.vx, -this.vz);
+        this.faceYaw += N.angleDelta(this.faceYaw, want) * N.ease(11 - 3.4 * Math.min(2, h), dt);
+      } else {
+        this.faceYaw += N.angleDelta(this.faceYaw, this.yaw) * N.ease(3.2, dt);   // settle back to the aim
+      }
+      // lean into the turn in air and water, level out on foot
+      const lean = (fly || this.inWater)
+        ? Math.max(-0.45, Math.min(0.45, (N.angleDelta(face0, this.faceYaw) / Math.max(dt, 0.001)) * 0.11))
+        : 0;
+      this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
       // ---- vertical ----
       if (fly) {

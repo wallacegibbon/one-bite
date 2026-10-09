@@ -33,6 +33,10 @@
       this.msgTimer = 0;
       this.prompt = '';
       this.thirdPerson = false;
+      // the shot: distance / yaw / pitch / fov are state, eased every frame
+      this.cam = { yaw: 0, pitch: 0, d: 0, fov: 76 };
+      this.camReady = false;
+      this.dt = 0.016;
       this.handMeshes = {};
       this.creatureMeshes = {};
       this.env = null;
@@ -335,7 +339,7 @@
       this.inv.splice(slotIdx, 1);
       this.stats.eaten++;
       this.dexFruit[fruitId] = true;
-      this.logMsg('吃下 ' + f.cn + '：变成 ' + f.form.cn + '。' + (f.side[0] ? '副作用：' + f.side[0] + '。' : ''), 'good');
+      this.logMsg('吃下 ' + f.cn + '：变成 ' + f.form.cn + '。' + (f.cost.length ? '代价：' + f.cost.join('；') + '。' : ''), 'good');
       this.particleBurst(p.x, p.y + 1, p.z, N.RARITY[f.rarity].color, 40);
       this.ensureModel(f.creature);
       this.checkQuests();
@@ -343,10 +347,9 @@
     revert(why) {
       const p = this.player;
       if (!p.form) return;
-      const f = FRU[p.form];
       p.form = null; p.formT = 0;
       this.stats.reverted++;
-      this.logMsg('复原为人形（' + (why || '时间到') + '）。' + (f.side[1] ? '余韵：' + f.side[1] + '。' : ''), '');
+      this.logMsg('复原为人形（' + (why || '时间到') + '）。', '');
     }
     usePlant(it, slotIdx) {
       const p = this.player, pl = PLANT[it.id];
@@ -591,6 +594,8 @@
     /* ------------------------- main loop ------------------------- */
     update(dt) {
       if (!this.ready) return;
+      // clamp so a stalled tab cannot teleport the camera or the physics
+      this.dt = Math.min(dt, 0.05);
       this.frames = (this.frames || 0) + 1;
       this._fpsT = (this._fpsT || 0) + dt; this._fpsN = (this._fpsN || 0) + 1;
       if (this._fpsT > 1) { this.fps = this._fpsN / this._fpsT; this._fpsT = 0; this._fpsN = 0; }
@@ -712,20 +717,45 @@
       if (g && Math.random() < 0.5) P.spawn(p.x + (Math.random() - 0.5), p.y + 0.5 + Math.random(), p.z + (Math.random() - 0.5), 0, 0.4, 0, 1.2, g, 0.18);
     }
 
+    /* ------------------------- camera -------------------------
+       You are both the actor and the subject of the shot, so the lens never
+       cuts. Pressing V pushes it out instead of switching views, changing
+       form widens it gradually, and terrain pulls it in. Every value is eased
+       as a rate-per-second (N.ease), so the shot feels identical at 30 or 144 fps. */
+    shootCamera(p) {
+      const dt = this.dt || 0.016;
+      const cam = this.cam, h = p.size()[1];
+      const dWant = this.thirdPerson ? 1.5 + 2.25 * h : 0;      // the subject holds roughly the same frame share
+      const fovWant = p.fov() + (this.thirdPerson ? 8 : 0);
+      if (!this.camReady) {
+        cam.yaw = p.yaw; cam.pitch = p.pitch; cam.d = dWant; cam.fov = fovWant;
+        this.camReady = true;
+      }
+      cam.d += (dWant - cam.d) * N.ease(5.5, dt);
+      cam.fov += (fovWant - cam.fov) * N.ease(3.5, dt);
+      // first person tracks the mouse exactly; the watching camera trails it
+      if (this.thirdPerson) {
+        cam.yaw += N.angleDelta(cam.yaw, p.yaw) * N.ease(9, dt);
+        cam.pitch += (p.pitch - cam.pitch) * N.ease(9, dt);
+      } else { cam.yaw = p.yaw; cam.pitch = p.pitch; }
+
+      const eyeY = this.thirdPerson ? p.y + h * 0.68 : p.eyePos();
+      const cp = Math.cos(cam.pitch);
+      const ox = -Math.sin(cam.yaw) * cp, oz = Math.cos(cam.yaw) * cp, oy = -Math.sin(cam.pitch);
+      let d = cam.d;
+      // never let terrain stand between the subject and the lens
+      for (let s = 0.7; d > 1 && s < d; s += 0.35) {
+        if (this.world.solidAt(Math.floor(p.x + ox * s), Math.floor(eyeY + oy * s), Math.floor(p.z + oz * s))) {
+          d = Math.max(0.7, s - 0.35); break;
+        }
+      }
+      return { x: p.x + ox * d, y: eyeY + oy * d, z: p.z + oz * d, yaw: cam.yaw, pitch: cam.pitch, fov: cam.fov };
+    }
+
     /* ------------------------- render ------------------------- */
     render() {
       const R = this.R, p = this.player, env = this.env;
-      const cam = {
-        x: p.x, y: p.eyePos(), z: p.z,
-        yaw: p.yaw, pitch: p.pitch, fov: p.fov()
-      };
-      if (this.thirdPerson) {
-        const d = 4.2;
-        cam.x = p.x - Math.sin(p.yaw) * Math.cos(p.pitch) * d;
-        cam.y = p.y + p.size()[1] * 0.7 - Math.sin(p.pitch) * d;
-        cam.z = p.z + Math.cos(p.yaw) * Math.cos(p.pitch) * d;
-        cam.fov = p.fov() + 6;
-      }
+      const cam = this.shootCamera(p);
       R.begin(cam, env);
 
       const IDENT = N.M4.create();
@@ -826,8 +856,12 @@
         const sc = md.scale;
         const base = N.M4.create();
         N.M4.trans(base, p.x, p.y, p.z);
-        const ry = N.M4.create(); N.M4.rotY(ry, p.yaw + Math.PI);
+        const ry = N.M4.create(); N.M4.rotY(ry, p.faceYaw + Math.PI);
         N.M4.mul(base, base, ry);
+        if (Math.abs(p.bank) > 0.002) {          // lean into the turn, like a filmed one
+          const rz = N.M4.create(); N.M4.rotZ(rz, p.bank);
+          N.M4.mul(base, base, rz);
+        }
         const sm = N.M4.create(); N.M4.scale(sm, sc, sc, sc);
         N.M4.mul(base, base, sm);
         const st = { t: this.time, move: Math.min(1, Math.hypot(p.vx, p.vz) / 5), fly: !!p.formDef.fly && !p.grounded, phase: 0, gait: 7 };

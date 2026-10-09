@@ -226,7 +226,7 @@
           '<div class="cn">' + (known ? f.cn : '？？？') + '</div>' +
           '<div class="meta"><span>' + rar.cn + '</span><span>' + rar.slots + ' 果格</span>' +
           (f.duration ? '<span>' + f.duration + 's</span>' : '<span>不可食</span>') + '</div>' +
-          (known ? '<div class="lore">' + f.lore + '</div><div class="side">副作用：' + f.side.join('；') + '</div>' +
+          (known ? '<div class="lore">' + f.lore + '</div><div class="side">代价：' + f.cost.join('；') + '</div>' +
             '<div class="dim">栖息：' + f.habitatCn + '</div>' : '<div class="dim">未获得</div>') +
           '</div>';
       }

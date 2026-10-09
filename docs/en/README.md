@@ -2,13 +2,13 @@
 
 **English** · [中文: ../cn/README.md](../cn/README.md)
 
-> A magic world without wands. The magic is not in your hand, it is in your mouth.
+> A world with exactly one magic, and that magic is fruit. It is not in your hand, it is in your mouth.
 
 A design-document set plus a playable prototype for an open-exploration game in voxel style.
 
 ## In one paragraph
 
-You are **a sixteen-year-old forager** (the name is yours to choose — the valley does not address people by name), walking into **Frutaria** for the first time. The witches here do not use wands — they **eat fruit and become the animal the fruit remembers**, reverting some time later. The valley is ringed by the **Grey Veil**; inside it are forest, a lake, mountains and floating isles, home to owls, bats, otters, foxes, deer, jellyfish, merrow, unicorns, beamborn spiders, ash bears, veilbeasts, the ash phoenix and dragons. Every animal fruits on its own ground. Your backpack has only **24 fruit slots**, and the more precious the fruit the bigger it is — **you cannot carry all the magic with you**.
+You are **a sixteen-year-old forager** (the name is yours to choose — the valley does not address people by name), walking into **Frutaria** for the first time. There is exactly one magic here: you **eat fruit and become the animal the fruit remembers**, reverting some time later, and you inherit that body completely — every ability, every fragility, while your mind stays your own. The valley is ringed by **grey fog**; inside it are forest, a lake, mountains and floating isles, and every animal lives on its own ground (the roster is in 03). Every animal fruits on its own ground. Your backpack has only **24 fruit slots**, and the more precious the fruit the bigger it is — **you cannot carry all the magic with you**.
 
 ## Core loop
 
@@ -26,7 +26,7 @@ Three tensions that mesh into each other:
 |---|---|
 | **The backpack does not fit it all** | Fruit occupies 1/2/4/7/12 slots by rarity, the backpack has 24 → at most 2 legendary fruits at a time |
 | **Fruit goes dormant** | A countdown starts when it is picked (common 25 min → legendary 7 min); when dormant it becomes a pit |
-| **The body refuses** | Every form has a side effect (photophobia, attraction to light, stealing urge, inability to lie…), transformation is not a pure buff |
+| **You inherit all of it** | Transformation is inheritance: you get everything that animal can do and everything it cannot (claws cannot open storage, antlers will not fit a low hole, skin cracks out of water…). The mind is untouched — you still decide what to do |
 
 ## Document index
 

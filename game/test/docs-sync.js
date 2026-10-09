@@ -291,6 +291,39 @@ for (const L of LANGS) {
   else good(`rename key ${ID.nameKey} is bound`);
 }
 
+/* ================= 10. the mind is never affected (doc 04 in both sets) =================
+   A form inherits the animal's body and the world's reaction to that body --
+   never a mind. No urges, no compulsions, no truth spells, no hijacked instincts.
+   The vocabulary itself is banned in the data and in both doc sets. */
+{
+  const BANNED = [
+    [/忍不住|不受控|无法抗拒|冲动|强迫|强制入睡|说谎|记忆模糊|只想朝北|趋光/g, 'cn'],
+    [/\burge\b|compuls|cannot resist|involuntar|inability to lie|forced to tell|memory blur|phototax|irresistib/gi, 'en']
+  ];
+  const targets = [
+    path.join(base, 'data', 'fruits.js'), path.join(base, 'data', 'creatures.js'),
+    path.join(base, '..', 'docs', 'cn', '00-总览与设计支柱.md'),
+    path.join(base, '..', 'docs', 'cn', '03-角色与生物.md'),
+    path.join(base, '..', 'docs', 'cn', '04-果实与变形系统.md'),
+    path.join(base, '..', 'docs', 'cn', 'README.md'),
+    path.join(base, '..', 'docs', 'en', '00-overview-and-design-pillars.md'),
+    path.join(base, '..', 'docs', 'en', '03-characters-and-creatures.md'),
+    path.join(base, '..', 'docs', 'en', '04-fruit-and-transformation.md'),
+    path.join(base, '..', 'docs', 'en', 'README.md')
+  ];
+  const hits = [];
+  for (const f of targets) {
+    const txt = fs.readFileSync(f, 'utf8');
+    for (const [re, lang] of BANNED)
+      for (const m of txt.matchAll(re)) {
+        const line = txt.slice(0, m.index).split('\n').length;
+        hits.push(`${path.relative(path.join(base, '..'), f)}:${line} "${m[0]}" [${lang}]`);
+      }
+  }
+  if (hits.length) bad('mental-effect language (forms inherit the body, not the mind)', hits.join(' | '), 'none');
+  else good('no mental effects anywhere: a form inherits the body only');
+}
+
 /* ================= report ================= */
 console.log('docs ↔ data 一致性检查 (docs/cn/ + docs/en/)');
 for (const s of ok) console.log('  ✔ ' + s);

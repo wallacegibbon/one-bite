@@ -49,40 +49,40 @@ A fruit starts counting down the moment it is picked.
 
 ### Common (1 slot)
 
-| id | English | Form | Duration | Habitat | Key abilities | Side effect |
+| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `owlberry` | Owlberry | owl | 240 s | Whisperwood · bell-tower hollow | fly 5.2, glide, night vision 0.75, stealth 0.45, fov 88 | Photophobic by day; lunges uncontrollably at small rodents |
+| `owlberry` | Owlberry | owl | 240 s | Whisperwood · bell-tower hollow | fly 5.2, glide, night vision 0.75, stealth 0.45, fov 88 | Photophobic by day (night vision inverts into blinding); talons cannot work latches or fruit bags (**cannot open storage**) |
 | `batfruit` | Batfruit | bat | 210 s | Echo Hollow ceiling · dead-tree cracks | fly 6.4, glide 0.25, night vision 0.95, stealth 0.3, fov 95 | Nearly blind by day; brief thirst after transforming |
-| `glowmoth` | Mothpear | moth | 180 s | Glowglade · night wood | fly 4.0, self-glow, stealth 0.25, fov 100 | **Phototactic: cannot resist strong light sources**; the time bar is drawn as a candle |
+| `glowmoth` | Mothpear | moth | 180 s | Glowglade · night wood | fly 4.0, self-glow, stealth 0.25, fov 100 | **Body so light a crosswind drifts you**; very short time bar (drawn as a candle) |
 
 ### Uncommon (2 slots)
 
-| id | English | Form | Duration | Habitat | Key abilities | Side effect |
+| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
 | `otterkin` | Otterkin | otter | 300 s | Mirrorlake shallows · waterfall pools | swim 2.2, breath +25 s, step 0.5 | −30% speed on land; **cannot open storage** |
-| `vulpine` | Vulpine Plum | fox | 300 s | Whisperwood edge · town orchard | speed 1.45, jump 1.2, dig, smell | Hated by dogs and hunters; **cannot resist stealing unstored fruit** |
+| `vulpine` | Vulpine Plum | fox | 300 s | Whisperwood edge · town orchard | speed 1.45, jump 1.2, dig, smell | Hated by dogs and hunters; **no fine motor control** (cannot pick small fruit, cannot open storage) |
 | `stagcap` | Stagcap | stag | 300 s | Whisperwood · deer paths | speed 1.7, jump 1.5, step 0.9, herd | **Antlers snag in narrow holes and doorframes**; locked onto by wolves and veilbeasts |
 | `jellybloom` | Jellybloom | jellyfish | 300 s | Mirrorlake mid-water | swim 1.6, breath +40 s, glow, immune to poison | Almost immobile on land; fish avoid you |
 
 ### Rare (4 slots)
 
-| id | English | Form | Duration | Habitat | Key abilities | Side effect |
+| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `merrow` | Merrow Pear | merrow | 600 s | Mirrorlake · sunken tower and merrow village | **breatheAir:false**, swim 2.6, talk:water, pressure resistant | Weak out of water (−50% speed, time bar runs 2×); the merrow village demands one lake thing back |
-| `unicorncherry` | Unicorn Cherry | unicorn | 420 s | Deep forest · the Hoar Grove | speed 2.1, jump 1.6, step 1.0, purify, talk:beast, walks on water | **Cannot lie**; extremely conspicuous (hunters and veilbeasts mark you) |
+| `merrow` | Merrow Pear | merrow | 600 s | Mirrorlake · sunken tower and merrow village | **breatheAir:false**, swim 2.6, talk:water, pressure resistant | Weak out of water (−50% speed, time bar runs 2×); **skin cracks after 60 s out of water and vitality drains** |
+| `unicorncherry` | Unicorn Cherry | unicorn | 420 s | Deep forest · the Hoar Grove | speed 2.1, jump 1.6, step 1.0, purify, talk:beast, walks on water | **Horn and shoulder width: no low or narrow space**; extremely conspicuous (hunters and veilbeasts mark you) |
 | `silkberry` | Silkberry | giant spider | 420 s | Deep Echo Hollow · ruin beams | **climb**, web, night vision 0.7, fov 110 | Humanoids panic at the sight of you (villagers refuse trade); extra damage from fire/strong light |
-| `bruinfig` | Bruin Fig | ash bear | 420 s | Ashscale Ridge rock face · hibernation den | strength, cold resistant, aura 8, step 1.1 | **No fine motor control** (cannot pick small fruit, cannot open storage); forced sleep after 3 transformations in a row |
+| `bruinfig` | Bruin Fig | ash bear | 420 s | Ashscale Ridge rock face · hibernation den | strength, cold resistant, aura 8, step 1.1 | **No fine motor control** (cannot pick small fruit, cannot open storage); **weight**: thin ice breaks, wooden bridges collapse |
 
 ### Epic (7 slots)
 
-| id | English | Form | Duration | Habitat | Key abilities | Side effect |
+| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `veilberry` | Veilwalker Ash-berry | veilbeast | 480 s | Inside the Grey Veil | **phase** (through walls), veilWalk, stealth 0.15, night vision 0.85 | Time bar runs 1.5×; the minimap fails for 1 minute after transforming |
-| `phoenixpit` | Phoenix Pit | phoenix | 240 s | Cloudspire · the ash ring peak | fly 7.5, **fire**, glow, **revive:1** (one resurrection) | "Burn-hunger" for 3 minutes after transforming, eating only mushrooms; **each transformation burns 1 common fruit in your backpack** |
+| `veilberry` | Veilwalker Ash-berry | veilbeast | 480 s | Inside the Grey Veil | **phase** (through walls), veilWalk, stealth 0.15, night vision 0.85 | Time bar runs 1.5×; **the body chills after transforming** (−20% speed for 1 minute) |
+| `phoenixpit` | Phoenix Pit | phoenix | 240 s | Cloudspire · the ash ring peak | fly 7.5, **fire**, glow, **revive:1** (one resurrection) | **Ravenous after transforming: vitality keeps draining until you eat**; **each transformation burns 1 common fruit in your backpack** |
 
 ### Legendary (12 slots)
 
-| id | English | Form | Duration | Habitat | Key abilities | Side effect |
+| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
 | `embercore` | Embercore | dragon | 300 s | Cloudspire · the ash dragon's nest | fly 9.0, fire, fire immune, strength, aura 18, size 3.2×2.4 | **Other dragons attack you**; the Grey Veil rejects a dragon shape (you are pushed out and hurt when near it); ravenous after transforming, fruit spoils at double rate for 10 minutes |
 | `motherbloom` | Mother Bloom | mother-tree avatar | **0 (inedible)** | The Old Orchard · the Mother Bloom | — | Used for "restitution" and "grafting" (the key item of the finale) |
@@ -115,6 +115,21 @@ A fruit starts counting down the moment it is picked.
 **Note that `size` is a hard gate**: a fox at 0.55×0.6 fits a 1×1 root hole; a stag at 0.9×1.6 does not — that is the physical implementation of the "antlers snag in doorframes" side effect, not just flavour text.
 
 ## 5. Transformation rules
+
+### 5.0 The inheritance rule: every ability, every fragility
+
+Transformation is not putting on equipment, it is changing bodies. **You inherit everything the animal can do and everything it cannot** — all of its power and all of its fragility.
+
+Costs come from exactly two places:
+
+| Source | Examples | Why |
+|---|---|---|
+| **this body cannot** | claws and jaws cannot do fine work (no picking small fruit, no opening storage); horn and shoulder width will not fit a low hole; weight breaks thin ice and wooden bridges; skin cracks out of water; photophobic by day | you changed body, so you changed the ability table |
+| **how the world reacts to this body** | hunters and veilbeasts mark you; dogs and hunters hate a fox shape; villagers refuse trade with a spider shape; other dragons attack you | they do not recognise *you*, they recognise this body |
+
+**The mind is untouched.** A form never makes you want anything and never stops you wanting anything. Inside a dragon's body you are still you: what you think, what you fear, what you decide — exactly as in a human shape.
+
+The one exception is a **body reflex**: a prey heart is not under your command. When something lunges at you, this body flinches (`fright`), and flinching burns air and drains the time bar faster. That is physiology, not psychology — you cannot stop the flinch, but you still decide what to do next.
 
 ### 5.1 The time bar
 

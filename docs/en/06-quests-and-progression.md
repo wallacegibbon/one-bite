@@ -26,73 +26,25 @@ Quests are not a reward pipeline, they are **the manual for the gates**: every q
 
 Quests appear as a checklist in the codex panel (J); completing one announces "✔ Done: …". **No reward popup, no XP** — the reward is "you can go there now".
 
-## 3. The full seven-chapter main line
+## 3. The seven invitations (quests are not a plot)
 
-### Chapter 1 · Empty Fruit (teaching)
+There is no main line, no villain and no ending. A quest is an **invitation to use a body**, and it is the only manual the game has: each one teaches one gate -- a place you can only reach one way, or a thing you can only carry one way.
 
-| Quest | Content |
-|---|---|
-| 1-1 Know the main cellar | same as q1 |
-| 1-2 Three Owlberries | same as q2 |
-| 1-3 The one with no taste | pick an **empty fruit** and eat it → introduces the Mother Bloom's amnesia |
-| 1-4 Wing of Night | same as q3 |
+| # | Invitation | What it teaches | Body needed |
+|---|---|---|---|
+| q1 | Know the main cellar | fruit dies; storage exists | none |
+| q2 | Three owlberries | picking, slots, dormancy | none |
+| q3 | Wing of night | flight, and the time bar in the air | owl |
+| q4 | The lake's ticket | breathing, drowning, the deep | merrow |
+| q5 | The grove's pass | a shape is not a disguise: the grove reads the body | unicorn |
+| q6 | The ember at cloud top | altitude, and what a legendary fruit costs | flying apex *(pending the roster decision)* |
+| q7 | The greenhouse divider | rarity costs one slot less | none |
 
-**End state**: the player knows three things — fruit dies, where the warehouse is, and that some fruit is empty.
+Nothing in the valley is waiting to be fixed. Do none of these and the valley is unchanged: the fruit still ripens, the badgers still come, the fog still forgets.
 
-### Chapter 2 · Identification (Starfall Keep)
+**End state of all seven**: the player can reach every habitat, carry what they need, and read a fruit at a glance. That is the whole of progression.
 
-- 2-1 The four towers of the greenhouse (one rarity tier each, teaching "read the ring colour to know the slot cost")
-- 2-2 The legendary tower is empty: "An Embercore used to sit here. It ate the other three."
-- 2-3 Find the **Silver Divider** in the greenhouse (backpack upgrade: rare −1 slot)
-- 2-4 The bell in the tower: it rings at midnight, and the bats leave the cave afterwards (teaching "activity windows")
-
-**End state**: the player understands rarity = capacity + shelf life, and gets the first backpack upgrade.
-
-### Chapter 3 · The Lake's Ledger (Mirrorlake)
-
-- 3-1 The ticket to Mirrorlake (q4)
-- 3-2 The jellyfish field *is* the tower's outline (locate the sunken tower by looking at the surface)
-- 3-3 Coral Tongue's demand: return a brass bell (at the base of the sunken tower)
-- 3-4 **Return vs take**: returning → the merrow give a Merrow Pear and open the village; taking → the lake remembers you (merrow permanently hostile, but the pear is yours immediately)
-
-**End state**: the player first faces the price of "the valley does not cooperate with you".
-
-### Chapter 4 · The Shape of the Grove
-
-- 4-1 The grove border: a human shape gets gored (a forced failure, teaching the attitude matrix)
-- 4-2 Slip in once along the deer path (deer form, unicorns are `curious`)
-- 4-3 The first Unicorn Cherry on a fallen trunk at the grove's edge (q5)
-- 4-4 White Dew remembers your grandmother — hands over the surviving page of the grandmother's fruit list (a clue to the 26 missing fruits)
-
-**End state**: the player understands "transformation = swapping your social identity".
-
-### Chapter 5 · Greyglove
-
-- 5-1 The fruit traps in the Old Orchard (block 80): a human shape cannot dismantle them, you need an ash bear or a dragon
-- 5-2 Toban Quill's offer: he pays for 12 slots of Embercore in exchange for being carried up to the Cloudspire
-- 5-3 A cellar tree gets robbed (first encounter with the fruit thieves) → teaching "field storage betrays you"
-- 5-4 Dismantle all 6 traps / or work for him (two branches, affecting chapter seven)
-
-**End state**: the player realises the fruit drain is a matter outside the Grey Veil, and the cause of the Mother Bloom's amnesia.
-
-### Chapter 6 · Cloudspire
-
-- 6-1 The stepping-isle route (no flight: spider climbing + Leaper jumps)
-- 6-2 The Embercore (q6): dragons are hostile, so you need a dragon form to sneak in → but dragons are hostile to each other (a paradox lesson)
-- 6-3 The Phoenix Pit at dusk (time-limited)
-- 6-4 Ashfall lands: the only dragon in the valley willing to land, because it is dying
-
-**End state**: the player holds one of the finale's two items (Embercore / Mother Bloom bud).
-
-### Chapter 7 · The Mother Bloom (three endings)
-
-| Ending | Requires | Price |
-|---|---|---|
-| **Restitution** | Mother Bloom bud (12 slots) + 20 empty fruits | every fruit permanently −50% potency; you can never become a dragon |
-| **Grafting** | Mother Bloom bud + Embercore (**24 slots = backpack completely full**) + the character's `mixed stomach` trait | the Mother Bloom dies; every rare fruit moves to the Cloudspire and must be harvested by flight |
-| **Non-intervention** | nothing | the share of empty fruit in the codex grows +2% per week; the ending shot is an ordinary hillside |
-
-The **physical difficulty of the grafting route** is deliberate: 12 + 12 = 24 = the backpack cap, meaning the player must walk the whole Old Orchard → Cloudspire → Mother Bloom route **carrying no supplies at all**. This is the game's final test of P3.
+> Removed with the simplification of the setting (01): the Mother Bloom's amnesia, the smuggling company, the three endings. Fruit that existed only for them is marked pending in 04.
 
 ## 4. Side quests (12, full design)
 
@@ -101,15 +53,15 @@ The **physical difficulty of the grafting route** is deliberate: 12 + 12 = 24 = 
 | The moth road | follow a moth swarm at night | it leads to the nearest water, unlocking 3 hidden cellar-tree anchors |
 | The bear's cellar | find a bear-dug hole on Ashscale Ridge | inside are pits that went dormant 300 years ago — planting one revives 1 missing fruit species |
 | The law unoverturned for 300 years | the Lanternrow chicken coop | as a fox, stealing "what is on the ground" is legal; stealing what is on the table is not |
-| The spider's ledger | the Old Orchard | destroy the Silkberry nests → the beams collapse → the Mother Bloom's roots are exposed (a shortcut) |
+| The spider's ledger | the Old Orchard | destroy the Silkberry nests → the beams collapse → a new way down to the cave floor (a shortcut) |
 | Pendulum's three | store an Owlberry in the main cellar | unlocks owl post |
-| The bell in the sunken tower | chapter 3 | trade with Coral Tongue |
+| The bell in the sunken tower | after the lake's ticket (q4) | trade with Coral Tongue |
 | The empty slot in the fog | after a veilbeast touched you | the fruit you lost shows up on a different tree |
 | Why Old Mei does not eat | store 50 fruit in total | the Embercore-scent event |
-| The Mother Bloom's rings | the Old Orchard | count the rings → the year the Grey Veil appeared |
+| The oldest tree | the Old Orchard | count the rings of the thickest tree in the valley |
 | Greyglove's ledger | Quill's camp | shows which fruits were shipped out (codex-completion clues) |
 | Empty seedlings | plant 20 empty pits | a 15% revival rate, the player's own "restoration garden" |
-| The dragon that landed | after chapter 6 | accompany Ashfall on its last flight |
+| Something large in the fog | after reaching the isles | a shape that is not yours *(pending the roster decision)* |
 
 ## 5. The codex (J key)
 
