@@ -10,7 +10,7 @@ Three hard rules:
 
 1. **Every plant has something it "wants to do"**: fruit self-glows (wants to be seen), vines grow down (looking for water), mushrooms ring up (claiming ground).
 2. **Buildings are grown, not laid**: Lanternrow's houses are timber frames with mossy-soil infill; Starfall Keep is brick plus lumenstone lamps; the Old Orchard stands because of spider silk.
-3. **There are only three light sources**: sun/moon, lumenstone and embers (self-lit blocks), creatures (glowing forms, jellyfish, moths, fruit). **There is no ambient fill light** — at night, without a Glowcap, you genuinely cannot see.
+3. **There are only three light sources**: sun/moon, lumenstone and embers (self-lit blocks), creatures (glowing forms, jellyfish, fruit). **There is no ambient fill light** — at night, without a Glowcap, you genuinely cannot see.
 
 ### Palette (the values actually used in the prototype)
 
@@ -59,8 +59,8 @@ Assembled from voxel parts: one mesh + one pivot + one animation per part.
 | `bob` | head/body | `dy = sin(t·2.2)·(move·0.12+0.05)` |
 | `sway` | fins/feathers | `rz = sin(t·2.4)·0.28` |
 
-15 models: human, owl, bat, moth, otter, fox, deer, jelly, merfolk, unicorn, spider, bear, dragon, veilbeast, phoenix.
-9 first-person hands: hand, talon, wing, paw, hoof, fin, claw, tentacle, shadow.
+8 models: human, owl, pangolin, frog, deer, jelly, spider, bear.
+6 first-person hands: hand, talon, web, hoof, claw, tentacle.
 
 ## 2. Audio direction (not implemented, full design)
 
@@ -68,8 +68,8 @@ Assembled from voxel parts: one mesh + one pivot + one animation per part.
 
 | Layer | Content |
 |---|---|
-| Bed | wind (loudest on the Cloudspire), water (Mirrorlake), drips (caves), leaf rustle (the Hoar Grove "rings even without wind") |
-| Creatures | bat chorus (a 12-part loop; when the player is a bat it joins as the 13th part), single owl notes, low merrow harmonies (only audible underwater) |
+| Bed | wind (loudest on the Cloudspire), water (Mirrorlake), drips (caves), leaf rustle (the Deep Grove "rings even without wind") |
+| Creatures | the chorus after rain (a 12-part frog loop; when the player is a frog it joins as the 13th part), single owl notes, low harmonies under water (only audible when submerged) |
 | Interaction | picking = a single "pop"; dormancy = a dry crack; transformation = joints rearranging + one breath in |
 | UI | codex page turn = paper; cellar door = wood |
 | Danger | inside the Grey Veil every sound is "sucked away" (the low-pass cutoff falls to 400 Hz with depth) |
@@ -89,7 +89,7 @@ All code is classic `<script src>` global scripts hanging off the `window.FRUTAR
 | `src/engine.js` | mat4, MeshBuilder, shaders, Renderer (frustum culling, sky, particles) |
 | `src/world.js` | block table, voxel storage, chunked meshing (with AO), DDA ray picking |
 | `src/worldgen.js` | value-noise/fbm terrain + structure generation (castle/town/cave/lake/isles/forest) |
-| `src/models.js` | 15 creature models + 9 hands + part animation matrices |
+| `src/models.js` | 8 creature models + 6 hands + part animation matrices |
 | `src/entities.js` | Player (AABB collision/breath/flight), Creature (attitude-driven AI), Particles |
 | `src/game.js` | main logic: fruit/backpack/spoilage/storage/quests/save/render loop |
 | `src/ui.js` | HUD, rotating minimap, item bar, storage panel, codex, help, death |
@@ -124,7 +124,8 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 | Creatures have no pathfinding | only "steer toward target + height correction + random deflection on hitting a wall", so they get stuck on terrain |
 | No LOD / no streaming | the 160³ world is fully resident in memory; the full scale needs chunk streaming |
 | No NPC dialogue trees | Old Mei / Quill / White Dew only have log text, no branching dialogue |
-| Cellar trees are never destroyed | the bear/dragon tree-destruction roll is not wired up (raids and owl post are implemented) |
+| Cellar trees are never destroyed | the bear tear-down / pangolin root-digging roll is not wired up (raids and owl post are implemented) |
+| The frog does not dry out on screen | `dryTimer` is in the data and the check is wired up, but there is no skin-moisture bar in the HUD (04 §3) |
 | No identity service | the `id` is generated locally, not issued by a server; cellar trees already carry an `owner`, but the main cellar is communal and there is no sharing-rights model (see 03 §6) |
 
 ## 4. Tests
@@ -135,7 +136,7 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 | `game/test/node-smoke.js` | no browser: data → generation → meshing (fake GL), verifies block distribution |
 | `game/test/heightmap.js` | prints an ASCII heightmap of the surface |
 | `game/test/probe.js` | finds a safe camera spot for every POI/zone |
-| `game/test/shots.js` | 16 screenshots in one launch (zones + transformation + UI + identity), checks console errors |
+| `game/test/shots.js` | 17 screenshots in one launch (zones + transformation + UI + identity), checks console errors |
 | `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology |
 | `game/test/input.js` | real key events: walk / jump / fly / time bar / Grey Veil border |
 | `game/test/upgrade.js` | backpack upgrades: 24→30→36 slots, Silver Divider −1, q7 trigger, save round-trip |

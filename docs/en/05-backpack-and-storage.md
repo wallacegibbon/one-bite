@@ -57,9 +57,9 @@ Fruit dies → a dead fruit becomes a pit → a pit can be planted → a planted
 This single idea answers Q1–Q5 at once:
 
 - Q1 cost = one pit (you get those anyway) + time (it has to grow)
-- Q2 location = anywhere it can take root (soil, light, not too far from the Mother Bloom's roots)
+- Q2 location = anywhere it can take root (soil, light, not on the roots of another cellar tree)
 - Q3 transfer = **owl post** (see §5)
-- Q4 degradation = a cellar tree's decay rate is 1/3 (not 0), and **badgers and fruit thieves come stealing**
+- Q4 degradation = a cellar tree's decay rate is 1/3 (not 0), and **bears and fruit thieves come stealing**
 - Q5 cap = **at most 3 cellar trees**, for a worldview reason rather than a numeric one: "At most 3 cellar trees — the valley cannot remember more places than that."
 
 **Verdict: adopted.**
@@ -84,7 +84,7 @@ This single idea answers Q1–Q5 at once:
   | Silver Divider (银丝隔层) | rare and above occupy **−1** slot | the silver mesh in the castle greenhouse |
 - Cap 36 slots = 3 legendary fruits. The Silver Divider makes "rare 4→3, epic 7→6, legendary 12→11", so 36 slots fit 3 legendary fruits plus spare room.
 
-**Why the backpack is never made bigger**: 24 slots = 2 legendary fruits. That number makes "do I bring the dragon fruit" a permanent trade-off.
+**Why the backpack is never made bigger**: 24 slots = 2 legendary fruits. That number makes "do I bring the bear fig" a permanent trade-off.
 
 ### 3.2 The main cellar (the fixed warehouse)
 
@@ -117,15 +117,15 @@ This single idea answers Q1–Q5 at once:
 | Cap | 3 trees | "the valley cannot remember more places" |
 | Min distance | 20 m | roots must not overlap; also forces the player to spread their points out |
 | Decay | ×0.33 | a cellar tree is alive, not a cellar. Fruit inside survives only 1/3 of the backpack's time |
-| Theft | one roll per game day, 30% chance a badger or a fruit thief takes 1–3 fruits; **if the player is within 45 m they are always scared off and nothing is lost**. The town cellar is never rolled against — it is the only storage with walls | field storage has to be **visited regularly** |
-| Destruction | a bear form can tear it down (tearing = everything drops); a dragon's fire = every item goes dormant | gives the strength forms an actual use |
+| Theft | one roll per game day, 30% chance a bear or a fruit thief takes 1–3 fruits; **if the player is within 45 m they are always scared off and nothing is lost**. The town cellar is never rolled against — it is the only storage with walls | field storage has to be **visited regularly** |
+| Destruction | a bear form can tear it down (tearing = everything drops); a pangolin form can dig out its roots (the same spill) | gives the strength and dig bodies an actual use |
 | Not movable | a dead cellar tree is dead, its goods scatter | there is no "pack up the warehouse" |
 
 **Why cellar-tree decay is not 0**: if field storage had zero decay, players would build one per map and the capacity anxiety would vanish. ×0.33 means a cellar tree is a **waystation**, not a **safe**.
 
 ## 4. The economics of storage (one table to see the trade-off)
 
-The lifespan of one **Merrow Pear** (rare, 4 slots, 900 s):
+The lifespan of one **Frog Pear** (rare, 4 slots, 900 s):
 
 | Stored in | Effective lifespan | Equal to, in-game |
 |---|---|---|
@@ -135,7 +135,7 @@ The lifespan of one **Merrow Pear** (rare, 4 slots, 900 s):
 
 A round trip "Mirrorlake → Lanternrow" takes about 3–4 minutes. So:
 
-- A Merrow Pear **cannot** be walked all the way from Mirrorlake to the cellar (900 s is enough on paper, but the route also involves digging, diving and transforming).
+- A Frog Pear **cannot** be walked all the way from Mirrorlake to the cellar (900 s is enough on paper, but the route also involves digging, diving and transforming).
 - You must plant a cellar tree near Mirrorlake as a waystation → this is the real motive for "building a new warehouse": **not greed, but the journey is longer than the shelf life.**
 
 ## 5. Moving goods between warehouses
@@ -183,7 +183,7 @@ These three turn "the warehouse" from a static UI into **something you manage, s
 | backpack upgrades (Pouch / Deep Pouch / Silver Divider) | ✅ implemented (`Game.upg` + `cap()/slotOf()`; q1→Pouch, q4→Deep Pouch, q7→Silver Divider; saved) |
 | fruit block regrowth | ✅ implemented (`Game.regrow[]`, `RARITY.regrow` game days ×±20%, saved) |
 | owl post | ✅ implemented (`Game.postItem/updatePosts`, 1 fruit / 3 game days / 10% lost, decays at ×0.1 in flight, in-transit saved) |
-| badger / fruit-thief rolls | ✅ implemented (`Game.dailyRolls()`, 30% per game day, player within 45 m always scares them off, 1–3 fruits taken; trap block 80 not involved) |
+| bear / fruit-thief rolls | ✅ implemented (`Game.dailyRolls()`, 30% per game day, player within 45 m always scares them off, 1–3 fruits taken; trap block 80 not involved) |
 | cellar-tree spacing (min 20 m) | ✅ implemented (`Game.buildCellarTree()` refuses a tree planted inside a sibling's roots) |
 | every number in the rule table above | ✅ lives in `N.STORAGE.treestash` (`minDist` / `raidChance` / `raidMin` / `raidMax` / `raidScareRadius`); `docs-sync.js` compares the prose against the data, and `docs-drift.js` proves it can fail |
 | cellar tree destroyed / bear tearing it down | ⬜ not implemented |

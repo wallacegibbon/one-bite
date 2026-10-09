@@ -1,6 +1,7 @@
 /* ==========================================================================
- *  worldgen.js -- valley generation: terrain / Mirrorlake / Starfall Keep / Whisperwood / bat cave /
+ *  worldgen.js -- valley generation: terrain / Mirrorlake / Starfall Keep / Whisperwood / Echo Hollow /
  *                  Lanternrow / the old orchard / Cloudspire isles / fruit and plant distribution
+ *                  Every fruit is placed where its own species lives (docs/en/02 s6).
  * ========================================================================== */
 (function (N) {
   const D = N.BLOCKS;
@@ -150,6 +151,17 @@
     }
   }
 
+  /* a burrow mound: a low earth heap, fruit on the lip (the pangolin's larder) */
+  function mound(x, z, fruitBlock) {
+    const y = gy(x, z);
+    if ([1, 2, 3, 24].indexOf(get(x, y, z)) < 0) return;
+    blob(x, y + 0.8, z, 1.6, 0.9, 1.6, 2);
+    if (fruitBlock && rnd() < 0.75) {
+      const a = rnd() * 6.28;
+      set(x + Math.round(Math.cos(a)), y + 2, z + Math.round(Math.sin(a)), fruitBlock);
+    }
+  }
+
   /* hang fruit on the sides of a trunk (region scan + shuffled order) */
   function onTrunk(fruitId, x0, z0, x1, z1, trunkBlock, count) {
     const cols = [];
@@ -229,7 +241,7 @@
     box(gx - 2, base, gz - 2, gx + 2, base + 4, gz + 2, 21, true);
     set(gx, base + 1, gz, 14);
     set(gx - 1, base + 1, gz - 1, N.FRUIT_BLOCK_REV['owlberry']);
-    set(gx + 1, base + 1, gz + 1, N.FRUIT_BLOCK_REV['unicorncherry']);
+    set(gx + 1, base + 1, gz + 1, N.FRUIT_BLOCK_REV['frogpear']);
     // cellar entrance (marked)
     set(cx, base, cz + 4, 78);
   }
@@ -276,7 +288,7 @@
     }
   }
 
-  /* ---------------- orchard ruins / the mother tree ---------------- */
+  /* ---------------- orchard ruins / the oldest tree ---------------- */
   function orchard() {
     const cx = 24, cz = 104;
     for (let a = 0; a < 6.283; a += 0.06) {
@@ -285,19 +297,26 @@
       const hgt = 20 + (rnd() < 0.4 ? 0 : (rnd() * 3 | 0));
       for (let y = 19; y <= hgt; y++) set(x, y, z, rnd() < 0.5 ? 11 : 3);
     }
-    // the mother tree
+    // the oldest tree in the valley
     for (let y = 21; y <= 30; y++) { set(cx, y, cz, 6); set(cx + 1, y, cz, 6); set(cx, y, cz + 1, 6); }
     blob(cx, 32, cz, 6, 3.5, 6, 7);
     blob(cx - 3, 30, cz + 2, 3, 2, 3, 27);
     set(cx, 26, cz + 1, 14);
-    // trees and silkberries among the ruins
+    // trees among the ruins
     for (let i = 0; i < 14; i++) {
       const a = rnd() * 6.28, r = rnd() * 10;
       tree(Math.round(cx + Math.cos(a) * r), Math.round(cz + Math.sin(a) * r), rnd() < 0.3 ? 'pine' : 'oak');
     }
+    // silkberry: the beams the spiders keep mending
+    onTrunk('silkberry', cx - 6, cz - 6, cx + 6, cz + 6, 6, 5);
+    // scaleberry: the burrow mounds are older than the town cellar
+    for (let i = 0; i < 9; i++) {
+      const a = rnd() * 6.28, r = 3 + rnd() * 9;
+      mound(Math.round(cx + Math.cos(a) * r), Math.round(cz + Math.sin(a) * r), N.FRUIT_BLOCK_REV['scaleberry']);
+    }
   }
 
-  /* ---------------- bat cave ---------------- */
+  /* ---------------- Echo Hollow (beamborn spiders) ---------------- */
   function cave() {
     const cx = 28, cz = 32;
     blob(cx, 19, cz, 9, 4.5, 8, 0);                 // hollow it out
@@ -310,21 +329,21 @@
       if (dist(x, z, cx, cz) > 9.2) continue;
       for (let y = 15; y <= 17; y++) if (!get(x, y, z)) set(x, y, z, 3);
     }
-    // batfruit on the ceiling (scan up from inside to find the roof)
-    for (let i = 0; i < 34; i++) {
+    // silkberry hangs from the roof, where the beams used to be
+    for (let i = 0; i < 22; i++) {
       const a = rnd() * 6.28, r = rnd() * 7;
       const x = Math.round(cx + Math.cos(a) * r), z = Math.round(cz + Math.sin(a) * r);
       let y = 18; while (y < 30 && !get(x, y, z)) y++;
-      if (get(x, y, z) && y > 19 && y < 28 && !get(x, y - 1, z)) set(x, y - 1, z, N.FRUIT_BLOCK_REV['batfruit']);
+      if (get(x, y, z) && y > 19 && y < 28 && !get(x, y - 1, z)) set(x, y - 1, z, N.FRUIT_BLOCK_REV['silkberry']);
     }
-    // silkberries (deep in the cave)
+    // silkberry, deep in the cave
     for (let i = 0; i < 5; i++) {
       const x = cx - 8 + (rnd() * 4 | 0), z = cz - 6 + (rnd() * 6 | 0), y = 19 + (rnd() * 3 | 0);
       if (!get(x, y, z)) set(x, y, z, N.FRUIT_BLOCK_REV['silkberry']);
     }
   }
 
-  /* ---------------- lakebed: sunken tower / mermaid village ---------------- */
+  /* ---------------- lakebed: sunken tower / the sunken huts ---------------- */
   function lakebed() {
     // sunken tower
     const tx = 66, tz = 118;
@@ -332,32 +351,35 @@
     for (let y = 7; y <= 14; y += 3) { set(tx - 3, y, tz, 21); set(tx + 3, y, tz, 21); set(tx, y, tz - 3, 21); set(tx, y, tz + 3, 21); }
     set(tx, 16, tz, 12); set(tx, 17, tz, 12);
     for (const [dx, dz] of [[-3, 0], [3, 0], [0, -3], [0, 3]]) {
-      set(tx + dx, 10, tz + dz, N.FRUIT_BLOCK_REV['merrow']);
-      set(tx + dx, 13, tz + dz, N.FRUIT_BLOCK_REV['merrow']);
+      set(tx + dx, 10, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
+      set(tx + dx, 13, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
     }
-    // mermaid village
+    // sunken huts: the valley had people in it before the fog
     for (const [hx, hz] of [[90, 120], [96, 116], [94, 124], [88, 126]]) {
       box(hx - 2, 7, hz - 2, hx + 2, 10, hz + 2, 3, true);
       set(hx, 11, hz, 22); set(hx - 2, 9, hz, 21);
     }
-    // kelp / jellyfish fields
+    // jellybloom fields: the brightest ring on the lakebed. They hang in the water
+    // column just above the mud (the lake surface is y=SEA), never on dry ground.
+    for (let i = 0, placed = 0; i < 120 && placed < 26; i++) {
+      const a = rnd() * 6.28, r = 12 + rnd() * 14;
+      const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
+      const y = gy(x, z);
+      const yy = y + 1 + (rnd() * 2 | 0);
+      if (y < SEA - 3 && yy < SEA && get(x, yy, z) === 5) { set(x, yy, z, N.FRUIT_BLOCK_REV['jellybloom']); placed++; }
+    }
+    // kelp
     for (let i = 0; i < 260; i++) {
       const a = rnd() * 6.28, r = rnd() * LAKE.r;
       const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
       const y = gy(x, z);
       if (y < SEA && y > 4 && get(x, y, z) && !get(x, y + 1, z)) set(x, y + 1, z, 75);
     }
-    for (let i = 0; i < 26; i++) {
-      const a = rnd() * 6.28, r = 8 + rnd() * 12;
-      const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
-      const y = gy(x, z);
-      if (y < SEA - 2 && !get(x, y + 1, z)) set(x, y + 1, z, N.FRUIT_BLOCK_REV['jellybloom']);
-    }
-    // otterkin bushes on the shore
-    for (let i = 0; i < 22; i++) {
+    // frogpear bushes in the reeds all round the shore
+    for (let i = 0; i < 30; i++) {
       const a = rnd() * 6.28, r = LAKE.r - 1 + rnd() * 3;
       const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
-      if (gy(x, z) >= SEA) bush(x, z, N.FRUIT_BLOCK_REV['otterkin']);
+      if (gy(x, z) >= SEA) bush(x, z, N.FRUIT_BLOCK_REV['frogpear']);
     }
   }
 
@@ -372,18 +394,18 @@
         set(x + dx, top, z + dz, 1);
         for (let y = top - 1; y >= top - th; y--) set(x + dx, y, z + dz, y > top - th + 1 ? 3 : 24);
       }
-      if (isle.nest) {
+      if (isle.beams) {
         for (let i = 0; i < 5; i++) tree(x - 4 + (rnd() * 8 | 0), z - 4 + (rnd() * 8 | 0), 'pine');
-        // dragon nest: bone heap + embers + embercore fruit
-        for (let a = 0; a < 6.283; a += 0.2) {
+        // the old beams: three centuries of spider silk holding a roof up
+        for (let a = 0; a < 6.283; a += 0.5) {
           const rr = 4 + rnd() * 2;
           const bx = Math.round(x + Math.cos(a) * rr), bz = Math.round(z + Math.sin(a) * rr);
-          set(bx, top + 1, bz, 22); set(bx, top + 2, bz, rnd() < 0.4 ? 18 : 22);
+          for (let k = 0; k < 3; k++) set(bx + k, top + 1, bz, 26);
         }
-        set(x, top + 1, z, 18); set(x + 1, top + 1, z, 18); set(x, top + 1, z + 1, 18);
-        set(x - 1, top + 2, z, N.FRUIT_BLOCK_REV['embercore']);
-        set(x + 2, top + 2, z - 1, N.FRUIT_BLOCK_REV['embercore']);
-        set(x - 2, top + 3, z + 2, N.FRUIT_BLOCK_REV['embercore']);
+        for (let k = -2; k <= 2; k++) { set(x + k, top + 3, z, 26); set(x, top + 3, z + k, 26); }
+        set(x - 1, top + 4, z, N.FRUIT_BLOCK_REV['silkberry']);
+        set(x + 2, top + 4, z - 1, N.FRUIT_BLOCK_REV['silkberry']);
+        set(x - 2, top + 4, z + 2, N.FRUIT_BLOCK_REV['silkberry']);
       } else {
         for (let i = 0; i < (r > 5 ? 5 : 2); i++) tree(x - r + 2 + (rnd() * (2 * r - 4) | 0), z - r + 2 + (rnd() * (2 * r - 4) | 0), 'pine');
       }
@@ -464,18 +486,23 @@
     }
     // owlberry: beside hollow old oaks
     onTrunk('owlberry', 10, 10, 150, 70, 6, 24);
-    // unicorn cherry: the Hoar Grove
-    onTrunk('unicorncherry', GROVE.x - 17, GROVE.z - 17, GROVE.x + 17, GROVE.z + 17, 22, 20);
-    // mothpear: the mushroom ring and woodland edges
-    for (let i = 0; i < 70; i++) {
-      const a = rnd() * 6.28, r = rnd() * 12;
-      const x = Math.round(gx + Math.cos(a) * r), z = Math.round(gz + Math.sin(a) * r);
-      const y = gy(x, z);
-      if (get(x, y, z) === 1 && !get(x, y + 1, z)) set(x, y + 1, z, N.FRUIT_BLOCK_REV['glowmoth']);
+    // stagcap: the fungus fruit of the deep grove, on silver trunks
+    onTrunk('stagcap', GROVE.x - 17, GROVE.z - 17, GROVE.x + 17, GROVE.z + 17, 22, 16);
+    // frogpear: the glade stays damp, so the frogs live there too
+    for (let i = 0; i < 26; i++) {
+      const a = rnd() * 6.28, r = 4 + rnd() * 9;
+      bush(Math.round(gx + Math.cos(a) * r), Math.round(gz + Math.sin(a) * r), N.FRUIT_BLOCK_REV['frogpear']);
     }
-    // vulpine plum: orchards outside town + the old orchard
-    onTrunk('vulpine', 110, 100, 152, 150, 6, 10);
-    onTrunk('vulpine', 14, 94, 38, 116, 6, 6);
+    // scaleberry: burrow mounds in the wood and on the ridge
+    for (let i = 0; i < 22; i++) {
+      const x = 10 + (rnd() * 140 | 0), z = 10 + (rnd() * 62 | 0);
+      if (dist(x, z, LAKE.x, LAKE.z) < LAKE.r + 2) continue;
+      mound(x, z, N.FRUIT_BLOCK_REV['scaleberry']);
+    }
+    for (let i = 0; i < 12; i++) {
+      const a = rnd() * 6.28, r = rnd() * 20;
+      mound(Math.round(MTN.x + Math.cos(a) * r), Math.round(MTN.z + Math.sin(a) * r), N.FRUIT_BLOCK_REV['scaleberry']);
+    }
     // bruin fig: Ashscale Ridge
     for (let i = 0; i < 26; i++) {
       const a = rnd() * 6.28, r = rnd() * 18;
@@ -483,18 +510,7 @@
       const y = gy(x, z);
       if (y > SEA + 6 && !get(x, y + 1, z) && [3, 15, 24, 2, 1].indexOf(get(x, y, z)) >= 0) set(x, y + 1, z, N.FRUIT_BLOCK_REV['bruinfig']);
     }
-    // veilberry: the boundary
-    for (let i = 0; i < 10; i++) {
-      const side = i % 4;
-      let x, z;
-      if (side === 0) { x = 8 + (rnd() * 140 | 0); z = 8; }
-      else if (side === 1) { x = 8 + (rnd() * 140 | 0); z = 151; }
-      else if (side === 2) { x = 8; z = 8 + (rnd() * 140 | 0); }
-      else { x = 151; z = 8 + (rnd() * 140 | 0); }
-      const y = gy(x, z);
-      if (y > SEA && !get(x, y + 1, z)) set(x, y + 1, z, N.FRUIT_BLOCK_REV['veilberry']);
-    }
-    // cellar stones: one under the mother tree + one near town
+    // cellar stones: one under the oldest tree + one near town
     for (const [x, z] of [[ORCH.x + 2, ORCH.z + 2], [116, 112]]) {
       const y = gy(x, z);
       if (get(x, y, z) === 1 && !get(x, y + 1, z)) set(x, y + 1, z, 65);

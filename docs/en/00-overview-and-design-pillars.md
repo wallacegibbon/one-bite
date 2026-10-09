@@ -21,7 +21,7 @@ This pillar decides directly: the casting animation = a bite; the material compo
 ### P2 · The body is the key
 
 Terrain is not opened by blowing it up, it is opened by *becoming the right shape*.
-A low root-hole only a fox can enter; deep water only a merrow can hold; a vertical cave wall only a spider can climb; the cloud tops only a dragon or an owl can reach.
+A low root-hole only a frog can enter; underwater only a frog can stay; a vertical cave wall only a pangolin or a spider can climb; the cloud tops only an owl can reach.
 **Progression = find the fruit + fit the fruit + survive long enough to get there.**
 Transformation is **inheritance**: you get everything that animal can do and everything it cannot. The mind is untouched — you still decide what to do (see 04 §5.0).
 
@@ -37,7 +37,7 @@ This turns hoarding into loss, turns the warehouse into a place that must be con
 
 ### P5 · The valley does not cooperate with you
 
-Every animal has its own opinion about *the shape you are in right now*. Become a unicorn and deer grow curious, foxes get impaled, and dragons come to fight you.
+Every animal has its own opinion about *the shape you are in right now*. Become a deer and the herd takes you in; walk onto the Northern Ridge in a pangolin shape and the bear comes at you.
 Transformation is not a pure buff, it is **swapping your social identity**.
 
 ## 3. Anti-goals (explicitly not doing)
@@ -53,11 +53,11 @@ Transformation is not a pure buff, it is **swapping your social identity**.
 
 ## 4. Experience goals (sentences the player should say out loud)
 
-- "My backpack is full, but the dragon's nest is right ahead — which fruit do I drop?"
-- "So this cave needed me to become a spider."
+- "My backpack is full, but the hibernation den on the Northern Ridge is right ahead — which fruit do I drop?"
+- "So this cave needed me to become a pangolin to dig it open."
 - "I stored it in the cellar, forgot about it for three weeks, and it all turned into pits."
 - "The pit I planted grew into a tree; that is going to be my own orchard one day."
-- "The unicorn is not attacking me — because I really am a unicorn."
+- "The herd is not running — because I really am a deer."
 
 ## 5. The player fantasy
 
@@ -86,7 +86,7 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 |---|---|---|
 | World | 160×48×160 voxels | 1024×128×1024 |
 | Zones | 11 | 20–24 |
-| Fruits | 15 | 30–40 |
-| Creatures | 14 species | 25–30 species + named individuals |
+| Fruits | 7 | 12–16 |
+| Creatures | 7 species | 12–16 species + named individuals |
 | Main line | 6 quests | 7 chapters × 4–6 quests |
 | One day | 420 seconds | 1200 seconds |

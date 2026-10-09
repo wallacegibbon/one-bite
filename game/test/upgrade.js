@@ -22,27 +22,29 @@ const path = require('path');
     // 1) baseline slot usage
     g.inv = [];
     out.base = { cap: g.cap(), used: g.used() };
-    for (const id of ['owlberry', 'merrow', 'embercore']) g.addItem('fruit', id);
+    for (const id of ['owlberry', 'frogpear', 'silkberry']) g.addItem('fruit', id);
     out.after3 = { cap: g.cap(), used: g.used(), slots: g.inv.map(i => g.slotOf(i)) };
-    // 2) a legendary fruit (12 slots) must not fit in a 24-slot pack
-    out.rejMother = g.addItem('fruit', 'motherbloom');
-    // 3) side pouch +6
+    // 2) one legendary (12 slots) fills the 24-slot pack exactly, a second one cannot fit
+    out.legendary = g.addItem('fruit', 'bruinfig');
+    out.rejSecond = g.addItem('fruit', 'bruinfig');
+    // 3) side pouch +6 is not yet enough for a second legendary
     g.upg.pouch1 = true;
     out.pouch1 = { cap: g.cap() };
-    out.acceptMother = g.addItem('fruit', 'motherbloom');
-    // 4) deep pouch +6
+    out.stillFull = g.addItem('fruit', 'bruinfig');
+    // 4) deep pouch +6 -> 36 slots, now it fits
     g.upg.pouch2 = true;
     out.pouch2 = { cap: g.cap() };
+    out.acceptSecond = g.addItem('fruit', 'bruinfig');
     // 5) silver divider: rare and above cost 1 less
-    g.inv = [];
-    const before = ['merrow', 'embercore', 'motherbloom'].map(id => g.slotOf({ kind: 'fruit', id }));
+    const probe = ['frogpear', 'silkberry', 'bruinfig'];
+    const before = probe.map(id => g.slotOf({ kind: 'fruit', id }));
     g.upg.divider = true;
-    const after = ['merrow', 'embercore', 'motherbloom'].map(id => g.slotOf({ kind: 'fruit', id }));
+    const after = probe.map(id => g.slotOf({ kind: 'fruit', id }));
     out.divider = { before, after, cap: g.cap() };
     // 6) common fruit is unaffected
     out.common = { before: 1, after: g.slotOf({ kind: 'fruit', id: 'owlberry' }) };
     // 7) pits cost half, plus the divider
-    out.pit = { merrow: g.slotOf({ kind: 'pit', id: 'merrow' }), mother: g.slotOf({ kind: 'pit', id: 'motherbloom' }) };
+    out.pit = { frogpear: g.slotOf({ kind: 'pit', id: 'frogpear' }), bruinfig: g.slotOf({ kind: 'pit', id: 'bruinfig' }) };
     // 8) walking to the greenhouse door should finish q7 and grant the divider
     g.upg.divider = false;
     const gh = window.FRUTARIA.POIS.find(p => p.id === 'greenhouse');

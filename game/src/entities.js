@@ -23,6 +23,7 @@
       this.vital = 5;              // vitality
       this.fright = 0;             // fright 0..1
       this.inWater = false; this.headWater = false;
+      this.dry = 0;                // seconds this amphibian body has been out of water
       this.moveAmt = 0;            // horizontal movement this frame (drives animation)
       this.bob = 0;
       this.lastRevert = 0;
@@ -110,6 +111,18 @@
       } else {
         this.air = Math.min(canBreathe ? 999 : 18, this.air + dt * (canBreathe ? 999 : 6));
       }
+
+      // ---- skin must stay wet (amphibian bodies: docs/en/04 s3) ----
+      // The frog breathes in water and on land, but its skin has to stay wet.
+      // This is the cost of the water niche on land -- it drowns on the shore.
+      if (f.dryTimer) {
+        if (this.inWater) { if (this.dry > f.dryTimer) game.logMsg('皮肤泡回水里了。', 'good'); this.dry = 0; }
+        else this.dry += dt;
+        if (this.dry > f.dryTimer) {
+          if (this.dry - dt <= f.dryTimer) game.logMsg('皮肤开始发干——这具身体要靠皮肤喝水。', 'warn');
+          game.damage(dt * 0.03, '脱水');
+        }
+      } else this.dry = 0;
 
       // ---- intended velocity ----
       const sprint = inp.sprint && this.air > 0 && !this.inWater;
@@ -252,13 +265,16 @@
     }
     attitudeTo(formId) {
       const a = this.sp.attitude || {};
-      const key = formId === null ? 'human' : formId;
+      // the player's form is a fruit id; attitudes are keyed by species id
+      const species = formId && N.FRUIT_BY_ID[formId] ? N.FRUIT_BY_ID[formId].creature : formId;
+      const key = formId === null ? 'human' : species;
       if (a[key]) return a[key];
-      if (formId && a.self) return a.self;
+      if (species && a.self && species === this.sp.id) return a.self;
       return a.default || 'ignore';
     }
-    isFlyer() { return ['owl', 'bat', 'moth', 'dragon', 'phoenix'].indexOf(this.sp.id) >= 0; }
-    isAquatic() { return ['otter', 'jelly', 'merfolk'].indexOf(this.sp.id) >= 0; }
+    isFlyer() { return ['owl'].indexOf(this.sp.id) >= 0; }
+    isAquatic() { return ['jelly'].indexOf(this.sp.id) >= 0; }        // never leaves the water
+    isAmphibian() { return ['frog'].indexOf(this.sp.id) >= 0; }       // bank and water both
 
     update(dt, pl, world, game) {
       const sp = this.sp;
@@ -334,27 +350,21 @@
 
       // altitude
       if (this.isFlyer()) {
-        const base = sleeping ? groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 6)) + 1.2
-          : (sp.id === 'dragon' || sp.id === 'phoenix' ? this.flyY : this.flyY);
-        const bob = Math.sin(this.t * 1.1 + this.phase) * (sp.id === 'dragon' ? 2.2 : 0.9);
-        const target = base + bob;
+        const base = sleeping ? groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 6)) + 1.2 : this.flyY;
+        const target = base + Math.sin(this.t * 1.1 + this.phase) * 0.9;
         this.y += (target - this.y) * Math.min(1, dt * 2.2);
-        if (sp.id === 'dragon') {
-          // circling the nest
-          const nest = N.POIS.find(p => p.id === 'nest');
-          const ang = this.t * 0.16 + this.phase;
-          const rr = 22 + Math.sin(this.t * 0.2 + this.phase) * 8;
-          this.x = nest.x + Math.cos(ang) * rr;
-          this.z = nest.z + Math.sin(ang) * rr;
-          this.yaw = ang + Math.PI / 2;
-          this.y = (nest.y + 12) + Math.sin(this.t * 0.5 + this.phase) * 4;
-          this.speed = sp.flySpeed;
-        }
       } else if (this.isAquatic()) {
         const wt = waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1);
-        const depth = sp.id === 'merfolk' ? 3 + (Math.sin(this.t * 0.6 + this.phase) * 2 + 2) : 1.2 + Math.sin(this.t + this.phase) * 0.8;
+        const depth = 1.2 + Math.sin(this.t + this.phase) * 0.8;
         const target = Math.max(1, wt - depth);
         this.y += (target - this.y) * Math.min(1, dt * 1.6);
+      } else if (this.isAmphibian()) {
+        // the frog sits on the bank, and floats just under the surface when it is in water
+        const inWater = world.liquidAt(Math.floor(this.x), Math.floor(this.y + 0.2), Math.floor(this.z));
+        const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
+        const wt = waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1);
+        const target = (inWater && wt > gy0) ? Math.max(gy0, wt - 0.3) : gy0;
+        this.y += (target - this.y) * Math.min(1, dt * 6);
       } else {
         const gy = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
         this.y += (gy - this.y) * Math.min(1, dt * 9);

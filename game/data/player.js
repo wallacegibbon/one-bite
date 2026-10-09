@@ -35,18 +35,18 @@
       { quest: 'q1',  cn: '存果人',           en: 'the cellar-keeper' },
       { quest: 'q3',  cn: '夜翼',             en: 'nightwing' },
       { quest: 'q4',  cn: '泅过镜湖的人',      en: 'the one who swam Mirrorlake' },
-      { quest: 'q5',  cn: '假独角兽',          en: 'the false unicorn' },
-      { quest: 'q6',  cn: '携焰者',            en: 'the ember-bearer' },
+      { quest: 'q5',  cn: '走进深林的人',      en: 'the one who walked the grove' },
+      { quest: 'q6',  cn: '云顶结网的人',      en: 'the cloud-top webster' },
       { quest: 'all', cn: '谷地记得的人',      en: 'the one the valley remembers' }
     ],
 
     // A trait of a character, not a law of the world. In a single-player game
-    // the protagonist has it; in a multiplayer game it must be rare, so the
-    // grafting ending can never be assumed for a given player.
+    // the protagonist has it; in a multiplayer game it must be rare, so two
+    // forms ever living in one body is never something you may assume of a player.
     traits: {
       mixStomach: {
         id: 'mixStomach', cn: '混胃', en: 'mixed stomach',
-        note: '能在体内同时压住两种魔法而不翻搅——终章"嫁接"路线的前提'
+        note: '能在体内同时压住两种魔法而不翻搅——混合形态的前提'
       }
     }
   };

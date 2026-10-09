@@ -18,7 +18,7 @@
       id: 'whisperwood', cn: '低语林', en: 'Whisperwood', kind: 'rect',
       x0: 6, z0: 6, x1: 154, z1: 72,
       color: [0.20, 0.36, 0.22], danger: 1,
-      desc: '外缘是月光草地与蘑菇圈，往里是古木与鹿径，最深处没有人走进去过——因为最深处是圣林。'
+      desc: '外缘是月光草地与蘑菇圈，往里是古木与鹿径，最深处是深鹿林——鹿比人多，所以那里的路都是踩出来的。'
     },
     {
       id: 'glowglade', cn: '蘑菇圈', en: 'Glowglade', kind: 'circle',
@@ -27,16 +27,16 @@
       desc: '一圈荧光菇围着中央的空地，夜里整圈会呼吸一样明灭。传说这是某种巨大生物曾经的脚印。'
     },
     {
-      id: 'batcave', cn: '蝙蝠洞 · 回声丘', en: 'Echo Hollow', kind: 'circle',
+      id: 'batcave', cn: '回声丘 · 蛛洞', en: 'Echo Hollow', kind: 'circle',
       cx: 28, cz: 30, r: 13,
       color: [0.30, 0.28, 0.30], danger: 2,
-      desc: '山体被掏空成三层隧道，最深处通向根须隧道。白天进去只能听见滴水，夜里进去会被合唱推着走。'
+      desc: '山体被掏空成三层隧道，最深处通向旧梁。白天进去只听得见滴水，夜里到处是腿。'
     },
     {
-      id: 'deepgrove', cn: '圣林（独角兽林地）', en: 'The Hoar Grove', kind: 'circle',
+      id: 'deepgrove', cn: '深鹿林', en: 'The Deep Grove', kind: 'circle',
       cx: 104, cz: 32, r: 18,
       color: [0.34, 0.46, 0.44], danger: 3,
-      desc: '银色的树，没有风也会响。人形进入会被顶出来；唯一的入口是“先变成它们”。'
+      desc: '银色的树，没有风也会响。鹿径在这里收拢成一条；跟着走，会走到鹿群，也会走到熊。'
     },
     {
       id: 'mountains', cn: '北岭 · 鹰喙峰', en: 'Ashscale Ridge', kind: 'circle',
@@ -48,7 +48,7 @@
       id: 'mirrorlake', cn: '镜湖', en: 'Mirrorlake', kind: 'circle',
       cx: 78, cz: 106, r: 34,
       color: [0.16, 0.32, 0.48], danger: 3,
-      desc: '湖底有沉塔与人鱼村。水面平静得像玻璃，是因为湖底的东西不想被看见。'
+      desc: '湖底有一座沉塔和几间沉没的旧屋。水面平静得像玻璃；一到雨后，整片湖岸一起叫。'
     },
     {
       id: 'starfall', cn: '星坠堡', en: 'Starfall Keep', kind: 'circle',
@@ -63,15 +63,15 @@
       desc: '主果窖所在地。镇子按灯笼排成一条线，夜里数灯笼就知道谁还没回家。'
     },
     {
-      id: 'orchard', cn: '果园遗迹 · 母树', en: 'The Old Orchard', kind: 'circle',
+      id: 'orchard', cn: '果园遗迹', en: 'The Old Orchard', kind: 'circle',
       cx: 24, cz: 104, r: 15,
       color: [0.36, 0.40, 0.28], danger: 2,
-      desc: '所有果实树的祖地，如今只剩一圈断墙和一株枯了一半的母树。'
+      desc: '所有果实树的祖地，如今只剩一圈断墙、几堆穿山甲的旧洞，和最老的那棵树。'
     },
     {
       id: 'cloudspire', cn: '云顶浮岛', en: 'Cloudspire', kind: 'sky',
       color: [0.62, 0.68, 0.80], danger: 4,
-      desc: '一串悬浮的岩岛，最高的那座是灰烬龙巢。没有飞行形态，这里只是天空里的一个影子。'
+      desc: '一串悬浮的岩岛，最高的那座上还留着三百年前的旧梁。没有飞行形态，这里只是天空里的一个影子。'
     }
   ];
 
@@ -81,18 +81,18 @@
     { id: 'belltower',   cn: '星坠堡钟塔', x: 78,  z: 104, y: 34, icon: 'tower',  zone: 'starfall' },
     { id: 'greenhouse',  cn: '果实温室（地窖）', x: 78, z: 110, y: 18, icon: 'door', zone: 'starfall' },
     { id: 'sunktower',   cn: '沉塔',       x: 66,  z: 118, y: 8,  icon: 'water',  zone: 'mirrorlake' },
-    { id: 'mermaidvillage', cn: '人鱼村',  x: 92,  z: 120, y: 9,  icon: 'water',  zone: 'mirrorlake' },
-    { id: 'groveheart',  cn: '圣林之心',   x: 104, z: 32,  y: 24, icon: 'tree',   zone: 'deepgrove' },
-    { id: 'cavemouth',   cn: '蝙蝠洞口',   x: 28,  z: 34,  y: 24, icon: 'cave',   zone: 'batcave' },
-    { id: 'nest',        cn: '灰烬龙巢',   x: 40,  z: 20,  y: 38, icon: 'sky',    zone: 'cloudspire' },
-    { id: 'mothertree',  cn: '母树',       x: 24,  z: 104, y: 22, icon: 'tree',   zone: 'orchard' },
+    { id: 'frogshall',   cn: '蛙鸣泽',   x: 92,  z: 120, y: 9,  icon: 'water',  zone: 'mirrorlake' },
+    { id: 'groveheart',  cn: '深鹿林之心', x: 104, z: 32,  y: 24, icon: 'tree',   zone: 'deepgrove' },
+    { id: 'cavemouth',   cn: '回声洞口',   x: 28,  z: 34,  y: 24, icon: 'cave',   zone: 'batcave' },
+    { id: 'beams',       cn: '旧梁',       x: 40,  z: 20,  y: 38, icon: 'sky',    zone: 'cloudspire' },
+    { id: 'oldtree',     cn: '最老的树',   x: 24,  z: 104, y: 22, icon: 'tree',   zone: 'orchard' },
     { id: 'mushring',    cn: '荧光菇环',   x: 60,  z: 56,  y: 20, icon: 'shroom', zone: 'glowglade' }
   ];
 
   /* Cloudspire isles: x, z, radius, top surface height */
   const SKY_ISLES = [
-    { id: 'nestisle',  x: 40,  z: 20, r: 11, top: 37, nest: true },
-    { id: 'phoenix',   x: 96,  z: 12, r: 7,  top: 40 },
+    { id: 'beamisle',  x: 40,  z: 20, r: 11, top: 37, beams: true },
+    { id: 'highroost', x: 96,  z: 12, r: 7,  top: 40 },
     { id: 'windbell',  x: 128, z: 58, r: 8,  top: 34 },
     { id: 'stepping1', x: 66,  z: 40, r: 4,  top: 31 },
     { id: 'stepping2', x: 84,  z: 56, r: 3,  top: 29 },

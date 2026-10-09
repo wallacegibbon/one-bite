@@ -78,9 +78,9 @@
         { id: 'q1', cn: '认识主果窖', hint: '去灯笼镇的果窖（按 E 打开），把任意果实存进去', done: false },
         { id: 'q2', cn: '三颗猫头鹰果', hint: '低语林的橡树洞里找 3 颗猫头鹰果', done: false },
         { id: 'q3', cn: '夜之翼', hint: '夜里吃下猫头鹰果，飞到 30 米以上', done: false },
-        { id: 'q4', cn: '镜湖的门票', hint: '找水獭果 → 下水 → 在沉塔取人鱼梨', done: false },
-        { id: 'q5', cn: '圣林的通行证', hint: '变成独角兽走进圣林，摘一颗银角樱', done: false },
-        { id: 'q6', cn: '云顶的焰心', hint: '飞到云顶龙巢，取一颗焰心果（小心龙）', done: false },
+        { id: 'q4', cn: '镜湖的门票', hint: '变成雨蛙下水，在沉塔的窗台上取一颗蛙果', done: false },
+        { id: 'q5', cn: '深鹿林的通行证', hint: '变成白尾鹿沿鹿径走进深鹿林，摘一颗鹿茸菌果', done: false },
+        { id: 'q6', cn: '云顶的旧梁', hint: '飞到云顶，在旧梁上摘一颗丝莓（梁蛛不欢迎客人）', done: false },
         { id: 'q7', cn: '温室的银丝网', hint: '去星坠堡的果实温室（地窖），找那张银丝隔层', done: false }
       ];
       this.progressStart = 0;
@@ -103,14 +103,14 @@
     }
 
     spawnCreatures() {
-      const counts = { owl: 6, bat: 8, moth: 10, otter: 5, fox: 4, deer: 6, jelly: 8, merfolk: 5, unicorn: 4, spider: 4, bear: 2, dragon: 2, phoenix: 1, veilbeast: 4 };
+      const counts = { owl: 6, pangolin: 4, deer: 6, jelly: 8, frog: 12, spider: 5, bear: 2 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
         for (let i = 0; i < n; i++) {
           const p = this.samplePos(sp.habitat[0]);
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);
-          if (c.isFlyer()) c.flyY = p.y + (sp.id === 'dragon' || sp.id === 'phoenix' ? 0 : 5 + Math.random() * 8);
+          if (c.isFlyer()) c.flyY = p.y + 5 + Math.random() * 8;
           this.creatures.push(c);
         }
       }
@@ -278,7 +278,7 @@
       if (N.FRUIT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
       if (N.PLANT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
       if (b === 78) { this.openStashUI(this.stashes[0]); return; }
-      if (b === 80) { this.logMsg('那是灰手套的捕果夹。拆掉它需要熊或龙。', 'warn'); return; }
+      if (b === 80) { this.logMsg('那是灰手套的捕果夹。拆掉它需要熊的爪子。', 'warn'); return; }
     }
     harvest(x, y, z, b) {
       const fid = N.FRUIT_BLOCK[b], pid = N.PLANT_BLOCK[b];
@@ -401,7 +401,7 @@
       this.setBlock(bx, by, bz, 77);
       const id = 'tree' + (this.stashes.length);
       this.stashes.push({ id, cn: STO.treestash.label, slots: STO.treestash.slots, decay: STO.treestash.decay, items: [], x: bx, y: by, z: bz, kind: 'tree', owner: this.id });
-      this.logMsg('窖树长成了：' + STO.treestash.slots + ' 果格，腐坏速度 1/3。獾会来偷，记得常回来看。', 'good');
+      this.logMsg('窖树长成了：' + STO.treestash.slots + ' 果格，腐坏速度 1/3。熊会来偷，记得常回来看。', 'good');
     }
 
     /* ------------------------- storage UI ------------------------- */
@@ -467,21 +467,20 @@
     /* ------------------------- damage / status ------------------------- */
     damage(a, cause) {
       const p = this.player;
-      if (p.formDef.fireImmune && cause === '火焰') return;
       p.vital -= a;
       if (p.vital <= 0) this.die(cause);
     }
     onCreatureTouch(c, dt) {
       const p = this.player;
       p.fright = Math.min(1, p.fright + dt * 0.9);
-      if (c.sp.id === 'dragon' || c.sp.id === 'phoenix') { if (!p.formDef.fireImmune) this.damage(dt * 1.1, '火焰'); }
-      else this.damage(dt * 0.5, c.sp.cn);
+      this.damage(dt * 0.5, c.sp.cn);
       if (Math.random() < dt * 2) this.logMsg(c.sp.cn + ' 在追你！', 'bad');
     }
     onVeil(p) {
       this.veilWarn = (this.veilWarn || 0) + 1;
       if (this.veilWarn % 40 === 1) this.logMsg('灰雾墙。它不阻止你离开，它只是让你忘记为什么要回来。', 'warn');
-      if (!p.formDef.veilWalk) p.vital -= 0.004;
+      // no form walks the fog any more: the veil is a border, not a place
+      p.vital -= 0.004;
     }
     die(cause) {
       const p = this.player;
@@ -508,7 +507,7 @@
         if (!s.items.length) continue;
         if (Math.random() >= STO.treestash.raidChance) continue;
         const near = Math.hypot(this.player.x - s.x, this.player.z - s.z) < STO.treestash.raidScareRadius;
-        const who = Math.random() < 0.6 ? '獾' : '灰手套的人';
+        const who = Math.random() < 0.6 ? '熊' : '灰手套的人';
         const where = s.kind === 'tree' ? '你的窖树' : s.cn;
         if (near) {
           this.logMsg('夜里' + who + '摸到' + where + '，你把它赶走了。', 'good');
@@ -546,9 +545,9 @@
       if (this.stashes[0].items.length > 0) { done(q('q1')); grant('pouch1'); }
       if (nFruit('owlberry') + nStash('owlberry') >= 3) done(q('q2'));
       if (p.form === 'owlberry' && p.y > 30) done(q('q3'), '夜风从翅膀下面穿过。');
-      if (nFruit('merrow') + nStash('merrow') >= 1) { done(q('q4')); grant('pouch2'); }
-      if (nFruit('unicorncherry') + nStash('unicorncherry') >= 1) done(q('q5'));
-      if (nFruit('embercore') + nStash('embercore') >= 1) done(q('q6'));
+      if (nFruit('frogpear') + nStash('frogpear') >= 1) { done(q('q4')); grant('pouch2'); }
+      if (nFruit('stagcap') + nStash('stagcap') >= 1) done(q('q5'));
+      if (nFruit('silkberry') + nStash('silkberry') >= 1) done(q('q6'));
       // q7: walk to the Starfall fruit greenhouse (cellar door)
       const gh = N.POIS.find(x => x.id === 'greenhouse');
       if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q7'), '银丝网叠在果筐上，正好能隔开稀有果实。'); grant('divider'); }
@@ -613,7 +612,9 @@
       if (p.form) {
         let rate = 1;
         const f = FRU[p.form].form;
-        if (f.breatheAir === false && !this.player.headWater) rate = 2;      // weakened out of water
+        // A body that breathes water is weakened out of it -- unless it is
+        // amphibian, which pays with drying skin instead (docs/en/04 s3).
+        if (f.breatheAir === false && !f.dryTimer && !this.player.headWater) rate = 2;
         if (p.fright > 0.3) rate += p.fright;                                 // fright drains the timer
         p.formT -= dt * rate;
         if (p.formT <= 0) this.revert();
@@ -706,11 +707,11 @@
         const a = Math.random() * 6.283, r = 1 + Math.random() * 6;
         P.spawn(p.x + Math.cos(a) * r, p.y + Math.random() * 2, p.z + Math.sin(a) * r, 0, 0.8 + Math.random(), 0, 2.5, [0.5, 0.85, 1], 0.14);
       }
-      // dragon nest embers
-      const nest = N.POIS.find(q => q.id === 'nest');
-      if (Math.hypot(nest.x - p.x, nest.z - p.z) < 40 && Math.random() < 0.8) {
-        P.spawn(nest.x + (Math.random() - 0.5) * 10, nest.y + 1, nest.z + (Math.random() - 0.5) * 10,
-          (Math.random() - 0.5) * 0.4, 0.8 + Math.random() * 1.2, (Math.random() - 0.5) * 0.4, 2 + Math.random() * 2, [1, 0.5, 0.15], 0.2);
+      // dust and silk drifting off the old beams on the highest isle
+      const beams = N.POIS.find(q => q.id === 'beams');
+      if (Math.hypot(beams.x - p.x, beams.z - p.z) < 40 && Math.random() < 0.8) {
+        P.spawn(beams.x + (Math.random() - 0.5) * 10, beams.y + 1, beams.z + (Math.random() - 0.5) * 10,
+          (Math.random() - 0.5) * 0.4, 0.3 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4, 2 + Math.random() * 2, [0.85, 0.85, 0.75], 0.16);
       }
       // player form glow
       const g = p.formDef.glow;

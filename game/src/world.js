@@ -47,8 +47,7 @@
   N.FRUITS.forEach((f, i) => {
     const id = 40 + i;
     const col = N.RARITY[f.rarity].color;
-    const tint = f.rarity === 'legendary' ? [1, 0.55, 0.2] :
-      (f.creature === 'unicorn' ? [0.85, 0.92, 1.0] : col);
+    const tint = f.rarity === 'legendary' ? [1, 0.55, 0.2] : col;
     def(id, {
       cn: f.cn, solid: false, opaque: false, emis: 1,
       c: tint,

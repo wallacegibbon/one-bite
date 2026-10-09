@@ -59,7 +59,7 @@ const path = require('path');
     g.inv.length = 0;
     const before = g.inv.length;
     const added = [];
-    for (const id of ['owlberry', 'owlberry', 'merrow', 'embercore', 'motherbloom', 'veilberry'])
+    for (const id of ['owlberry', 'owlberry', 'scaleberry', 'frogpear', 'silkberry', 'bruinfig'])
       added.push(id + '=' + (g.addItem('fruit', id) ? 'ok' : 'FULL'));
     return { added, used: g.used(), cap: g.cap(), slots: g.inv.map(i => i.id + ':' + g.slotOf(i)) };
   });
@@ -99,7 +99,7 @@ const path = require('path');
   await step('cellar', () => {
     const g = window.game;
     g.inv.length = 0;
-    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'embercore');
+    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'silkberry');
     g.openStashUI(g.stashes[0]);
     g.invSel = 0; g.moveItem('in');
     g.stashSel = 0; g.moveItem('out');
@@ -170,7 +170,7 @@ const path = require('path');
     const tree = g.stashes.find(s => s.kind === 'tree');
     g._owlUnlocked = false; g.stashes[0].items.length = 0;
     g.openStashUI(tree); g.stashSel = 0;
-    for (let i = 0; i < 3; i++) tree.items.push({ kind: 'fruit', id: 'merrow', fresh: 900, maxFresh: 900 });
+    for (let i = 0; i < 3; i++) tree.items.push({ kind: 'fruit', id: 'frogpear', fresh: 900, maxFresh: 900 });
     const before = tree.items.length;
     g.postItem();
     return { unlocked: g.owlUnlocked(), refused: tree.items.length === before, posts: g.posts.length };
@@ -205,7 +205,7 @@ const path = require('path');
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree');
     g.openStashUI(tree); g.stashSel = 0;
-    tree.items.push({ kind: 'fruit', id: 'embercore', fresh: 420, maxFresh: 420 });
+    tree.items.push({ kind: 'fruit', id: 'silkberry', fresh: 600, maxFresh: 600 });
     g.stashSel = tree.items.length - 1;
     g.postItem();
     const p = g.posts[g.posts.length - 1];
@@ -216,7 +216,7 @@ const path = require('path');
   await new Promise(r => setTimeout(r, 500));
   await step('postArrivedFresh', () => {
     const g = window.game;
-    const e = g.stashes[0].items.filter(i => i.id === 'embercore').pop();
+    const e = g.stashes[0].items.filter(i => i.id === 'silkberry').pop();
     return { arrived: !!e, fresh: e ? +e.fresh.toFixed(1) : null, lost: g.stats.postLost || 0 };
   });
   const idBefore = await step('idBefore', () => window.game.id);

@@ -26,7 +26,7 @@ There is no mystery to solve, no one to rescue, no villain. You are here for two
 
 | Survive | Experience |
 |---|---|
-| Fruit spoils, the backpack has 24 slots, and the valley is bigger than the life of a single fruit — so you arrange, you store, you choose | Fly the night wood as an owl, sink to the bottom of Mirrorlake as a merrow, force a path open as a bear: every body shows you a part of the valley you could not otherwise see |
+| Fruit spoils, the backpack has 24 slots, and the valley is bigger than the life of a single fruit — so you arrange, you store, you choose | Fly the night wood as an owl, sink to the bottom of Mirrorlake as a frog, force a path open as a bear: every body shows you a part of the valley you could not otherwise see |
 
 Failing is simple too: hunger, drowning, cold, being chased, time running out. There is no failure cutscene — you wake up in town, and what you were carrying lies where you fell.
 
@@ -36,14 +36,14 @@ A grey band of fog around the valley, roughly 400 m thick and too tall to see th
 
 - It does **not** stop you leaving. You can walk in and through it; on the other side is an ordinary hillside.
 - What it stops is **coming back**. Anyone who leaves forgets, within two hours, why they were going back; fruit carried out turns into ordinary fruit within a day and loses all magic.
-- It is cold inside, and the deeper you go the harder walking gets. It has its own animals.
+- It is cold inside, and the deeper you go the harder walking gets. **There are no animals in the fog** — not one living thing, which is the most unsettling part of it.
 
 > Design purpose: the world border is not a wall, it is **forgetting**. The player never hits anything — they turn around, because further on there is no reason.
 
 ## 4. How transformation works (see 04)
 
 - Eat the fruit → become the animal it remembers → the time bar runs out → you are human again.
-- **You inherit the whole body**: everything it can do, and everything it cannot. Claws cannot open storage, a horn will not fit a low hole, skin cracks out of water. **The mind is untouched** — inside a dragon's body you are still you (04 §5.0).
+- **You inherit the whole body**: everything it can do, and everything it cannot. Claws cannot open storage, antlers will not fit a low hole, skin dries out of water. **The mind is untouched** — inside a bear's body you are still you (04 §5.0).
 - Only one magic at a time. Eating a second fruit before the first is gone causes **churn**: vitality drops and the current form is overwritten. Experienced foragers wait until their stomach is empty.
 - A fruit starts spoiling the moment it leaves the tree. A dormant fruit becomes a pit; a pit can be planted, and in a hundred years or so there may be a new fruit tree where it was.
 
