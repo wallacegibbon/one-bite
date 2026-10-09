@@ -317,6 +317,28 @@ const path = require('path');
   });
   check('the block key is unique across the whole world', hl.duplicates === null && hl.unique === hl.blocks, hl);
 
+  // 10d. particles carry their own gravity: bubbles rise, motes hover, embers fall
+  const part = await step('particleGravity', () => {
+    const g = window.game, P = g.particles;
+    const n0 = P.n;
+    P.spawn(0, 40, 0, 0, 0.8, 0, 5, [1, 1, 1], 0.2, -0.5);   // bubble: buoyant
+    const bubble = n0;
+    P.spawn(0, 40, 0, 0, 0.3, 0, 5, [1, 1, 1], 0.2, 0);      // mote / firefly: weightless
+    const mote = n0 + 1;
+    P.spawn(0, 40, 0, 0, 0, 0, 5, [1, 1, 1], 0.2);           // ember: the default gravity
+    const ember = n0 + 2;
+    for (let i = 0; i < 20; i++) P.update(0.1, g.world);     // two seconds
+    const out = {
+      vy: [+P.vy[bubble].toFixed(2), +P.vy[mote].toFixed(2), +P.vy[ember].toFixed(2)],
+      dy: [+(P.py[bubble] - 40).toFixed(2), +(P.py[mote] - 40).toFixed(2), +(P.py[ember] - 40).toFixed(2)]
+    };
+    P.n = n0;                                               // drop the test particles again
+    return out;
+  });
+  check('a bubble rises instead of sinking', part.vy[0] > 0.8 && part.dy[0] > 1, part);
+  check('a mote hovers instead of sinking into the ground', Math.abs(part.vy[1]) < 0.31, part);
+  check('an ember still falls', part.vy[2] < -2, part);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

@@ -400,17 +400,23 @@
       this.vx = new Float32Array(this.max); this.vy = new Float32Array(this.max); this.vz = new Float32Array(this.max);
       this.life = new Float32Array(this.max); this.max_life = new Float32Array(this.max);
       this.col = new Uint8Array(this.max * 4); this.size = new Float32Array(this.max);
+      /* Downward acceleration per particle, in m/s^2. One gravity for all of
+         them was wrong: bubbles fell out of the lake and fireflies sank into
+         the ground inside their own lifetime. Negative is buoyant, 0 hovers
+         (motes, dust, fireflies), the default is the old 1.2 for embers. */
+      this.grav = new Float32Array(this.max);
       this.bPos = gl.createBuffer(); this.bCol = gl.createBuffer(); this.bSize = gl.createBuffer();
       this.fBuf = new Float32Array(this.max * 3);
       this.sBuf = new Float32Array(this.max);
       this.cBuf = new Uint8Array(this.max * 4);
     }
-    spawn(x, y, z, vx, vy, vz, life, col, size) {
+    spawn(x, y, z, vx, vy, vz, life, col, size, grav) {
       if (this.n >= this.max) return;
       const i = this.n++;
       this.px[i] = x; this.py[i] = y; this.pz[i] = z;
       this.vx[i] = vx; this.vy[i] = vy; this.vz[i] = vz;
       this.life[i] = life; this.max_life[i] = life;
+      this.grav[i] = grav === undefined ? 1.2 : grav;
       this.col[i * 4] = col[0] * 255; this.col[i * 4 + 1] = col[1] * 255; this.col[i * 4 + 2] = col[2] * 255; this.col[i * 4 + 3] = 255;
       this.size[i] = size;
     }
@@ -423,14 +429,14 @@
             this.px[i] = this.px[j]; this.py[i] = this.py[j]; this.pz[i] = this.pz[j];
             this.vx[i] = this.vx[j]; this.vy[i] = this.vy[j]; this.vz[i] = this.vz[j];
             this.life[i] = this.life[j]; this.max_life[i] = this.max_life[j];
-            this.size[i] = this.size[j];
+            this.size[i] = this.size[j]; this.grav[i] = this.grav[j];
             this.col[i * 4] = this.col[j * 4]; this.col[i * 4 + 1] = this.col[j * 4 + 1];
             this.col[i * 4 + 2] = this.col[j * 4 + 2]; this.col[i * 4 + 3] = this.col[j * 4 + 3];
           }
           i--; continue;
         }
         this.px[i] += this.vx[i] * dt; this.py[i] += this.vy[i] * dt; this.pz[i] += this.vz[i] * dt;
-        this.vy[i] -= 1.2 * dt;
+        this.vy[i] -= this.grav[i] * dt;
         this.vx[i] *= 1 - 0.6 * dt; this.vz[i] *= 1 - 0.6 * dt;
       }
     }

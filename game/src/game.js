@@ -758,22 +758,22 @@
         const a = Math.random() * 6.283, r = 4 + Math.random() * 14;
         const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
         const y = N.groundY(this.world, Math.floor(x), Math.floor(z), Math.floor(p.y + 6)) + 0.6;
-        P.spawn(x, y, z, (Math.random() - 0.5) * 0.6, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6, 3 + Math.random() * 3, [0.7, 1, 0.45], 0.16);
+        P.spawn(x, y, z, (Math.random() - 0.5) * 0.6, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6, 3 + Math.random() * 3, [0.7, 1, 0.45], 0.16, 0);
       }
       // jellyfish / underwater bubbles
       if (p.headWater && Math.random() < 0.6) {
         const a = Math.random() * 6.283, r = 1 + Math.random() * 6;
-        P.spawn(p.x + Math.cos(a) * r, p.y + Math.random() * 2, p.z + Math.sin(a) * r, 0, 0.8 + Math.random(), 0, 2.5, [0.5, 0.85, 1], 0.14);
+        P.spawn(p.x + Math.cos(a) * r, p.y + Math.random() * 2, p.z + Math.sin(a) * r, 0, 0.8 + Math.random(), 0, 2.5, [0.5, 0.85, 1], 0.14, -0.5);
       }
       // dust and silk drifting off the old beams on the highest isle
       const beams = N.POIS.find(q => q.id === 'beams');
       if (Math.hypot(beams.x - p.x, beams.z - p.z) < 40 && Math.random() < 0.8) {
         P.spawn(beams.x + (Math.random() - 0.5) * 10, beams.y + 1, beams.z + (Math.random() - 0.5) * 10,
-          (Math.random() - 0.5) * 0.4, 0.3 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4, 2 + Math.random() * 2, [0.85, 0.85, 0.75], 0.16);
+          (Math.random() - 0.5) * 0.4, 0.3 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4, 2 + Math.random() * 2, [0.85, 0.85, 0.75], 0.16, 0.05);
       }
       // player form glow
       const g = p.formDef.glow;
-      if (g && Math.random() < 0.5) P.spawn(p.x + (Math.random() - 0.5), p.y + 0.5 + Math.random(), p.z + (Math.random() - 0.5), 0, 0.4, 0, 1.2, g, 0.18);
+      if (g && Math.random() < 0.5) P.spawn(p.x + (Math.random() - 0.5), p.y + 0.5 + Math.random(), p.z + (Math.random() - 0.5), 0, 0.4, 0, 1.2, g, 0.18, 0);
     }
 
     /* ------------------------- camera -------------------------
