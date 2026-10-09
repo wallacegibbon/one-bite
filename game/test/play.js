@@ -339,6 +339,32 @@ const path = require('path');
   check('a mote hovers instead of sinking into the ground', Math.abs(part.vy[1]) < 0.31, part);
   check('an ember still falls', part.vy[2] < -2, part);
 
+  // 10e. dying ends the tick: the fall must not overwrite the respawn point
+  const death = await step('deathEndsTheTick', () => {
+    const g = window.game, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form, formT: p.formT, formMax: p.formMax, vital: p.vital };
+    window.ui.showCellar(false);          // an earlier step left a panel open
+    g.mode = 'play';                      // the player only moves in play mode
+    g.inv.length = 0;
+    p.form = 'owlberry'; p.formT = 999; p.formMax = 999; p.vital = 1;
+    p.x = 8; p.y = -3; p.z = 8; p.vx = 0; p.vy = -20; p.vz = 0;   // under the world
+    g.update(0.05);
+    const s = g.cellar();
+    const out = {
+      mode: g.mode, form: p.form, vital: +p.vital.toFixed(2), deaths: g.stats.deaths,
+      at: [Math.round(p.x), Math.round(p.y), Math.round(p.z)],
+      want: [s.x + 2, s.y + 1, s.z + 2],
+      airborne: p.y > 25, vy: +p.vy.toFixed(2)
+    };
+    window.ui.showDead(false);
+    Object.assign(p, { x: was.x, y: was.y, z: was.z, form: was.form, formT: was.formT, formMax: was.formMax, vital: was.vital, vx: 0, vy: 0, vz: 0 });
+    g.mode = 'play'; g.player.dead = false;
+    return out;
+  });
+  check('death clears the form and revives at full vitality', death.form === null && death.vital === 5, death);
+  check('the body is back at the town cellar', death.at.join(',') === death.want.join(','), death);
+  check('the fall did not leave them at y=30 above the roof', death.airborne === false, death);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

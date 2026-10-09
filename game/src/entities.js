@@ -27,6 +27,10 @@
       this.moveAmt = 0;            // horizontal movement this frame (drives animation)
       this.bob = 0;
       this.lastRevert = 0;
+      /* Set by Game.die() and cleared at the top of the next frame. It is not a
+         "is the player alive" flag -- dying always revives them at the town
+         cellar -- it is a stop sign for the rest of the tick that killed them. */
+      this.dead = false;
       this.stamina = 1;
     }
     get formDef() { return this.form ? N.FRUIT_BY_ID[this.form].form : HUMAN; }
@@ -115,6 +119,9 @@
         const ceiling = canBreathe ? 999 : this.maxAir();
         this.air = Math.min(ceiling, this.air + dt * (canBreathe ? 999 : 6));
       }
+      // drowning can end the run here; die() has already moved this body to the
+      // town cellar, and the form captured above no longer describes it
+      if (this.dead) return;
 
       // ---- skin must stay wet (amphibian bodies: docs/en/04 s3) ----
       // The frog breathes in water and on land, but its skin has to stay wet.
@@ -125,6 +132,7 @@
         if (this.dry > f.dryTimer) {
           if (this.dry - dt <= f.dryTimer) game.logMsg(N.t('log.dryOut'), 'warn');
           game.damage(dt * 0.03, N.t('log.causeDry'));
+          if (this.dead) return;
         }
       } else this.dry = 0;
 
@@ -232,7 +240,13 @@
         this.z = Math.max(B, Math.min(W.d - B, this.z));
         this.vx *= 0.2; this.vz *= 0.2;
       }
-      if (this.y < -2) { game.damage(1.2, N.t('log.causeFall')); this.y = 30; this.vy = 0; }
+      if (this.y < -2) {
+        game.damage(1.2, N.t('log.causeFall'));
+        // if that was fatal, die() has already put this body back at the town
+        // cellar; overwriting y with 30 would drop them onto the roof of it
+        if (this.dead) return;
+        this.y = 30; this.vy = 0;
+      }
 
       // ---- fright decay ----
       this.fright = Math.max(0, this.fright - dt * 0.12);

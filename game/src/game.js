@@ -539,6 +539,9 @@
     die(cause) {
       const p = this.player;
       this.stats.deaths++;
+      // stop the rest of this tick: whatever is still mid-update is holding a
+      // form and a position that just stopped describing this body
+      p.dead = true;
       this.logMsg(N.t('log.died', { z: this.zoneName(), c: cause }), 'bad');
       // fruit scatters
       const sx = Math.floor(p.x), sy = Math.floor(p.y), sz = Math.floor(p.z);
@@ -647,6 +650,7 @@
     /* ------------------------- main loop ------------------------- */
     update(dt) {
       if (!this.ready) return;
+      this.player.dead = false;      // the stop sign a death raised lasts exactly one tick
       // clamp so a stalled tab cannot teleport the camera or the physics
       this.dt = Math.min(dt, 0.05);
       this.frames = (this.frames || 0) + 1;

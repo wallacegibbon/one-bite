@@ -274,6 +274,9 @@
       this.show.dead = on;
       el('dead').classList.toggle('hidden', !on);
       el('modalRoot').classList.toggle('on', on);
+      // the mode lives in the game, not in a css class: die() set it to 'dead',
+      // closing the panel is what ends it
+      if (!on) this.g.mode = 'play';
     }
     onLog() { this.logLen = -1; }
   }

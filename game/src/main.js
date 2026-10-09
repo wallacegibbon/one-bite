@@ -94,7 +94,7 @@
   document.getElementById('btnCloseCellar').onclick = () => ui.showCellar(false);
   document.getElementById('btnCloseJournal').onclick = () => { ui.showJournal(false); game.mode = 'play'; };
   document.getElementById('btnCloseHelp').onclick = () => { ui.showHelp(false); game.mode = 'play'; };
-  document.getElementById('btnDead').onclick = () => { ui.showDead(false); game.mode = 'play'; canvas.requestPointerLock(); };
+  document.getElementById('btnDead').onclick = () => { ui.showDead(false); canvas.requestPointerLock(); };
   document.getElementById('btnJournal').onclick = () => { game.mode = 'journal'; ui.showJournal(true); };
   document.getElementById('btnHelp').onclick = () => { game.mode = 'help'; ui.showHelp(true); };
   document.getElementById('btnSave').onclick = () => game.save();
@@ -168,7 +168,6 @@
     ui.update();
     fpsN++; fpsT += dt;
     if (fpsT > 1) { fps = fpsN / fpsT; fpsN = 0; fpsT = 0; document.getElementById('fps').textContent = Math.round(fps) + ' fps'; }
-    if (!document.getElementById('dead').classList.contains('hidden')) game.mode = 'dead';
   }
 
   window.game = game;
