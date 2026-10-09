@@ -411,6 +411,55 @@ const path = require('path');
   check('an open storage panel is not rebuilt while nothing changes', still.mutations === 0, still);
   check('it is rebuilt as soon as the backpack changes', still.packNow === 2, still);
 
+  // 10g. the main verb of the game: look at a thing, use it. The cellar crate is
+  // the one block the game asks about by what it is for ("can I store things in
+  // this?") rather than by its number, so this is what proves that wiring works.
+  const crate = await step('lookAndUseCrate', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA, ID = N.BLOCK_ID;
+    const p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch };
+    const crowd = g.creatures;
+    window.ui.showCellar(false); g.mode = 'play'; g.openStash = null; g.player.dead = false;
+    g.creatures = [];                                   // nothing to observe instead
+    const crates = [];
+    for (let y = 1; y < W.h; y++) for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++)
+      if (W.get(x, y, z) === ID.cellarCrate) crates.push({ x, y, z });
+    let seen = null;
+    for (const c of crates) {
+      for (const [dx, dz] of [[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,2],[2,-2],[-2,-2],
+                              [3,3],[-3,3],[3,-3],[-3,-3],[4,0],[0,4],[4,4],[-4,-4]]) {
+        const px = c.x + 0.5 + dx, pz = c.z + 0.5 + dz, py = c.y;
+        if (W.solidAt(px, py, pz) || W.solidAt(px, py + 1, pz) || !W.solidAt(px, py - 1, pz)) continue;
+        // stand far enough back that the store itself is out of arm's reach:
+        // only the block under the crosshair can answer now
+        if (g.stashes.some(s => Math.hypot(s.x + 0.5 - px, s.y + 1 - py, s.z + 0.5 - pz) < 3.4)) continue;
+        p.x = px; p.y = py; p.z = pz;
+        const ey = p.eyePos();
+        const ex = c.x + 0.5 - px, ez = c.z + 0.5 - pz, eyy = c.y + 0.5 - ey;
+        p.yaw = Math.atan2(ex, -ez);
+        p.pitch = Math.atan2(eyy, Math.hypot(ex, ez));
+        const t = g.rayTarget();
+        if (t && t.x === c.x && t.y === c.y && t.z === c.z) { seen = { crate: c, from: [px, py, pz] }; break; }
+      }
+      if (seen) break;
+    }
+    if (!seen) { g.creatures = crowd; Object.assign(p, was); return { crates: crates.length, error: 'no crate in range' }; }
+    g.update(0.016);
+    const prompt = g.prompt;
+    g.interact();
+    const out = {
+      crates: crates.length, at: seen.crate, from: seen.from,
+      promptIsCellar: prompt === N.t('log.promptCellar'), prompt: prompt,
+      mode: g.mode, open: g.openStash && g.openStash.id
+    };
+    window.ui.showCellar(false); g.mode = 'play'; g.openStash = null;
+    g.creatures = crowd; Object.assign(p, was);
+    return out;
+  });
+  check('a cellar crate was found to look at', crate.at !== undefined, crate);
+  check('looking at a cellar crate asks you to open it', crate.promptIsCellar === true, crate);
+  check('using it opens the store behind that crate', crate.mode === 'cellar' && crate.open === 'cellar', crate);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

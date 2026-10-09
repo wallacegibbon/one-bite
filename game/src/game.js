@@ -326,8 +326,8 @@
       if (!bd) return;
       if (N.FRUIT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
       if (N.PLANT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
-      if (b === 78) { this.openStashUI(this.cellar()); return; }
-      if (b === 80) { this.logMsg(N.t('log.trap'), 'warn'); return; }
+      if (bd.store) { this.openStashUI(this.cellar()); return; }
+      if (bd.trap) { this.logMsg(N.t('log.trap'), 'warn'); return; }
     }
     harvest(x, y, z, b) {
       const fid = N.FRUIT_BLOCK[b], pid = N.PLANT_BLOCK[b];
@@ -428,7 +428,7 @@
       const bx = Math.floor(p.x), bz = Math.floor(p.z);
       const by = N.groundY(this.world, bx, bz, Math.floor(p.y + 3));
       if (by < 1) return;
-      this.setBlock(bx, by, bz, 6);
+      this.setBlock(bx, by, bz, N.BLOCK_ID.trunk);
       this.growQueue.push({ x: bx, y: by, z: bz, t: 120, fruit: it.id });
       this.inv.splice(slotIdx, 1);
       this.logMsg(N.t('log.plantPit', { n: itemName(it.id) }), 'good');
@@ -448,11 +448,11 @@
           return;
         }
       }
-      for (let y = 1; y <= 4; y++) this.setBlock(bx, by + y, bz, 79);
+      for (let y = 1; y <= 4; y++) this.setBlock(bx, by + y, bz, N.BLOCK_ID.cellarTrunk);
       for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++)
         for (let dy = 4; dy <= 6; dy++)
-          if (dx * dx + dz * dz + (dy - 5) * (dy - 5) < 7 && !(dx === 0 && dz === 0 && dy < 4)) this.setBlock(bx + dx, by + dy, bz + dz, 27);
-      this.setBlock(bx, by, bz, 77);
+          if (dx * dx + dz * dz + (dy - 5) * (dy - 5) < 7 && !(dx === 0 && dz === 0 && dy < 4)) this.setBlock(bx + dx, by + dy, bz + dz, N.BLOCK_ID.darkLeaf);
+      this.setBlock(bx, by, bz, N.BLOCK_ID.cellarCore);
       const id = 'tree' + (this.stashes.length);
       this.stashes.push({ id, kind: 'tree', slots: STO.treestash.slots, decay: STO.treestash.decay, items: [], x: bx, y: by, z: bz, owner: this.id });
       this.logMsg(N.t('log.treeBuilt', { s: STO.treestash.slots }), 'good');
@@ -718,11 +718,11 @@
       for (let i = this.growQueue.length - 1; i >= 0; i--) {
         const g = this.growQueue[i]; g.t -= dt;
         if (g.t <= 0) {
-          for (let y = 1; y <= 4; y++) this.setBlock(g.x, g.y + y, g.z, 6);
+          for (let y = 1; y <= 4; y++) this.setBlock(g.x, g.y + y, g.z, N.BLOCK_ID.trunk);
           for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = 4; dy <= 6; dy++)
-            if (dx * dx + dz * dz + (dy - 5) * (dy - 5) < 6) this.setBlock(g.x + dx, g.y + dy, g.z + dz, 7);
+            if (dx * dx + dz * dz + (dy - 5) * (dy - 5) < 6) this.setBlock(g.x + dx, g.y + dy, g.z + dz, N.BLOCK_ID.leaf);
           const fb = N.FRUIT_BLOCK_REV[g.fruit];
-          if (fb) for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1]]) if (this.world.get(g.x + dx, g.y + 5, g.z + dz) === 7) this.setBlock(g.x + dx, g.y + 5, g.z + dz, fb);
+          if (fb) for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1]]) if (this.world.get(g.x + dx, g.y + 5, g.z + dz) === N.BLOCK_ID.leaf) this.setBlock(g.x + dx, g.y + 5, g.z + dz, fb);
           this.growQueue.splice(i, 1);
           this.logMsg(N.t('log.sapling'), 'good');
         }
@@ -757,10 +757,11 @@
           const t = this.rayTarget();
           if (t) {
             const b = this.world.get(t.x, t.y, t.z);
+            const bd = N.BLOCKS[b] || {};
             this.hover = t;
             if (N.FRUIT_BLOCK[b]) this.prompt = N.t('log.promptPickFruit', { n: N.disp(FRU[N.FRUIT_BLOCK[b]]) });
             else if (N.PLANT_BLOCK[b]) this.prompt = N.t('log.promptPickPlant', { n: N.disp(PLANT[N.PLANT_BLOCK[b]]) });
-            else if (b === 78) this.prompt = N.t('log.promptCellar');
+            else if (bd.store) this.prompt = N.t('log.promptCellar');
           } else this.hover = null;
         } else this.hover = null;
       }

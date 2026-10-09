@@ -243,7 +243,7 @@
     set(gx - 1, base + 1, gz - 1, N.FRUIT_BLOCK_REV['owlberry']);
     set(gx + 1, base + 1, gz + 1, N.FRUIT_BLOCK_REV['frogpear']);
     // cellar entrance (marked)
-    set(cx, base, cz + 4, 78);
+    set(cx, base, cz + 4, N.BLOCK_ID.cellarCrate);
   }
 
   /* ---------------- Lanternrow + the main cellar ---------------- */
@@ -270,7 +270,7 @@
     for (let r = 0; r <= 5; r++) for (let a = 0; a < 6.283; a += 0.22)
       set(Math.round(cx + Math.cos(a) * r), y + 5 + Math.round(r * 0.8), Math.round(cz + Math.sin(a) * r), 11);
     set(cx, y + 2, cz - 4, 0); set(cx, y + 3, cz - 4, 0);
-    set(cx, y + 1, cz, 78);                       // * the cellar chest (interaction point)
+    set(cx, y + 1, cz, N.BLOCK_ID.cellarCrate);   // * the cellar chest (interaction point)
     set(cx - 2, y + 2, cz - 4, 14); set(cx + 2, y + 2, cz - 4, 14);
     set(cx, y + 4, cz, 14);
     // the lantern road
