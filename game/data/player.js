@@ -35,8 +35,7 @@
       { quest: 'q1',  cn: '存果人',           en: 'the cellar-keeper' },
       { quest: 'q3',  cn: '夜翼',             en: 'nightwing' },
       { quest: 'q4',  cn: '泅过镜湖的人',      en: 'the one who swam Mirrorlake' },
-      { quest: 'q5',  cn: '湖底的灯',           en: 'the lamp on the lakebed' },
-      { quest: 'q6',  cn: '背下北岭的人',        en: 'the one who carried the ridge home' },
+      { quest: 'q5',  cn: '背下北岭的人',        en: 'the one who carried the ridge home' },
       { quest: 'all', cn: '谷地记得的人',      en: 'the one the valley remembers' }
     ]
     // There is no talent list here on purpose. The protagonist holds no talent

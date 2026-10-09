@@ -47,16 +47,16 @@ Requires a browser with WebGL 1.0. On first load, 100 chunks are generated acros
 ## What the prototype is
 
 - **160×48×160 voxel world, 11 zones**: Starfall Keep (castle on an island), Whisperwood, Glowglade, Echo Hollow, the Deep Grove, Ashscale Ridge, Mirrorlake (underwater, sunken tower, the Frogshall), Lanternrow, the Old Orchard, the Cloudspire isles (6), and the Grey Veil as the border.
-- **4 fruits, 4 bodies, one animal per niche**: owl, lamp jellyfish, frog, bear. The rarity ladder has five rungs and the valley currently grows three of them (common / rare / legendary); one fruit occupies 1, 4 or 12 of your 24 slots.
+- **3 fruits, 3 bodies, one animal per niche**: owl, frog, bear. The rarity ladder has five rungs and the valley currently grows three of them (common / rare / legendary); one fruit occupies 1, 4 or 12 of your 24 slots.
 - **Transformation**: one body at a time. Eating a second fruit replaces the body you are wearing; the cost is the body you ended early and the fruit you spent.
-- **Body abilities the code actually runs**: collision size, walk / swim / fly speed, jump force, auto step-up, gliding (an owl that stops flapping comes down at a third of your speed), held breath and its bonus, breathing water, skin that dries out of it, night vision — and the same eye washed out by daylight —, self-glow, stealth, intimidation radius, immunity to the ridge cold and to the jellyfish sting, field of view, first-person hand.
-- **4 species, 28 animals**, attitude-driven AI: they react to the shape you are wearing right now, and no animal hunts you on its own initiative. Danger is the water, the height, the cold, the fog, pushing through a jellyfish, and what your current body cannot do.
+- **Body abilities the code actually runs**: collision size, walk / swim / fly speed, jump force, auto step-up, gliding (an owl that stops flapping comes down at a third of your speed), held breath, breathing water, skin that dries out of it, night vision — and the same eye washed out by daylight —, stealth, intimidation radius, immunity to the ridge cold, field of view, first-person hand.
+- **3 species, 20 animals**, attitude-driven AI: they react to the shape you are wearing right now, and no animal hunts you on its own initiative. Danger is the water, the height, the cold, the fog, and what your current body cannot do.
 - **Storage**: 24-slot backpack, the main cellar (96 slots, decay ×0.1), and up to 3 cellar trees in the field (24 slots, ×0.33, at least 20 m apart).
 - **3 backpack upgrades**: Pouch +6 (first quest), Deep Pouch +6 (sunken tower), Silver Divider (rare fruit costs one slot less, greenhouse) → 36 slots at full upgrade.
 - **Spoilage and regrowth**: a picked fruit goes dormant (rarer fruit faster) and can be planted from its pit; fruiting sites bear again after 1 / 1.5 / 2 / 2.5 / 3 game days (±20%), and the regrow queue is saved.
 - **Cellar-tree raids**: one roll per game day, 30%, a bear or a fruit thief takes 1–3 fruits; you within 45 m always scare it off. The main cellar is guarded by Old Mei and is never robbed.
 - **Owl post**: cellar tree → main cellar, 1 fruit per 3 game days, 10% lost, at most 3 in transit.
-- **7 quests**, a codex, a 420-second day/night cycle, self-lit fruit and plants, particles, a rotating minimap, death drops and retrieval, localStorage saves.
+- **6 quests**, a codex, a 420-second day/night cycle, self-lit fruit and plants, particles, a rotating minimap, death drops and retrieval, localStorage saves.
 - **Identity layer with no fixed protagonist name**: a stable `id` (the world only remembers that), an earned epithet the valley actually uses, and an optional player-chosen name (`N`).
 - **Switchable interface language** (中文 / English, `L` or the HUD button): interface text lives in one flat table per language, setting text stays as a `cn`/`en` pair on the record itself, and nothing translated is ever written to the save file (07 §3.4).
 
@@ -66,7 +66,7 @@ NPC dialogue trees; a cellar tree being torn down by a bear; the HUD bar for the
 
 ## Cut from the design — not on the roadmap
 
-Mixed forms, the magic stomach, beast residue, the twelve side quests, the trading company and its agent, the protagonist's fruit list and its hidden reveal, Empty fruit, the fruit-thief traps, the `strength` and `tongue` abilities, and the pangolin, deer and spider animals. These are decisions, not unfinished work; `game/test/docs-sync.js` fails the build if the first four reappear in either language.
+Mixed forms, the magic stomach, beast residue, the twelve side quests, the trading company and its agent, the protagonist's fruit list and its hidden reveal, Empty fruit, the fruit-thief traps, the `strength` and `tongue` abilities, and the pangolin, deer, spider and lamp jellyfish animals. These are decisions, not unfinished work; `game/test/docs-sync.js` fails the build if the first four reappear in either language.
 
 ## Layout
 

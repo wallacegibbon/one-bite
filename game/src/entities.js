@@ -41,9 +41,11 @@
     get formDef() { return this.form ? N.FRUIT_BY_ID[this.form].form : HUMAN; }
     get modelId() { return this.form ? N.FRUIT_BY_ID[this.form].creature : 'human'; }
     size() { return this.formDef.size || HUMAN.size; }
-    /* Held breath is a property of the body: a jellyfish body carries forty
-       seconds more than a human one (docs/en/04 s3, airBonus). */
-    maxAir() { return 18 + (this.formDef.airBonus || 0); }
+    /* Held breath is a property of the body. A frog body does not need air at
+       all (breatheAir: false, handled by the caller); every body that does need
+       it holds it for the same eighteen seconds. No body in the valley carries
+       a bonus since the jellyfish was cut -- the field went with it. */
+    maxAir() { return 18; }
     eyePos() {
       const m = N.MODELS[this.modelId];
       const h = (m && m.eye ? m.eye : 1.6);
@@ -382,7 +384,9 @@
           /* A creature that cannot leave the water should not be sent to a
              place where it would have to. Pick again until the ground is wet;
              after a few tries take it anyway, so a lake that has somehow
-             drained does not leave the jellyfish standing still. */
+             drained does not leave a water animal standing still. (No species
+             in the valley has locomotion 'water' right now; the mode stays
+             because the data still documents it.) */
           let tx = this.homeX, tz = this.homeZ;
           for (let tries = 0; tries < 8; tries++) {
             tx = this.homeX + (Math.random() - 0.5) * 2 * r;
@@ -465,10 +469,6 @@
       // contact effects
       if (dp < (this.sp.scale || 0.2) * 8 + 0.8) {
         if (this.state === 'chase') game.onCreatureTouch(this, dt);
-        /* A sting is not an attack. Nothing in the valley hunts the player; the
-           lamp jellyfish simply is stinging, the way the ridge simply is cold,
-           and a body that is immune to it stands in the middle of the field. */
-        else if (this.sp.sting && !pl.formDef.poisonImmune) game.onSting(this, dt);
         else if (this.sp.aura && (pl.formDef.aura || 0) > 0) { /* they ignore each other */ }
       }
       // intimidation: the player's form aura makes lesser creatures flee.

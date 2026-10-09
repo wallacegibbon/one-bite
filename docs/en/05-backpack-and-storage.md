@@ -180,7 +180,7 @@ These three turn "the warehouse" from a static UI into **something you manage, s
 | main cellar (96 slots, ×0.1, fixed coordinates) | ✅ implemented (`stashes[0]`, block 78 cellar crate) |
 | cellar tree (24 slots, ×0.33, cap 3) | ✅ implemented (`buildCellarTree`, block 79/77) |
 | storage UI (two-way transfer) | ✅ implemented (`openStashUI/moveItem`, `ui.renderCellar`) |
-| backpack upgrades (Pouch / Deep Pouch / Silver Divider) | ✅ implemented (`Game.upg` + `cap()/slotOf()`; q1→Pouch, q4→Deep Pouch, q7→Silver Divider; saved) |
+| backpack upgrades (Pouch / Deep Pouch / Silver Divider) | ✅ implemented (`Game.upg` + `cap()/slotOf()`; q1→Pouch, q4→Deep Pouch, q6→Silver Divider; saved) |
 | fruit block regrowth | ✅ implemented (`Game.regrow[]`, `RARITY.regrow` game days ×±20%, saved) |
 | owl post | ✅ implemented (`Game.postItem/updatePosts`, 1 fruit / 3 game days / 10% lost, decays at ×0.1 in flight, in-transit saved) |
 | bear / fruit-thief rolls | ✅ implemented (`Game.dailyRolls()`, 30% per game day, player within 45 m always scares them off, 1–3 fruits taken) |

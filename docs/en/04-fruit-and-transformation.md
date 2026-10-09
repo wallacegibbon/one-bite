@@ -22,7 +22,7 @@ Rarity is not a "value tier", it is **two physical parameters**:
 
 The valley currently grows **three of these five rungs** — common, rare, legendary. The ladder stays: it is a law of storage, not a shopping list.
 
-One important corollary: one Bruin Fig (12 slots) + one Jellybloom (4 slots) + one Frog Pear (4 slots) = 20 of the 24 slots gone, **leaving 4 slots for anything else**. That is the physical price of carrying the valley's heaviest body together with both lake bodies: you reach the Northern Ridge, but you have no room left to pick up a second one.
+One important corollary: one Bruin Fig (12 slots) + one Frog Pear (4 slots) = 16 of the 24 slots gone, **leaving 8 slots for anything else**. That is the physical price of carrying the valley's heaviest body together with the lake body: you reach the Northern Ridge, and there is no room left for a second one — two Bruin Figs fill the backpack exactly, with nothing else in it.
 
 ### 1.1 Regrowth
 
@@ -61,7 +61,6 @@ A fruit starts counting down the moment it is picked.
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `jellybloom` | Jellybloom | jellyfish | 360 s | Mirrorlake mid-water | swim 1.6, breath +40 s, self-glow, immune to poison, fov 95 | Almost immobile on land; fish avoid you (no communication with water life) |
 | `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 2.4, swim 2.4, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
 
 ### Legendary (12 slots)
@@ -83,36 +82,32 @@ sit here looking implemented while nothing reads it.
 | Field | Meaning | What the player feels | Prototype |
 |---|---|---|---|
 | `size[w,h]` | collision box in metres | how low a hole you can enter; decides whether a 1×1 passage fits | live |
-| `speed` | land movement multiplier | bear 1.1 / frog 0.9 / jellyfish 0.5 | live |
+| `speed` | land movement multiplier | bear 1.1 / frog 0.9 | live |
 | `jump` | jump force multiplier | frog 2.4 / bear 0.9 | live |
-| `swim` | underwater movement multiplier | frog 2.4 / jellyfish 1.6 | live |
+| `swim` | underwater movement multiplier | frog 2.4 | live |
 | `fly` | flight thrust (0 = cannot fly) | only the owl, 5.2 | live |
 | `glide` | unpowered gliding: the fall speed cap, as a fraction of normal | owl 0.35 — let go of the key and the owl stops hanging in the air: it comes down at a third of the speed you do, keeping the ground speed it had | live |
 | `breatheAir:false` | breathe underwater | only the frog | live |
-| `airBonus` | extra seconds of held breath | jellyfish +40 | live |
 | `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 | live |
 | `nightVision` | brightening in the dark, 0–1, and the same eye overwhelmed by daylight | owl 0.75 / frog 0.3 | live |
-| `glow[r,g,b]` | self-illumination | jellyfish | live |
 | `stealth` | creature alert-radius multiplier | owl 0.45 / frog 0.5 = hard to spot | live |
 | `aura` | intimidation radius | bear 8 = small animals scatter as you approach | live |
 | `coldImmune` | the altitude cold of the northern ridge does not bite | bear | live |
-| `poisonImmune` | the lamp jellyfish sting does not bite | jellyfish | live |
 | `step` | auto step-up height in metres | bear 1.1 = walks up any stair | live |
 | `fov` | field of view | frog 100 / bear 68 | live |
-| `hand` | first-person hand model | hand/talon/web/claw/tentacle | live |
+| `hand` | first-person hand model | hand/talon/web/claw | live |
 
-Two of those fields are switches rather than numbers: `coldImmune` and
-`poisonImmune` change what can hurt you at all, not how much. They are also the
-two the valley advertises hardest — the Ashscale text promises a bear body
-shrugs off the cold, and the Mirrorlake text puts a field of stinging jellyfish
-on the lakebed exactly where the fruit grows. Both are rules the code runs now.
+One of those fields is a switch rather than a number: `coldImmune` changes what
+can hurt you at all, not how much. It is also the one the valley advertises
+hardest — the Ashscale text promises that a bear body shrugs off the cold. That
+is a rule the code runs now.
 
 `tongue` used to sit on this table (frog, 4 m of plucking reach). It is gone: the
 frog's niche is swimming and breathing water, and a second way of reaching
 things would have made the size gate — a frog fits a 1×1 gap a bear will not —
 one door among several instead of the only one.
 
-All twenty fields on the four forms are read by the code. `game/test/reach.js`
+All seventeen fields on the three forms are read by the code. `game/test/reach.js`
 re-asks that question on every run and fails if a field is added to the data and
 nothing in `game/src/` reads it, so this column cannot quietly rot back into
 advertising.
@@ -130,7 +125,7 @@ Costs come from exactly two places:
 | Source | Examples | Why |
 |---|---|---|
 | **this body cannot** | claws and jaws cannot do fine work (no picking small fruit, no opening storage); a 1.4×1.5 body will not fit a low hole; weight breaks thin ice and wooden bridges; the skin dries after 90 s out of water; photophobic by day | you changed body, so you changed the ability table |
-| **how the world reacts to this body** | fish avoid you; an owl leaves when you walk up — as a human, and just as fast as a brown bear; the lake's own animals ignore a jellyfish shape and do not ignore yours | they do not recognise *you*, they recognise this body |
+| **how the world reacts to this body** | an owl leaves when you walk up — as a human, and just as fast as a brown bear; the frogs on the shore ignore a human body, run from an owl body, and do not move at all when you are wearing one of their own | they do not recognise *you*, they recognise this body |
 
 **The mind is untouched.** A form never makes you want anything and never stops you wanting anything. Inside a bear's body you are still you: what you think, what you fear, what you decide — exactly as in a human shape.
 
@@ -154,4 +149,4 @@ The one exception is a **body reflex**: this body startles before you have decid
 | Backpack full | "Backpack full (24/24 slots) — go back to the cellar first." The fruit does **not** drop, it stays where it is |
 | The fruit block | a faintly self-lit small box (0.44³ body + two small leaves), colour = the rarity ring colour |
 
-Fruit block ids 40–43 (4 kinds), non-solid, non-opaque, `emis:1` — at night you can only see them because they glow themselves. That is the implementation of "at night you can see the Owlberry faintly reflecting light".
+Fruit block ids 40–42 (3 kinds), non-solid, non-opaque, `emis:1` — at night you can only see them because they glow themselves. That is the implementation of "at night you can see the Owlberry faintly reflecting light".

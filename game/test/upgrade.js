@@ -22,9 +22,9 @@ const path = require('path');
     // 1) baseline slot usage
     g.inv = [];
     out.base = { cap: g.cap(), used: g.used() };
-    for (const id of ['owlberry', 'frogpear', 'jellybloom']) g.addItem('fruit', id);
+    for (const id of ['owlberry', 'frogpear']) g.addItem('fruit', id);
     out.after3 = { cap: g.cap(), used: g.used(), slots: g.inv.map(i => g.slotOf(i)) };
-    // 2) one legendary (12 slots) brings the pack to 21 of 24; a second cannot fit
+    // 2) one legendary (12 slots) brings the pack to 17 of 24; a second cannot fit
     out.legendary = g.addItem('fruit', 'bruinfig');
     out.rejSecond = g.addItem('fruit', 'bruinfig');
     // 3) side pouch +6 is not yet enough for a second legendary
@@ -36,7 +36,7 @@ const path = require('path');
     out.pouch2 = { cap: g.cap() };
     out.acceptSecond = g.addItem('fruit', 'bruinfig');
     // 5) silver divider: rare and above cost 1 less
-    const probe = ['frogpear', 'jellybloom', 'bruinfig'];
+    const probe = ['frogpear', 'bruinfig'];
     const before = probe.map(id => g.slotOf({ kind: 'fruit', id }));
     g.upg.divider = true;
     const after = probe.map(id => g.slotOf({ kind: 'fruit', id }));
@@ -45,12 +45,12 @@ const path = require('path');
     out.common = { before: 1, after: g.slotOf({ kind: 'fruit', id: 'owlberry' }) };
     // 7) pits cost half, plus the divider
     out.pit = { frogpear: g.slotOf({ kind: 'pit', id: 'frogpear' }), bruinfig: g.slotOf({ kind: 'pit', id: 'bruinfig' }) };
-    // 8) walking to the greenhouse door should finish q7 and grant the divider
+    // 8) walking to the greenhouse door should finish q6 and grant the divider
     g.upg.divider = false;
     const gh = window.FRUTARIA.POIS.find(p => p.id === 'greenhouse');
     g.player.x = gh.x + 1; g.player.y = gh.y + 1; g.player.z = gh.z + 1;
     g.checkQuests();
-    out.q7 = { done: g.quests.find(q => q.id === 'q7').done, divider: g.upg.divider };
+    out.q6 = { done: g.quests.find(q => q.id === 'q6').done, divider: g.upg.divider };
     // 9) upgrades survive a save/load round trip
     g.save();
     const raw = JSON.parse(localStorage.getItem(window.FRUTARIA.SAVE_KEY) || '{}');

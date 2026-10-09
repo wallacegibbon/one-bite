@@ -71,7 +71,7 @@ const path = require('path');
     g.inv.length = 0;
     const before = g.inv.length;
     const added = [];
-    for (const id of ['owlberry', 'owlberry', 'frogpear', 'jellybloom', 'bruinfig'])
+    for (const id of ['owlberry', 'owlberry', 'frogpear', 'frogpear', 'bruinfig'])
       added.push(id + '=' + (g.addItem('fruit', id) ? 'ok' : 'FULL'));
     return { added, used: g.used(), cap: g.cap(), slots: g.inv.map(i => i.id + ':' + g.slotOf(i)) };
   });
@@ -86,19 +86,25 @@ const path = require('path');
     return { form: p.form, model: p.modelId, formT: +p.formT.toFixed(1), fly: !!p.formDef.fly, size: p.size(), fov: p.fov() };
   });
 
-  // 3b. held breath belongs to the body: airBonus is not decoration
+  // 3b. held breath belongs to the body: a body that needs air is clamped to
+  //     eighteen seconds, and a body that breathes water is not clamped at all.
+  //     (No body carries a bonus any more -- `airBonus` went with the jellyfish.)
   const air = await step('airCeiling', () => {
     const g = window.game, p = g.player, N = window.FRUTARIA;
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, air: p.air, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
     p.x = 136.5; p.y = 22; p.z = 130.5; p.vx = p.vy = p.vz = 0; p.vital = 5;
     p.form = null; p.air = 100; p.update(0.1, {}, g);      // over-full air is clamped to the body ceiling
     const human = p.air;
-    p.form = 'jellybloom'; p.air = 100; p.update(0.1, {}, g);
-    const jelly = p.air;
+    p.form = 'frogpear'; p.air = 100; p.update(0.1, {}, g);
+    const frog = p.air;
+    p.form = 'owlberry'; p.air = 100; p.update(0.1, {}, g);
+    const owl = p.air;
     Object.assign(p, was);
-    return { human, jelly, bonus: N.FRUIT_BY_ID.jellybloom.form.airBonus };
+    return { human, frog, owl, ceiling: N.FRUIT_BY_ID.owlberry.form.airBonus };
   });
-  check('airBonus raises the breath ceiling', air.jelly === air.human + air.bonus, air);
+  check('a body that needs air is clamped to eighteen seconds', air.human === 18, air);
+  check('a body that breathes water is not clamped down to eighteen seconds', air.frog > 100, air);
+  check('no body carries an extra breath bonus', air.owl === 18 && air.ceiling === undefined, air);
 
   // 4. flight after transforming: hold up for 1.5 seconds
   const flyY = await step('fly', () => {
@@ -128,7 +134,7 @@ const path = require('path');
   //     step is what keeps it deleted.
   const swap = await step('oneBodyAtATime', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
-    const ids = ['owlberry', 'jellybloom', 'frogpear', 'bruinfig'];
+    const ids = ['owlberry', 'frogpear', 'bruinfig'];
     g.inv.length = 0;
     for (const id of ids) g.addItem('fruit', id);
     const before = { vital: p.vital, inv: g.inv.length };
@@ -140,10 +146,10 @@ const path = require('path');
       before, after, forms,
       gastric: g.gastric, gastricTime: g.gastricTime,
       overwrite: N.t('log.overwrite', {
-        a: N.disp(N.FRUIT_BY_ID.owlberry.form), b: N.disp(N.FRUIT_BY_ID.jellybloom.form)
+        a: N.disp(N.FRUIT_BY_ID.owlberry.form), b: N.disp(N.FRUIT_BY_ID.frogpear.form)
       }),
       sawOverwrite: lines.some(l => l === N.t('log.overwrite', {
-        a: N.disp(N.FRUIT_BY_ID.owlberry.form), b: N.disp(N.FRUIT_BY_ID.jellybloom.form)
+        a: N.disp(N.FRUIT_BY_ID.owlberry.form), b: N.disp(N.FRUIT_BY_ID.frogpear.form)
       })),
       churnKeys: Object.keys(N.T).filter(loc =>
         N.T[loc]['log.churn'] !== undefined || N.T[loc]['log.causeOverload'] !== undefined)
@@ -151,9 +157,9 @@ const path = require('path');
     p.form = null; p.formT = 0; g.inv.length = 0;
     return out;
   });
-  check('each fruit replaces the body in order', JSON.stringify(swap.forms) === JSON.stringify(['owlberry', 'jellybloom', 'frogpear', 'bruinfig']), swap.forms);
+  check('each fruit replaces the body in order', JSON.stringify(swap.forms) === JSON.stringify(['owlberry', 'frogpear', 'bruinfig']), swap.forms);
   check('swapping bodies costs no vitality', swap.after.vital === swap.before.vital, swap);
-  check('each fruit is spent exactly once, none destroyed by a penalty', swap.after.inv === swap.before.inv - 4, swap);
+  check('each fruit is spent exactly once, none destroyed by a penalty', swap.after.inv === swap.before.inv - 3, swap);
   check('the gastric counter no longer exists on the game', swap.gastric === undefined && swap.gastricTime === undefined, swap);
   check('the replacement is announced', swap.sawOverwrite, swap.overwrite);
   check('the churn keys stay out of both language tables', swap.churnKeys.length === 0, swap.churnKeys);
@@ -162,7 +168,7 @@ const path = require('path');
   await step('cellar', () => {
     const g = window.game;
     g.inv.length = 0;
-    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'jellybloom');
+    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'frogpear');
     g.openStashUI(g.stashes[0]);
     g.invSel = 0; g.moveItem('in');
     g.stashSel = 0; g.moveItem('out');
@@ -268,7 +274,7 @@ const path = require('path');
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree');
     g.openStashUI(tree); g.stashSel = 0;
-    tree.items.push({ kind: 'fruit', id: 'jellybloom', fresh: 600, maxFresh: 600 });
+    tree.items.push({ kind: 'fruit', id: 'frogpear', fresh: 600, maxFresh: 900 });
     g.stashSel = tree.items.length - 1;
     g.postItem();
     const p = g.posts[g.posts.length - 1];
@@ -279,7 +285,8 @@ const path = require('path');
   await new Promise(r => setTimeout(r, 500));
   await step('postArrivedFresh', () => {
     const g = window.game;
-    const e = g.stashes[0].items.filter(i => i.id === 'jellybloom').pop();
+    // the posted fruit is appended when it arrives, so the last one is it
+    const e = g.stashes[0].items.filter(i => i.id === 'frogpear').pop();
     return { arrived: !!e, fresh: e ? +e.fresh.toFixed(1) : null, lost: g.stats.postLost || 0 };
   });
   // a fruit that runs out in the owl's claws goes dormant: same rule as on a shelf
@@ -329,37 +336,36 @@ const path = require('path');
     return { quests: g.quests.map(q => q.id + (q.done ? '✔' : '·')), log: g.log.slice(-5).map(l => l.text) };
   });
 
-  /* 9b. the two gates that are not "obtain a fruit": q5 wants a body at a depth,
-     q6 wants a fruit carried. A jellybloom in the pack is not the quest -- a
-     human can dive and take one. The quest is going down as a jellyfish. */
+  /* 9b. the two gates that are not "count what is in the pack": q5 wants the fig
+     carried (a legendary one is 12 of 24 slots and sleeps in 420 s, so the quest
+     is the walk home), and q6 wants you standing at the greenhouse door -- no
+     amount of fruit does anything there. */
   const gates = await step('quest gates', () => {
-    const g = window.game, p = g.player;
+    const g = window.game, p = g.player, N = window.FRUTARIA;
     const was = { form: p.form, formT: p.formT, x: p.x, y: p.y, z: p.z,
                   inv: g.inv.slice(), upg: Object.assign({}, g.upg) };
     const q = id => g.quests.find(x => x.id === id);
     const put = (arr, keep) => { arr.length = 0; for (const it of keep) arr.push(it); };
     put(g.inv, []);
     q('q5').done = false; q('q6').done = false;
-    g.addItem('fruit', 'jellybloom');
-    p.form = 'jellybloom'; p.formT = 200; p.x = 78; p.z = 106; p.y = 30;   // the fruit, but in the air
+    const gh = N.POIS.find(x => x.id === 'greenhouse');
+    p.x = gh.x + 40; p.y = gh.y + 1; p.z = gh.z + 40;      // nowhere near the door
     g.checkQuests();
-    const fruitAlone = q('q5').done;
-    p.y = 9;                                                               // and on the lakebed
+    const farFromDoor = q('q6').done;
+    g.addItem('fruit', 'bruinfig');                        // 12 of 24 slots
     g.checkQuests();
-    const bodyAndDepth = q('q5').done;
-    q('q5').done = false;
-    g.addItem('fruit', 'bruinfig');                                        // 12 of 24 slots
+    const carried = q('q5').done;
+    p.x = gh.x + 1; p.y = gh.y + 1; p.z = gh.z + 1;        // at the door
     g.checkQuests();
-    const carried = q('q6').done;
+    const atDoor = q('q6').done;
     Object.assign(p, { form: was.form, formT: was.formT, x: was.x, y: was.y, z: was.z });
     put(g.inv, was.inv);
     for (const k in g.upg) if (!(k in was.upg)) delete g.upg[k];
     q('q5').done = false; q('q6').done = false;
-    return { fruitAlone, bodyAndDepth, carried };
+    return { farFromDoor, carried, atDoor };
   });
-  check('q5 is not the fruit alone', gates.fruitAlone === false, gates);
-  check('q5 is a jellyfish body on the lakebed', gates.bodyAndDepth === true, gates);
-  check('q6 is a bruin fig carried home', gates.carried === true, gates);
+  check('q5 is a bruin fig carried home', gates.carried === true, gates);
+  check('q6 is a place, not a fruit', gates.farFromDoor === false && gates.atDoor === true, gates);
 
   // 10. ecology: population / species mix
   await step('ecology', () => {
@@ -374,19 +380,19 @@ const path = require('path');
     const g = window.game, p = g.player, N = window.FRUTARIA;
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
     const bear = g.creatures.find(c => c.sp.id === 'bear');
-    const jelly = g.creatures.find(c => c.sp.id === 'jelly');
+    const frog = g.creatures.find(c => c.sp.id === 'frog');
     p.form = 'bruinfig'; p.vital = 5;
     const standNextTo = (c) => { p.x = c.x + 3; p.y = c.y; p.z = c.z; c.state = 'wander'; c.alarm = 0; };
     standNextTo(bear); bear.update(0.05, p, g.world, g);
     const bearAtt = bear.attitudeTo('bruinfig'), bearState = bear.state;
-    standNextTo(jelly); jelly.update(0.05, p, g.world, g);
-    const jellyAtt = jelly.attitudeTo('bruinfig'), jellyState = jelly.state;
+    standNextTo(frog); frog.update(0.05, p, g.world, g);
+    const frogAtt = frog.attitudeTo('bruinfig'), frogState = frog.state;
     Object.assign(p, was);
-    bear.state = 'wander'; jelly.state = 'wander'; bear.alarm = 0; jelly.alarm = 0;
-    return { aura: N.FRUIT_BY_ID.bruinfig.form.aura, bearAtt, bearState, jellyAtt, jellyState };
+    bear.state = 'wander'; frog.state = 'wander'; bear.alarm = 0; frog.alarm = 0;
+    return { aura: N.FRUIT_BY_ID.bruinfig.form.aura, bearAtt, bearState, frogAtt, frogState };
   });
   check('a bear is not intimidated by a bear', intimidate.bearState !== 'flee', intimidate);
-  check('the bear aura still scares another species', intimidate.jellyState === 'flee', intimidate);
+  check('the bear aura still scares another species', intimidate.frogState === 'flee', intimidate);
 
   // 10c. the highlight box is cached by a key that names exactly one block
   const hl = await step('highlightKey', () => {
@@ -470,7 +476,7 @@ const path = require('path');
         if (++n < 40) return requestAnimationFrame(tick);
         obs.disconnect();
         const quiet = mutations;
-        g.addItem('fruit', 'jellybloom', 100);                 // now change one thing
+        g.addItem('fruit', 'frogpear', 100);                    // now change one thing
         requestAnimationFrame(() => requestAnimationFrame(() => {
           const shelf = node.children.length;
           window.ui.showCellar(false); g.mode = 'play';
@@ -589,9 +595,9 @@ const path = require('path');
   check('a frog that wanders off hops back to the herd', beasts.herd.after < beasts.herd.before - 3, beasts.herd);
   check('flying comes from the body, not from the species name', beasts.flyFromData === true, beasts);
 
-  /* 10i. the four abilities that used to be declared and inert: glide, night
-     vision, the ridge cold, the jellyfish sting. Each is measured against the
-     body that does not have it, so what is being tested is the number in
+  /* 10i. the three abilities that used to be declared and inert: glide, night
+     vision and the ridge cold. Each is measured against the body that does not
+     have it, so what is being tested is the number in
      data/fruits.js and not a coincidence about one particular animal. */
   const glide = await step('glide', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
@@ -659,28 +665,6 @@ const path = require('path');
   check('the cold announces itself once, not every frame', cold.human.announced === 1, cold.human);
   check('a bear body never feels it', cold.bear.vital === 5 && cold.bear.announced === 0, cold);
   check('outside the ridge, altitude alone does not bite', cold.off.vital === 5, cold.off);
-
-  const sting = await step('jellySting', () => {
-    const g = window.game, N = window.FRUTARIA, p = g.player;
-    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, vital: p.vital, wasCold: p.wasCold };
-    const jelly = g.creatures.find(c => c.sp.id === 'jelly');
-    const inside = (form) => {
-      p.form = form; p.vital = 5; p.wasCold = false; p.fright = 0;
-      g.log.length = 0;
-      for (let i = 0; i < 180; i++) {                              // 3 s standing inside the animal
-        p.x = jelly.x; p.y = jelly.y; p.z = jelly.z;
-        jelly.update(1 / 60, p, g.world, g);
-      }
-      return { vital: +p.vital.toFixed(2), warned: g.log.some(l => l.text === N.t('log.stung', { n: N.disp(jelly.sp) })) };
-    };
-    const human = inside(null);
-    const jellyBody = inside('jellybloom');
-    Object.assign(p, was);
-    return { human, jellyBody, sting: N.CREATURE_BY_ID.jelly.sting };
-  });
-  check('walking into a lamp jellyfish costs vitality', sting.human.vital < 5 - 0.5, sting.human);
-  check('the sting is announced once', sting.human.warned === true, sting.human);
-  check('a jellyfish body stands in the middle of the field untouched', sting.jellyBody.vital === 5, sting.jellyBody);
 
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');

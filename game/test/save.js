@@ -36,7 +36,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
   const made = await step('make', () => {
     const g = window.game, N = window.FRUTARIA;
     g.inv.length = 0;
-    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'jellybloom'); g.addItem('plant', 'cellarseed');
+    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'frogpear'); g.addItem('plant', 'cellarseed');
     // the town cellar gets a fruit, so q1 / owl post state is non-trivial
     g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 500, maxFresh: 900 });
     // a cellar tree

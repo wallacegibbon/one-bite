@@ -10,7 +10,7 @@ Three hard rules:
 
 1. **Every plant has something it "wants to do"**: fruit self-glows (wants to be seen), vines grow down (looking for water), mushrooms ring up (claiming ground).
 2. **Buildings are grown, not laid**: Lanternrow's houses are timber frames with mossy-soil infill; Starfall Keep is brick plus lumenstone lamps; the Old Orchard is a ring of broken wall around the oldest tree in the valley.
-3. **There are only three light sources**: sun/moon, lumenstone and embers (self-lit blocks), creatures (glowing forms, jellyfish, fruit). **There is no ambient fill light** — at night, without a Glowcap, you genuinely cannot see.
+3. **There are only three light sources**: sun/moon, lumenstone and embers (self-lit blocks), and fruit (a fruit block lights itself, and so does one you carry — no body in the valley glows). **There is no ambient fill light** — at night, without a Glowcap, you genuinely cannot see.
 
 ### Palette (the values actually used in the prototype)
 
@@ -59,8 +59,8 @@ Assembled from voxel parts: one mesh + one pivot + one animation per part.
 | `bob` | head/body | `dy = sin(t·2.2)·(move·0.12+0.05)` |
 | `sway` | fins/feathers | `rz = sin(t·2.4)·0.28` |
 
-5 models: human, owl, frog, jelly, bear.
-5 first-person hands: hand, talon, web, claw, tentacle.
+4 models: human, owl, frog, bear.
+4 first-person hands: hand, talon, web, claw.
 
 ## 2. Audio direction (not implemented, full design)
 
@@ -114,7 +114,7 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 
 - Voxels: `Uint8Array(w*h*d)` = 160×48×160 = 1.23 MB.
 - **Heightmap**: planned (`Uint8Array(w*d)`), not in the prototype. Bounding the meshing loop with one measured no faster — rebuilding all 100 chunks costs about 1.0 ms per chunk with it or without it — and it has to be right on every block write or geometry gets quietly clipped. Meshing scans the full chunk height; the time goes into the faces, not into the empty sky.
-- Save: `localStorage['frutaria.save.v2']`, storing only the **block diff** (`diffs`) + player (position, vitality, current form and its remaining time) + **identity** (`id` / `name`, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + planting queue (`growQueue`) + fruit scattered by death (`drops`) + plant buffs + owl post + backpack upgrades + quests + time. Measured 2.3 KB with a cellar tree, a sapling and a post in flight.
+- Save: `localStorage['frutaria.save.v3']`, storing only the **block diff** (`diffs`) + player (position, vitality, current form and its remaining time) + **identity** (`id` / `name`, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + planting queue (`growQueue`) + fruit scattered by death (`drops`) + plant buffs + owl post + backpack upgrades + quests + time. Measured 2.3 KB with a cellar tree, a sapling and a post in flight.
 - A save is **offered back, never silently loaded**: the start screen quotes it (day, hour, pack, trees) and Continue walks you back to it. The town cellar belongs to the valley rather than to the save, so it is rebuilt from the map data and every store is looked up by `id` — a save that lists only cellar trees still has a town to walk into.
 
 ### 3.4 Interface language
@@ -148,7 +148,7 @@ Two consequences worth knowing:
 | The frog does not dry out on screen | `dryTimer` is in the data and the check is wired up, but there is no skin-moisture bar in the HUD (04 §3) |
 | No identity service | the `id` is generated locally, not issued by a server; cellar trees already carry an `owner`, but the main cellar is communal and there is no sharing-rights model (see 03 §6) |
 | Only two languages | a third language means one more flat table in `data/i18n.js` plus a third field on every record that carries setting text (`cn` / `en` pairs in the data files) |
-| The new hazards are invisible | the ridge cold and the jellyfish sting are rules the code runs, but there is no frost, no breath fog, no HUD cue and no sting animation — the only thing that tells you is a log line, and a player can die of either without ever seeing why |
+| The new hazards are invisible | the ridge cold is a rule the code runs, but there is no frost, no breath fog and no HUD cue — the only thing that tells you is a log line, and a player can die of it without ever seeing why; the owl's daylight glare is nothing but one more layer of fog |
 | Zone prose is never displayed | every zone in `data/world.js` carries a `desc`, and no interface reads it. The map bible in 02 is the only place that writing reaches a reader, and it is Chinese-only, so it is not covered by the language switch either |
 
 ## 4. Tests
@@ -159,12 +159,12 @@ Two consequences worth knowing:
 | `game/test/node-smoke.js` | no browser: data → generation → meshing (fake GL), verifies block distribution |
 | `game/test/heightmap.js` | prints an ASCII heightmap of the surface |
 | `game/test/probe.js` | finds a safe camera spot for every POI/zone |
-| `game/test/shots.js` | 22 screenshots in one launch (zones + transformation + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
-| `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology; plus the world reacting to a body (block edits re-mesh, the breath ceiling, intimidation by species, a unique key per block), **one body at a time** (four fruits eaten in a row: each replaces the body, vitality never moves, each fruit is spent exactly once, and no gastric counter exists), what each quest gate actually requires, how each animal moves and when it is awake, and **the four abilities measured against the body that lacks them** (glide caps the fall at the speed the data promises, the same dark is brighter for an owl while the sky itself does not change, the ridge takes vitality from a human and never from a bear, standing inside a jellyfish costs vitality and a jellyfish body is untouched) |
+| `game/test/shots.js` | 21 screenshots in one launch (zones + transformation + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
+| `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology; plus the world reacting to a body (block edits re-mesh, the breath ceiling, intimidation by species, a unique key per block), **one body at a time** (three fruits eaten in a row: each replaces the body, vitality never moves, each fruit is spent exactly once, and no gastric counter exists), what each quest gate actually requires, how each animal moves and when it is awake, and **the three abilities measured against the body that lacks them** (glide caps the fall at the speed the data promises, the same dark is brighter for an owl while the sky itself does not change, the ridge takes vitality from a human and never from a bear) |
 | `game/test/save.js` | the save round trip: write a save, reload the page, continue from the start screen — identity, backpack, stores, the planting queue, scattered fruit, buffs and the form bar all come back, and a save that lists no town cellar still gets one |
 | `game/test/input.js` | real key events: walk / jump / fly / time bar / Grey Veil border |
 | `game/test/lang.js` | language switch: every visible string comes from the table in use, no raw key leaks, and the save file is byte-identical across languages |
-| `game/test/upgrade.js` | backpack upgrades: 24→30→36 slots, Silver Divider −1, q7 trigger, save round-trip |
+| `game/test/upgrade.js` | backpack upgrades: 24→30→36 slots, Silver Divider −1, q6 trigger, save round-trip |
 | `game/test/shot.js` | a single screenshot (with coordinates / yaw / form / time / `cellar=1` to open the storage panel), for eyeballing |
 | `game/test/docs-sync.js` | **docs ↔ data consistency**: zones/POIs/isles/rarity/storage/cellar-tree rules/scale table/key bindings/id coverage, plus the phrases a cut design must never leave behind and the mental-effect vocabulary the setting forbids; checked for both the Chinese and the English document sets; exit 1 on drift |
 | `game/test/reach.js` | **data ↔ code consistency**: every field on a fruit, on a fruit's ability block and on a creature must be read by some file in `game/src/`, or sit in a printed `NOT_YET_IMPLEMENTED` list with its reason. An entry that has quietly gone live fails too, so the list can only shrink by being fixed |

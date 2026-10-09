@@ -35,7 +35,7 @@ const DRIFTS = [
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed stomach lets both bodies act at once.', 'cut design back in (mixed stomach)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed form is possible with the right talent.', 'cut design back in (mixed form)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nBeast residue accumulates per form.', 'cut design back in (beast residue)'],
-  ['00-overview-and-design-pillars.md', '| Fruits | 4 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count']
+  ['00-overview-and-design-pillars.md', '| Fruits | 3 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count']
 ];
 
 let missed = 0;

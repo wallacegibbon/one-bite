@@ -80,7 +80,7 @@ The valley is not a floor, it is four:
 | **Cloudspire** | 29–40 | 6 isles, the old beams | Owl (fly 5.2), or the stepping isles + Leaper |
 | **Canopy** | 20–28 | Crowns, bell-tower roof, the top of the Deep Grove | Jump + Leaper |
 | **Ground** | 15–24 | Forest, town, keep, orchard | Walking |
-| **Underwater** | 0–14 | Mirrorlake, sunken tower, sunken huts, jelly fields | Frog (skin breathing); jellyfish (water only) |
+| **Underwater** | 0–14 | Mirrorlake, sunken tower, sunken huts | Only the frog (skin breathing) |
 
 **Mirrorlake depth**: surface y14, bottom y5 — nine blocks down. A human holds breath for 18 seconds, exactly enough to reach the tower windows and come back up, not enough to pick a fruit off the sill. That is the whole argument for "become the frog first": in this water exactly one animal breathes for you.
 
@@ -128,7 +128,6 @@ Radius 34, deepest at the centre.
 
 - **Sunken Tower** (66,118): top at y12 (two blocks under the surface), base at y5. The window sills carry **frog pear**. Picking it requires breathing underwater.
 - **Frogshall** (92,120): y9, a ring of sunken huts. The frogs' place; after rain their chorus drowns the bell.
-- **Jelly fields**: their outline is exactly the sunken tower's — from the surface, the tower is what glows. They neither chase nor flee: wade into one and it stings you (0.25 vitality a second, and it stops the moment you are out of it). A jellyfish body stands in the middle of the field and picks the fruit.
 
 ### 5.6 The Deep Grove and the Old Orchard
 
@@ -158,9 +157,7 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
     ├─ mounds / low root holes ─→ no gate, and nothing down there either
     │
     ├─ Mirrorlake ──────────────→ frog (breatheAir:false, skin breathing)
-    │      ├─ tower sills ──────→ frog pear (q4)
-    │      └─ lakebed, y<11 ────→ jellyfish (58 s of breath, a lamp of its own)
-    │             └─ the field ─→ jellybloom (q5)
+    │      └─ tower sills ──────→ frog pear (q4)
     │
     ├─ canopy / bell tower ─────→ owl (fly 5.2)
     │      └─ above 30 m ───────→ quest "Nightwing" (q3)
@@ -168,10 +165,10 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
     ├─ Cloudspire isles ────────→ owl (fly) or stepping isles + Leaper (jump)
     │
     └─ Ashscale Ridge ledges ───→ bear (step 1.1 m: it walks up what you must jump, and the cold never touches it)
-           └─ rock face, y>20 ──→ bruin fig (q6)
+           └─ rock face, y>20 ──→ bruin fig (q5)
 ```
 
-**The key design point**: every door needs exactly one body, and that body always appears outside the door first. The Frog Pear on the tower sill hangs four metres above the Jellybloom field: the fruit that teaches you the lake is a fruit the lake already gave you. Two places now have a shape and nothing behind it — Echo Hollow and the Deep Grove, both built for animals that were cut — and those are the honest holes in this map, not solved ones.
+**The key design point**: every door needs exactly one body, and that body always appears outside the door first. The Frog Pear on the tower sill hangs two blocks under the surface: the fruit that teaches you the lake is a fruit the lake already gave you. Two places now have a shape and nothing behind it — Echo Hollow and the Deep Grove, both built for animals that were cut — and those are the honest holes in this map, not solved ones.
 
 ## 7. Danger and the Grey Veil
 
@@ -184,6 +181,6 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
 | Old Orchard | 2 | broken ground and low wall; nothing that hunts you |
 | Deep Grove | 3 | nothing that hunts you: dense silver trunks, and a bear standing in the path you came in by |
 | Ashscale Ridge | 3 | the height, the cold (it starts above y26 and reaches its full bite at y36; a bear body never feels it), a brown bear that ignores you and will not step aside |
-| Mirrorlake | 3 | drowning (18 s for a human, 58 s in a jellyfish body), a frog drying out on land, and the lamp jellyfish: swim into one and it stings you, which a jellyfish body does not mind |
+| Mirrorlake | 3 | drowning (18 s for a human; only a frog body needs no air underwater), a frog drying out on land |
 | Cloudspire | 4 | falling |
 | The Grey Veil | 5 | vitality drains, no sense of direction (minimap off) |

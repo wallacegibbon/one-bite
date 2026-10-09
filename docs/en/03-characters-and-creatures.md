@@ -2,9 +2,9 @@
 
 [中文: ../cn/03-角色与生物.md](../cn/03-角色与生物.md)
 
-Source of truth: `game/data/creatures.js` (4 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name).
+Source of truth: `game/data/creatures.js` (3 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name).
 
-**One species per ecological niche.** The valley has four openings you can wear: the night sky, open water, the shore, the ridge. Each animal takes one opening. There is no "second fox", and no in-between species that is "half otter, half merrow".
+**One species per ecological niche.** The valley has three openings you can wear: the night sky, the shallows and the shore, the ridge. Each animal takes one opening. There is no "second fox", and no in-between species that is "half otter, half merrow".
 
 ## 1. Characters
 
@@ -48,17 +48,16 @@ Lookup order: `attitude[species of the player's current form]` → `attitude.hum
 
 Rows = creatures, columns = player forms. `·` = falls through to `default`.
 
-| | human | owl | jelly | frog | bear |
-|---|---|---|---|---|---|
-| Screech Owl | flee | calm | · | curious | flee |
-| Lamp Jellyfish | · | · | calm | ignore | · |
-| Mirrorlake Frog | · | flee | · | calm | ignore |
-| Brown Bear | · | · | ignore | ignore | calm |
+| | human | owl | frog | bear |
+|---|---|---|---|---|
+| Screech Owl | flee | calm | curious | flee |
+| Mirrorlake Frog | · | flee | calm | ignore |
+| Brown Bear | · | · | ignore | calm |
 
 **Three design intentions you can read off the matrix:**
 
 1. **The diagonal is all `calm`** — becoming that species is the pass. It is not a disguise: the grove, the lake and the ridge read the body.
-2. **No row contains `hostile`** — there are no monsters in the valley. Nothing here attacks the player on its own initiative any more: the two animals the bear used to hunt are gone, and what is left of danger is the weather, the water, the height, what your own body cannot do, and what an animal's body does to yours when you push through it. The lamp jellyfish is the last one: it never chases, it simply is stinging, and `poisonImmune` is the answer to it.
+2. **No row contains `hostile`** — there are no monsters in the valley. Nothing here attacks the player on its own initiative any more: the two animals the bear used to hunt are gone, and what is left of danger is the weather, the water, the height, the cold on the ridge, and what your own body cannot do. All of it comes from the ground and from the body — none of it comes from what an animal intends.
 3. **Frogs fear owls, owls are curious about frogs** — a complete predator chain you can read straight out of the table: whatever you become, you receive both that species' pass and that species' predator. And an owl leaves the moment a bear walks in.
 
 ## 3. Creature table
@@ -66,13 +65,12 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 | id | 中文 | English | Model | scale | Habitat | Activity | Speed | Alert | Pack | Fruit |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `owl` | 猫头鹰 | Screech Owl | owl | 0.16 | Whisperwood / Starfall Keep / Glowglade / Cloudspire | night | 3.2 (fly 7.0) | 12 | 1 | Owlberry |
-| `jelly` | 灯水母 | Lamp Jellyfish | jelly | 0.16 | Mirrorlake | both | 0.8 (swim 2.2) | 4 | 10 | Jellybloom |
 | `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6) | 12 | 12 | Frog Pear |
 | `bear` | 棕熊 | Brown Bear | bear | 0.24 | Northern Ridge / Whisperwood | both | 5.0 | 22 | 1 | Bruin Fig |
 
-Distribution of the 28 individuals in the prototype: owl 6, jelly 8, frog 12, bear 2.
+Distribution of the 20 individuals in the prototype: owl 6, frog 12, bear 2.
 
-**Why only 4 species**: every species you add costs a fruit, a habitat, a row in the attitude matrix, and a whole set of "where can this body go" gates. A 4 × 5 matrix can be read at a glance; a 14 × 15 matrix has to be memorised. Once the setting was simplified, **the readability of the gates became content in its own right**.
+**Why only 3 species**: every species you add costs a fruit, a habitat, a row in the attitude matrix, and a whole set of "where can this body go" gates. A 3 × 4 matrix can be read at a glance; a 14 × 15 matrix has to be memorised. Once the setting was simplified, **the readability of the gates became content in its own right**.
 
 **The valley still holds animals it will not give you.** The places kept their names — the Deep Grove, the deer paths, Echo Hollow, the mounds in the Old Orchard — and the animals that made those names are not coming back until each one arrives with a fruit, a niche and a door only it can open. Until then they are absence, which is what the valley is made of.
 
@@ -81,7 +79,6 @@ Distribution of the 28 individuals in the prototype: owl 6, jelly 8, frog 12, be
 One entry per species, always written as "verifiable fact + unverifiable rumour":
 
 - **Screech Owl**: by day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and form Lanternrow's volunteer patrol.
-- **Lamp Jellyfish**: the lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; push through them and they sting you.
 - **Mirrorlake Frog**: after rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.
 - **Brown Bear**: the bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.
 
@@ -122,8 +119,7 @@ The Grey Veil takes names first — it makes you forget *why you meant to come b
 | q1 | the cellar-keeper | 存果人 |
 | q3 | nightwing | 夜翼 |
 | q4 | the one who swam Mirrorlake | 泅过镜湖的人 |
-| q5 | the lamp on the lakebed | 湖底的灯 |
-| q6 | the one who carried the ridge home | 背下北岭的人 |
+| q5 | the one who carried the ridge home | 背下北岭的人 |
 | all quests | the one the valley remembers | 谷地记得的人 |
 
 A later one overrides an earlier one; when it changes the game announces it once ("the valley has started calling you …").

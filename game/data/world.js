@@ -80,8 +80,8 @@
   ];
 
   /* Points of interest: minimap markers, and the named places the code anchors
-     things to -- the cellar door, the quest greenhouse, the lake the jellyfish
-     swim in. A POI is a place with a name; a zone is a place with a shape. */
+     things to -- the cellar door, the quest greenhouse, the lake the frogs call
+     in. A POI is a place with a name; a zone is a place with a shape. */
   const POIS = [
     { id: 'cellar',      cn: '主果窖',     en: 'Main Cellar',          x: 136, z: 134, y: 20, icon: 'chest' },
     { id: 'belltower',   cn: '星坠堡钟塔', en: 'Starfall Bell Tower',  x: 78,  z: 104, y: 34, icon: 'tower' },

@@ -21,7 +21,7 @@ This pillar decides directly: the casting animation = a bite; the material compo
 ### P2 · The body is the key
 
 Terrain is not opened by blowing it up, it is opened by *becoming the right shape*.
-A low root-hole only a frog can enter; the lake bottom only a jellyfish can cross; the cloud tops only an owl can reach; the ridge ledges only a bear can stand on.
+A low root-hole only a frog can enter; the underwater window sills of the sunken tower only a frog can reach; the cloud tops only an owl can reach; the ridge ledges only a bear can stand on.
 **Progression = find the fruit + fit the fruit + survive long enough to get there.**
 Transformation is **inheritance**: you get everything that animal can do and everything it cannot. The mind is untouched — you still decide what to do (see 04 §5.0).
 
@@ -37,7 +37,7 @@ This turns hoarding into loss, turns the warehouse into a place that must be con
 
 ### P5 · The valley does not cooperate with you
 
-Every animal has its own opinion about *the shape you are in right now*. Walk up to an owl as a human and it leaves; walk up as a brown bear and it leaves faster. Become a jellyfish and the lake's own animals do not move at all.
+Every animal has its own opinion about *the shape you are in right now*. Walk up to an owl as a human and it leaves; walk up as a brown bear and it leaves faster. Become a frog and the frogs on the shore ignore you completely.
 Transformation is not a pure buff, it is **swapping your social identity**.
 
 ## 3. Anti-goals (explicitly not doing)
@@ -57,7 +57,7 @@ Transformation is not a pure buff, it is **swapping your social identity**.
 - "So the lake only let me down to the tower as a frog."
 - "I stored it in the cellar, forgot about it for three weeks, and it all turned into pits."
 - "The pit I planted grew into a tree; that is going to be my own orchard one day."
-- "The jellies are not running — because I really am one of them."
+- "The frogs are not running — because I really am one of them."
 
 ## 5. The player fantasy
 
@@ -86,7 +86,7 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 |---|---|---|
 | World | 160×48×160 voxels | 1024×128×1024 |
 | Zones | 11 | 20–24 |
-| Fruits | 4 | 12–16 |
-| Creatures | 4 species | 12–16 species + named individuals |
-| Main line | 7 quests | 7 chapters × 4–6 quests |
+| Fruits | 3 | 12–16 |
+| Creatures | 3 species | 12–16 species + named individuals |
+| Main line | 6 quests | 7 chapters × 4–6 quests |
 | One day | 420 seconds | 1200 seconds |

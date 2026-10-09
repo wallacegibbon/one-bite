@@ -2,7 +2,7 @@
  *  FRUTARIA
  *  Fruit / plant / rarity data -- the single source of truth shared by the design docs and the game
  *  Mirrors: docs/en/04-fruit-and-transformation.md and docs/en/05-backpack-and-storage.md
- *  One fruit per species, and one species per niche: four fruits, four bodies.
+ *  One fruit per species, and one species per niche: three fruits, three bodies.
  *  The rarity ladder still has five rungs; the valley currently only grows
  *  three of them (common / rare / legendary).
  * ========================================================================== */
@@ -33,20 +33,20 @@
    *                 is not flapping -- 0.35 = it comes down at a third of the
    *                 speed you do. Unpowered: it buys distance, never height.
    *   breatheAir  : whether air is required (false = can breathe underwater)
-   *   airBonus    : extra seconds of held breath
    *   dryTimer    : seconds out of water before the skin starts to dry (amphibian bodies)
    *   nightVision : 0..1 brightening in the dark, and the same eye washed out by daylight
-   *   glow        : self-illumination [r,g,b]
    *   stealth     : creature alert-radius multiplier (<1 = harder to spot)
    *   aura        : intimidation radius (>0 scares off lesser creatures / raises alert)
    *   coldImmune  : the altitude cold of the northern ridge does not bite
-   *   poisonImmune: the lamp jellyfish sting does not bite
    *   step        : auto step-up height in metres
    *   fov         : field of view
    *   hand        : first-person hand model id
    * Fields that no body in the valley uses any more (climb, dig, armor, web,
    * herd) were deleted with the animals that had them, and `tongue` went with
    * them: the frog's niche is swimming and breathing water, not reaching things.
+   * `airBonus`, `glow` and `poisonImmune` went the same way when the jellyfish
+   * body was cut -- no body in the valley holds a second of extra breath,
+   * carries a light of its own, or shrugs off an animal's body.
    * A field comes back when a fruit asks for it, not before.
    * Nothing here is a mental effect: a form inherits a body and the world's
    * reaction to that body, never a mind (docs/en/04 s5.0).
@@ -69,19 +69,6 @@
     },
 
     /* ============ rare ============ */
-    {
-      id: 'jellybloom', cn: '水母花苞', en: 'Jellybloom', rarity: 'rare', creature: 'jelly',
-      habitat: ['mirrorlake'], habitatCn: '镜湖中层', habitatEn: 'Mirrorlake mid-water',
-      duration: 360,
-      form: {
-        cn: '水母', en: 'jellyfish', size: [0.7, 0.8], speed: 0.5, swim: 1.6, airBonus: 40,
-        glow: [0.55, 0.8, 1.0], poisonImmune: true, fov: 95, hand: 'tentacle', step: 0.2
-      },
-      cost: ['陆地几乎无法移动', '鱼群会避开你（无法与水生生物交流）'],
-      costEn: ['almost immobile on land', 'fish avoid you (no communication with water life)'],
-      lore: '它把毒变成灯。湖底最亮的一圈，就是水母花苞的田。',
-      loreEn: 'It turns poison into a lamp. The brightest ring on the lakebed is a field of Jellybloom.'
-    },
     {
       id: 'frogpear', cn: '蛙果', en: 'Frog Pear', rarity: 'rare', creature: 'frog',
       habitat: ['mirrorlake', 'glowglade', 'starfall'], habitatCn: '镜湖芦苇 · 雨后水洼', habitatEn: 'Mirrorlake reeds · rain pools',

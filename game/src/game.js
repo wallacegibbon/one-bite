@@ -5,10 +5,12 @@
   const RAR = N.RARITY, FRU = N.FRUIT_BY_ID, PLANT = N.PLANT_BY_ID, STO = N.STORAGE, IDEN = N.IDENTITY;
 
   const DAY_LEN = 420;          // one in-game day = 7 minutes of real time
-  // v2: fruit blocks are numbered by position in data/fruits.js (40 + index), so
+  // v3: fruit blocks are numbered by position in data/fruits.js (40 + index), so
   // cutting a fruit renumbers the world. An old save would plant the wrong fruit
   // in someone's orchard, which is a worse surprise than losing the world.
-  const SAVE_KEY = 'frutaria.save.v2';
+  // v2 was the roster cut to four fruits; v3 is the cut to three (the jellyfish
+  // body is gone), which moved frog pear and bruin fig down one block each.
+  const SAVE_KEY = 'frutaria.save.v3';
 
   /* A fruit / plant / pit has no name of its own in the interface: it is read
      off the record in data/fruits.js, which carries a cn/en pair. */
@@ -99,13 +101,10 @@
         { id: 'q4', cn: '镜湖的门票', en: 'The ticket to Mirrorlake', done: false,
           hint: { cn: '变成雨蛙下水，在沉塔的窗台上取一颗蛙果',
                   en: 'become a frog, get in the water, take a Frog Pear from the sill of the sunken tower' } },
-        { id: 'q5', cn: '湖底的田', en: 'The field on the lakebed', done: false,
-          hint: { cn: '吃下一颗水母花苞，变成水母，沉到镜湖湖底的果田',
-                  en: 'eat a Jellybloom, become a jellyfish and sink down to the field on the lakebed' } },
-        { id: 'q6', cn: '一颗棕熊果', en: 'One Bruin Fig', done: false,
+        { id: 'q5', cn: '一颗棕熊果', en: 'One Bruin Fig', done: false,
           hint: { cn: '在北岭岩坡上摘一颗棕熊果：它占 12 格，7 分钟就失活——把它带进仓库',
                   en: 'pick a Bruin Fig off the ridge rock: it costs 12 slots and sleeps in 7 minutes — get it into a cellar' } },
-        { id: 'q7', cn: '温室的银丝网', en: 'The silver mesh in the greenhouse', done: false,
+        { id: 'q6', cn: '温室的银丝网', en: 'The silver mesh in the greenhouse', done: false,
           hint: { cn: '去星坠堡的果实温室（地窖），找那张银丝隔层',
                   en: "go to Starfall's fruit greenhouse (the cellar) and find the silver divider" } }
       ];
@@ -132,7 +131,7 @@
     }
 
     spawnCreatures() {
-      const counts = { owl: 6, jelly: 8, frog: 12, bear: 2 };
+      const counts = { owl: 6, frog: 12, bear: 2 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
         for (let i = 0; i < n; i++) {
@@ -542,16 +541,6 @@
       this.damage(dt * 0.5, N.disp(c.sp));
       if (Math.random() < dt * 2) this.logMsg(N.t('log.chased', { n: N.disp(c.sp) }), 'bad');
     }
-    /* The lamp jellyfish is not chasing anyone -- you are standing inside it.
-       The warning is throttled so wading through a herd of eight does not fill
-       the log, and it says what the answer is, because the answer is a body. */
-    onSting(c, dt) {
-      this.damage(dt * c.sp.sting, N.t('log.causeSting'));
-      if (this._stungAt === undefined || this.time - this._stungAt > 12) {
-        this._stungAt = this.time;
-        this.logMsg(N.t('log.stung', { n: N.disp(c.sp) }), 'bad');
-      }
-    }
     onVeil(p) {
       this.veilWarn = (this.veilWarn || 0) + 1;
       if (this.veilWarn % 40 === 1) this.logMsg(N.t('log.veil'), 'warn');
@@ -629,17 +618,12 @@
       if (n('owlberry') >= 3) done(q('q2'));
       if (p.form === 'owlberry' && p.y > 30) done(q('q3'), N.t('log.q3msg'));
       if (n('frogpear') >= 1) { done(q('q4')); grant('pouch2'); }
-      /* q5 is gated on the body and the depth, not on the fruit: a human holds
-         breath for 18 seconds, a jellyfish body for 58, and the field sits four
-         metres under the surface. The fruit is the ticket, the body is the quest
-         (docs/en/06 s2). Same shape as q3, which asks for wings and 30 metres. */
-      if (p.form === 'jellybloom' && p.y < N.WORLD.sea - 3) done(q('q5'), N.t('log.q5msg'));
-      // q6 asks for the fruit instead: a legendary one costs 12 of 24 slots and
-      // sleeps in 420 s, so the quest is the carry, not the climb
-      if (n('bruinfig') >= 1) done(q('q6'));
-      // q7: walk to the Starfall fruit greenhouse (cellar door)
+      // q5 asks for the fruit, not the body: a legendary one costs 12 of 24
+      // slots and sleeps in 420 s, so the quest is the carry, not the climb
+      if (n('bruinfig') >= 1) done(q('q5'));
+      // q6: walk to the Starfall fruit greenhouse (cellar door)
       const gh = N.POIS.find(x => x.id === 'greenhouse');
-      if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q7'), N.t('log.q7msg')); grant('divider'); }
+      if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q6'), N.t('log.q6msg')); grant('divider'); }
       this.checkEpithet();
     }
     /* The HUD asks for this every frame. The answer only changes when the player
@@ -820,7 +804,7 @@
         const y = N.groundY(this.world, Math.floor(x), Math.floor(z), Math.floor(p.y + 6)) + 0.6;
         P.spawn(x, y, z, (Math.random() - 0.5) * 0.6, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6, 3 + Math.random() * 3, [0.7, 1, 0.45], 0.16, 0);
       }
-      // jellyfish / underwater bubbles
+      // bubbles off a body that is swimming under
       if (p.headWater && Math.random() < 0.6) {
         const a = Math.random() * 6.283, r = 1 + Math.random() * 6;
         P.spawn(p.x + Math.cos(a) * r, p.y + Math.random() * 2, p.z + Math.sin(a) * r, 0, 0.8 + Math.random(), 0, 2.5, [0.5, 0.85, 1], 0.14, -0.5);
@@ -831,9 +815,6 @@
         P.spawn(beams.x + (Math.random() - 0.5) * 10, beams.y + 1, beams.z + (Math.random() - 0.5) * 10,
           (Math.random() - 0.5) * 0.4, 0.3 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4, 2 + Math.random() * 2, [0.85, 0.85, 0.75], 0.16, 0.05);
       }
-      // player form glow
-      const g = p.formDef.glow;
-      if (g && Math.random() < 0.5) P.spawn(p.x + (Math.random() - 0.5), p.y + 0.5 + Math.random(), p.z + (Math.random() - 0.5), 0, 0.4, 0, 1.2, g, 0.18, 0);
     }
 
     /* ------------------------- camera -------------------------

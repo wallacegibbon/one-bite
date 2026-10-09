@@ -349,15 +349,6 @@
       box(hx - 2, 7, hz - 2, hx + 2, 10, hz + 2, 3, true);
       set(hx, 11, hz, 22); set(hx - 2, 9, hz, 21);
     }
-    // jellybloom fields: the brightest ring on the lakebed. They hang in the water
-    // column just above the mud (the lake surface is y=SEA), never on dry ground.
-    for (let i = 0, placed = 0; i < 120 && placed < 26; i++) {
-      const a = rnd() * 6.28, r = 12 + rnd() * 14;
-      const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
-      const y = gy(x, z);
-      const yy = y + 1 + (rnd() * 2 | 0);
-      if (y < SEA - 3 && yy < SEA && get(x, yy, z) === 5) { set(x, yy, z, N.FRUIT_BLOCK_REV['jellybloom']); placed++; }
-    }
     // kelp
     for (let i = 0; i < 260; i++) {
       const a = rnd() * 6.28, r = rnd() * LAKE.r;
