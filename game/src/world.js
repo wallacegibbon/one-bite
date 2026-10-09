@@ -148,6 +148,11 @@
       return n;
     }
     topAt(x, z) { return this.maxY[z * this.w + x]; }
+    /* One integer naming one block, used as a cache key. Mixed radix (x, z, y)
+       over the world bounds, so two different blocks can never share a key --
+       a decimal packing like x*10000 + y*100 + z collides as soon as an axis
+       passes 99, and the highlight box would stick to the old block. */
+    key(x, y, z) { return (x * this.d + z) * this.h + y; }
 
     /* ---- meshing ---- */
     buildChunk(gl, ci) {

@@ -304,6 +304,19 @@ const path = require('path');
   check('a bear is not intimidated by a bear', intimidate.bearState !== 'flee', intimidate);
   check('the bear aura still scares another species', intimidate.jellyState === 'flee', intimidate);
 
+  // 10c. the highlight box is cached by a key that names exactly one block
+  const hl = await step('highlightKey', () => {
+    const W = window.game.world, k = (x, y, z) => W.key(x, y, z);
+    const pair = [k(10, 1, 100), k(10, 2, 0)];      // the old decimal packing gave both 100200
+    const seen = new Set(); let dup = null, n = 0;
+    for (let x = 0; x < W.w && !dup; x++) for (let z = 0; z < W.d && !dup; z++) for (let y = 0; y < W.h && !dup; y++) {
+      const v = k(x, y, z); n++;
+      if (seen.has(v)) dup = { x, y, z }; else seen.add(v);
+    }
+    return { pair, distinct: pair[0] !== pair[1], blocks: n, duplicates: dup, unique: seen.size };
+  });
+  check('the block key is unique across the whole world', hl.duplicates === null && hl.unique === hl.blocks, hl);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

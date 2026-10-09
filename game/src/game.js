@@ -816,9 +816,10 @@
           mb.box(t.x + a - h, t.y + h, t.z + b - h, e, S, e, c, true, 1);   // along Y (inset, so edges never overlap)
           mb.box(t.x + a - h, t.y + b - h, t.z + h, e, e, S, c, true, 1);   // along Z (inset)
         }
-        if (!this._hl || this._hlAt !== (t.x * 10000 + t.y * 100 + t.z)) {
+        const hlAt = W.key(t.x, t.y, t.z);
+        if (!this._hl || this._hlAt !== hlAt) {
           if (this._hl) { R.gl.deleteBuffer(this._hl.pos); R.gl.deleteBuffer(this._hl.col); R.gl.deleteBuffer(this._hl.dat); }
-          this._hl = mb.upload(R.gl); this._hlAt = t.x * 10000 + t.y * 100 + t.z;
+          this._hl = mb.upload(R.gl); this._hlAt = hlAt;
         }
         R.drawMesh(this._hl, IDENT, { noCull: true });
       }
