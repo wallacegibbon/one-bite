@@ -233,8 +233,13 @@
       return this.chunks[ci];
     }
 
-    /* ---- DDA raycast ---- */
-    raycast(ox, oy, oz, dx, dy, dz, maxD) {
+    /* ---- DDA raycast ----
+       Returns the first block the line enters, with `t` = the distance travelled
+       to reach that block's **near face** (so `t` is where the line touches it,
+       not where it ends up inside it). `solidOnly` skips the non-solid micro
+       blocks -- fruit, reeds, the cellar-tree core -- which the picking ray must
+       see and the camera ray must not be stopped by. */
+    raycast(ox, oy, oz, dx, dy, dz, maxD, solidOnly) {
       let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
       const sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1, sz = dz > 0 ? 1 : -1;
       const adx = Math.abs(dx), ady = Math.abs(dy), adz = Math.abs(dz);
@@ -245,7 +250,7 @@
       let t = 0, nx = 0, ny = 0, nz = 0;
       for (let i = 0; i < 256; i++) {
         const b = this.get(x, y, z);
-        if (b && B[b] && (B[b].solid || B[b].micro)) return { x, y, z, nx, ny, nz, block: b, t };
+        if (b && B[b] && (B[b].solid || (!solidOnly && B[b].micro))) return { x, y, z, nx, ny, nz, block: b, t };
         if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += ddx; nx = -sx; ny = 0; nz = 0; }
         else if (tmy < tmz) { y += sy; t = tmy; tmy += ddy; nx = 0; ny = -sy; nz = 0; }
         else { z += sz; t = tmz; tmz += ddz; nx = 0; ny = 0; nz = -sz; }

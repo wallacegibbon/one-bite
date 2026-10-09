@@ -67,6 +67,8 @@ Assembled from voxel parts: one mesh + one pivot per part. A part may name a `pa
 
 A part may also declare `air:[rx,ry,rz]` and `crouch:[rx,ry,rz]`: the pose it takes when the body is off the ground, and when its legs are loaded. The weights come from the physics, not from a guess about which animal is being drawn -- `air` is how far off the ground the body actually is, `crouch` how long its feet have been down since the last launch, and `squash` the speed it arrived at the ground with, applied to the whole body as a scale. A body that does not hop is never animated as if it did.
 
+A model carries **no scale of its own**. One number sizes a body: the collision box in `data/creatures.js` (`size`, in metres). The model is authored in unit boxes, and the creature's `scale` turns them into metres — so the model and the box are the same body twice, and if they disagree the player is clipped by geometry they can see themselves not touching. `game/test/node-smoke.js` measures every model against the box its creature declares and fails the build when it overhangs: the model's horizontal radius may exceed the box's half-width by at most 0.1 m, its top the box's height by at most 0.06 m. A **radius**, not a width, because the box is a square footprint that does not turn with the body — a model that fits face-on still sticks through a wall sideways. Before the gate existed the bear reached 1.26 m from its centre while its box was 0.70 m across: 0.56 m of bear inside the wall it was leaning against, and the frog's snout 0.13 m past its own box.
+
 4 models: human, owl, frog, bear.
 4 first-person hands: hand, talon, web, claw.
 
@@ -115,6 +117,11 @@ All code is classic `<script src>` global scripts hanging off the `window.FRUTAR
 - **Sky**: a full-screen quad, procedural gradient + sun/moon discs + stars.
 - **Fog**: exponential, colour follows day/night; underwater changes colour and density; inside the Grey Veil it becomes dense grey fog.
 - **Particles**: a single draw call, capped at 900 (glowing seeds, splashes, transformation smoke).
+- **Camera**: the lens points exactly where the mouse points, in both views. What trails behind is the body (`faceYaw`), which has mass. A lens that eased toward the aim was the bug: W ran off in a direction the screen was not pointing at, and the highlight box sat over a block the crosshair was not on. `cam.yaw` / `cam.pitch` are gone — the only camera state left is the distance and the field of view, both eased.
+- **Third-person distance**: `1.5 + 2.25 × height`, eased, plus 8° of field of view — the subject keeps roughly the same share of the frame whether it is a frog or a bear.
+- **Occlusion**: a DDA from the subject toward the lens, solid blocks only (fruit and reeds must not blind the camera). The lens is backed off to the hit block's **near face** minus 0.2 m, never closer than 0.55 m.
+- **Inside your own body**: pulled in that far, the lens is inside the box it is filming, so the body is not drawn — otherwise you are looking at the inside of your own skull.
+- **One camera per frame**: `update()` shoots it once (`_camFrame`) and the picking ray, the highlight box, the interaction prompt and `render()` all read that same frame. The ray starts at the lens in third person and at the eye in first, but reach (5.5 m) is always measured from the body, never from the lens.
 
 Measured in the prototype (1280×720, SwiftShader software rendering): all 100 chunks built, about 200–300k triangles, 47–400 draw calls, **54–60 fps**.
 

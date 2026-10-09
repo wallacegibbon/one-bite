@@ -786,6 +786,99 @@ const path = require('path');
   check('an owl folds its wings on the branch and opens them in the air',
     gait.npcOwl.roost === 0 && gait.npcOwl.abroad === 1, gait.npcOwl);
 
+  /* 10k. the lens is the hand. The watching camera used to trail the aim, so
+     while you were turning the mouse the body ran off in a direction the screen
+     was not pointing at; and it was pulled in by sampling points along the line
+     and stepping back a fixed 0.35 m from the first sample inside a block, which
+     left it buried in a hillside. What must survive is the body's mass: the
+     animal turns behind the lens, the lens does not turn behind the mouse. */
+  const lens = await step('camera', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const was = { tp: g.thirdPerson, input: g.input, frame: g._camFrame, camReady: g.camReady,
+      x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      vx: p.vx, vy: p.vy, vz: p.vz, form: p.form, grounded: p.grounded };
+    /* main.js captures game.input once and writes the keys into that object
+       every frame, so handing the game a private input object here is what
+       keeps the real main loop from overwriting the test's. */
+    g.thirdPerson = true; p.form = null; p.vital = 10; p.fright = 0; p.air = p.maxAir();
+    const crowd = g.creatures; g.creatures = [];   // an animal nearby would own the prompt and blank the box
+    /* a wall to walk into, with a 12 m corridor in front of it: air at head
+       height the whole way and solid floor the whole way. The floor matters --
+       without it the body falls out of the test halfway through a run of
+       updates and every number after that means nothing. */
+    let wall = null;
+    for (let x = 24; x < 150 && !wall; x++) for (let z = 24; z < 150 && !wall; z++)
+      for (let y = 20; y < 34 && !wall; y++) {
+        if (!g.world.solidAt(x, y, z) || !g.world.solidAt(x, y + 1, z)) continue;
+        let clear = true;
+        for (let k = 1; k <= 12 && clear; k++)
+          if (!g.world.solidAt(x - k, y - 1, z) || g.world.solidAt(x - k, y, z) ||
+              g.world.solidAt(x - k, y + 1, z) || g.world.liquidAt(x - k, y, z)) clear = false;
+        if (clear) wall = { x, y, z };
+      }
+    if (!wall) { Object.assign(p, was); g.thirdPerson = was.tp; g.input = was.input; g.creatures = crowd; return { error: 'no wall found' }; }
+    const stand = (yaw, pitch, x, z, y) => {
+      p.x = x; p.y = y; p.z = z; p.yaw = yaw; p.pitch = pitch; p.faceYaw = yaw;
+      p.vx = p.vy = p.vz = 0; p.grounded = false; g.camReady = false;
+    };
+    const out = { wall };
+    // a continuous mouse turn: the lens stays exactly on the aim, the body does not
+    g.input = { fwd: true };
+    stand(Math.PI / 2, -0.1, wall.x - 6, wall.z + 0.5, wall.y);
+    for (let i = 0; i < 40; i++) g.update(1 / 60);
+    let lensLag = 0, bodyLag = 0;
+    for (let i = 0; i < 40; i++) {
+      p.yaw += 0.05;                                   // 3 rad/s of mouse
+      g.update(1 / 60);
+      lensLag = Math.max(lensLag, Math.abs(N.angleDelta(p.yaw, g._camFrame.yaw)));
+      bodyLag = Math.max(bodyLag, Math.abs(N.angleDelta(p.yaw, p.faceYaw)));
+    }
+    out.turn = { lensLag: +lensLag.toFixed(4), bodyLag: +bodyLag.toFixed(3) };
+    g.input = {};                       // from here on the body stands still
+    /* Pressed against a wall and looking away from it: the lens belongs on the
+       far side of the stone, so every pitch has to pull it in, and it must never
+       end up inside a block. Facing the wall instead leaves 12 m of corridor
+       behind the body -- that is the shot that must stay its full length. */
+    out.pressed = [];
+    for (const pitch of [-1.2, -0.4, 0, 0.6, 1.2]) {
+      stand(-Math.PI / 2, pitch, wall.x - 0.6, wall.z + 0.5, wall.y);
+      for (let i = 0; i < 40; i++) g.update(1 / 60);
+      const c = g._camFrame;
+      out.pressed.push({ pitch, d: +c.d.toFixed(2), inSolid: g.world.solidAt(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)) });
+    }
+    stand(Math.PI / 2, 0, wall.x - 6, wall.z + 0.5, wall.y);
+    for (let i = 0; i < 40; i++) g.update(1 / 60);
+    out.free = +g._camFrame.d.toFixed(2);
+    // the picking ray is the lens ray: recompute it here and compare with the box
+    g.input = {};
+    stand(Math.PI / 2, 0, wall.x - 4, wall.z + 0.5, wall.y);
+    for (let i = 0; i < 40; i++) g.update(1 / 60);
+    const c = g._camFrame, cp = Math.cos(p.pitch), sp = Math.sin(p.pitch);
+    const dx = Math.sin(p.yaw) * cp, dy = sp, dz = -Math.cos(p.yaw) * cp;
+    const back = Math.hypot(c.x - p.x, c.y - p.eyePos(), c.z - p.z);
+    const want = g.world.raycast(c.x, c.y, c.z, dx, dy, dz, back + 5.5);
+    out.ray = { want: want && [want.x, want.y, want.z], hover: g.hover && [g.hover.x, g.hover.y, g.hover.z] };
+    g.thirdPerson = false; g.input = {};
+    stand(Math.PI / 2, 0, wall.x - 4, wall.z + 0.5, wall.y);
+    for (let i = 0; i < 40; i++) g.update(1 / 60);
+    const c1 = g._camFrame;
+    const want1 = g.world.raycast(p.x, p.eyePos(), p.z, dx, dy, dz, 5.5);
+    out.rayFirst = { want: want1 && [want1.x, want1.y, want1.z], hover: g.hover && [g.hover.x, g.hover.y, g.hover.z],
+      d: +c1.d.toFixed(2) };
+    Object.assign(p, was); g.thirdPerson = was.tp; g.input = was.input; g._camFrame = was.frame; g.camReady = was.camReady; g.creatures = crowd;
+    return out;
+  });
+  check('the lens never trails the mouse', lens.turn && lens.turn.lensLag === 0, lens.turn);
+  check('the body still turns behind the lens, with mass', lens.turn && lens.turn.bodyLag > 0.3, lens.turn);
+  check('a lens pressed against a wall is pulled in, not buried',
+    lens.pressed && lens.pressed.every(c => !c.inSolid) && lens.pressed.every(c => c.d < 2), lens.pressed);
+  check('clear air behind the body keeps the shot its full length', lens.free > 5, lens.free);
+  check('the highlight box is the block under the crosshair',
+    lens.ray && lens.ray.want && JSON.stringify(lens.ray.want) === JSON.stringify(lens.ray.hover), lens.ray);
+  check('in first person the crosshair is the eye',
+    lens.rayFirst && lens.rayFirst.want && JSON.stringify(lens.rayFirst.want) === JSON.stringify(lens.rayFirst.hover), lens.rayFirst);
+  check('first person has no lens behind the head to pull in', lens.rayFirst && lens.rayFirst.d === 0, lens.rayFirst);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

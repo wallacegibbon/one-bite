@@ -4,7 +4,13 @@
 (function (N) {
   const M4 = N.M4;
 
-  const HUMAN = { cn: '人形', en: 'human', size: [0.62, 1.8], speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55 };
+  /* The body you start in. `size` is the collision box in metres (a square
+     footprint: the box does not turn with the body, so a model has to fit it at
+     any facing -- node-smoke.js measures that). `scale` converts the model's
+     authored units to metres. A model never carries its own scale: the record
+     that asks for a body says how big that body is, so an animal is declared
+     once (the animals live in data/creatures.js, this one lives here). */
+  const HUMAN = { cn: '人形', en: 'human', size: [0.62, 1.8], scale: 0.18, speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55 };
 
   /* The speed a body that does nothing about it falls at. `glide` is a fraction
      of this, so the number in the data file is a ratio and not a speed. */
@@ -47,6 +53,12 @@
     get formDef() { return this.form ? N.FRUIT_BY_ID[this.form].form : HUMAN; }
     get modelId() { return this.form ? N.FRUIT_BY_ID[this.form].creature : 'human'; }
     size() { return this.formDef.size || HUMAN.size; }
+    /* model units -> metres. The animal's own record carries the number (an
+       animal is declared once, whether it is walking around or worn as a body);
+       the human body takes it from the form def above. */
+    bodyScale() {
+      return this.form ? N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature].scale : HUMAN.scale;
+    }
     /* Held breath is a property of the body. A frog body does not need air at
        all (breatheAir: false, handled by the caller); every body that does need
        it holds it for the same eighteen seconds. No body in the valley carries

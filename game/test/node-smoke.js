@@ -11,6 +11,8 @@ require(path.join(base, 'src', 'i18n.js'));
 require(path.join(base, 'src', 'engine.js'));
 require(path.join(base, 'src', 'world.js'));
 require(path.join(base, 'src', 'worldgen.js'));
+require(path.join(base, 'src', 'models.js'));
+require(path.join(base, 'src', 'entities.js'));
 
 const F = window.FRUTARIA;
 
@@ -31,6 +33,45 @@ const F = window.FRUTARIA;
   console.log('i18n 语言', ids.join('/'), '每语言', keys.length, '键', bad ? '!! ' + bad + ' 张表不一致' : 'OK');
   if (bad) process.exitCode = 1;
 }
+/* A model has to fit the box its body collides with. The box is a square
+   footprint that does not turn with the body, so what matters is the model's
+   horizontal **radius**: a model wider than its box walks an arm, a snout or a
+   head through a wall the body is pressed against, and the player trusts the
+   box -- docs/en/04 s4 makes size a hard gate, not flavour. A limb may cross
+   the line a little (a swinging arm, a tail, a muzzle carried over the chest),
+   so the allowance is 0.1 m. Before this check existed nothing in the build
+   could see it: the bear's head hung 0.56 m outside its box and the frog's
+   snout 0.13 m. */
+{
+  const TOL_R = 0.1, TOL_H = 0.06;
+  const extents = (modelId, sc) => {
+    let r = 0, top = 0, bottom = 0;
+    for (const part of F.MODELS[modelId].parts) {
+      for (const b of part.boxes) {
+        for (const cx of [b[0], b[0] + b[3]]) for (const cz of [b[2], b[2] + b[5]])
+          r = Math.max(r, Math.hypot(cx, cz) * sc);
+        top = Math.max(top, (b[1] + b[4]) * sc);
+        bottom = Math.min(bottom, b[1] * sc);
+      }
+    }
+    return { r, top, bottom };
+  };
+  const bodies = [['human', F.HUMAN_FORM.scale, F.HUMAN_FORM.size]];
+  for (const fruit of F.FRUITS)
+    bodies.push([fruit.creature, F.CREATURE_BY_ID[fruit.creature].scale, fruit.form.size]);
+  let bad = 0;
+  for (const [modelId, sc, size] of bodies) {
+    const e = extents(modelId, sc), hw = size[0] / 2;
+    const over = [];
+    if (e.r > hw + TOL_R) over.push(`半径 ${e.r.toFixed(3)} > ${hw.toFixed(3)}+${TOL_R}`);
+    if (e.top > size[1] + TOL_H) over.push(`顶 ${e.top.toFixed(3)} > ${size[1]}+${TOL_H}`);
+    if (e.bottom < -0.001) over.push(`脚 below ${(e.bottom.toFixed(3))}`);
+    if (over.length) { bad++; console.log('!! 模型超出碰撞盒', modelId, over.join(', ')); }
+  }
+  console.log('模型/碰撞盒', bodies.length, '个身体', bad ? '!! ' + bad + ' 个穿模' : 'OK');
+  if (bad) process.exitCode = 1;
+}
+
 const gl = {
   ARRAY_BUFFER: 1, STATIC_DRAW: 2, FLOAT: 3, UNSIGNED_BYTE: 4,
   createBuffer: () => ({}), bindBuffer() {}, bufferData() {}, deleteBuffer() {}

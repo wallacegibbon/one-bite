@@ -44,8 +44,8 @@
       this.hover = null;                   // the block the crosshair ray points at
       this.prompt = '';
       this.thirdPerson = false;
-      // the shot: distance / yaw / pitch / fov are state, eased every frame
-      this.cam = { yaw: 0, pitch: 0, d: 0, fov: 76 };
+      // the shot: the distance and the field of view are state, eased every frame
+      this.cam = { d: 0, fov: 76 };      // yaw and pitch are the player's, never a copy
       this.camReady = false;
       this.dt = 0.016;
       this.handMeshes = {};
@@ -308,11 +308,26 @@
     }
 
     /* ------------------------- interaction ------------------------- */
+    /* The crosshair is the lens. In first person the two are the same line, so
+       the ray leaves the eye. In third person it has to leave the lens, or the
+       highlighted box is not the box E picks: the lens sits several metres behind
+       the head and points along the same direction from a different place.
+       `reach` still belongs to the body, not to the lens -- the block has to be
+       within reach of the body you are wearing, and in front of it. */
     rayTarget() {
-      const p = this.player;
+      const p = this.player, REACH = 5.5;
       const cp = Math.cos(p.pitch), sp = Math.sin(p.pitch);
       const dx = Math.sin(p.yaw) * cp, dy = sp, dz = -Math.cos(p.yaw) * cp;
-      return this.world.raycast(p.x, p.eyePos(), p.z, dx, dy, dz, 5.5);
+      const ey = p.eyePos();
+      const c = this.thirdPerson ? this._camFrame : null;
+      if (!c) return this.world.raycast(p.x, ey, p.z, dx, dy, dz, REACH);
+      const back = Math.hypot(c.x - p.x, c.y - ey, c.z - p.z);
+      const t = this.world.raycast(c.x, c.y, c.z, dx, dy, dz, back + REACH);
+      if (!t) return null;
+      const hx = c.x + dx * t.t, hy = c.y + dy * t.t, hz = c.z + dz * t.t;
+      if (Math.hypot(hx - p.x, hy - ey, hz - p.z) > REACH) return null;   // out of the body's reach
+      if ((hx - p.x) * dx + (hy - ey) * dy + (hz - p.z) * dz < 0) return null;   // behind the body
+      return t;
     }
     nearestCreature(r) {
       let best = null, bd = r;
@@ -759,6 +774,12 @@
       // cellar trees all edit blocks, and each edit flags its chunk
       if (this.world.anyDirty()) this.world.rebuildDirty(this.R.gl, 6);
 
+      /* The frame's camera is worked out here, before the picking ray, so the
+         crosshair, the highlight box and E all agree on one line. render() uses
+         this frame instead of computing a second one, which would ease the
+         distance and the field of view twice per frame. */
+      this._camFrame = this.shootCamera(p);
+
       // interaction prompt
       this.prompt = '';
       if (playing) {
@@ -821,41 +842,51 @@
        You are both the actor and the subject of the shot, so the lens never
        cuts. Pressing V pushes it out instead of switching views, changing
        form widens it gradually, and terrain pulls it in. Every value is eased
-       as a rate-per-second (N.ease), so the shot feels identical at 30 or 144 fps. */
+       as a rate-per-second (N.ease), so the shot feels identical at 30 or 144 fps.
+
+       The lens points exactly where the mouse points, in both views. What
+       trails behind is the body (`faceYaw`), which has mass. A trailing lens
+       was the bug: it meant W ran off in a direction the screen was not pointing
+       at, and the crosshair sat over a block the picking ray was not pointing at. */
     shootCamera(p) {
       const dt = this.dt || 0.016;
-      const cam = this.cam, h = p.size()[1];
+      const cam = this.cam, sz = p.size(), h = sz[1], w = sz[0];
       const dWant = this.thirdPerson ? 1.5 + 2.25 * h : 0;      // the subject holds roughly the same frame share
       const fovWant = p.fov() + (this.thirdPerson ? 8 : 0);
-      if (!this.camReady) {
-        cam.yaw = p.yaw; cam.pitch = p.pitch; cam.d = dWant; cam.fov = fovWant;
-        this.camReady = true;
-      }
+      if (!this.camReady) { cam.d = dWant; cam.fov = fovWant; this.camReady = true; }
       cam.d += (dWant - cam.d) * N.ease(5.5, dt);
       cam.fov += (fovWant - cam.fov) * N.ease(3.5, dt);
-      // first person tracks the mouse exactly; the watching camera trails it
-      if (this.thirdPerson) {
-        cam.yaw += N.angleDelta(cam.yaw, p.yaw) * N.ease(9, dt);
-        cam.pitch += (p.pitch - cam.pitch) * N.ease(9, dt);
-      } else { cam.yaw = p.yaw; cam.pitch = p.pitch; }
 
+      // the direction from the subject to the lens (a unit vector)
+      const cp = Math.cos(p.pitch);
+      const ox = -Math.sin(p.yaw) * cp, oz = Math.cos(p.yaw) * cp, oy = -Math.sin(p.pitch);
       const eyeY = this.thirdPerson ? p.y + h * 0.68 : p.eyePos();
-      const cp = Math.cos(cam.pitch);
-      const ox = -Math.sin(cam.yaw) * cp, oz = Math.cos(cam.yaw) * cp, oy = -Math.sin(cam.pitch);
       let d = cam.d;
-      // never let terrain stand between the subject and the lens
-      for (let s = 0.7; d > 1 && s < d; s += 0.35) {
-        if (this.world.solidAt(Math.floor(p.x + ox * s), Math.floor(eyeY + oy * s), Math.floor(p.z + oz * s))) {
-          d = Math.max(0.7, s - 0.35); break;
-        }
+      /* Never let terrain stand between the subject and the lens. The lens is
+         backed off to the **face** of the block in the way. Sampling points along
+         the line and stepping back a fixed 0.35 m from the first sample that
+         landed inside a block left the lens buried in a hillside: a sample
+         inside a block says nothing about where that block's surface is. */
+      if (this.thirdPerson) {
+        const hit = this.world.raycast(p.x, eyeY, p.z, ox, oy, oz, cam.d, true);
+        if (hit) d = Math.max(0.55, hit.t - 0.2);
       }
-      return { x: p.x + ox * d, y: eyeY + oy * d, z: p.z + oz * d, yaw: cam.yaw, pitch: cam.pitch, fov: cam.fov };
+      const x = p.x + ox * d, y = eyeY + oy * d, z = p.z + oz * d;
+      /* pulled in this far, the lens is inside the body it is filming: the world
+         is drawn, the body is not, or you look at the inside of your own skull */
+      const inBody = this.thirdPerson &&
+        Math.abs(x - p.x) < w * 0.5 + 0.12 && Math.abs(z - p.z) < w * 0.5 + 0.12 &&
+        y > p.y - 0.12 && y < p.y + h + 0.12;
+      return { x, y, z, yaw: p.yaw, pitch: p.pitch, fov: cam.fov, d, inBody };
     }
 
     /* ------------------------- render ------------------------- */
     render() {
       const R = this.R, p = this.player, env = this.env;
-      const cam = this.shootCamera(p);
+      // the frame update() prepared, or a fresh one when update() did not run
+      // (the start screen, ?freeze): the lens must not be a frame behind
+      const cam = this._camFrame || this.shootCamera(p);
+      this._camFrame = null;
       R.begin(cam, env);
 
       const IDENT = N.M4.create();
@@ -958,11 +989,10 @@
         R.drawMesh(hand, m, { day: Math.max(0.55, this.daylight) });
         R.gl.enable(R.gl.DEPTH_TEST);
       }
-      // third-person body
-      if (this.thirdPerson) {
+      // third-person body (skipped when the lens has been pulled inside it)
+      if (this.thirdPerson && !cam.inBody) {
         const parts = this.ensureModel(p.modelId);
-        const md = N.MODELS[p.modelId];
-        const sc = md.scale;
+        const sc = p.bodyScale();
         const base = N.M4.create();
         N.M4.trans(base, p.x, p.y, p.z);
         const ry = N.M4.create(); N.M4.rotY(ry, p.faceYaw + Math.PI);

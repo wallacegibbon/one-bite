@@ -16,7 +16,7 @@
   const CREATURES = [
     {
       /* niche: the night sky -- flight */
-      id: 'owl', cn: '猫头鹰', en: 'Screech Owl', model: 'owl', scale: 0.16,
+      id: 'owl', cn: '猫头鹰', en: 'Screech Owl', model: 'owl', scale: 0.15,
       habitat: ['whisperwood', 'starfall', 'glowglade', 'cloudspire'], active: 'night',
       locomotion: 'fly', speed: 3.2, flySpeed: 7.0, alert: 12, herd: 1,
       fruit: 'owlberry',
