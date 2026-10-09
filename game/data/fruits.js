@@ -247,7 +247,16 @@
       { id: 'divider', cn: '银丝隔层（稀有果实占用 −1）', slots: 0, desc: '城堡温室的银丝网' }
     ] },
     cellar:    { slots: 96, decay: 0.1, label: '灯笼镇 · 主果窖' },
-    treestash: { slots: 24, decay: 0.33, max: 3, label: '窖树（野外仓库）' },
+    // A cellar tree is alive, so it has a body: it can be robbed, and it must
+    // not be planted on top of its sibling's roots. These are the numbers the
+    // docs quote (05, "cellar tree" rule table) -- docs-sync.js compares the
+    // prose against them, so changing one here forces the docs to change too.
+    treestash: { slots: 24, decay: 0.33, max: 3, label: '窖树（野外仓库）',
+                 minDist: 20,          // m between two cellar trees
+                 raidChance: 0.30,     // one roll per game day
+                 raidMin: 1,           // fruits taken when the raid lands
+                 raidMax: 3,
+                 raidScareRadius: 45 }, // player this close always scares it off
     pitToSeed: true   // a dormant fruit becomes a pit, which can be planted into a fruit tree
   };
 

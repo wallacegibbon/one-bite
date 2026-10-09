@@ -33,6 +33,8 @@ function tableAfter(md, heading) {
 }
 const unbacktick = s => s.replace(/`/g, '');
 const norm = s => (s || '').replace(/\s+/g, '').replace(/（.*?）/g, '').replace(/[·・]/g, '');
+// docs write "30%", data stores 0.30 -- hoisted because LANGS below uses it
+function pct(x) { return Math.round(x * 100); }
 const num = s => { const m = String(s).match(/-?\d+(\.\d+)?/); return m ? +m[0] : null; };
 const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.startsWith(y) || y.startsWith(x); };
 
@@ -56,9 +58,11 @@ const LANGS = [
     // cellar-tree rules are prose/regex claims rather than a table
     rules: [
       [/\|\s*上限\s*\|\s*(\d+)\s*棵/, N.STORAGE.treestash.max, '窖树上限'],
-      [/\|\s*最小间距\s*\|\s*(\d+)\s*m/, 20, '窖树最小间距'],
-      [/\|\s*被偷[^|]*\|\s*每游戏日\s*\d+\s*次判定，\s*(\d+)%/, 30, '掠夺概率%'],
-      [/玩家若在\s*(\d+)\s*m\s*内/, 45, '赶走半径 m']
+      [/\|\s*最小间距\s*\|\s*(\d+)\s*m/, N.STORAGE.treestash.minDist, '窖树最小间距'],
+      [/\|\s*被偷[^|]*\|\s*每游戏日\s*\d+\s*次判定，\s*(\d+)%/, pct(N.STORAGE.treestash.raidChance), '掠夺概率%'],
+      [/偷走\s*(\d+)\s*–\s*\d+\s*颗/, N.STORAGE.treestash.raidMin, '偷走下限'],
+      [/偷走\s*\d+\s*–\s*(\d+)\s*颗/, N.STORAGE.treestash.raidMax, '偷走上限'],
+      [/玩家若在\s*(\d+)\s*m\s*内/, N.STORAGE.treestash.raidScareRadius, '赶走半径 m']
     ],
     keyRe: /按\s*([A-Z])\s*(?:种|使用|打开|交互|吃|存)/g,
     nameOf: x => x.cn
@@ -77,9 +81,11 @@ const LANGS = [
     nameField: 'en',
     rules: [
       [/\|\s*Cap\s*\|\s*(\d+)\s*trees/, N.STORAGE.treestash.max, 'cellar-tree cap'],
-      [/\|\s*Min distance\s*\|\s*(\d+)\s*m/, 20, 'cellar-tree min distance'],
-      [/\|\s*Theft[^|]*\|\s*one roll per game day,\s*(\d+)%/, 30, 'raid chance %'],
-      [/within\s+(\d+)\s+m/, 45, 'scare-off radius m']
+      [/\|\s*Min distance\s*\|\s*(\d+)\s*m/, N.STORAGE.treestash.minDist, 'cellar-tree min distance'],
+      [/\|\s*Theft[^|]*\|\s*one roll per game day,\s*(\d+)%/, pct(N.STORAGE.treestash.raidChance), 'raid chance %'],
+      [/takes\s*(\d+)\s*–\s*\d+\s*fruits/, N.STORAGE.treestash.raidMin, 'raid take minimum'],
+      [/takes\s*\d+\s*–\s*(\d+)\s*fruits/, N.STORAGE.treestash.raidMax, 'raid take maximum'],
+      [/within\s+(\d+)\s+m/, N.STORAGE.treestash.raidScareRadius, 'scare-off radius m']
     ],
     keyRe: /press\s+`?([A-Z])\b/gi,
     nameOf: x => x.en

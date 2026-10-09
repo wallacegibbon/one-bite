@@ -113,7 +113,7 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 
 - Voxels: `Uint8Array(w*h*d)` = 160×48×160 = 1.23 MB.
 - `maxY` heightmap: `Uint8Array(w*d)`, speeding up meshing and creature pathing.
-- Save: `localStorage['frutaria.save.v1']`, storing only the **block diff** (`diffs`) + player + backpack + storages + regrow queue (`regrow`) + backpack upgrades + quests + time. Measured 1.7 KB.
+- Save: `localStorage['frutaria.save.v1']`, storing only the **block diff** (`diffs`) + player + **identity** (`id` / `name` / traits, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + backpack upgrades + quests + time. Measured 1.7 KB.
 
 ### 3.4 Known technical debt
 
@@ -135,12 +135,12 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 | `game/test/node-smoke.js` | no browser: data → generation → meshing (fake GL), verifies block distribution |
 | `game/test/heightmap.js` | prints an ASCII heightmap of the surface |
 | `game/test/probe.js` | finds a safe camera spot for every POI/zone |
-| `game/test/shots.js` | 14 screenshots in one launch (zones + transformation + UI), checks console errors |
+| `game/test/shots.js` | 16 screenshots in one launch (zones + transformation + UI + identity), checks console errors |
 | `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology |
 | `game/test/input.js` | real key events: walk / jump / fly / time bar / Grey Veil border |
 | `game/test/upgrade.js` | backpack upgrades: 24→30→36 slots, Silver Divider −1, q7 trigger, save round-trip |
 | `game/test/shot.js` | a single screenshot (with coordinates / yaw / form / time / `cellar=1` to open the storage panel), for eyeballing |
 | `game/test/docs-sync.js` | **docs ↔ data consistency**: zones/POIs/isles/rarity/storage/cellar-tree rules/key bindings/id coverage, checked for both the Chinese and the English document sets; exit 1 on drift |
-| `game/test/docs-drift.js` | **self-test**: injects 13 known errors into `docs/en/` and `docs/` (numbers / names / keys / a missing file / a stray file / a fixed protagonist name) and confirms docs-sync catches every one, then restores |
+| `game/test/docs-drift.js` | **self-test**: injects 15 known errors into `docs/en/` and `docs/` (numbers / names / keys / warehouse rules / a missing file / a stray file / a fixed protagonist name) and confirms docs-sync catches every one, then restores |
 
 headless Chrome needs: `--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader` (WebGL 1.0 verified working).

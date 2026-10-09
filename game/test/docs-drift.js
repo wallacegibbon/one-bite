@@ -21,6 +21,8 @@ const DRIFTS = [
   ['04-fruit-and-transformation.md', '| legendary | 传说 | **12** |', '| legendary | 传说 | **11** |', 'legendary slots'],
   ['05-backpack-and-storage.md', '| **96** |', '| **90** |', 'cellar slots'],
   ['05-backpack-and-storage.md', 'one roll per game day, 30%', 'one roll per game day, 40%', 'raid chance'],
+  ['05-backpack-and-storage.md', '| Min distance | 20 m |', '| Min distance | 21 m |', 'cellar-tree min distance'],
+  ['05-backpack-and-storage.md', 'takes 1–3 fruits', 'takes 1–4 fruits', 'raid take maximum'],
   ['02-map-and-scenes.md', '| `cellar` | Main Cellar | (136,134) | 20 |', '| `cellar` | Main Cellar | (136,134) | 21 |', 'POI y'],
   ['02-map-and-scenes.md', '| `nestisle` | (40,20) | 11 | 37 |', '| `nestisle` | (40,20) | 11 | 36 |', 'isle top'],
   ['02-map-and-scenes.md', '| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 4 |', '| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 3 |', 'zone danger'],

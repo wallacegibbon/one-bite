@@ -21,7 +21,10 @@ const SHOTS = [
   ['owl', 'pos=104,30,40 yaw=1.2 pitch=-0.25 form=owlberry tp=1'],
   ['mermaid', 'pos=92,11,120 yaw=0.5 pitch=-0.1 form=merrow tp=1'],
   ['inv', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=owlberry,merrow,embercore,unicorncherry'],
-  ['cellarui', 'pos=136,26,134 yaw=0.2 pitch=-0.1 safe inv=owlberry,merrow,embercore,unicorncherry cellar=1']
+  ['cellarui', 'pos=136,26,134 yaw=0.2 pitch=-0.1 safe inv=owlberry,merrow,embercore,unicorncherry cellar=1'],
+  // identity: the valley calls you an epithet, the name is yours (N in game)
+  ['who', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3'],
+  ['journal', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3,q4 journal=1']
 ];
 
 (async () => {
@@ -77,9 +80,12 @@ const SHOTS = [
       if (c.inv) for (const id of c.inv.split(',')) g.addItem('fruit', id);
       if (c.tp) g.thirdPerson = true;
       if (c.cellar) g.openStashUI(g.stashes[0]);
+      if (c.name) g.setName(c.name);
+      if (c.epquest) { for (const q of c.epquest.split(',')) g.quests.find(x => x.id === q).done = true; g.checkEpithet(); }
       g.updateEnv();
       return { zone: g.zoneName(g.player.x, g.player.z) };
     }, c);
+    if (c.journal) await page.evaluate(() => { window.game.mode = 'journal'; window.ui.showJournal(true); });
     await new Promise(r => setTimeout(r, 1400));
     const st = await page.evaluate(() => {
       const g = window.game, p = g.player;

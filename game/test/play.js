@@ -118,33 +118,52 @@ const path = require('path');
     const before = g.stashes.length;
     g.buildCellarTree();
     const tree = g.stashes[g.stashes.length - 1];
-    return { pitCount: pits.length, added: g.stashes.length - before, ownerIsPlayer: tree.owner === g.id, stashes: g.stashes.map(s => s.id + '@' + [s.x, s.y, s.z].join(',')) };
+    // the same spot again must be refused: roots need STO.treestash.minDist of room
+    const nBefore = g.stashes.length;
+    g.buildCellarTree();
+    const refused = g.stashes.length === nBefore;
+    return { pitCount: pits.length, added: g.stashes.length - before, ownerIsPlayer: tree.owner === g.id,
+             tooCloseRefused: refused, minDist: window.FRUTARIA.STORAGE.treestash.minDist,
+             stashes: g.stashes.map(s => s.id + '@' + [s.x, s.y, s.z].join(',')) };
   });
   check('cellar tree is owned by the player id', ct.ownerIsPlayer === true, ct);
+  check('a second cellar tree too close is refused', ct.tooCloseRefused === true, ct);
 
   // 8. save / load
   // cellar raids: far away always loses, nearby always defends, the main cellar is never robbed
-  await step('raidFar', () => {
+  const rf = await step('raidFar', () => {
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree');
     if (!tree) return 'no cellar tree';
     const cellar = g.stashes[0];
     for (let i = 0; i < 6; i++) tree.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
     for (let i = 0; i < 4; i++) cellar.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
+    const cellarBefore = cellar.items.length;
     g.player.x = tree.x + 400; g.player.z = tree.z + 400;   // far away
-    let guard = 0;
-    while (tree.items.length > 0 && guard++ < 60) g.dailyRolls();
-    return { treeLeft: tree.items.length, cellarLeft: cellar.items.length, rolls: guard, lost: g.stats.raidsLost };
+    let guard = 0, prev = tree.items.length;
+    const taken = [];
+    while (tree.items.length > 0 && guard++ < 60) {
+      g.dailyRolls();
+      if (tree.items.length < prev) taken.push(prev - tree.items.length);
+      prev = tree.items.length;
+    }
+    const T = window.FRUTARIA.STORAGE.treestash;
+    return { treeLeft: tree.items.length, cellarLeft: cellar.items.length, cellarBefore, rolls: guard, lost: g.stats.raidsLost,
+             takeMin: Math.min(...taken), takeMax: Math.max(...taken), ruleMin: T.raidMin, ruleMax: T.raidMax };
   });
-  await step('raidNear', () => {
+  check('raid take stays inside the data bounds', rf.takeMin >= rf.ruleMin && rf.takeMax <= rf.ruleMax, rf);
+  check('the town cellar is never robbed', rf.cellarLeft === rf.cellarBefore, rf);
+  const rn = await step('raidNear', () => {
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree');
     for (let i = 0; i < 6; i++) tree.items.push({ kind: 'fruit', id: 'owlberry', fresh: 900, maxFresh: 900 });
-    g.player.x = tree.x + 5; g.player.z = tree.z + 5;       // standing close
+    const R = window.FRUTARIA.STORAGE.treestash.raidScareRadius;
+    g.player.x = tree.x + R - 1; g.player.z = tree.z;      // just inside the scare radius
     const before = tree.items.length, scared0 = g.stats.raidsScared || 0;
     for (let i = 0; i < 40; i++) g.dailyRolls();
-    return { before, after: tree.items.length, scared: (g.stats.raidsScared || 0) - scared0 };
+    return { before, after: tree.items.length, scared: (g.stats.raidsScared || 0) - scared0, radius: R };
   });
+  check('standing inside the scare radius loses nothing', rn.after === rn.before && rn.scared > 0, rn);
   // owl post
   await step('postLocked', () => {
     const g = window.game;

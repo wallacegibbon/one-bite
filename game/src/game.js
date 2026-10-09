@@ -383,6 +383,14 @@
       const bx = Math.floor(p.x), bz = Math.floor(p.z);
       const by = N.groundY(this.world, bx, bz, Math.floor(p.y + 3));
       if (by < 1) return;
+      // roots must not overlap: the same rule the docs state as a minimum distance
+      for (const s of this.stashes) {
+        if (s.kind !== 'tree') continue;
+        if (Math.hypot(bx - s.x, bz - s.z) < STO.treestash.minDist) {
+          this.logMsg('这里离另一棵窖树太近了——至少要隔 ' + STO.treestash.minDist + ' m，根系会打架。', 'warn');
+          return;
+        }
+      }
       for (let y = 1; y <= 4; y++) this.setBlock(bx, by + y, bz, 79);
       for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++)
         for (let dy = 4; dy <= 6; dy++)
@@ -490,18 +498,21 @@
     /* ------------------------- per-game-day rolls ------------------------- */
     /* docs/en/05: a cellar tree is a living store -- it attracts thieves. The main cellar is guarded by Old Mei and is never robbed. */
     dailyRolls() {
+      // stashes[0] is the town cellar and is deliberately skipped: the docs state
+      // theft as a rule of field storage (05, cellar-tree table), not of the town.
       for (let i = 1; i < this.stashes.length; i++) {
         const s = this.stashes[i];
         if (!s.items.length) continue;
-        if (Math.random() >= 0.30) continue;
-        const near = Math.hypot(this.player.x - s.x, this.player.z - s.z) < 45;
+        if (Math.random() >= STO.treestash.raidChance) continue;
+        const near = Math.hypot(this.player.x - s.x, this.player.z - s.z) < STO.treestash.raidScareRadius;
         const who = Math.random() < 0.6 ? '獾' : '灰手套的人';
         const where = s.kind === 'tree' ? '你的窖树' : s.cn;
         if (near) {
           this.logMsg('夜里' + who + '摸到' + where + '，你把它赶走了。', 'good');
           this.stats.raidsScared = (this.stats.raidsScared || 0) + 1;
         } else {
-          const n = Math.min(s.items.length, 1 + ((Math.random() * 3) | 0));
+          const n = Math.min(s.items.length, STO.treestash.raidMin +
+            ((Math.random() * (STO.treestash.raidMax - STO.treestash.raidMin + 1)) | 0));
           const taken = [];
           for (let k = 0; k < n; k++) {
             const j = (Math.random() * s.items.length) | 0;

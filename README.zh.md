@@ -80,11 +80,11 @@ game/
 node game/test/node-smoke.js   # 无浏览器：数据 → 生成 → 网格化（假 GL）
 node game/test/probe.js        # 各区域/POI 的取景点与水深
 node game/test/docs-sync.js    # 文档 ↔ 数据一致性（中英文两套，不一致 exit 1）
-node game/test/docs-drift.js   # 自检：向 docs/en/ 与 docs/ 注入 13 处错误，确认 docs-sync 全部能抓到
+node game/test/docs-drift.js   # 自检：向 docs/en/ 与 docs/ 注入 15 处错误，确认 docs-sync 全部能抓到
 node game/test/play.js         # 玩法闭环：采集→重生→容量→变形→存取→窖树→掠夺→邮递→存档
 node game/test/upgrade.js      # 背包升级与果格数学
 node game/test/input.js        # 真实按键：走/跳/飞/时间/灰雾墙边界
-node game/test/shots.js g      # 14 张区域截图 → .shots/
+node game/test/shots.js g      # 16 张截图 → .shots/（区域、变形、UI、身份）
 node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # 单张，肉眼检查
 ```
 

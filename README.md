@@ -80,11 +80,11 @@ game/
 node game/test/node-smoke.js   # no browser: data → generation → meshing (fake GL)
 node game/test/probe.js        # camera spots and water depth for each zone / POI
 node game/test/docs-sync.js    # docs ↔ data consistency (exit 1 on drift, both languages)
-node game/test/docs-drift.js   # self-test: injects 13 errors into docs/en/ and docs/, confirms docs-sync catches them
+node game/test/docs-drift.js   # self-test: injects 15 errors into docs/en/ and docs/, confirms docs-sync catches them
 node game/test/play.js         # gameplay loop: harvest → respawn → capacity → transform → storage → cellar tree → raid → post → save
 node game/test/upgrade.js      # backpack upgrades and slot maths
 node game/test/input.js        # real key events: walk / jump / fly / time / Grey Veil border
-node game/test/shots.js g      # 14 zone screenshots → .shots/
+node game/test/shots.js g      # 16 screenshots → .shots/ (zones, transformation, UI, identity)
 node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # single shot, for eyeballing
 ```
 
