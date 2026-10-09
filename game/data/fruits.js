@@ -98,7 +98,7 @@
       habitat: ['mountains', 'whisperwood'], habitatCn: '北岭岩坡 · 冬眠穴', habitatEn: 'Northern Ridge rock face · hibernation den',
       duration: 480,
       form: {
-        cn: '棕熊', en: 'bear', size: [1.4, 1.5], speed: 1.1, jump: 0.9, strength: true, coldImmune: true,
+        cn: '棕熊', en: 'bear', size: [1.4, 1.5], speed: 1.1, jump: 0.9, coldImmune: true,
         aura: 8, step: 1.1, fov: 68, hand: 'claw'
       },
       cost: ['无法精细操作（不能采摘小果、不能开仓库）', '体重：薄冰会裂，木桥会塌'],

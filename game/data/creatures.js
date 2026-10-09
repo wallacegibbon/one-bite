@@ -45,7 +45,7 @@
       dexEn: 'After rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.'
     },
     {
-      /* niche: the ridge -- strength, and a body that is its own weatherproofing */
+      /* niche: the ridge -- a big body, and a body that is its own weatherproofing */
       id: 'bear', cn: '棕熊', en: 'Brown Bear', model: 'bear', scale: 0.24,
       habitat: ['mountains', 'whisperwood'], active: 'both',
       locomotion: 'walk', speed: 5.0, alert: 22, herd: 1,

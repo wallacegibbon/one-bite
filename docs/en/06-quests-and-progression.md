@@ -48,13 +48,11 @@ Nothing in the valley is waiting to be fixed. Do none of these and the valley is
 
 **End state of all seven**: the player can reach every habitat, carry what they need, and read a fruit at a glance. That is the whole of progression.
 
-> Removed with the simplification of the setting (01): the mother tree's amnesia, the three endings, and the fruit and creatures that existed only for them. The Greyglove Trading Company stayed — it is not a villain, it is an institution that ships fruit out, and the valley's border (01 §3) is its opponent.
-
 ## 4. No side quests
 
 There is no second tier of content. The seven invitations are the whole quest set: nothing waits in a hollow, no named animal asks you to fetch a thing for it, no name carved on a beam is waiting to be read.
 
-This section used to be a 12-row design table. After the roster and the magic were simplified it was the odd thing out: **every row in it was unimplemented**, and together the rows were the reason the map promised more than it paid — the hollow that answers dropped stones, the mounds in the orchard, the beams that never fell, the grove with no door. Each of those was a place held open for a quest that was never going to arrive, and two of the rows depended on animals the valley no longer has.
+This section used to be a 12-row design table. After the roster and the magic were simplified it was the odd thing out: **every row in it was unimplemented**, and together the rows were the reason the map promised more than it paid — the hollow that answers dropped stones, the mounds in the orchard, the beams still standing, the grove with no door. Each of those was a place held open for a quest that was never going to arrive, and two of the rows depended on animals the valley no longer has.
 
 What stands in their place is the sentence the creature chapter already uses: the valley keeps its animals to itself until each one arrives with a fruit, a niche and a door only it can open. Until then a place may simply **be** there — dark, deep, good for nothing. That is not a hole to fill; it is the same kind of absence the fog is made of.
 
@@ -64,7 +62,7 @@ If a place ever earns a quest, that quest has to teach a gate: a place only one 
 
 Three tabs:
 
-1. **Fruit codex**: 4 cells (40 in the full design), undiscovered ones show as "?". Discovered ones show: name, rarity, slot cost, dormancy time, habitat, form abilities, side effect, lore.
+1. **Fruit codex**: 4 cells, undiscovered ones show as "?". Discovered ones show: name, rarity, slot cost, dormancy time, habitat, form abilities, side effect, lore.
 2. **Creature codex**: 4 species, showing the dex text + its current attitude toward you (live, changes with your form).
 3. **Quest list**: the current quest's hint, with no reward shown.
 

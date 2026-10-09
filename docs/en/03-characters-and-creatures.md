@@ -12,26 +12,15 @@ Source of truth: `game/data/creatures.js` (4 species + the attitude matrix + cod
 
 A forager's apprentice from outside Lanternrow. **This character has no fixed name**: the valley does not address people by name, it addresses them by *what they have done* (see §6). Wherever these documents refer to the character they say "the forager" or use the second person.
 
-- **Motivation**: they came into the valley carrying a hand-drawn fruit list. The list has 26 fruits on it; only 4 can still be found in the valley. They want to know whether the other 22 are gone, or whether the list is wrong.
-- **No talent**: an ordinary forager, subject to every law of the valley. Eating a second fruit while already transformed simply changes them into that body, like anyone else — one body at a time, for them too (04 §5.1).
-- **Backstory slot**: who left that list belongs to the character, not to the world. In single player it is "the grandmother"; in multiplayer each character can have a different origin (a fellow apprentice, a creditor, a former Greyglove employee) — or the list can simply be held by Old Mei and the character merely recognises it.
-- **What they do not say**: the list's original owner was driven out of the valley by the Greyglove Trading Company.
+- **No talent and no past**: an ordinary forager, subject to every law of the valley. Eating a second fruit while already transformed simply changes them into that body, like anyone else — one body at a time, for them too (04 §5.1).
+- **No backstory**: this character did not come into the valley for a reason the game is going to explain. They are here, they need to eat, and the valley is full of things they cannot reach yet. That is the whole premise and there is nothing waiting behind it.
 
 ### Old Mei (老梅, ~70)
 
 The keeper of the main cellar. She is the one who set the shape of Lanternrow's cellar: 96 slots, underground, constant temperature, spoilage rate ×0.1.
 
-- She **never eats fruit**. She never transforms once in the whole game. Ask her and she says: "I smelled one Bruin Fig. That was enough."
 - Function: teaching, the backpack upgrade (Pouch, +6 slots), the only source of cellar stones.
-- Secret: she can smell a fruit's remaining freshness — to the minute. That is why the cellar never fills up with dormant fruit.
-
-### Toban Quill (托班·奎尔)
-
-The valley agent of the Greyglove Trading Company. In his thirties; his gloves are grey because "you cannot have fruit stains on your hands".
-
-- He is not evil. His position is that the valley's fruit cures diseases outside, and the valley is only nine kilometres wide.
-- He does three things: buys fruit (paying money, which is useless in the valley), sets fruit traps in the Old Orchard (block 80), and tries to carry one Jellybloom through the Grey Veil.
-- The correct way to use him: **he does not know which fruits go dormant**. The rare fruit you trade him for often has only half its time left.
+- She is the only person in the valley who never transforms. The game never asks her why, and she never brings it up.
 
 ### Pendulum / Old Drum / One-Eye (named creatures)
 
@@ -149,4 +138,4 @@ A later one overrides an earlier one; when it changes the game announces it once
 
 **In place**: `id` is saved, cellar trees carry an `owner`, epithets are event-driven, and name and identity are decoupled.
 
-**Still missing**: an identity service (the `id` issued by a server), storage ownership and sharing rights (the main cellar is currently communal), the Frogshall's ledger keyed by id, NPCs remembering dialogue per id, and the resolution of attitude-matrix conflicts such as "two players walk into Mirrorlake as frogs at the same time".
+**Still missing**: an identity service (the `id` issued by a server), storage ownership and sharing rights (the main cellar is currently communal), NPCs remembering dialogue per id, and the resolution of attitude-matrix conflicts such as "two players walk into Mirrorlake as frogs at the same time".

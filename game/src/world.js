@@ -79,14 +79,13 @@
   def(77, { cn: '窖树核心', solid: false, opaque: false, emis: 1, c: [1.0, 0.85, 0.45], micro: [[0.3, 0.1, 0.3, 0.4, 0.5, 0.4]] });
   def(78, { cn: '果窖箱', store: true, c: [0.44, 0.31, 0.19], ct: [0.66, 0.48, 0.24] });
   def(79, { cn: '窖树', c: [0.40, 0.31, 0.21] });
-  def(80, { cn: '窃果贼陷阱', trap: true, solid: false, opaque: false, emis: 1, c: [0.9, 0.35, 0.3], micro: [[0.3, 0.0, 0.3, 0.4, 0.6, 0.4]] });
 
   const AIR = 0, WATER = 5;
 
   /* The blocks the game itself places and breaks. A block number is what a save
      file stores, so it is named once here rather than written out at every call
-     site. `store` and `trap` are the two the game asks about: the interaction
-     code asks "can I put things in this?" instead of "is this 78?". */
+     site. `store` is the flag the game asks about: the interaction code asks
+     "can I put things in this?" instead of "is this 78?". */
   const BLOCK_ID = { trunk: 6, leaf: 7, darkLeaf: 27, cellarCore: 77, cellarCrate: 78, cellarTrunk: 79 };
 
   /* ------------------------- face table (with AO axes) ------------------------- */

@@ -118,7 +118,7 @@ This single idea answers Q1–Q5 at once:
 | Min distance | 20 m | roots must not overlap; also forces the player to spread their points out |
 | Decay | ×0.33 | a cellar tree is alive, not a cellar. Fruit inside survives only 1/3 of the backpack's time |
 | Theft | one roll per game day, 30% chance a bear or a fruit thief takes 1–3 fruits; **if the player is within 45 m they are always scared off and nothing is lost**. The town cellar is never rolled against — it is the only storage with walls | field storage has to be **visited regularly** |
-| Destruction | a bear form can tear it down (tearing = everything drops) | gives the strength body an actual use |
+| Destruction | a bear form can tear it down (tearing = everything drops) — **not implemented** | a big body should be able to wreck a thing |
 | Not movable | a dead cellar tree is dead, its goods scatter | there is no "pack up the warehouse" |
 
 **Why cellar-tree decay is not 0**: if field storage had zero decay, players would build one per map and the capacity anxiety would vanish. ×0.33 means a cellar tree is a **waystation**, not a **safe**.
@@ -183,7 +183,7 @@ These three turn "the warehouse" from a static UI into **something you manage, s
 | backpack upgrades (Pouch / Deep Pouch / Silver Divider) | ✅ implemented (`Game.upg` + `cap()/slotOf()`; q1→Pouch, q4→Deep Pouch, q7→Silver Divider; saved) |
 | fruit block regrowth | ✅ implemented (`Game.regrow[]`, `RARITY.regrow` game days ×±20%, saved) |
 | owl post | ✅ implemented (`Game.postItem/updatePosts`, 1 fruit / 3 game days / 10% lost, decays at ×0.1 in flight, in-transit saved) |
-| bear / fruit-thief rolls | ✅ implemented (`Game.dailyRolls()`, 30% per game day, player within 45 m always scares them off, 1–3 fruits taken; trap block 80 not involved) |
+| bear / fruit-thief rolls | ✅ implemented (`Game.dailyRolls()`, 30% per game day, player within 45 m always scares them off, 1–3 fruits taken) |
 | cellar-tree spacing (min 20 m) | ✅ implemented (`Game.buildCellarTree()` refuses a tree planted inside a sibling's roots) |
 | every number in the rule table above | ✅ lives in `N.STORAGE.treestash` (`minDist` / `raidChance` / `raidMin` / `raidMax` / `raidScareRadius`); `docs-sync.js` compares the prose against the data, and `docs-drift.js` proves it can fail |
 | cellar tree destroyed / bear tearing it down | ⬜ not implemented |

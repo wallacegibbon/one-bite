@@ -51,7 +51,6 @@ const NOT_YET_IMPLEMENTED = {
     nightVision: 'the renderer has no per-form brightness; owl 0.75 / frog 0.3 inert',
     poisonImmune: 'nothing in the world poisons you yet, so jellybloom cannot prove it',
     tongue: 'harvest reach is a fixed distance; frogpear 4 is inert',
-    strength: 'no breakable object exists yet (the B14 traps were never placed)',
     coldImmune: 'the Ashscale cold band does no damage yet, so there is nothing to be immune to'
   }
 };

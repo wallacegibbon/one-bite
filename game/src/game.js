@@ -328,7 +328,6 @@
       if (N.FRUIT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
       if (N.PLANT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
       if (bd.store) { this.openStashUI(this.cellar()); return; }
-      if (bd.trap) { this.logMsg(N.t('log.trap'), 'warn'); return; }
     }
     harvest(x, y, z, b) {
       const fid = N.FRUIT_BLOCK[b], pid = N.PLANT_BLOCK[b];

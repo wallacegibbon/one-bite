@@ -9,7 +9,7 @@
 Three hard rules:
 
 1. **Every plant has something it "wants to do"**: fruit self-glows (wants to be seen), vines grow down (looking for water), mushrooms ring up (claiming ground).
-2. **Buildings are grown, not laid**: Lanternrow's houses are timber frames with mossy-soil infill; Starfall Keep is brick plus lumenstone lamps; the Old Orchard is a ring of broken wall around the oldest tree in the valley, and nobody knows what used to hold its beams up.
+2. **Buildings are grown, not laid**: Lanternrow's houses are timber frames with mossy-soil infill; Starfall Keep is brick plus lumenstone lamps; the Old Orchard is a ring of broken wall around the oldest tree in the valley.
 3. **There are only three light sources**: sun/moon, lumenstone and embers (self-lit blocks), creatures (glowing forms, jellyfish, fruit). **There is no ambient fill light** — at night, without a Glowcap, you genuinely cannot see.
 
 ### Palette (the values actually used in the prototype)
@@ -143,12 +143,12 @@ Two consequences worth knowing:
 | No async meshing | chunk meshing is budgeted at 22 ms per frame during boot; a player edit flags its chunk and the flagged chunks are re-meshed on a 6 ms per frame budget |
 | Creatures have no pathfinding | only "steer toward target + height correction + random deflection on hitting a wall", so they get stuck on terrain |
 | No LOD / no streaming | the 160³ world is fully resident in memory; the full scale needs chunk streaming |
-| No NPC dialogue trees | Old Mei / Quill / One-Eye only have log text, no branching dialogue |
+| No NPC dialogue trees | Old Mei / One-Eye only have log text, no branching dialogue |
 | Cellar trees are never destroyed | the bear tear-down roll is not wired up (raids and owl post are implemented) |
 | The frog does not dry out on screen | `dryTimer` is in the data and the check is wired up, but there is no skin-moisture bar in the HUD (04 §3) |
 | No identity service | the `id` is generated locally, not issued by a server; cellar trees already carry an `owner`, but the main cellar is communal and there is no sharing-rights model (see 03 §6) |
 | Only two languages | a third language means one more flat table in `data/i18n.js` plus a third field on every record that carries setting text (`cn` / `en` pairs in the data files) |
-| Six form abilities are declared and inert | `glide`, `nightVision`, `tongue`, `strength`, `coldImmune` and `poisonImmune` sit in `data/fruits.js` and in the 04 §4 table, and no file in `game/src/` reads any of them. `game/test/reach.js` prints the list on every run, and fails if an entry goes live without the list being updated — the list can only shrink by a field actually being built (04 §4) |
+| Five form abilities are declared and inert | `glide`, `nightVision`, `tongue`, `coldImmune` and `poisonImmune` sit in `data/fruits.js` and in the 04 §4 table, and no file in `game/src/` reads any of them. `game/test/reach.js` prints the list on every run, and fails if an entry goes live without the list being updated — the list can only shrink by a field actually being built (04 §4) |
 | Zone prose is never displayed | every zone in `data/world.js` carries a `desc`, and no interface reads it. The map bible in 02 is the only place that writing reaches a reader, and it is Chinese-only, so it is not covered by the language switch either |
 
 ## 4. Tests

@@ -125,20 +125,20 @@ Three layers of tunnel, about 120 blocks long. The id is still `batcave`, and th
 Radius 34, deepest at the centre.
 
 - **Sunken Tower** (66,118): top at y12 (two blocks under the surface), base at y5. The window sills carry **frog pear**. Picking it requires breathing underwater.
-- **Frogshall** (92,120): y9, a ring of sunken huts (the valley had people in it before the fog). Now the frogs' place; after rain their chorus drowns the bell.
+- **Frogshall** (92,120): y9, a ring of sunken huts. The frogs' place; after rain their chorus drowns the bell.
 - **Jelly fields**: their outline is exactly the sunken tower's — from the surface, the tower is what glows.
 
 ### 5.6 The Deep Grove and the Old Orchard
 
 **The Deep Grove** (104,32, r18): silver-leaf wood (blocks 9/22) where every old track folds into one. Nothing grows on the silver trunks now. The grove is bear country — the ridge bears come down into it and bury their own fruit here — and it has no door: no fruit, no gate, no reason. That is no longer a hole in the design: the valley keeps its animals until each one arrives with a fruit, a niche and a door only it can open (03 §3), and a wood is allowed to be bear country and nothing else.
 
-**The Old Orchard** (24,104, r15): a ring of broken wall (30 across) plus the oldest tree in the valley (`oldtree`). Every root heap is an old burrow — the town cellar's shape is said to be copied from bears, and the bears copied it from whatever dug these first. The ruins' beams have been holding themselves up for three centuries. They stay up.
+**The Old Orchard** (24,104, r15): a ring of broken wall (30 across) plus the oldest tree in the valley (`oldtree`). Every root heap is an old burrow. The beams of the ruins are still standing. They stay up.
 
 ### 5.7 Cloudspire Isles
 
 | Isle | Position | Radius | Top y | What is there |
 |---|---|---|---|---|
-| `beamisle` | (40,20) | 11 | 37 | **The Old Beams**: three-century-old timber that never fell, and the view |
+| `beamisle` | (40,20) | 11 | 37 | **The Old Beams**: old timber that is still standing, and the view |
 | `highroost` | (96,12) | 7 | 40 | The highest isle, windy, no fruit; the owls moult here |
 | `windbell` | (128,58) | 8 | 34 | Windbell isle, no fruit, viewpoint |
 | `stepping1` | (66,40) | 4 | 31 | Stepping isle |
@@ -179,7 +179,7 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
 | Starfall Keep | 1 | none (but the greenhouse fruit is unpickable) |
 | Whisperwood / Glowglade | 1 | rain choruses that hide footsteps, and old tracks that lead somewhere you did not mean to go |
 | Echo Hollow | 2 | darkness (needs night vision / glow), falls |
-| Old Orchard | 2 | thief traps (block 80, needs a bear to break) |
+| Old Orchard | 2 | broken ground and low wall; nothing that hunts you |
 | Deep Grove | 3 | nothing that hunts you: dense silver trunks, and a bear standing in the path you came in by |
 | Ashscale Ridge | 3 | the height, the cold (a bear body is immune — not implemented yet), a brown bear that ignores you and will not step aside |
 | Mirrorlake | 3 | drowning (18 s for a human, 58 s in a jellyfish body), a frog drying out on land |

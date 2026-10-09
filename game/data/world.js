@@ -24,7 +24,7 @@
       id: 'glowglade', cn: '蘑菇圈', en: 'Glowglade', kind: 'circle',
       cx: 60, cz: 56, r: 13,
       danger: 1,
-      desc: '一圈荧光菇围着中央的空地，夜里整圈会呼吸一样明灭。传说这是某种巨大生物曾经的脚印。'
+      desc: '一圈荧光菇围着中央的空地，夜里整圈会呼吸一样明灭。'
     },
     {
       id: 'batcave', cn: '回声丘', en: 'Echo Hollow', kind: 'circle',
@@ -48,7 +48,7 @@
       id: 'mirrorlake', cn: '镜湖', en: 'Mirrorlake', kind: 'circle',
       cx: 78, cz: 106, r: 34,
       danger: 3,
-      desc: '湖底有一座沉塔和几间沉没的旧屋。水面平静得像玻璃；一到雨后，整片湖岸一起叫。'
+      desc: '湖底有一座沉塔。水面平静得像玻璃；一到雨后，整片湖岸一起叫。'
     },
     {
       id: 'starfall', cn: '星坠堡', en: 'Starfall Keep', kind: 'circle',
@@ -71,7 +71,7 @@
     {
       id: 'cloudspire', cn: '云顶浮岛', en: 'Cloudspire', kind: 'sky',
       danger: 4,
-      desc: '一串悬浮的岩岛，最高的那座上还留着三百年前的旧梁。没有飞行形态，这里只是天空里的一个影子。'
+      desc: '一串悬浮的岩岛，最高的那座上架着旧梁。没有飞行形态，这里只是天空里的一个影子。'
     }
   ];
 

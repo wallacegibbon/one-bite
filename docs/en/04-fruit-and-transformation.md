@@ -68,9 +68,9 @@ A fruit starts counting down the moment it is picked.
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `bruinfig` | Bruin Fig | bear | 480 s | Northern Ridge rock face · hibernation den | strength, cold immune, aura 8, step 1.1, size 1.4×1.5 | **No fine motor control** (cannot pick small fruit, cannot open storage); **weight**: thin ice breaks, wooden bridges collapse |
+| `bruinfig` | Bruin Fig | bear | 480 s | Northern Ridge rock face · hibernation den | cold immune, aura 8, step 1.1, size 1.4×1.5 | **No fine motor control** (cannot pick small fruit, cannot open storage); **weight**: thin ice breaks, wooden bridges collapse |
 
-**Which of those costs the prototype enforces**: only the frog's skin. `dryTimer` is wired up — 90 s out of water and vitality drains — and it is the one cost in this table a player can die from today. Everything else in the Cost column is still design: talons and claws "cannot open storage" (every body opens it), a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body), thin ice does not break, no bridge collapses, and the owl's daylight blindness never happens because there is no night vision to invert. The Key abilities column carries the same caveat — see §4 for the six fields that are declared and inert.
+**Which of those costs the prototype enforces**: only the frog's skin. `dryTimer` is wired up — 90 s out of water and vitality drains — and it is the one cost in this table a player can die from today. Everything else in the Cost column is still design: talons and claws "cannot open storage" (every body opens it), a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body), thin ice does not break, no bridge collapses, and the owl's daylight blindness never happens because there is no night vision to invert. The Key abilities column carries the same caveat — see §4 for the five fields that are declared and inert.
 
 **Why there is no fifth**: the fruit table is a mirror of the animal table. Adding a fruit means adding a niche, a row in the attitude matrix and a new set of gates (03 §3). Four is what can be read in ten seconds; the next one has to earn that.
 
@@ -100,18 +100,16 @@ sit here looking implemented while nothing reads it.
 | `fov` | field of view | frog 100 / bear 68 | live |
 | `hand` | first-person hand model | hand/talon/web/claw/tentacle | live |
 
-There are three further pure boolean switches, which change checks rather than
-numbers: `strength` (pushes obstacles, breaks doors), `poisonImmune`,
-`coldImmune`. **None of the three is implemented either**, and neither is
-`glide`, `nightVision` or `tongue` — six of the twenty-two fields on the four
-forms are declared and inert.
+There are two further pure boolean switches, which change checks rather than
+numbers: `poisonImmune` and `coldImmune`. **Neither is implemented either**, and
+neither is `glide`, `nightVision` or `tongue` — five of the twenty-one fields on
+the four forms are declared and inert.
 
-That is the honest list, and it matters more than it looks, because two of them
-are load-bearing on content the valley already advertises: the Ashscale Ridge
-text promises that a bear body shrugs off the cold (`coldImmune`), and the Old
-Orchard traps are supposed to need a bear's claws (`strength`). Until those two
-are built, the bear's advertised difference from a human is its collision box,
-its speed and its intimidation radius.
+That is the honest list, and it matters more than it looks, because one of them
+is load-bearing on content the valley already advertises: the Ashscale Ridge
+text promises that a bear body shrugs off the cold (`coldImmune`). Until that is
+built, the bear's advertised difference from a human is its collision box, its
+speed and its intimidation radius.
 
 **Note that `size` is a hard gate**: a frog at 0.5×0.5 fits a 1×1 root hole and the gaps between reeds; a bear at 1.4×1.5 does not — that is the physical implementation of "weight collapses the bridge" and "this body will not fit that door", not just flavour text.
 
@@ -141,24 +139,7 @@ The one exception is a **body reflex**: this body startles before you have decid
 
 **One body at a time is a law of the world, not a difficulty setting.** No talent, plant or tool makes two bodies coexist. The moment one backpack could carry two bodies, every door in the valley stops being a decision about *which body to arrive in* and becomes a shopping list.
 
-## 6. Empty fruit (not implemented, full design)
-
-Nothing in the prototype bears empty fruit: there is no such state on an item,
-no "This fruit has no taste." line in either language table, and no replant
-roll. The section below is the design, kept whole because it is cheap to build
-(one flag on the item, one log line, one roll in the planting path) and because
-it is the only mechanic that makes the gap between the list's 26 fruits and the
-valley's 4 something the player can push on.
-
-Some fruit trees bear **empty fruit**: identical in appearance, slot cost and dormancy, but eating one does nothing and only announces "This fruit has no taste."
-
-- Empty fruit has no cause. The valley does not explain itself — in some years some trees bear tasteless fruit.
-- Empty fruit **can still be planted**, and the tree it grows has a 15% chance of coming back as real fruit — the player's only means of "repair".
-- In the codex, empty fruit shows as "?" and does not count toward codex completion.
-
-> Design use: empty fruit lets the player verify with their own hands the motivation "the list has 26 fruits, the valley has 4" — some of them are not gone, they are still there and empty.
-
-## 7. The picking interaction
+## 6. The picking interaction
 
 | Step | Presentation |
 |---|---|
