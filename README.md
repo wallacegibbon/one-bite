@@ -1,4 +1,4 @@
-# FRUTARIA · 果灵谷
+# FRUTARIA · 果窖
 
 **English** · [中文: README.zh.md](README.zh.md)
 

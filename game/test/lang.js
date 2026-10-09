@@ -45,6 +45,7 @@ const path = require('path');
     return {
       locale: window.FRUTARIA.locale(),
       title: document.title,
+      startTitle: ((document.querySelector('#start .title') || {}).textContent || '').trim(),
       langBtn: txt('btnLang'),
       hint: txt('hintRow'),
       cap: txt('capTxt'),
@@ -78,10 +79,16 @@ const path = require('path');
       u.langBtn === (id === 'zh' ? 'English' : '中文'), u.langBtn);
     check('the log was rewritten in the new language (' + id + ')',
       u.log.indexOf(id === 'zh' ? '界面语言' : 'Interface language') >= 0, u.log.slice(0, 160));
+    // the brand is the one name that must not move with the language: it sits in
+    // the document title in both locales, and the start screen shows it instead
+    // of a name only one of the two languages can read
+    check('the document title carries the brand (' + id + ')', u.title.indexOf('FRUTARIA') >= 0, u.title);
+    check('the start screen shows a title, not a key (' + id + ')',
+      u.startTitle.length > 0 && u.startTitle.indexOf('.') < 0, u.startTitle);
   }
 
   // 2. the two languages really differ everywhere the player looks
-  for (const k of ['title', 'cap', 'mm', 'air', 'hint', 'stats', 'itemTip', 'log']) {
+  for (const k of ['title', 'startTitle', 'cap', 'mm', 'air', 'hint', 'stats', 'itemTip', 'log']) {
     check('the ' + k + ' text changes with the language', seen.zh[k] !== seen.en[k], { zh: seen.zh[k], en: seen.en[k] });
   }
 

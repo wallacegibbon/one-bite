@@ -27,8 +27,8 @@
 
     /* ---------------------------------------------------------------- zh */
     zh: {
-      'app.title': '果灵谷 · FRUTARIA（可玩原型）',
-      'start.title': '果灵谷',
+      'app.title': '果窖 · FRUTARIA（可玩原型）',
+      'start.title': '果窖',
       'start.sub': 'FRUTARIA · 无杖魔法 · 变形探索（可玩原型）',
       'start.loading': '生成世界中…',
       'start.gen': '正在长出一片谷地… {p}%',
@@ -127,7 +127,7 @@
       'dead.body': '你在原地留下了背包里的一切。它们正在失活。',
 
       /* ---------------------------- log lines ---------------------------- */
-      'log.welcome': '欢迎来到果灵谷。按 H 看操作，按 J 看图鉴。',
+      'log.welcome': '欢迎来到谷地。按 H 看操作，按 J 看图鉴。',
       'log.packFull': '背包满了（{u}/{c} 果格）——先回果窖。',
       'log.dormant': '{n} 失活了，只剩一颗果核——种下去也许还能结果。',
       'log.pick': '采下 {n}（{r}，占 {s} 果格）',
@@ -306,7 +306,7 @@
       'dead.body': 'You left everything you were carrying where you fell. It is going dormant.',
 
       /* ---------------------------- log lines ---------------------------- */
-      'log.welcome': 'Welcome to Frutaria. Press H for the controls, J for the codex.',
+      'log.welcome': 'Welcome to the valley. Press H for the controls, J for the codex.',
       'log.packFull': 'Backpack full ({u}/{c} slots) — go back to the cellar first.',
       'log.dormant': '{n} went dormant — all that is left is a pit. Plant it and it may still fruit.',
       'log.pick': 'Picked {n} ({r}, {s} slot(s))',

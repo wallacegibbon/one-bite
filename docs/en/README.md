@@ -1,4 +1,4 @@
-# FRUTARIA · 果灵谷
+# FRUTARIA · 果窖
 
 **English** · [中文: ../cn/README.md](../cn/README.md)
 
@@ -8,7 +8,7 @@ A design-document set plus a playable prototype for an open-exploration game in 
 
 ## In one paragraph
 
-You are **a sixteen-year-old forager** (the name is yours to choose — the valley does not address people by name), walking into **Frutaria** for the first time. There is exactly one magic here: you **eat fruit and become the animal the fruit remembers**, reverting some time later, and you inherit that body completely — every ability, every fragility, while your mind stays your own. The valley is ringed by **grey fog**; inside it are forest, a lake, mountains and floating isles, and every animal lives on its own ground (the roster is in 03). Every animal fruits on its own ground. Your backpack has only **24 fruit slots**, and the more precious the fruit the bigger it is — **you cannot carry all the magic with you**.
+You are **a sixteen-year-old forager** (the name is yours to choose — the valley does not address people by name), walking into **the valley** for the first time. There is exactly one magic here: you **eat fruit and become the animal the fruit remembers**, reverting some time later, and you inherit that body completely — every ability, every fragility, while your mind stays your own. The valley is ringed by **grey fog**; inside it are forest, a lake, mountains and floating isles, and every animal lives on its own ground (the roster is in 03). Every animal fruits on its own ground. Your backpack has only **24 fruit slots**, and the more precious the fruit the bigger it is — **you cannot carry all the magic with you**.
 
 ## Core loop
 
@@ -33,7 +33,7 @@ Three tensions that mesh into each other:
 | File | Contents |
 |---|---|
 | [00-overview-and-design-pillars.md](00-overview-and-design-pillars.md) | Design pillars, experience goals, anti-goals, MVP boundary |
-| [01-worldview-and-story.md](01-worldview-and-story.md) | Frutaria, the Grey Veil, the one magic, the valley's three institutions |
+| [01-worldview-and-story.md](01-worldview-and-story.md) | The valley (it has no name), the Grey Veil, the one magic, its three institutions |
 | [02-map-and-scenes.md](02-map-and-scenes.md) | Zone table, ASCII map, vertical layers, fruit gating graph, POIs |
 | [03-characters-and-creatures.md](03-characters-and-creatures.md) | Protagonist, NPCs, 3 creatures, attitude matrix, named individuals |
 | [04-fruit-and-transformation.md](04-fruit-and-transformation.md) | Full table of 3 fruits, form abilities, side effects |
