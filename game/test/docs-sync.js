@@ -64,7 +64,7 @@ const LANGS = [
       [/偷走\s*\d+\s*–\s*(\d+)\s*颗/, N.STORAGE.treestash.raidMax, '偷走上限'],
       [/玩家若在\s*(\d+)\s*m\s*内/, N.STORAGE.treestash.raidScareRadius, '赶走半径 m']
     ],
-    keyRe: /按\s*([A-Z])\s*(?:种|使用|打开|交互|吃|存)/g,
+    keyRe: /按\s*([A-Z])\s*(?:种|使用|打开|交互|吃|存|寄)/g,
     nameOf: x => x.cn,
     cut: ['混合形态', '混胃']
   },

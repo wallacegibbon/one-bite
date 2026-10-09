@@ -147,7 +147,7 @@ The backpack is the transport vehicle. Subtract the consumables you need on the 
 ### 5.2 Owl post (cellar tree ↔ main cellar)
 
 - Precondition: you have stored at least 1 Owlberry in the main cellar (this unlocks "Pendulum").
-- Pressing E on a cellar tree offers one extra option: "have Pendulum carry one away".
+- Open the cellar tree's storage panel (press E on the tree), select a fruit on the shelf with the arrow keys, then **press P to post it** — "have Pendulum carry one away". P is bound only while a storage panel is open, and posting from the main cellar is refused: the owl flies between a cellar tree and the main cellar, never out of the main cellar.
 - One fruit at a time, **delivered 3 game days later** at the main cellar.
 - On arrival the fruit **has already decayed for 3 days** (counted at the main cellar's ×0.1), so posting only makes sense for rarity ≥ rare.
 - 10% failure rate: "Pendulum did not come back. On the fourth day it flew back by itself, mouth empty."
