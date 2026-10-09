@@ -13,7 +13,7 @@ Source of truth: `game/data/creatures.js` (7 species + the attitude matrix + cod
 A forager's apprentice from outside Lanternrow. **This character has no fixed name**: the valley does not address people by name, it addresses them by *what they have done* (see §6). Wherever these documents refer to the character they say "the forager" or use the second person.
 
 - **Motivation**: they came into the valley carrying a hand-drawn fruit list. The list has 26 fruits on it; only 7 can still be found in the valley. They want to know whether the other 19 are gone, or whether the list is wrong.
-- **Trait `mixed stomach`**: they can hold two magics down at once. An ordinary person eating two fruits dies of a magic-stomach churn; they only feel ill. This is the exception to the magic-stomach rule, and the precondition for mixed forms. **Note that it is a property of the character, not a law of the world** — in a multiplayer game it is rare, and you may never assume a given player has it (see §6).
+- **No talent**: an ordinary forager, subject to every law of the valley. Eating a second fruit while already transformed costs them vitality like anyone else — one body at a time, for them too (04 §5.2).
 - **Backstory slot**: who left that list belongs to the character, not to the world. In single player it is "the grandmother"; in multiplayer each character can have a different origin (a fellow apprentice, a creditor, a former Greyglove employee) — or the list can simply be held by Old Mei and the character merely recognises it.
 - **What they do not say**: the list's original owner was driven out of the valley by the Greyglove Trading Company.
 
@@ -155,6 +155,6 @@ A later one overrides an earlier one; when it changes the game announces it once
 
 ### Multiplayer: already in place / still missing
 
-**In place**: `id` is saved, cellar trees carry an `owner`, epithets are event-driven, name and identity are decoupled, and `mixed stomach` is a character trait rather than a law of the world.
+**In place**: `id` is saved, cellar trees carry an `owner`, epithets are event-driven, and name and identity are decoupled.
 
 **Still missing**: an identity service (the `id` issued by a server), storage ownership and sharing rights (the main cellar is currently communal), the Frogshall's ledger keyed by id, beast residue accumulated per character, NPCs remembering dialogue per id, and the resolution of attitude-matrix conflicts such as "two players walk into the Deep Grove as deer at the same time".

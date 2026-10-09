@@ -65,7 +65,8 @@ const LANGS = [
       [/玩家若在\s*(\d+)\s*m\s*内/, N.STORAGE.treestash.raidScareRadius, '赶走半径 m']
     ],
     keyRe: /按\s*([A-Z])\s*(?:种|使用|打开|交互|吃|存)/g,
-    nameOf: x => x.cn
+    nameOf: x => x.cn,
+    cut: ['混合形态', '混胃']
   },
   {
     tag: 'en',
@@ -88,7 +89,8 @@ const LANGS = [
       [/within\s+(\d+)\s+m/, N.STORAGE.treestash.raidScareRadius, 'scare-off radius m']
     ],
     keyRe: /press\s+`?([A-Z])\b/gi,
-    nameOf: x => x.en
+    nameOf: x => x.en,
+    cut: ['mixed form', 'mixed stomach']
   }
 ];
 
@@ -245,6 +247,13 @@ for (const L of LANGS) {
     const missP = N.PLANTS.filter(p => !all.includes(L.nameOf(p)));
     if (missP.length) bad(`${T} plants never mentioned in docs`, missP.map(L.nameOf), '—');
     else good(`${T} all ${N.PLANTS.length} plants appear in the docs`);
+    /* A design that was removed has to leave the docs too: prose the code will
+       never keep is worse than a blank page. Add the phrase here when a design
+       is cut, so it cannot quietly come back through a copy-paste. */
+    const lower = all.toLowerCase();
+    const back = L.cut.filter(w => lower.includes(w.toLowerCase()));
+    if (back.length) for (const w of back) bad(`${T} cut design still in docs`, w, 'removed from the design');
+    else good(`${T} no cut design came back (${L.cut.join(' / ')} absent)`);
   }
 }
 
@@ -278,13 +287,12 @@ for (const L of LANGS) {
     const miss = ID.epithets.map(e => e[L.nameField]).filter(x => !all.includes(x));
     if (miss.length) bad(`${T} epithets missing from docs`, miss, 'IDENTITY.epithets');
     if (!all.includes(ID.epithetDefault[L.nameField])) bad(`${T} default epithet`, 'missing', ID.epithetDefault[L.nameField]);
-    if (!all.includes(ID.traits.mixStomach[L.nameField])) bad(`${T} mixStomach trait`, 'missing', ID.traits.mixStomach[L.nameField]);
     // language-neutral tokens so the numbers can be checked in either language
     const mMax = all.match(/nameMax\s+(\d+)/), mBytes = all.match(/idBytes\s+(\d+)/);
     if (!mMax || +mMax[1] !== ID.nameMax) bad(`${T} nameMax`, mMax && mMax[1], ID.nameMax);
     if (!mBytes || +mBytes[1] !== ID.idBytes) bad(`${T} idBytes`, mBytes && mBytes[1], ID.idBytes);
     if (!all.includes(ID.idPrefix)) bad(`${T} id prefix`, 'missing', ID.idPrefix);
-    good(`${T} identity: no fixed name, all ${ID.epithets.length + 1} epithets + trait + numbers documented`);
+    good(`${T} identity: no fixed name, all ${ID.epithets.length + 1} epithets + numbers documented`);
   }
   const main = fs.readFileSync(path.join(base, 'src', 'main.js'), 'utf8');
   if (!new RegExp(`k === '${ID.nameKey}'`).test(main)) bad('IDENTITY.nameKey', ID.nameKey, 'not bound in main.js');

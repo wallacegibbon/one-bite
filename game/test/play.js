@@ -278,14 +278,13 @@ const path = require('path');
     const epAll = g.epithet().cn;
     g.quests.forEach((q, i) => q.done = was[i]);           // leave quest state untouched
     const nm = g.setName('abcdefghijklmnopqrstuvwx');      // 24 chars, must clamp
-    return { id: g.id, epDefault, epQ1, epAll, epDefaultExpected: ID.epithetDefault.cn, nameLen: nm.length, nameMax: ID.nameMax, trait: g.hasTrait('mixStomach') };
+    return { id: g.id, epDefault, epQ1, epAll, epDefaultExpected: ID.epithetDefault.cn, nameLen: nm.length, nameMax: ID.nameMax };
   });
   check('id looks like p-xxxxxx', /^p-[a-z0-9]{6}$/.test(ident.id), ident.id);
   check('default epithet comes from data', ident.epDefault === ident.epDefaultExpected, ident);
   check('epithet changes after q1', ident.epQ1 !== ident.epDefault, { a: ident.epDefault, b: ident.epQ1 });
   check('epithet changes when all quests are done', ident.epAll !== ident.epQ1, { a: ident.epQ1, b: ident.epAll });
   check('player name is clamped to nameMax', ident.nameLen === ident.nameMax, ident);
-  check('mixStomach is a character trait', ident.trait === true, ident.trait);
 
   // 9. quests
   await step('quests', () => {

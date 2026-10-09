@@ -81,7 +81,6 @@
       // earned by deeds, the name is the player's own (docs/en/03 section 6).
       this.id = IDEN.idPrefix + Math.random().toString(36).slice(2, 2 + IDEN.idBytes);
       this.name = IDEN.nameDefault;
-      this.traits = { mixStomach: true };   // a character trait, not a world law
       // quests: a quest is an invitation to use a body (docs/en/06 s3), so its
       // text lives here next to the check that completes it
       this.quests = [
@@ -992,7 +991,6 @@
         : N.t('log.unnamed', { e: N.disp(this.epithet()) }), 'good');
       return this.name;
     }
-    hasTrait(t) { return !!this.traits[t]; }
     // announce a change of epithet once, when the valley starts using it.
     // The comparison is on the record itself, not on its text: switching
     // language mid-session must not read as the valley having renamed you.
@@ -1027,7 +1025,7 @@
       try {
         const p = this.player;
         const s = {
-          id: this.id, name: this.name, traits: this.traits,
+          id: this.id, name: this.name,
           time: this.time, day: this.day, seed: this.seed,
           p: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vital: p.vital,
                form: p.form, formT: p.formT, formMax: p.formMax, dry: p.dry },
@@ -1050,7 +1048,6 @@
       if (!s) return false;
       // identity: keep the saved id (the world's memory is keyed on it), never a name we invented
       this.id = s.id || this.id; this.name = s.name || '';
-      Object.assign(this.traits, s.traits || {});
       this.time = s.time; this.day = s.day;
       this.inv = s.inv || [];
       this.stashes = this.mergeStashes(s.stashes);

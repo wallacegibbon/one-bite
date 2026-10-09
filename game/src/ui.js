@@ -244,11 +244,9 @@
       const g = this.g;
       // identity block: the epithet is what the valley uses; the id is what the world stores
       const ep = g.epithet();
-      const tr = N.IDENTITY.traits.mixStomach;
       let me = '<h3>' + N.t('j.you') + '</h3><div class="dim">' + N.t('j.youEpithet', { e: N.disp(ep) }) +
         (g.name ? N.t('j.youNameSet', { n: g.name }) : N.t('j.youNameNone')) +
-        N.t('j.youId', { id: g.id }) +
-        (g.hasTrait('mixStomach') ? N.t('j.youTrait', { t: N.disp(tr) }) : '') + '</div>';
+        N.t('j.youId', { id: g.id }) + '</div>';
       let q = '<h3>' + N.t('j.quests') + '</h3>';
       for (const qq of g.quests) q += '<div class="q' + (qq.done ? ' done' : '') + '"><b>' + (qq.done ? '✔ ' : '○ ') + N.disp(qq) +
         '</b><div class="dim">' + N.disp(qq.hint) + '</div></div>';

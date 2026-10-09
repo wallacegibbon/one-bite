@@ -28,7 +28,8 @@ const DRIFTS = [
   ['02-map-and-scenes.md', '| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 4 |', '| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 3 |', 'zone danger'],
   ['02-map-and-scenes.md', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r34 | (78,106) |', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r30 | (78,106) |', 'zone radius'],
   ['03-characters-and-creatures.md', '| `thorn` | 刺刺菇 | Thorncap |', '| `thorn` | 刺刺菇 | Thorny Cap |', 'plant name coverage'],
-  ['05-backpack-and-storage.md', 'press F to use', 'press Q to use', 'unbound key claim']
+  ['05-backpack-and-storage.md', 'press F to use', 'press Q to use', 'unbound key claim'],
+  ['04-fruit-and-transformation.md', '### 5.2 The magic stomach', '### 5.2 The magic stomach (mixed forms: see 5.3)', 'cut design back in (mixed forms)']
 ];
 
 let missed = 0;
@@ -75,6 +76,18 @@ fs.unlinkSync(path.join(ROOT, 'docs', 'README.md'));
   fs.writeFileSync(p, bak.replace('### 采集者（16 岁）—— 名字由玩家决定', '### 林奈（Linnaeus，16 岁）'));
   const r = run();
   console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [fixed protagonist name] exit=${r.code}`);
+  if (r.code === 0) missed++;
+  else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
+  fs.writeFileSync(p, bak);
+}
+
+// a design that was cut must stay out of the Chinese docs as well
+{
+  const CN = path.join(ROOT, 'docs', 'cn'), f = '04-果实与变形系统.md', p = path.join(CN, f);
+  const bak = fs.readFileSync(p, 'utf8');
+  fs.writeFileSync(p, bak.replace('### 5.2 魔力胃（原型：覆盖 + 警告）', '### 5.2 魔力胃（原型：覆盖 + 警告）\n\n有 `混胃` 天赋者可得混合形态。'));
+  const r = run();
+  console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [cut design back in, cn] exit=${r.code}`);
   if (r.code === 0) missed++;
   else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
   fs.writeFileSync(p, bak);

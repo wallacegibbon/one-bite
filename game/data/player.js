@@ -38,18 +38,10 @@
       { quest: 'q5',  cn: '走进深林的人',      en: 'the one who walked the grove' },
       { quest: 'q6',  cn: '云顶结网的人',      en: 'the cloud-top webster' },
       { quest: 'all', cn: '谷地记得的人',      en: 'the one the valley remembers' }
-    ],
-
-    // A trait of a character, not a law of the world. In a single-player game
-    // the protagonist has it; in a multiplayer game it must be rare, so two
-    // forms ever living in one body is never something you may assume of a player.
-    traits: {
-      mixStomach: {
-        id: 'mixStomach', cn: '混胃', en: 'mixed stomach',
-        note: '能在体内同时压住两种魔法而不翻搅——混合形态的前提',
-        noteEn: 'can hold two magics in the body at once without churning — the precondition for mixed forms'
-      }
-    }
+    ]
+    // There is no talent list here on purpose. The protagonist holds no talent
+    // that bends the transformation rules: two magics never share one body, for
+    // them as much as for anyone (docs/en/04 s5.2).
   };
 
   N.IDENTITY = IDENTITY;

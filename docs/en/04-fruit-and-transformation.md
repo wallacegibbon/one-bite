@@ -141,22 +141,9 @@ The one exception is a **body reflex**: a prey heart is not under your command. 
 - Full design (not implemented):
   - The "magic residue" of two forms coexists in the stomach for 90 seconds, during which every action check is −30%.
   - If the two forms differ in body size by ≥ 1.0 m, the churn damage doubles (**human → bear → jellyfish** is the most dangerous combination: 1.5 m against 0.8 m).
-  - **The `mixed stomach` exception**: a character holding that trait can deliberately "mix stomachs", see 5.3.
+- **One body at a time.** Two magics never share a body: the second fruit always overwrites the first, and no talent, plant or tool makes them coexist. This is a law of the world, not a difficulty setting — the moment one backpack could carry two bodies, every door in the valley stops being a decision about *which body to arrive in* and becomes a shopping list.
 
-### 5.3 Mixed forms (not implemented, full design)
-
-Eating two fruits at once **without churning** (needs the magic-stomach talent or a neutralising plant) gives a half-length mixed form:
-
-| Combination | Mixed form | Duration | Traits |
-|---|---|---|---|
-| owl + spider | **Eaves Shadow** | 210 s | fly 5.2 + climb: you can fly up to a cave ceiling and then climb it; completely photophobic by day, and villagers refuse trade permanently |
-| frog + jellyfish | **Tidelamp** | 400 s | breathe underwater + self-glow + breath +40: you can reach the bottom of the sunken tower and read the whole jellyfish field; drying out is halved |
-| pangolin + bear | **Digger** | 360 s | dig + strength + armor: digs through any earth wall and breaks doors open; no fine motor control at all, and the weight collapses every wooden structure |
-| deer + bear | **Heavyhorn** | 300 s | speed 1.5 + strength: the fastest charge in the valley; antlers and 1.6 m of shoulder, so no door fits |
-
-A mixed form's fruit cost = the sum of both (12+7 = 19 slots); that is the price of "if you want to mix, clear the backpack".
-
-### 5.4 Beast residue (not implemented, full design)
+### 5.3 Beast residue (not implemented, full design)
 
 Repeatedly transforming into the same form leaves traces on the human shape:
 
