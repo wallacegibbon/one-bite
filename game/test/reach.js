@@ -16,6 +16,14 @@
  * being named to the i18n layer (`I18N.field(o, 'lore')` reads `lore` and
  * `loreEn`), never on a bare word: models.js has a body part called `web` and
  * says "digging claws", and a word count reports both as implemented.
+ *
+ * Known weakness, stated rather than hidden: the question asked is "does any
+ * file read `.field`", not "does any file read THIS record's field". A name
+ * shared between record types passes on the strength of the other type -- that
+ * is how `slots` on a plant looked live while nothing ever read it, because
+ * stashes and backpack upgrades have a `slots` that is read. It makes the test
+ * unable to report a collision as dead; it never makes it lie about a field
+ * that is genuinely unread.
  * ========================================================================== */
 const fs = require('fs');
 const path = require('path');
@@ -51,7 +59,8 @@ const NOT_YET_IMPLEMENTED = {
 const groups = {
   fruit: [...new Set(N.FRUITS.flatMap(f => Object.keys(f)))],
   form: [...new Set(N.FRUITS.flatMap(f => Object.keys(f.form)))],
-  creature: [...new Set(N.CREATURES.flatMap(c => Object.keys(c)))]
+  creature: [...new Set(N.CREATURES.flatMap(c => Object.keys(c)))],
+  plant: [...new Set(N.PLANTS.flatMap(p => Object.keys(p)))]
   /* Zones are deliberately NOT scanned. Every zone carries a `desc`, and the
      i18n rule above would score it as read because `descOf` exists and plants
      use it -- but no zone text is ever rendered anywhere. A check that passes

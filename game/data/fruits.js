@@ -110,24 +110,30 @@
 
   /* ------------------------------------------------------------------
    * Wondrous plants (no form change; temporary buffs / tools)
+   * A plant takes the slots of its rarity: slotOf() goes through RARITY and
+   * nothing else, so there is no per-plant `slots` field here. Six plants used
+   * to carry one, each exactly equal to its rarity's cost, which made it look
+   * like a knob that was not connected to anything. If a plant is ever meant
+   * to be lighter or heavier than its rarity, add the field AND the override
+   * in slotOf() in the same change.
    * ------------------------------------------------------------------ */
   const PLANTS = [
-    { id: 'glowcap', cn: '荧光菇', en: 'Glowcap', rarity: 'common', slots: 1, effect: 'light',
+    { id: 'glowcap', cn: '荧光菇', en: 'Glowcap', rarity: 'common', effect: 'light',
       desc: '摘下后 5 分钟自身发光，可放置成路标。蘑菇圈的特产。',
       descEn: 'Glows by itself for 5 minutes after picking; can be placed as a waymarker. A specialty of the Glowglade.' },
-    { id: 'leaper', cn: '弹弹菇', en: 'Leaper', rarity: 'common', slots: 1, effect: 'jump',
+    { id: 'leaper', cn: '弹弹菇', en: 'Leaper', rarity: 'common', effect: 'jump',
       desc: '跳跃 +80%，持续 90 秒。吃多会手抖（视角抖动）。',
       descEn: 'Jump +80% for 90 seconds. Too many and your hands shake (the camera jitters).' },
-    { id: 'drifter', cn: '雾隐菇', en: 'Drifter', rarity: 'uncommon', slots: 2, effect: 'stealth',
+    { id: 'drifter', cn: '雾隐菇', en: 'Drifter', rarity: 'uncommon', effect: 'stealth',
       desc: '生物警觉半径 −70%，脚步声消失，持续 120 秒。吃后说话别人听不见。',
       descEn: 'Creature alert radius −70%, footsteps gone, 120 seconds. After eating it, others cannot hear you speak.' },
-    { id: 'thorn', cn: '刺刺菇', en: 'Thorncap', rarity: 'uncommon', slots: 2, effect: 'defense',
+    { id: 'thorn', cn: '刺刺菇', en: 'Thorncap', rarity: 'uncommon', effect: 'defense',
       desc: '90 秒内近身伤害反弹，但移动速度 −20%。',
       descEn: '90 seconds of melee damage reflection, but movement speed −20%.' },
-    { id: 'glowseed', cn: '发光种子', en: 'Glowseed', rarity: 'common', slots: 1, effect: 'plant',
+    { id: 'glowseed', cn: '发光种子', en: 'Glowseed', rarity: 'common', effect: 'plant',
       desc: '可种在任何泥土上：长成永久光点，也可作为“窖树”的锚点标记。',
       descEn: 'Plant it in any soil: it becomes a permanent point of light, and can mark the anchor of a cellar tree.' },
-    { id: 'cellarseed', cn: '窖树种', en: 'Cellar Stone', rarity: 'rare', slots: 4, effect: 'build',
+    { id: 'cellarseed', cn: '窖树种', en: 'Cellar Stone', rarity: 'rare', effect: 'build',
       desc: '种下后长成“窖树”：一座 24 果格的野外小仓库，腐坏速度 1/3，会被熊与窃果贼光顾。',
       descEn: 'Planted, it grows into a cellar tree: a 24-slot field store, decay 1/3, visited by bears and fruit thieves.' }
   ];
