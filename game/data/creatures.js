@@ -1,6 +1,9 @@
 /* ==========================================================================
  *  Creature data -- mirrors docs/en/03-characters-and-creatures.md
- *  One species per ecological niche. Seven niches, seven species.
+ *  Four species, one per niche, and every one of them has a fruit: each is a
+ *  body the player can wear. An animal without a fruit is allowed later (the
+ *  valley is full of places named after animals that are no longer here), but
+ *  it would be scenery, not a transformation.
  *  attitude  : reaction to the player's current form; self=same species, default=fallback
  *  locomotion: walk / fly / water / amphibian -- how the body moves. The code
  *              asks this instead of asking "is this the owl?", so a second flying
@@ -22,26 +25,6 @@
       dexEn: 'By day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and they are Lanternrow\'s volunteer patrol.'
     },
     {
-      /* niche: the ground -- digging, and a body that is its own armour */
-      id: 'pangolin', cn: '穿山甲', en: 'Burrow Pangolin', model: 'pangolin', scale: 0.16,
-      habitat: ['orchard', 'whisperwood', 'mountains'], active: 'dusk',
-      locomotion: 'walk', speed: 2.2, alert: 10, herd: 1,
-      fruit: 'scaleberry',
-      attitude: { self: 'calm', default: 'ignore', bear: 'flee', human: 'curious' },
-      dex: '它挖的洞比灯笼镇的果窖老得多——镇上的果窖形制，据说是抄熊的，而熊是抄穿山甲的。受惊时它把自己卷成一枚鳞片球，任何牙齿都无从下口。',
-      dexEn: 'The tunnels it digs are far older than Lanternrow\'s cellar — the shape of the town\'s cellar is said to be copied from bears, and bears copied it from pangolins. Frightened, it rolls itself into a ball of scales that no tooth can get a hold of.'
-    },
-    {
-      /* niche: the forest -- speed and leaping, and being prey */
-      id: 'deer', cn: '白尾鹿', en: 'Fallow Deer', model: 'deer', scale: 0.19,
-      habitat: ['whisperwood', 'deepgrove', 'glowglade'], active: 'both',
-      locomotion: 'walk', speed: 5.4, alert: 20, herd: 6,
-      fruit: 'stagcap',
-      attitude: { self: 'calm', default: 'flee', bear: 'flee', frog: 'ignore', human: 'flee' },
-      dex: '鹿径不是路，是几百年里被同一群鹿踩出来的"决定"。跟着鹿径走一定能找到水，也一定能找到熊。',
-      dexEn: 'A deer path is not a road, it is a "decision" pressed into the ground by the same herd over centuries. Follow a deer path and you will certainly find water, and you will certainly find a bear.'
-    },
-    {
       /* niche: open water -- drifting light */
       id: 'jelly', cn: '灯水母', en: 'Lamp Jellyfish', model: 'jelly', scale: 0.16,
       habitat: ['mirrorlake'], active: 'both',
@@ -57,27 +40,17 @@
       habitat: ['mirrorlake', 'glowglade', 'starfall'], active: 'both',
       locomotion: 'amphibian', speed: 1.8, swimSpeed: 4.6, alert: 12, herd: 12,
       fruit: 'frogpear',
-      attitude: { self: 'calm', default: 'ignore', owl: 'flee', bear: 'ignore', deer: 'ignore' },
+      attitude: { self: 'calm', default: 'ignore', owl: 'flee', bear: 'ignore' },
       dex: '雨后整片湖岸一起叫，声音能压过钟塔。它们不喝水——它们靠皮肤喝。',
       dexEn: 'After rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.'
     },
     {
-      /* niche: caves and old beams -- climbing */
-      id: 'spider', cn: '梁蛛', en: 'Beamborn Spider', model: 'spider', scale: 0.18,
-      habitat: ['batcave', 'orchard', 'cloudspire', 'starfall'], active: 'both',
-      locomotion: 'walk', speed: 3.0, alert: 10, herd: 1,
-      fruit: 'silkberry',
-      attitude: { self: 'calm', default: 'ignore', bear: 'ignore' },
-      dex: '住在梁上，不结网捕虫，结网"补房子"。果园遗迹和云顶浮岛的旧梁至今没塌，靠的是它们三百年织的梁。',
-      dexEn: 'Lives in the beams, spins no webs for insects, spins webs to repair buildings. The old beams of the Old Orchard and of the Cloudspire isles have not collapsed, and that is thanks to three hundred years of web.'
-    },
-    {
-      /* niche: the ridge -- strength */
-      id: 'bear', cn: '灰熊', en: 'Ash Bear', model: 'bear', scale: 0.24,
+      /* niche: the ridge -- strength, and a body that is its own weatherproofing */
+      id: 'bear', cn: '棕熊', en: 'Brown Bear', model: 'bear', scale: 0.24,
       habitat: ['mountains', 'whisperwood'], active: 'both',
       locomotion: 'walk', speed: 5.0, alert: 22, herd: 1,
       fruit: 'bruinfig',
-      attitude: { self: 'calm', default: 'ignore', deer: 'hostile', pangolin: 'hostile', frog: 'ignore' },
+      attitude: { self: 'calm', default: 'ignore', frog: 'ignore', jelly: 'ignore' },
       dex: '北岭的熊会挖"果窖"——它们比人类更早学会把果实埋起来慢慢吃。它们也拆人类的窖树：熊不需要背包。',
       dexEn: 'The bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.'
     }

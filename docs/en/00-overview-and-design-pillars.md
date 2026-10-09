@@ -21,7 +21,7 @@ This pillar decides directly: the casting animation = a bite; the material compo
 ### P2 · The body is the key
 
 Terrain is not opened by blowing it up, it is opened by *becoming the right shape*.
-A low root-hole only a frog can enter; underwater only a frog can stay; a vertical cave wall only a pangolin or a spider can climb; the cloud tops only an owl can reach.
+A low root-hole only a frog can enter; the lake bottom only a jellyfish can cross; the cloud tops only an owl can reach; the ridge ledges only a bear can stand on.
 **Progression = find the fruit + fit the fruit + survive long enough to get there.**
 Transformation is **inheritance**: you get everything that animal can do and everything it cannot. The mind is untouched — you still decide what to do (see 04 §5.0).
 
@@ -37,7 +37,7 @@ This turns hoarding into loss, turns the warehouse into a place that must be con
 
 ### P5 · The valley does not cooperate with you
 
-Every animal has its own opinion about *the shape you are in right now*. Become a deer and the herd takes you in; walk onto the Northern Ridge in a pangolin shape and the bear comes at you.
+Every animal has its own opinion about *the shape you are in right now*. Walk up to an owl as a human and it leaves; walk up as a brown bear and it leaves faster. Become a jellyfish and the lake's own animals do not move at all.
 Transformation is not a pure buff, it is **swapping your social identity**.
 
 ## 3. Anti-goals (explicitly not doing)
@@ -54,10 +54,10 @@ Transformation is not a pure buff, it is **swapping your social identity**.
 ## 4. Experience goals (sentences the player should say out loud)
 
 - "My backpack is full, but the hibernation den on the Northern Ridge is right ahead — which fruit do I drop?"
-- "So this cave needed me to become a pangolin to dig it open."
+- "So the lake only let me down to the tower as a frog."
 - "I stored it in the cellar, forgot about it for three weeks, and it all turned into pits."
 - "The pit I planted grew into a tree; that is going to be my own orchard one day."
-- "The herd is not running — because I really am a deer."
+- "The jellies are not running — because I really am one of them."
 
 ## 5. The player fantasy
 

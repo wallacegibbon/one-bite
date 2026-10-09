@@ -71,7 +71,7 @@ const path = require('path');
     g.inv.length = 0;
     const before = g.inv.length;
     const added = [];
-    for (const id of ['owlberry', 'owlberry', 'scaleberry', 'frogpear', 'silkberry', 'bruinfig'])
+    for (const id of ['owlberry', 'owlberry', 'frogpear', 'jellybloom', 'bruinfig'])
       added.push(id + '=' + (g.addItem('fruit', id) ? 'ok' : 'FULL'));
     return { added, used: g.used(), cap: g.cap(), slots: g.inv.map(i => i.id + ':' + g.slotOf(i)) };
   });
@@ -125,7 +125,7 @@ const path = require('path');
   await step('cellar', () => {
     const g = window.game;
     g.inv.length = 0;
-    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'silkberry');
+    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'jellybloom');
     g.openStashUI(g.stashes[0]);
     g.invSel = 0; g.moveItem('in');
     g.stashSel = 0; g.moveItem('out');
@@ -231,7 +231,7 @@ const path = require('path');
     const g = window.game;
     const tree = g.stashes.find(s => s.kind === 'tree');
     g.openStashUI(tree); g.stashSel = 0;
-    tree.items.push({ kind: 'fruit', id: 'silkberry', fresh: 600, maxFresh: 600 });
+    tree.items.push({ kind: 'fruit', id: 'jellybloom', fresh: 600, maxFresh: 600 });
     g.stashSel = tree.items.length - 1;
     g.postItem();
     const p = g.posts[g.posts.length - 1];
@@ -242,7 +242,7 @@ const path = require('path');
   await new Promise(r => setTimeout(r, 500));
   await step('postArrivedFresh', () => {
     const g = window.game;
-    const e = g.stashes[0].items.filter(i => i.id === 'silkberry').pop();
+    const e = g.stashes[0].items.filter(i => i.id === 'jellybloom').pop();
     return { arrived: !!e, fresh: e ? +e.fresh.toFixed(1) : null, lost: g.stats.postLost || 0 };
   });
   // a fruit that runs out in the owl's claws goes dormant: same rule as on a shelf
@@ -262,7 +262,7 @@ const path = require('path');
   check('dormant stops the decay instead of running into the negatives', dorm.mid.fresh === 0 && dorm.after.fresh === 0, dorm);
 
   const idBefore = await step('idBefore', () => window.game.id);
-  await step('save', () => { window.game.save(); const s = localStorage.getItem('frutaria.save.v1'); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
+  await step('save', () => { window.game.save(); const s = localStorage.getItem(window.FRUTARIA.SAVE_KEY); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
   const ld = await step('load', () => { const ok = window.game.load(); return { ok, id: window.game.id, inv: window.game.inv.map(i => i.id), stashes: window.game.stashes.length }; });
   check('id survives save/load', ld.id === idBefore, { before: idBefore, after: ld.id });
 
@@ -397,7 +397,7 @@ const path = require('path');
         if (++n < 40) return requestAnimationFrame(tick);
         obs.disconnect();
         const quiet = mutations;
-        g.addItem('fruit', 'stagcap', 100);                 // now change one thing
+        g.addItem('fruit', 'jellybloom', 100);                 // now change one thing
         requestAnimationFrame(() => requestAnimationFrame(() => {
           const shelf = node.children.length;
           window.ui.showCellar(false); g.mode = 'play';
@@ -460,7 +460,8 @@ const path = require('path');
   check('using it opens the store behind that crate', crate.mode === 'cellar' && crate.open === 'cellar', crate);
 
   // 10h. how a body moves is data: the owl crosses the valley at its flying
-  // speed, the pangolin keeps the dusk, and a deer that wanders off walks back
+  // speed, a dusk animal keeps the dusk even when no animal in the valley does,
+  // and a frog that wanders off hops back to its own kind
   const beasts = await step('creatureBehaviour', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, night: g.night };
@@ -475,35 +476,36 @@ const path = require('path');
       return +Math.hypot(c.x - x0, c.z - z0).toFixed(2);
     };
     const find = id => g.creatures.find(c => c.sp.id === id);
-    const owl = find('owl'), pang = find('pangolin');
-    const out = {
-      owlNight: run(owl, 1), owlNoon: run(owl, 0),
-      pangNoon: run(pang, 0), pangDusk: run(pang, 0.6)
-    };
-    // the herd: put one deer well outside the middle of its own kind
-    const deer = g.creatures.filter(c => c.sp.id === 'deer');
-    const h = g.herdCentres.deer;
-    const straggler = deer[0];
+    const owl = find('owl'), frog = find('frog');
+    const out = { owlNight: run(owl, 1), owlNoon: run(owl, 0) };
+    // 'dusk' is still part of the setting, so the branch stays covered
+    const dusk = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.frog, { active: 'dusk', locomotion: 'walk' }), frog.x, frog.y, frog.z);
+    out.duskNoon = run(dusk, 0); out.duskDusk = run(dusk, 0.6);
+    // the herd: put one frog well outside the middle of its own kind
+    const frogs = g.creatures.filter(c => c.sp.id === 'frog');
+    const h = g.herdCentres.frog;
+    const straggler = frogs[0];
     const ang = Math.atan2(straggler.z - h.z, straggler.x - h.x);
     straggler.x = h.x + Math.cos(ang) * 30; straggler.z = h.z + Math.sin(ang) * 30;
     straggler.y = N.groundY(g.world, Math.floor(straggler.x), Math.floor(straggler.z), 40);
     straggler.state = 'wander'; straggler.pause = 99; straggler.tx = straggler.x; straggler.tz = straggler.z;
     g.night = 0.5;
     const before = +Math.hypot(straggler.x - h.x, straggler.z - h.z).toFixed(1);
-    for (let i = 0; i < 60; i++) straggler.update(1 / 60, p, g.world, g);
+    // three seconds: a frog walks at 1.8 m/s and only 42% of that while strolling
+    for (let i = 0; i < 180; i++) straggler.update(1 / 60, p, g.world, g);
     out.herd = { before, after: +Math.hypot(straggler.x - h.x, straggler.z - h.z).toFixed(1) };
     straggler.state = 'wander'; straggler.alarm = 0;
     // and the proof that none of this is keyed to a species name
     const ghost = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.owl, { locomotion: 'walk' }), 80, 30, 80);
-    const wings = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.deer, { locomotion: 'fly' }), 80, 30, 80);
+    const wings = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.frog, { locomotion: 'fly' }), 80, 30, 80);
     out.flyFromData = wings.isFlyer() === true && ghost.isFlyer() === false;
     g.night = was.night; Object.assign(p, was);
     return out;
   });
   check('an owl crosses the valley at its flying speed, not its walking speed', beasts.owlNight > 2.4 && beasts.owlNight < 3.4, beasts);
   check('an owl sleeps through the day', beasts.owlNoon === 0, beasts);
-  check('a dusk animal is asleep at noon and abroad at dusk', beasts.pangNoon === 0 && beasts.pangDusk > 0.3, beasts);
-  check('a deer that wanders off walks back to the herd', beasts.herd.after < beasts.herd.before - 1, beasts.herd);
+  check('a dusk animal is asleep at noon and abroad at dusk', beasts.duskNoon === 0 && beasts.duskDusk > 0.3, beasts);
+  check('a frog that wanders off hops back to the herd', beasts.herd.after < beasts.herd.before - 1, beasts.herd);
   check('flying comes from the body, not from the species name', beasts.flyFromData === true, beasts);
 
   console.log(log.join('\n'));

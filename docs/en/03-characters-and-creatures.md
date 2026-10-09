@@ -30,17 +30,16 @@ The keeper of the main cellar. She is the one who set the shape of Lanternrow's 
 The valley agent of the Greyglove Trading Company. In his thirties; his gloves are grey because "you cannot have fruit stains on your hands".
 
 - He is not evil. His position is that the valley's fruit cures diseases outside, and the valley is only nine kilometres wide.
-- He does three things: buys fruit (paying money, which is useless in the valley), sets fruit traps in the Old Orchard (block 80), and tries to carry one Silkberry through the Grey Veil.
+- He does three things: buys fruit (paying money, which is useless in the valley), sets fruit traps in the Old Orchard (block 80), and tries to carry one Jellybloom through the Grey Veil.
 - The correct way to use him: **he does not know which fruits go dormant**. The rare fruit you trade him for often has only half its time left.
 
-### White Dew / Pendulum / Old Drum / One-Eye (named creatures)
+### Pendulum / Old Drum / One-Eye (named creatures)
 
 | Name | Species | Location | Role |
 |---|---|---|---|
-| **White Dew** | Fallow Deer | Heart of the Deep Grove | The only deer that recognises the hand-drawn fruit list. It gored Quill twice |
 | **Pendulum** | Screech Owl | Starfall Bell Tower | Head of the volunteer patrol. Will carry fruit you dropped far away back to the nearest store (once every 3 days) |
 | **Old Drum** | Mirrorlake Frog | the Frogshall | The first frog to start calling after rain — the Frogshall is named after it. Wants a brass bell back from the sunken tower |
-| **One-Eye** | Ash Bear | the Northern Ridge | The bear that has torn down three cellar trees. The town treats it as a colleague, not a disaster |
+| **One-Eye** | Brown Bear | the Northern Ridge | The bear that has torn down three cellar trees. The town treats it as a colleague, not a disaster |
 
 ## 2. The creature attitude system
 
@@ -60,49 +59,42 @@ Lookup order: `attitude[species of the player's current form]` → `attitude.hum
 
 Rows = creatures, columns = player forms. `·` = falls through to `default`.
 
-| | human | owl | pangolin | deer | jelly | frog | spider | bear |
-|---|---|---|---|---|---|---|---|---|
-| Screech Owl | flee | calm | · | · | · | curious | · | flee |
-| Burrow Pangolin | curious | · | calm | · | · | · | · | flee |
-| Fallow Deer | flee | · | · | calm | · | ignore | · | flee |
-| Lamp Jellyfish | · | · | · | · | calm | ignore | · | · |
-| Mirrorlake Frog | · | flee | · | ignore | · | calm | · | ignore |
-| Beamborn Spider | · | · | · | · | · | · | calm | ignore |
-| Ash Bear | · | · | hostile | hostile | · | ignore | · | calm |
+| | human | owl | jelly | frog | bear |
+|---|---|---|---|---|---|
+| Screech Owl | flee | calm | · | curious | flee |
+| Lamp Jellyfish | · | · | calm | ignore | · |
+| Mirrorlake Frog | · | flee | · | calm | ignore |
+| Brown Bear | · | · | ignore | ignore | calm |
 
 **Three design intentions you can read off the matrix:**
 
-1. **The diagonal is all `calm`** — becoming that species is the pass. The Deep Grove runs on this, and so do the beams.
-2. **Only the bear row contains `hostile`** — there are no monsters in the valley. Exactly one animal attacks the player on its own initiative, and what it attacks is **two other animals**, not "human shape". Danger comes from the food chain, not from malice.
-3. **Frogs fear owls, owls are curious about frogs** — a complete predator chain you can read straight out of the table: whatever you become, you receive both that species' pass and that species' predator.
+1. **The diagonal is all `calm`** — becoming that species is the pass. It is not a disguise: the grove, the lake and the ridge read the body.
+2. **No row contains `hostile`** — there are no monsters in the valley. Nothing here attacks the player on its own initiative any more: the two animals the bear used to hunt are gone, and what is left of danger is the weather, the water, the height, and what your own body cannot do.
+3. **Frogs fear owls, owls are curious about frogs** — a complete predator chain you can read straight out of the table: whatever you become, you receive both that species' pass and that species' predator. And an owl leaves the moment a bear walks in.
 
 ## 3. Creature table
 
 | id | 中文 | English | Model | scale | Habitat | Activity | Speed | Alert | Pack | Fruit |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `owl` | 猫头鹰 | Screech Owl | owl | 0.16 | Whisperwood / Starfall Keep / Glowglade / Cloudspire | night | 3.2 (fly 7.0) | 12 | 1 | Owlberry |
-| `pangolin` | 穿山甲 | Burrow Pangolin | pangolin | 0.16 | Old Orchard / Whisperwood / Northern Ridge | dusk | 2.2 | 10 | 1 | Scaleberry |
-| `deer` | 白尾鹿 | Fallow Deer | deer | 0.19 | Whisperwood / Deep Grove / Glowglade | both | 5.4 | 20 | 6 | Stagcap |
 | `jelly` | 灯水母 | Lamp Jellyfish | jelly | 0.16 | Mirrorlake | both | 0.8 (swim 2.2) | 4 | 10 | Jellybloom |
 | `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6) | 12 | 12 | Frog Pear |
-| `spider` | 梁蛛 | Beamborn Spider | spider | 0.18 | Echo Hollow / Old Orchard / Cloudspire / Starfall Keep | both | 3.0 | 10 | 1 | Silkberry |
-| `bear` | 灰熊 | Ash Bear | bear | 0.24 | Northern Ridge / Whisperwood | both | 5.0 | 22 | 1 | Bruin Fig |
+| `bear` | 棕熊 | Brown Bear | bear | 0.24 | Northern Ridge / Whisperwood | both | 5.0 | 22 | 1 | Bruin Fig |
 
-Distribution of the 43 individuals in the prototype: owl 6, pangolin 4, deer 6, jelly 8, frog 12, spider 5, bear 2.
+Distribution of the 28 individuals in the prototype: owl 6, jelly 8, frog 12, bear 2.
 
-**Why only 7 species**: every species you add costs a fruit, a habitat, a row in the attitude matrix, and a whole set of "where can this body go" gates. A 7 × 8 matrix can be read in ten seconds; a 14 × 15 matrix has to be memorised. Once the setting was simplified, **the readability of the gates became content in its own right**.
+**Why only 4 species**: every species you add costs a fruit, a habitat, a row in the attitude matrix, and a whole set of "where can this body go" gates. A 4 × 5 matrix can be read at a glance; a 14 × 15 matrix has to be memorised. Once the setting was simplified, **the readability of the gates became content in its own right**.
+
+**The valley still holds animals it will not give you.** The places kept their names — the Deep Grove, the deer paths, Echo Hollow, the mounds in the Old Orchard — and the animals that made those names are not coming back until each one arrives with a fruit, a niche and a door only it can open. Until then they are absence, which is what the valley is made of.
 
 ## 4. Codex text (implemented in game)
 
 One entry per species, always written as "verifiable fact + unverifiable rumour":
 
 - **Screech Owl**: by day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and form Lanternrow's volunteer patrol.
-- **Burrow Pangolin**: the tunnels it digs are far older than Lanternrow's cellar — the shape of the town's cellar is said to be copied from bears, and bears copied it from pangolins. Frightened, it rolls itself into a ball of scales that no tooth can get a hold of.
-- **Fallow Deer**: a deer path is not a road, it is a "decision" pressed into the ground by the same herd over centuries. Follow a deer path and you will certainly find water, and you will certainly find a bear.
 - **Lamp Jellyfish**: the lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows.
 - **Mirrorlake Frog**: after rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.
-- **Beamborn Spider**: lives in the beams, weaves no webs for insects, weaves webs to *repair buildings*. The beams of the Old Orchard and of the Cloudspire isles have not collapsed, and that is thanks to three hundred years of web they spun.
-- **Ash Bear**: the bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.
+- **Brown Bear**: the bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.
 
 ## 5. Magic plants (not creatures, but spread by creatures)
 
@@ -157,4 +149,4 @@ A later one overrides an earlier one; when it changes the game announces it once
 
 **In place**: `id` is saved, cellar trees carry an `owner`, epithets are event-driven, and name and identity are decoupled.
 
-**Still missing**: an identity service (the `id` issued by a server), storage ownership and sharing rights (the main cellar is currently communal), the Frogshall's ledger keyed by id, beast residue accumulated per character, NPCs remembering dialogue per id, and the resolution of attitude-matrix conflicts such as "two players walk into the Deep Grove as deer at the same time".
+**Still missing**: an identity service (the `id` issued by a server), storage ownership and sharing rights (the main cellar is currently communal), the Frogshall's ledger keyed by id, beast residue accumulated per character, NPCs remembering dialogue per id, and the resolution of attitude-matrix conflicts such as "two players walk into Mirrorlake as frogs at the same time".

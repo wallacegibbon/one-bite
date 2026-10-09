@@ -36,7 +36,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
   const made = await step('make', () => {
     const g = window.game, N = window.FRUTARIA;
     g.inv.length = 0;
-    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'silkberry'); g.addItem('plant', 'cellarseed');
+    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'jellybloom'); g.addItem('plant', 'cellarseed');
     // the town cellar gets a fruit, so q1 / owl post state is non-trivial
     g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 500, maxFresh: 900 });
     // a cellar tree
@@ -46,7 +46,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     g.addItem('pit', 'owlberry');
     g.plantPit(g.inv[g.inv.length - 1], g.inv.length - 1);
     // fruit scattered by a death
-    g.drops.push({ x: 120, y: 22, z: 118, item: { kind: 'fruit', id: 'stagcap', fresh: 700, maxFresh: 1200 }, t: 600 });
+    g.drops.push({ x: 120, y: 22, z: 118, item: { kind: 'fruit', id: 'frogpear', fresh: 700, maxFresh: 900 }, t: 600 });
     // a plant buff and a form in progress
     g.buffs.stealth = 60;
     g.addItem('fruit', 'owlberry');
@@ -60,7 +60,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
       coreBlock: tree ? g.world.get(tree.x, tree.y, tree.z) : null
     };
   });
-  await step('save', () => { window.game.save(); const s = localStorage.getItem('frutaria.save.v1'); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
+  await step('save', () => { window.game.save(); const s = localStorage.getItem(window.FRUTARIA.SAVE_KEY); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
 
   /* ---------- 2. reload the page: the valley must come back on its own ---------- */
   await page.goto(URL_MENU, { waitUntil: 'load' });
@@ -140,7 +140,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
       inv: [], stashes: [{ id: 'tree1', kind: 'tree', slots: 24, decay: 0.33, items: [], x: 60, y: 20, z: 60 }],
       diffs: [], seen: {}, dex: {}, regrow: [], posts: [], quests: [], stats: {}, upg: {}
     };
-    localStorage.setItem('frutaria.save.v1', JSON.stringify(legacy));
+    localStorage.setItem(window.FRUTARIA.SAVE_KEY, JSON.stringify(legacy));
     return window.game.load();
   });
   const legacy = await step('legacyAfter', () => {

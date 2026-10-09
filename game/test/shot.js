@@ -45,7 +45,7 @@ const path = require('path');
       g.player.x = 130; g.player.z = 128;
       g.buildCellarTree();
       const tree = g.stashes[g.stashes.length - 1];
-      for (const id of ['silkberry', 'frogpear', 'owlberry']) tree.items.push({ kind: 'fruit', id, fresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh, maxFresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh });
+      for (const id of ['jellybloom', 'frogpear', 'owlberry']) tree.items.push({ kind: 'fruit', id, fresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh, maxFresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh });
       g.stashes[0].items.push({ kind: 'fruit', id: 'owlberry', fresh: 1500, maxFresh: 1500 });
       g.openStashUI(tree);
       g.stashSel = 0; g.postItem();

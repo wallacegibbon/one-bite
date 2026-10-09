@@ -35,8 +35,8 @@ Three tensions that mesh into each other:
 | [00-overview-and-design-pillars.md](00-overview-and-design-pillars.md) | Design pillars, experience goals, anti-goals, MVP boundary |
 | [01-worldview-and-story.md](01-worldview-and-story.md) | Frutaria, the Grey Veil, the one magic, the valley's three institutions |
 | [02-map-and-scenes.md](02-map-and-scenes.md) | Zone table, ASCII map, vertical layers, fruit gating graph, POIs |
-| [03-characters-and-creatures.md](03-characters-and-creatures.md) | Protagonist, NPCs, 7 creatures, attitude matrix, named individuals |
-| [04-fruit-and-transformation.md](04-fruit-and-transformation.md) | Full table of 7 fruits, form abilities, side effects |
+| [03-characters-and-creatures.md](03-characters-and-creatures.md) | Protagonist, NPCs, 4 creatures, attitude matrix, named individuals |
+| [04-fruit-and-transformation.md](04-fruit-and-transformation.md) | Full table of 4 fruits, form abilities, side effects |
 | [05-backpack-and-storage.md](05-backpack-and-storage.md) | **The storage mechanism (the one open question in the original brief)**: 3 options compared + the recommended design |
 | [06-quests-and-progression.md](06-quests-and-progression.md) | The seven invitations, 12 side quests, codex, death and time |
 | [07-art-audio-technical.md](07-art-audio-technical.md) | Voxel art rules, palette, audio, rendering and data structures |
@@ -47,7 +47,7 @@ The Chinese originals sit in the sibling folder [`docs/cn/`](../cn/README.md): `
 
 `game/index.html` — a dependency-free, hand-written WebGL1 voxel renderer. Double-click it (or run `python3 -m http.server` and visit `/game/`).
 
-Implemented: terrain generation (castle/town/lake/caves/isles), 7 creature AIs (attitude-driven), 7 fruits, transformation and ability switching, the 24-slot backpack with spoilage, main cellar + cellar-tree storage, quests, codex, day/night, the Grey Veil border, death drops and retrieval, the identity layer (id / epithet / name — the protagonist has no fixed name), a switchable interface language (中文 / English, 07 §3.4), localStorage saves.
+Implemented: terrain generation (castle/town/lake/caves/isles), 4 creature AIs (attitude-driven), 4 fruits, transformation and ability switching, the 24-slot backpack with spoilage, main cellar + cellar-tree storage, quests, codex, day/night, the Grey Veil border, death drops and retrieval, the identity layer (id / epithet / name — the protagonist has no fixed name), a switchable interface language (中文 / English, 07 §3.4), localStorage saves.
 Not implemented (designed in the docs): the full magic-stomach rules, beast residue, NPC dialogue trees, cellar trees being torn down by bears, the skin-moisture bar for the frog form, procedural audio.
 
 ## Data *is* the setting

@@ -30,7 +30,7 @@ const path = require('path');
     for (let k = 46; k > 0; k--) if (g.world.solidAt(136, k, 130)) { g.player.y = k + 1; break; }
     g.player.yaw = 3.14; g.player.pitch = 0;
     g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'bruinfig');
-    g.stashes[0].items.push({ kind: 'fruit', id: 'stagcap', fresh: 400, maxFresh: 900 });
+    g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 400, maxFresh: 900 });
     window.startGame();
   });
   await new Promise(r => setTimeout(r, 500));
@@ -102,11 +102,11 @@ const path = require('path');
   await page.evaluate(() => window.setLocale('zh'));
   await new Promise(r => setTimeout(r, 200));
   await page.evaluate(() => window.game.save());
-  const saveZh = await page.evaluate(() => localStorage.getItem('frutaria.save.v1'));
+  const saveZh = await page.evaluate(() => localStorage.getItem(window.FRUTARIA.SAVE_KEY));
   await page.evaluate(() => window.setLocale('en'));
   await new Promise(r => setTimeout(r, 200));
   await page.evaluate(() => window.game.save());
-  const saveEn = await page.evaluate(() => localStorage.getItem('frutaria.save.v1'));
+  const saveEn = await page.evaluate(() => localStorage.getItem(window.FRUTARIA.SAVE_KEY));
   check('a save file carries no interface language', saveZh === saveEn,
     { zh: (saveZh || '').slice(0, 200), en: (saveEn || '').slice(0, 200) });
 

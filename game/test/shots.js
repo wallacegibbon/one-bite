@@ -20,14 +20,15 @@ const SHOTS = [
   ['night', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe time=620'],
   ['owl', 'pos=104,30,40 yaw=1.2 pitch=-0.25 form=owlberry tp=1'],
   ['frog', 'pos=92,11,120 yaw=0.5 pitch=-0.1 form=frogpear tp=1'],
-  ['pangolin', 'pos=24,26,104 yaw=1.0 pitch=-0.2 form=scaleberry tp=1 safe'],
-  ['inv', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,silkberry,bruinfig'],
-  ['cellarui', 'pos=136,26,134 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,silkberry,bruinfig cellar=1'],
+  ['jelly', 'pos=92,11,118 yaw=0.5 pitch=-0.05 form=jellybloom tp=1'],
+  ['bear', 'pos=142,32,18 yaw=2.2 pitch=-0.25 form=bruinfig tp=1 safe'],
+  ['inv', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,jellybloom,bruinfig'],
+  ['cellarui', 'pos=136,26,134 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,jellybloom,bruinfig cellar=1'],
   // identity: the valley calls you an epithet, the name is yours (N in game)
   ['who', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3'],
   ['journal', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3,q4 journal=1'],
   // the same two screens after pressing L: the interface re-translates, the world does not move
-  ['inv_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,silkberry,bruinfig lang=en'],
+  ['inv_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,jellybloom,bruinfig lang=en'],
   ['journal_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=Xiaoman epquest=q1,q3,q4 journal=1 lang=en'],
   // the help panel: the rules a player is actually told, in the other language
   ['help_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe help=1 lang=en']

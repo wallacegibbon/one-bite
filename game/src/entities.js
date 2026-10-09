@@ -264,8 +264,8 @@
   /* The part of the day a species is out (docs/en/03 s3: day / night / both /
      dusk). `night` is the curve the sky already runs on: 1 at midnight, 0 at
      noon. A dusk animal is out at both ends of the day and asleep at noon and
-     at midnight -- the valley's pangolins are said to come and go with the
-     light, not with the dark. */
+     at midnight -- no species in the valley uses 'dusk' right now, but the word
+     is part of the setting, so the branch stays for the next animal. */
   function outAt(sp, night) {
     switch (sp.active) {
       case 'night': return night >= 0.35;

@@ -118,7 +118,7 @@ This single idea answers Q1–Q5 at once:
 | Min distance | 20 m | roots must not overlap; also forces the player to spread their points out |
 | Decay | ×0.33 | a cellar tree is alive, not a cellar. Fruit inside survives only 1/3 of the backpack's time |
 | Theft | one roll per game day, 30% chance a bear or a fruit thief takes 1–3 fruits; **if the player is within 45 m they are always scared off and nothing is lost**. The town cellar is never rolled against — it is the only storage with walls | field storage has to be **visited regularly** |
-| Destruction | a bear form can tear it down (tearing = everything drops); a pangolin form can dig out its roots (the same spill) | gives the strength and dig bodies an actual use |
+| Destruction | a bear form can tear it down (tearing = everything drops) | gives the strength body an actual use |
 | Not movable | a dead cellar tree is dead, its goods scatter | there is no "pack up the warehouse" |
 
 **Why cellar-tree decay is not 0**: if field storage had zero decay, players would build one per map and the capacity anxiety would vanish. ×0.33 means a cellar tree is a **waystation**, not a **safe**.

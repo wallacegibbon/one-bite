@@ -2,7 +2,9 @@
  *  FRUTARIA
  *  Fruit / plant / rarity data -- the single source of truth shared by the design docs and the game
  *  Mirrors: docs/en/04-fruit-and-transformation.md and docs/en/05-backpack-and-storage.md
- *  One fruit per species, and one species per niche: seven fruits, seven bodies.
+ *  One fruit per species, and one species per niche: four fruits, four bodies.
+ *  The rarity ladder still has five rungs; the valley currently only grows
+ *  three of them (common / rare / legendary).
  * ========================================================================== */
 (function (N) {
 
@@ -35,13 +37,13 @@
    *   glow        : self-illumination [r,g,b]
    *   stealth     : creature alert-radius multiplier (<1 = harder to spot)
    *   aura        : intimidation radius (>0 scares off lesser creatures / raises alert)
-   *   armor       : damage taken multiplier (<1 = the body shrugs bites off)
-   *   climb       : can climb walls
-   *   dig         : can break soft blocks
    *   tongue      : metres of reach when plucking / grabbing
    *   step        : auto step-up height in metres
    *   fov         : field of view
    *   hand        : first-person hand model id
+   * Fields that no body in the valley uses any more (climb, dig, armor, web,
+   * herd) were deleted with the animals that had them. A field comes back when
+   * a fruit asks for it, not before.
    * Nothing here is a mental effect: a form inherits a body and the world's
    * reaction to that body, never a mind (docs/en/04 s5.0).
    * ------------------------------------------------------------------ */
@@ -60,34 +62,6 @@
       costEn: ['photophobic by day: night vision turns blinding in daylight', 'talons cannot work latches or fruit bags (cannot open storage)'],
       lore: '灰紫色的小果，长在老橡树洞里，只在夜里能看见它微微反光。守夜人说：“摘猫头鹰果最好的办法，是先变成猫头鹰。”',
       loreEn: 'A small grey-violet fruit, grown in an old oak hollow, only visible at night as a faint reflection. The night watch says: "The best way to pick an Owlberry is to become an owl first."'
-    },
-
-    /* ============ uncommon ============ */
-    {
-      id: 'scaleberry', cn: '鳞果', en: 'Scaleberry', rarity: 'uncommon', creature: 'pangolin',
-      habitat: ['orchard', 'whisperwood', 'mountains'], habitatCn: '果园遗迹土丘 · 北岭坡地', habitatEn: 'Old Orchard mounds · Northern Ridge slopes',
-      duration: 300,
-      form: {
-        cn: '穿山甲', en: 'pangolin', size: [0.7, 0.75], speed: 0.8, jump: 0.6, dig: true, climb: true,
-        armor: 0.5, stealth: 0.4, fov: 65, hand: 'claw', step: 0.4
-      },
-      cost: ['无精细操作：爪只能挖与抓，不能开门闩与果袋', '甲重：入水即沉，不能游泳'],
-      costEn: ['no fine motor control: the claws can only dig and grip, not open latches or fruit bags', 'the armour is heavy: you sink the moment you are in water, and cannot swim'],
-      lore: '鳞片状的小果，一簇一簇贴在老树根旁的土丘上。摘它得挖——挖到一半你会发现，这个洞原本是别人住的。',
-      loreEn: 'Small scale-shaped fruits, in clusters on the mounds beside old roots. Picking one means digging — and halfway through you find out that the burrow used to be somebody\'s home.'
-    },
-    {
-      id: 'stagcap', cn: '鹿茸菌果', en: 'Stagcap', rarity: 'uncommon', creature: 'deer',
-      habitat: ['whisperwood', 'deepgrove'], habitatCn: '低语林 · 鹿径', habitatEn: 'Whisperwood · deer paths',
-      duration: 300,
-      form: {
-        cn: '白尾鹿', en: 'deer', size: [0.9, 1.6], speed: 1.7, jump: 1.5, step: 0.9, stealth: 0.8,
-        herd: true, fov: 70, hand: 'hoof'
-      },
-      cost: ['角与肩宽：进不了低矮与狭窄处', '猎物体质：任何猎食者都会先注意到你'],
-      costEn: ['antlers and shoulder width: no low or narrow space', 'prey build: every predator notices you first'],
-      lore: '长在倒木上的菌状果，一年只结两次。它的腿记得整个谷地。',
-      loreEn: 'A mushroom-shaped fruit on fallen trunks, cropping only twice a year. Its legs remember the whole valley.'
     },
 
     /* ============ rare ============ */
@@ -118,28 +92,13 @@
       loreEn: 'A green fruit halfway up a reed, all of them out overnight after rain. It does not drink water — it drinks through its skin, so it hands you that trick as well.'
     },
 
-    /* ============ epic ============ */
-    {
-      id: 'silkberry', cn: '丝莓', en: 'Silkberry', rarity: 'epic', creature: 'spider',
-      habitat: ['batcave', 'orchard', 'cloudspire'], habitatCn: '回声丘洞顶 · 遗迹梁柱', habitatEn: 'Echo Hollow ceiling · ruin beams',
-      duration: 420,
-      form: {
-        cn: '梁蛛', en: 'spider', size: [1.1, 0.8], speed: 1.2, climb: true,
-        web: true, nightVision: 0.7, fov: 110, hand: 'claw', step: 0.4
-      },
-      cost: ['人形生物见到你会恐慌（村民拒绝交易）', '火焰与强光造成额外伤害'],
-      costEn: ['humanoids panic at the sight of you (villagers refuse trade)', 'fire and strong light deal extra damage'],
-      lore: '八颗小果围成一圈，像一只睁着的眼睛。吃下它，你会开始理解“门”是个可有可无的东西。',
-      loreEn: 'Eight small fruits in a ring, like one open eye. Eat it and you begin to understand that a "door" is optional.'
-    },
-
     /* ============ legendary ============ */
     {
-      id: 'bruinfig', cn: '灰熊无花果', en: 'Bruin Fig', rarity: 'legendary', creature: 'bear',
+      id: 'bruinfig', cn: '棕熊果', en: 'Bruin Fig', rarity: 'legendary', creature: 'bear',
       habitat: ['mountains', 'whisperwood'], habitatCn: '北岭岩坡 · 冬眠穴', habitatEn: 'Northern Ridge rock face · hibernation den',
       duration: 480,
       form: {
-        cn: '灰熊', en: 'bear', size: [1.4, 1.5], speed: 1.1, jump: 0.9, strength: true, coldImmune: true,
+        cn: '棕熊', en: 'bear', size: [1.4, 1.5], speed: 1.1, jump: 0.9, strength: true, coldImmune: true,
         aura: 8, step: 1.1, fov: 68, hand: 'claw'
       },
       cost: ['无法精细操作（不能采摘小果、不能开仓库）', '体重：薄冰会裂，木桥会塌'],

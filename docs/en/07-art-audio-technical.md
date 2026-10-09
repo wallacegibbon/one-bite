@@ -9,7 +9,7 @@
 Three hard rules:
 
 1. **Every plant has something it "wants to do"**: fruit self-glows (wants to be seen), vines grow down (looking for water), mushrooms ring up (claiming ground).
-2. **Buildings are grown, not laid**: Lanternrow's houses are timber frames with mossy-soil infill; Starfall Keep is brick plus lumenstone lamps; the Old Orchard stands because of spider silk.
+2. **Buildings are grown, not laid**: Lanternrow's houses are timber frames with mossy-soil infill; Starfall Keep is brick plus lumenstone lamps; the Old Orchard is a ring of broken wall around the oldest tree in the valley, and nobody knows what used to hold its beams up.
 3. **There are only three light sources**: sun/moon, lumenstone and embers (self-lit blocks), creatures (glowing forms, jellyfish, fruit). **There is no ambient fill light** — at night, without a Glowcap, you genuinely cannot see.
 
 ### Palette (the values actually used in the prototype)
@@ -59,8 +59,8 @@ Assembled from voxel parts: one mesh + one pivot + one animation per part.
 | `bob` | head/body | `dy = sin(t·2.2)·(move·0.12+0.05)` |
 | `sway` | fins/feathers | `rz = sin(t·2.4)·0.28` |
 
-8 models: human, owl, pangolin, frog, deer, jelly, spider, bear.
-6 first-person hands: hand, talon, web, hoof, claw, tentacle.
+5 models: human, owl, frog, jelly, bear.
+5 first-person hands: hand, talon, web, claw, tentacle.
 
 ## 2. Audio direction (not implemented, full design)
 
@@ -114,7 +114,7 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 
 - Voxels: `Uint8Array(w*h*d)` = 160×48×160 = 1.23 MB.
 - **Heightmap**: planned (`Uint8Array(w*d)`), not in the prototype. Bounding the meshing loop with one measured no faster — rebuilding all 100 chunks costs about 1.0 ms per chunk with it or without it — and it has to be right on every block write or geometry gets quietly clipped. Meshing scans the full chunk height; the time goes into the faces, not into the empty sky.
-- Save: `localStorage['frutaria.save.v1']`, storing only the **block diff** (`diffs`) + player (position, vitality, current form and its remaining time) + **identity** (`id` / `name`, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + planting queue (`growQueue`) + fruit scattered by death (`drops`) + plant buffs + owl post + backpack upgrades + quests + time. Measured 2.4 KB with a cellar tree, a sapling and a post in flight.
+- Save: `localStorage['frutaria.save.v2']`, storing only the **block diff** (`diffs`) + player (position, vitality, current form and its remaining time) + **identity** (`id` / `name`, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + planting queue (`growQueue`) + fruit scattered by death (`drops`) + plant buffs + owl post + backpack upgrades + quests + time. Measured 2.3 KB with a cellar tree, a sapling and a post in flight.
 - A save is **offered back, never silently loaded**: the start screen quotes it (day, hour, pack, trees) and Continue walks you back to it. The town cellar belongs to the valley rather than to the save, so it is rebuilt from the map data and every store is looked up by `id` — a save that lists only cellar trees still has a town to walk into.
 
 ### 3.4 Interface language
@@ -143,8 +143,8 @@ Two consequences worth knowing:
 | No async meshing | chunk meshing is budgeted at 22 ms per frame during boot; a player edit flags its chunk and the flagged chunks are re-meshed on a 6 ms per frame budget |
 | Creatures have no pathfinding | only "steer toward target + height correction + random deflection on hitting a wall", so they get stuck on terrain |
 | No LOD / no streaming | the 160³ world is fully resident in memory; the full scale needs chunk streaming |
-| No NPC dialogue trees | Old Mei / Quill / White Dew only have log text, no branching dialogue |
-| Cellar trees are never destroyed | the bear tear-down / pangolin root-digging roll is not wired up (raids and owl post are implemented) |
+| No NPC dialogue trees | Old Mei / Quill / One-Eye only have log text, no branching dialogue |
+| Cellar trees are never destroyed | the bear tear-down roll is not wired up (raids and owl post are implemented) |
 | The frog does not dry out on screen | `dryTimer` is in the data and the check is wired up, but there is no skin-moisture bar in the HUD (04 §3) |
 | No identity service | the `id` is generated locally, not issued by a server; cellar trees already carry an `owner`, but the main cellar is communal and there is no sharing-rights model (see 03 §6) |
 | Only two languages | a third language means one more flat table in `data/i18n.js` plus a third field on every record that carries setting text (`cn` / `en` pairs in the data files) |

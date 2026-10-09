@@ -5,7 +5,10 @@
   const RAR = N.RARITY, FRU = N.FRUIT_BY_ID, PLANT = N.PLANT_BY_ID, STO = N.STORAGE, IDEN = N.IDENTITY;
 
   const DAY_LEN = 420;          // one in-game day = 7 minutes of real time
-  const SAVE_KEY = 'frutaria.save.v1';
+  // v2: fruit blocks are numbered by position in data/fruits.js (40 + index), so
+  // cutting a fruit renumbers the world. An old save would plant the wrong fruit
+  // in someone's orchard, which is a worse surprise than losing the world.
+  const SAVE_KEY = 'frutaria.save.v2';
 
   /* A fruit / plant / pit has no name of its own in the interface: it is read
      off the record in data/fruits.js, which carries a cn/en pair. */
@@ -129,7 +132,7 @@
     }
 
     spawnCreatures() {
-      const counts = { owl: 6, pangolin: 4, deer: 6, jelly: 8, frog: 12, spider: 5, bear: 2 };
+      const counts = { owl: 6, jelly: 8, frog: 12, bear: 2 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
         for (let i = 0; i < n; i++) {
@@ -911,7 +914,7 @@
         N.M4.mul(base, base, ry);
         const sm = N.M4.create(); N.M4.scale(sm, sc, sc, sc);
         N.M4.mul(base, base, sm);
-        const st = { t: this.time + c.phase, move: Math.min(1, c.speed / (c.sp.speed || 3)) * (c.speed > 0.2 ? 1 : 0), fly: c.isFlyer() && c.state !== 'roost', phase: c.phase, gait: c.sp.id === 'spider' ? 9 : 7 };
+        const st = { t: this.time + c.phase, move: Math.min(1, c.speed / (c.sp.speed || 3)) * (c.speed > 0.2 ? 1 : 0), fly: c.isFlyer() && c.state !== 'roost', phase: c.phase };
         for (const e of parts) {
           const m = N.partMatrix(N.M4.create(), base, e, st);
           R.drawMesh(e.mesh, m, {});
@@ -960,7 +963,7 @@
         }
         const sm = N.M4.create(); N.M4.scale(sm, sc, sc, sc);
         N.M4.mul(base, base, sm);
-        const st = { t: this.time, move: Math.min(1, Math.hypot(p.vx, p.vz) / 5), fly: !!p.formDef.fly && !p.grounded, phase: 0, gait: 7 };
+        const st = { t: this.time, move: Math.min(1, Math.hypot(p.vx, p.vz) / 5), fly: !!p.formDef.fly && !p.grounded, phase: 0 };
         for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st), {});
       }
     }
@@ -1080,5 +1083,6 @@
 
   N.Game = Game;
   N.DAY_LEN = DAY_LEN;
+  N.SAVE_KEY = SAVE_KEY;      // the tests write a save by hand; they must use the same key
 
 })(window.FRUTARIA = window.FRUTARIA || {});

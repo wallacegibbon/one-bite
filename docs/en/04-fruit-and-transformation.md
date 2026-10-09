@@ -20,7 +20,9 @@ Rarity is not a "value tier", it is **two physical parameters**:
 
 **The backpack is 24 slots** → at most: 24 common / 12 uncommon / 6 rare / 3 epic / **2 legendary**.
 
-One important corollary: one Bruin Fig (12 slots) + one Silkberry (7 slots) = 19 of the 24 slots gone, **leaving 5 slots for anything else**. That is the physical price of carrying the valley's two heaviest bodies: you reach the Northern Ridge, but you have no room left to pick up a second one.
+The valley currently grows **three of these five rungs** — common, rare, legendary. The ladder stays: it is a law of storage, not a shopping list.
+
+One important corollary: one Bruin Fig (12 slots) + one Jellybloom (4 slots) + one Frog Pear (4 slots) = 20 of the 24 slots gone, **leaving 4 slots for anything else**. That is the physical price of carrying the valley's heaviest body together with both lake bodies: you reach the Northern Ridge, but you have no room left to pick up a second one.
 
 ### 1.1 Regrowth
 
@@ -55,25 +57,12 @@ A fruit starts counting down the moment it is picked.
 |---|---|---|---|---|---|---|
 | `owlberry` | Owlberry | owl | 240 s | Whisperwood · bell-tower hollow | fly 5.2, glide 0.35, night vision 0.75, stealth 0.45, fov 88, size 0.55×0.7 | Photophobic by day (night vision inverts into blinding); talons cannot work latches or fruit bags (**cannot open storage**) |
 
-### Uncommon (2 slots)
-
-| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
-|---|---|---|---|---|---|---|
-| `scaleberry` | Scaleberry | pangolin | 300 s | Old Orchard mounds · Northern Ridge slopes | **dig**, **climb**, armor 0.5 (halves damage taken), stealth 0.4, fov 65 | No fine motor control: claws can only dig and grip, not work latches or fruit bags; **armour is heavy: you sink, you cannot swim** |
-| `stagcap` | Stagcap | deer | 300 s | Whisperwood · deer paths | speed 1.7, jump 1.5, step 0.9, stealth 0.8, herd, fov 70 | **Antlers and shoulder width: no low or narrow space**; prey build: every predator notices you first |
-
 ### Rare (4 slots)
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
 | `jellybloom` | Jellybloom | jellyfish | 360 s | Mirrorlake mid-water | swim 1.6, breath +40 s, self-glow, immune to poison, fov 95 | Almost immobile on land; fish avoid you (no communication with water life) |
 | `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 2.4, swim 2.4, **tongue 4 m**, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
-
-### Epic (7 slots)
-
-| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
-|---|---|---|---|---|---|---|
-| `silkberry` | Silkberry | spider | 420 s | Echo Hollow ceiling · ruin beams | **climb**, web (walks on its own silk), night vision 0.7, fov 110 | Humanoids panic at the sight of you (villagers refuse trade); extra damage from fire and strong light |
 
 ### Legendary (12 slots)
 
@@ -88,29 +77,26 @@ A fruit starts counting down the moment it is picked.
 | Field | Meaning | What the player feels |
 |---|---|---|
 | `size[w,h]` | collision box in metres | how low a hole you can enter; decides whether a 1×1 passage fits |
-| `speed` | land movement multiplier | deer 1.7 / bear 1.1 / jellyfish 0.5 |
-| `jump` | jump force multiplier | frog 2.4 / deer 1.5 |
+| `speed` | land movement multiplier | bear 1.1 / frog 0.9 / jellyfish 0.5 |
+| `jump` | jump force multiplier | frog 2.4 / bear 0.9 |
 | `swim` | underwater movement multiplier | frog 2.4 / jellyfish 1.6 |
 | `fly` | flight thrust (0 = cannot fly) | only the owl, 5.2 |
 | `glide` | unpowered gliding (fall speed cap) | owl 0.35 |
 | `breatheAir:false` | breathe underwater | only the frog |
 | `airBonus` | extra seconds of held breath | jellyfish +40 |
 | `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 |
-| `nightVision` | brightening in the dark, 0–1 | spider 0.7 / owl 0.75 |
+| `nightVision` | brightening in the dark, 0–1 | owl 0.75 / frog 0.3 |
 | `glow[r,g,b]` | self-illumination | jellyfish |
-| `stealth` | creature alert-radius multiplier | pangolin 0.4 = hard to spot |
+| `stealth` | creature alert-radius multiplier | owl 0.45 / frog 0.5 = hard to spot |
 | `aura` | intimidation radius | bear 8 = small animals scatter as you approach |
-| `armor` | damage-taken multiplier (<1 = this body shrugs off bites) | pangolin 0.5 |
-| `climb` | wall climbing | pangolin, spider |
-| `dig` | break soft blocks | only the pangolin |
 | `tongue` | metres of reach when plucking / grabbing | frog 4 |
 | `step` | auto step-up height in metres | bear 1.1 = walks up any stair |
-| `fov` | field of view | spider 110 / bear 68 |
-| `hand` | first-person hand model | hand/talon/web/hoof/claw/tentacle |
+| `fov` | field of view | frog 100 / bear 68 |
+| `hand` | first-person hand model | hand/talon/web/claw/tentacle |
 
-There are five further pure boolean switches, which change checks rather than numbers: `web` (can move along silk it spun), `strength` (pushes obstacles, breaks doors), `poisonImmune`, `coldImmune`, `herd` (same-species grouping check).
+There are three further pure boolean switches, which change checks rather than numbers: `strength` (pushes obstacles, breaks doors), `poisonImmune`, `coldImmune`.
 
-**Note that `size` is a hard gate**: a frog at 0.5×0.5 fits a 1×1 root hole and the gaps between reeds; a bear at 1.4×1.5 does not — that is the physical implementation of "weight collapses the bridge" and "antlers snag in the doorframe", not just flavour text.
+**Note that `size` is a hard gate**: a frog at 0.5×0.5 fits a 1×1 root hole and the gaps between reeds; a bear at 1.4×1.5 does not — that is the physical implementation of "weight collapses the bridge" and "this body will not fit that door", not just flavour text.
 
 ## 5. Transformation rules
 
@@ -122,12 +108,12 @@ Costs come from exactly two places:
 
 | Source | Examples | Why |
 |---|---|---|
-| **this body cannot** | claws and jaws cannot do fine work (no picking small fruit, no opening storage); antlers and shoulder width will not fit a low hole; weight breaks thin ice and wooden bridges; the skin dries after 90 s out of water; armour makes you sink; photophobic by day | you changed body, so you changed the ability table |
-| **how the world reacts to this body** | villagers refuse trade with a spider shape; fish avoid you; every predator spots a deer shape first; a bear is hostile to a pangolin shape and to a deer shape | they do not recognise *you*, they recognise this body |
+| **this body cannot** | claws and jaws cannot do fine work (no picking small fruit, no opening storage); a 1.4×1.5 body will not fit a low hole; weight breaks thin ice and wooden bridges; the skin dries after 90 s out of water; photophobic by day | you changed body, so you changed the ability table |
+| **how the world reacts to this body** | fish avoid you; an owl leaves when you walk up — as a human, and just as fast as a brown bear; the lake's own animals ignore a jellyfish shape and do not ignore yours | they do not recognise *you*, they recognise this body |
 
 **The mind is untouched.** A form never makes you want anything and never stops you wanting anything. Inside a bear's body you are still you: what you think, what you fear, what you decide — exactly as in a human shape.
 
-The one exception is a **body reflex**: a prey heart is not under your command. When something lunges at you, this body flinches (`fright`), and flinching burns air and drains the time bar faster. That is physiology, not psychology — you cannot stop the flinch, but you still decide what to do next.
+The one exception is a **body reflex**: this body startles before you have decided to (`fright`). When something charges into you, the flinch burns air and drains the time bar faster. That is physiology, not psychology — you cannot stop the flinch, but you still decide what to do next.
 
 ### 5.1 The time bar
 
@@ -149,7 +135,7 @@ Repeatedly transforming into the same form leaves traces on the human shape:
 
 | Cumulative transformations | Residue |
 |---|---|
-| 5 | night vision +0.15 (owl / spider line) |
+| 5 | night vision +0.15 (owl line) |
 | 10 | that species' alertness toward you −20% |
 | 20 | the codex entry for that species gains a line: "it recognises you" |
 | 30 | **irreversible**: human `size` permanently +0.1 m (some caves become harder to enter) |
