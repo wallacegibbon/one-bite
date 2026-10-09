@@ -114,7 +114,8 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 
 - Voxels: `Uint8Array(w*h*d)` = 160×48×160 = 1.23 MB.
 - `maxY` heightmap: `Uint8Array(w*d)`, speeding up meshing and creature pathing.
-- Save: `localStorage['frutaria.save.v1']`, storing only the **block diff** (`diffs`) + player + **identity** (`id` / `name` / traits, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + backpack upgrades + quests + time. Measured 1.7 KB.
+- Save: `localStorage['frutaria.save.v1']`, storing only the **block diff** (`diffs`) + player (position, vitality, current form and its remaining time) + **identity** (`id` / `name` / traits, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + planting queue (`growQueue`) + fruit scattered by death (`drops`) + plant buffs + owl post + backpack upgrades + quests + time. Measured 2.4 KB with a cellar tree, a sapling and a post in flight.
+- A save is **offered back, never silently loaded**: the start screen quotes it (day, hour, pack, trees) and Continue walks you back to it. The town cellar belongs to the valley rather than to the save, so it is rebuilt from the map data and every store is looked up by `id` — a save that lists only cellar trees still has a town to walk into.
 
 ### 3.4 Interface language
 
@@ -157,7 +158,8 @@ Two consequences worth knowing:
 | `game/test/heightmap.js` | prints an ASCII heightmap of the surface |
 | `game/test/probe.js` | finds a safe camera spot for every POI/zone |
 | `game/test/shots.js` | 20 screenshots in one launch (zones + transformation + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
-| `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology |
+| `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology; plus the world reacting to a body (block edits re-mesh, the breath ceiling, intimidation by species, a unique key per block) |
+| `game/test/save.js` | the save round trip: write a save, reload the page, continue from the start screen — identity, backpack, stores, the planting queue, scattered fruit, buffs and the form bar all come back, and a save that lists no town cellar still gets one |
 | `game/test/input.js` | real key events: walk / jump / fly / time bar / Grey Veil border |
 | `game/test/lang.js` | language switch: every visible string comes from the table in use, no raw key leaks, and the save file is byte-identical across languages |
 | `game/test/upgrade.js` | backpack upgrades: 24→30→36 slots, Silver Divider −1, q7 trigger, save round-trip |

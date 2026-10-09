@@ -22,6 +22,8 @@
     game.logMsg(N.t('log.langTo', { n: cur.label }), 'good');
     ui.applyLang();
     ui.update();
+    // the start screen quotes a save in the current language too
+    if (!document.getElementById('startWrap').classList.contains('hidden')) showStart();
     return true;
   }
   function setKeys() {
@@ -99,13 +101,30 @@
   document.getElementById('btnLang').onclick = () => setLocale(N.i18n.next().id);
 
   /* ---------------- start ---------------- */
+  /* A save is offered back rather than silently loaded: the valley is the same
+     seed, so continuing means walking up to the very cellar you walked away
+     from, with the fruit you left on the shelf still going off. */
+  function showStart() {
+    const wrap = document.getElementById('startWrap');
+    if (!wrap) return;
+    wrap.classList.remove('hidden');
+    const info = game.saveInfo();
+    const btn = document.getElementById('btnStart');
+    btn.dataset.i18n = info ? 'start.continue' : 'start.btn';
+    btn.textContent = N.t(btn.dataset.i18n);
+    document.getElementById('btnFresh').classList.toggle('hidden', !info);
+    const note = document.getElementById('startSave');
+    note.classList.toggle('hidden', !info);
+    note.textContent = info ? N.t('start.saveNote', { d: info.day, h: info.hour, n: info.items, t: info.trees }) : '';
+  }
+
   document.getElementById('btnStart').onclick = () => {
     document.getElementById('start').classList.add('hidden');
     started = true;
+    if (game.hasSave()) game.load();
     canvas.requestPointerLock();
-    if (localStorage.getItem('frutaria.save.v1')) { /* autoload happens after init */ }
   };
-  document.getElementById('btnFresh').onclick = () => { localStorage.removeItem('frutaria.save.v1'); location.reload(); };
+  document.getElementById('btnFresh').onclick = () => { game.clearSave(); location.reload(); };
 
   /* ---------------- boot ---------------- */
   const QS = new URLSearchParams(location.search);
@@ -131,7 +150,7 @@
       if (QS.get('time')) game.time = +QS.get('time');
       game.updateEnv();
     } else {
-      setTimeout(() => { const s = document.getElementById('startWrap'); if (s) s.classList.remove('hidden'); }, 200);
+      setTimeout(showStart, 200);
     }
     requestAnimationFrame(loop);
   }

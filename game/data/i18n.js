@@ -35,6 +35,8 @@
       'err.webgl': 'WebGL 不可用',
       'start.hint': '点击画面锁定鼠标 · Esc 释放鼠标 · 建议全屏',
       'start.btn': '开始探索',
+      'start.continue': '回到上次离开的那条路',
+      'start.saveNote': '存档 · 第 {d} 天 · 约 {h} 时 · 背包 {n} 件 · 窖树 {t} 棵',
       'start.fresh': '清除存档',
 
       'btn.journal': '图鉴 J',
@@ -212,6 +214,8 @@
       'err.webgl': 'WebGL is not available',
       'start.hint': 'Click to lock the mouse · Esc releases it · full screen recommended',
       'start.btn': 'Start exploring',
+      'start.continue': 'Walk back to where you left off',
+      'start.saveNote': 'save · day {d} · about {h}:00 · {n} items in the pack · {t} cellar trees',
       'start.fresh': 'Clear save',
 
       'btn.journal': 'Codex J',

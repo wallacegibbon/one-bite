@@ -68,7 +68,10 @@
       this.particles = new N.Particles(this.R.gl, 900);
       // storage. A store has no name of its own: the interface calls it by kind,
       // so switching language mid-save cannot freeze a translated string in it.
-      this.stashes.push({ id: 'cellar', kind: 'cellar', slots: STO.cellar.slots, decay: STO.cellar.decay, items: [], x: 136, y: 21, z: 134 });
+      // The town cellar belongs to the valley rather than to the save file, so it
+      // is rebuilt from the map data and every lookup that means "the town" uses
+      // cellar() instead of an index.
+      this.stashes.push(this.makeCellar());
       // spawn
       const sp = N.spawn;
       this.player.x = sp.x; this.player.y = sp.y; this.player.z = sp.z;
@@ -220,7 +223,28 @@
       if (this.ui) this.ui.onLog();
     }
 
-    /* ------------------------- backpack / storage ------------------------- */
+    /* ------------------------- storage ------------------------- */
+    /* The town cellar is a place in the valley, not a thing the player owns: it
+       is always present, at the cellar door the map names. Field stores (the
+       cellar trees) are the player's and come from the save file. */
+    makeCellar() {
+      const poi = N.POIS.find(p => p.id === 'cellar') || { x: 136, z: 134, y: 20 };
+      return { id: 'cellar', kind: 'cellar', slots: STO.cellar.slots, decay: STO.cellar.decay,
+               items: [], x: poi.x, y: poi.y + 1, z: poi.z };
+    }
+    cellar() { return this.stashes.find(s => s.id === 'cellar') || this.stashes[0]; }
+    /* Merge a saved store list without ever losing the town cellar: an old or
+       partial save may hold only the trees, and then stashes[0] would be a tree
+       while every "the town" lookup still expects the cellar. */
+    mergeStashes(saved) {
+      const list = Array.isArray(saved) ? saved : [];
+      const savedCellar = list.find(s => s && s.id === 'cellar');
+      const cellar = savedCellar || this.makeCellar();
+      cellar.kind = 'cellar';
+      return [cellar].concat(list.filter(s => s && s.id && s.id !== 'cellar'));
+    }
+
+    /* ------------------------- backpack ------------------------- */
     /* capacity = base 24 + pouches earned; the silver divider makes rare-and-above cost 1 slot less */
     cap() {
       let c = STO.backpack.slots;
@@ -301,7 +325,7 @@
       if (!bd) return;
       if (N.FRUIT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
       if (N.PLANT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
-      if (b === 78) { this.openStashUI(this.stashes[0]); return; }
+      if (b === 78) { this.openStashUI(this.cellar()); return; }
       if (b === 80) { this.logMsg(N.t('log.trap'), 'warn'); return; }
     }
     harvest(x, y, z, b) {
@@ -410,7 +434,8 @@
     }
     buildCellarTree() {
       const p = this.player;
-      if (this.stashes.length - 1 >= STO.treestash.max) { this.logMsg(N.t('log.treeCap', { n: STO.treestash.max }), 'warn'); return; }
+      const trees = this.stashes.filter(s => s.kind === 'tree').length;
+      if (trees >= STO.treestash.max) { this.logMsg(N.t('log.treeCap', { n: STO.treestash.max }), 'warn'); return; }
       const bx = Math.floor(p.x), bz = Math.floor(p.z);
       const by = N.groundY(this.world, bx, bz, Math.floor(p.y + 3));
       if (by < 1) return;
@@ -454,7 +479,7 @@
     /* ------------------------- owl post (docs/en/05 section 5.2) ------------------------- */
     /* cellar tree -> main cellar, one fruit at a time, delivered after 3 in-game days, 10% lost.
        Requires at least one owlberry stored in the main cellar (unlocks "Pendulum"). */
-    owlUnlocked() { return this.stashes[0].items.some(i => i.id === 'owlberry') || this._owlUnlocked; }
+    owlUnlocked() { return this.cellar().items.some(i => i.id === 'owlberry') || this._owlUnlocked; }
     postItem() {
       const s = this.openStash;
       if (!s) return;
@@ -481,12 +506,12 @@
         if (Math.random() < 0.10) {
           this.logMsg(N.t('log.postLost', { n: name }), 'bad');
           this.stats.postLost = (this.stats.postLost || 0) + 1;
-        } else if (this.used(this.stashes[0].items) + this.slotOf(po.it) > this.stashes[0].slots) {
+        } else if (this.used(this.cellar().items) + this.slotOf(po.it) > this.cellar().slots) {
           this.logMsg(N.t('log.postFull', { n: name }), 'warn');
           const back = this.stashes.find(s => s.id === po.from);
-          (back || this.stashes[0]).items.push(po.it);
+          (back || this.cellar()).items.push(po.it);
         } else {
-          this.stashes[0].items.push(po.it);
+          this.cellar().items.push(po.it);
           this.logMsg(N.t('log.postArrived', { n: name }), 'good');
           this.stats.postSent = (this.stats.postSent || 0) + 1;
         }
@@ -520,7 +545,7 @@
       for (const it of this.inv) this.drops.push({ x: sx + (Math.random() * 3 - 1.5), y: sy + 1, z: sz + (Math.random() * 3 - 1.5), item: it, t: 600 });
       this.inv = [];
       p.vital = 5; p.air = p.maxAir(); p.fright = 0; p.form = null; p.formT = 0;
-      const s = this.stashes[0];
+      const s = this.cellar();
       p.x = s.x + 2; p.y = s.y + 1; p.z = s.z + 2; p.vx = p.vy = p.vz = 0;
       this.mode = 'dead';
       if (this.ui) this.ui.showDead(true);
@@ -529,10 +554,10 @@
     /* ------------------------- per-game-day rolls ------------------------- */
     /* docs/en/05: a cellar tree is a living store -- it attracts thieves. The main cellar is guarded by Old Mei and is never robbed. */
     dailyRolls() {
-      // stashes[0] is the town cellar and is deliberately skipped: the docs state
-      // theft as a rule of field storage (05, cellar-tree table), not of the town.
-      for (let i = 1; i < this.stashes.length; i++) {
-        const s = this.stashes[i];
+      // the town cellar is deliberately skipped: the docs state theft as a rule of
+      // field storage (05, cellar-tree table), not of the town, which has Old Mei.
+      for (const s of this.stashes) {
+        if (s.kind === 'cellar') continue;
         if (!s.items.length) continue;
         if (Math.random() >= STO.treestash.raidChance) continue;
         const near = Math.hypot(this.player.x - s.x, this.player.z - s.z) < STO.treestash.raidScareRadius;
@@ -571,7 +596,7 @@
         this.upg[uid] = true;
         this.logMsg(N.t('log.upgrade', { n: N.disp(u), e: u.slots ? N.t('log.upgSlots', { n: u.slots }) : N.t('log.upgRare'), d: N.descOf(u) }), 'good');
       };
-      if (this.stashes[0].items.length > 0) { done(q('q1')); grant('pouch1'); }
+      if (this.cellar().items.length > 0) { done(q('q1')); grant('pouch1'); }
       if (nFruit('owlberry') + nStash('owlberry') >= 3) done(q('q2'));
       if (p.form === 'owlberry' && p.y > 30) done(q('q3'), N.t('log.q3msg'));
       if (nFruit('frogpear') + nStash('frogpear') >= 1) { done(q('q4')); grant('pouch2'); }
@@ -933,14 +958,42 @@
     }
 
     /* ------------------------- save ------------------------- */
+    hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
+    clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* nothing to clear */ } }
+    // what the start screen quotes back, without loading anything
+    saveInfo() {
+      try {
+        const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+        if (!s) return null;
+        return {
+          day: s.day || 1,
+          hour: Math.floor(((s.time || 0) / DAY_LEN * 24) % 24),
+          items: (s.inv || []).length,
+          trees: (s.stashes || []).filter(x => x && x.kind === 'tree').length
+        };
+      } catch (e) { return null; }
+    }
+
+    /* Everything that would otherwise be lost on a reload is written here: the
+       block diff rather than the voxels, the queues (regrowth, planting, owl
+       post, fruit scattered on death), the stores, the identity and the clock.
+       Nothing translated is stored -- a store is named by its kind, a quest
+       keeps its text next to the check that completes it. */
     save() {
       try {
+        const p = this.player;
         const s = {
           id: this.id, name: this.name, traits: this.traits,
           time: this.time, day: this.day, seed: this.seed,
-          p: { x: this.player.x, y: this.player.y, z: this.player.z, yaw: this.player.yaw, pitch: this.player.pitch, vital: this.player.vital, form: this.player.form, formT: this.player.formT },
-          inv: this.inv, stashes: this.stashes.map(s2 => ({ id: s2.id, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
-          diffs: this.diffs, seen: this.seen, dex: this.dexFruit, regrow: this.regrow, posts: this.posts, owl: this._owlUnlocked || false,
+          p: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vital: p.vital,
+               form: p.form, formT: p.formT, formMax: p.formMax, dry: p.dry },
+          inv: this.inv,
+          stashes: this.stashes.map(s2 => ({ id: s2.id, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
+          diffs: this.diffs, seen: this.seen, dex: this.dexFruit,
+          regrow: this.regrow, growQueue: this.growQueue, posts: this.posts, drops: this.drops,
+          buffs: this.buffs, gastric: this.gastric || 0,
+          gastricTime: this.gastricTime === undefined ? null : this.gastricTime,
+          owl: this._owlUnlocked || false,
           quests: this.quests.map(q => [q.id, q.done]), stats: this.stats, upg: this.upg
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(s));
@@ -954,18 +1007,30 @@
       // identity: keep the saved id (the world's memory is keyed on it), never a name we invented
       this.id = s.id || this.id; this.name = s.name || '';
       Object.assign(this.traits, s.traits || {});
-      this.epithetSeen = this.epithet();
       this.time = s.time; this.day = s.day;
-      this.inv = s.inv || []; this.stashes = s.stashes;
+      this.inv = s.inv || [];
+      this.stashes = this.mergeStashes(s.stashes);
       this.seen = s.seen || {}; this.dexFruit = s.dex || {}; this.stats = s.stats || this.stats;
-      for (const d of s.diffs) this.world.set(d[0], d[1], d[2], d[3]);
-      this.diffs = s.diffs;
+      for (const d of (s.diffs || [])) this.world.set(d[0], d[1], d[2], d[3]);
+      this.diffs = s.diffs || [];
       this.regrow = s.regrow || [];
+      this.growQueue = s.growQueue || [];      // a planted pit must still be growing after a reload
+      this.drops = s.drops || [];              // fruit scattered on death stays recoverable
+      this.buffs = s.buffs || {};
+      this.gastric = s.gastric || 0;
+      if (s.gastricTime !== null && s.gastricTime !== undefined) this.gastricTime = s.gastricTime;
       this.posts = s.posts || []; this._owlUnlocked = !!s.owl;
-      Object.assign(this.player, { x: s.p.x, y: s.p.y, z: s.p.z, yaw: s.p.yaw, pitch: s.p.pitch, vital: s.p.vital, form: s.p.form, formT: s.p.formT });
+      const p = this.player;
+      Object.assign(p, { x: s.p.x, y: s.p.y, z: s.p.z, yaw: s.p.yaw, pitch: s.p.pitch,
+        vital: s.p.vital, form: s.p.form, formT: s.p.formT,
+        formMax: s.p.formMax || (s.p.formT || 1), dry: s.p.dry || 0 });
       for (const q of s.quests || []) { const qq = this.quests.find(x => x.id === q[0]); if (qq) qq.done = q[1]; }
       Object.assign(this.upg, s.upg || {});
-      for (let i = 0; i < this.world.cx * this.world.cz; i++) this.world.buildChunk(this.R.gl, i);
+      // read off the restored quests, so it has to come after them
+      this.epithetSeen = this.epithet();
+      this.lastHour = this.hour;               // a loaded clock must not read as a new day
+      // the diffs above flagged their chunks; the budgeted rebuild in update()
+      // re-meshes exactly those, so loading does not stall on a full remesh
       this.meshDone = this.meshTotal; this.ready = true;
       this.logMsg(N.t('log.loaded'), 'good');
       return true;

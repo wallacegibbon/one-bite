@@ -15,6 +15,7 @@ run probe 60
 run docs-sync 60
 run docs-drift 180
 run play 300
+run save 300
 run upgrade 220
 run input 300
 run lang 220
