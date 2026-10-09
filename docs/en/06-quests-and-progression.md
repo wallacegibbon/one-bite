@@ -20,13 +20,15 @@ Quests are not a reward pipeline, they are **the manual for the gates**: every q
 | `q2` | Three Owlberries | find 3 Owlberries in the oak hollows of the Whisperwood | habitat binding + night vision | owlberry ≥ 3 in the backpack |
 | `q3` | Wing of Night | at night eat an Owlberry and fly above 30 metres | flight + the time bar | `form==='owlberry' && y > 30` |
 | `q4` | The ticket to Mirrorlake | become a frog, get in the water, take a Frog Pear from the sill of the sunken tower | the two-stage water gate (breath → breathing through skin) | obtain frogpear |
-| `q5` | The pass into the Deep Grove | become a deer, follow the deer path into the Deep Grove, pick a Stagcap | the attitude matrix *is* the pass | obtain stagcap |
-| `q6` | The old beams of the Cloudspire | fly to the cloud tops and pick a Silkberry off the old beams (spiders do not welcome guests) | altitude + a body that spins silk | obtain silkberry |
+| `q5` | The field on the lakebed | eat a Jellybloom, become a jellyfish and sink down to the field on the lakebed | a body with 58 seconds of breath and a lamp of its own, which cannot walk | `form==='jellybloom' && y < 11` |
+| `q6` | One Bruin Fig | pick a Bruin Fig off the ridge rock: it costs 12 slots and sleeps in 7 minutes — get it into a cellar | a legendary fruit is a carry, not a collection | obtain bruinfig |
 | `q7` | The silver mesh in the greenhouse | go to Starfall's fruit greenhouse (the cellar) and find the silver divider | backpack upgrade: rare and above −1 slot | stand within 6 m of `greenhouse` (y inside −6…+10) |
 
 Quests appear as a checklist in the codex panel (J); completing one announces "✔ Done: …". **No reward popup, no XP** — the reward is "you can go there now".
 
 Finishing q4 also grants `pouch2` (Deep Pouch, +6 slots): one dive in Mirrorlake brings back Frog Pears at 4 slots each, and a 24-slot backpack cannot carry a useful amount.
+
+q5 is the only quest that verifies a **body** rather than a fruit: a human willing to spend 18 seconds of breath can also reach the lakebed and take a Jellybloom, so the quest is not "you own one", it is "you are standing on the lakebed in a body that holds 58 seconds and carries its own lamp". q6 is the opposite — it verifies only the fruit, because the hard part of a legendary fruit is not reaching it but carrying it: 12 of your 24 slots, and it goes dormant in 7 minutes.
 
 ## 3. The seven invitations (quests are not a plot)
 
@@ -38,8 +40,8 @@ There is no main line, no villain and no ending. A quest is an **invitation to u
 | q2 | Three owlberries | picking, slots, dormancy | none |
 | q3 | Wing of night | flight, and the time bar in the air | owl |
 | q4 | The lake's ticket | breathing, drowning, skin, drying out | frog |
-| q5 | The grove's pass | a shape is not a disguise: the grove reads the body | deer |
-| q6 | The beams at cloud top | altitude, and a body that climbs and spins silk | owl (fly) or pangolin (climb) + Leaper |
+| q5 | The field on the lakebed | breath you can hold, and a body that lights itself and cannot walk | jellyfish |
+| q6 | One bruin fig | a legendary fruit is a logistics problem: 12 of 24 slots, dormant in 420 s | brown bear (steps over 1.1 m ledges) — or two legs, jumping one at a time |
 | q7 | The greenhouse divider | rarity costs one slot less | none |
 
 Nothing in the valley is waiting to be fixed. Do none of these and the valley is unchanged: the fruit still ripens, the bear still comes, the fog still makes you forget.
@@ -53,11 +55,11 @@ Nothing in the valley is waiting to be fixed. Do none of these and the valley is
 | Side quest | Trigger | Content |
 |---|---|---|
 | The chorus after rain | listen to the shore of Mirrorlake after rain | follow the first frog that starts calling (Old Drum) and it takes you to the only tower entrance the reeds have not blocked |
-| A deer path is not a road | follow a herd of deer | a deer path always leads to water; along it you unlock 3 hidden cellar-tree anchors |
+| A deer path is not a road | walk one of the old tracks in the middle wood | the deer that pressed them into the ground are gone and the tracks are not: an old track always leads to water; along it you unlock 3 hidden cellar-tree anchors |
 | The brass bell in the sunken tower | after the lake's ticket (q4) | carry the bell off the tower sill back to the Frogshall — Old Drum recognises it |
 | The bear's cellar | find a bear-dug hole on the Northern Ridge | inside are pits that went dormant 300 years ago — planting one revives 1 missing fruit species |
 | The empty burrow | the mounds of the Old Orchard | dig out a burrow that is already empty: at the bottom is a whole store of pits that someone carried off, and nobody knows who |
-| The spider's ledger | the Old Orchard | destroy the Silkberry nests → the beams collapse → a new way down to the cave floor (a shortcut) |
+| The beams that never fell | the Old Orchard | those beams should have come down centuries ago and did not; pull one brace and the roof follows, opening a new way down to the cave floor (a shortcut) |
 | Pendulum's three | store an Owlberry in the main cellar | unlocks owl post (once every 3 days, fruit you dropped far away is carried to the nearest store) |
 | The empty slot in the fog | after losing a fruit at the fog's edge | that fruit turns up on a different tree — not the same tree, not even the same kind |
 | Why Old Mei does not eat | store 50 fruit in total | the Bruin Fig scent event: she only says "I smelled one. That was enough." |
@@ -69,8 +71,8 @@ Nothing in the valley is waiting to be fixed. Do none of these and the valley is
 
 Three tabs:
 
-1. **Fruit codex**: 7 cells (40 in the full design), undiscovered ones show as "?". Discovered ones show: name, rarity, slot cost, dormancy time, habitat, form abilities, side effect, lore.
-2. **Creature codex**: 7 species, showing the dex text + its current attitude toward you (live, changes with your form).
+1. **Fruit codex**: 4 cells (40 in the full design), undiscovered ones show as "?". Discovered ones show: name, rarity, slot cost, dormancy time, habitat, form abilities, side effect, lore.
+2. **Creature codex**: 4 species, showing the dex text + its current attitude toward you (live, changes with your form).
 3. **Quest list**: the current quest's hint, with no reward shown.
 
 Codex completion is the **only growth metric that is recorded**, and it grants no numeric reward.

@@ -4,7 +4,7 @@
 
 Source of truth: `game/data/fruits.js`. Every number in this document comes straight from that file.
 
-**One fruit per animal.** The valley has seven animals (03), so it has seven transformation fruits. There is no "second fox fruit", and no fruit that belongs to no animal.
+**One fruit per animal.** The valley has four animals you can wear (03), so it has four transformation fruits. There is no "second fox fruit", and no fruit that belongs to no animal.
 
 ## 1. Rarity: capacity and shelf life
 
@@ -49,7 +49,7 @@ A fruit starts counting down the moment it is picked.
 - The game announces dormancy explicitly: "Owlberry went dormant — all that is left is a pit. Plant it and it may still fruit."
 - **There are no "preservation" items.** The only way to slow decay is storage.
 
-## 3. The full fruit table (7 kinds)
+## 3. The full fruit table (4 kinds)
 
 ### Common (1 slot)
 
@@ -70,7 +70,7 @@ A fruit starts counting down the moment it is picked.
 |---|---|---|---|---|---|---|
 | `bruinfig` | Bruin Fig | bear | 480 s | Northern Ridge rock face · hibernation den | strength, cold immune, aura 8, step 1.1, size 1.4×1.5 | **No fine motor control** (cannot pick small fruit, cannot open storage); **weight**: thin ice breaks, wooden bridges collapse |
 
-**Why there is no eighth**: the fruit table is a mirror of the animal table. Adding a fruit means adding a niche, a row in the attitude matrix and a new set of gates (03 §3). Seven is the most that can be read in ten seconds.
+**Why there is no fifth**: the fruit table is a mirror of the animal table. Adding a fruit means adding a niche, a row in the attitude matrix and a new set of gates (03 §3). Four is what can be read in ten seconds; the next one has to earn that.
 
 ## 4. Form ability fields
 
@@ -150,7 +150,7 @@ Some fruit trees bear **empty fruit**: identical in appearance, slot cost and do
 - Empty fruit **can still be planted**, and the tree it grows has a 15% chance of coming back as real fruit — the player's only means of "repair".
 - In the codex, empty fruit shows as "?" and does not count toward codex completion.
 
-> Design use: empty fruit lets the player verify with their own hands the motivation "the list has 26 fruits, the valley has 7" — some of them are not gone, they are still there and empty.
+> Design use: empty fruit lets the player verify with their own hands the motivation "the list has 26 fruits, the valley has 4" — some of them are not gone, they are still there and empty.
 
 ## 7. The picking interaction
 
@@ -161,4 +161,4 @@ Some fruit trees bear **empty fruit**: identical in appearance, slot cost and do
 | Backpack full | "Backpack full (24/24 slots) — go back to the cellar first." The fruit does **not** drop, it stays where it is |
 | The fruit block | a faintly self-lit small box (0.44³ body + two small leaves), colour = the rarity ring colour |
 
-Fruit block ids 40–46 (7 kinds), non-solid, non-opaque, `emis:1` — at night you can only see them because they glow themselves. That is the implementation of "at night you can see the Owlberry faintly reflecting light".
+Fruit block ids 40–43 (4 kinds), non-solid, non-opaque, `emis:1` — at night you can only see them because they glow themselves. That is the implementation of "at night you can see the Owlberry faintly reflecting light".

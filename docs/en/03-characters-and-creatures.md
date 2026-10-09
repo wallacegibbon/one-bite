@@ -2,9 +2,9 @@
 
 [中文: ../cn/03-角色与生物.md](../cn/03-角色与生物.md)
 
-Source of truth: `game/data/creatures.js` (7 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name).
+Source of truth: `game/data/creatures.js` (4 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name).
 
-**One species per ecological niche.** The valley has exactly seven openings: the night sky, digging in the ground, running in the forest, open water, shallows and shore, caves and beams, the ridge. Each animal takes one opening. There is no "second fox", and no in-between species that is "half otter, half merrow".
+**One species per ecological niche.** The valley has four openings you can wear: the night sky, open water, the shore, the ridge. Each animal takes one opening. There is no "second fox", and no in-between species that is "half otter, half merrow".
 
 ## 1. Characters
 
@@ -12,7 +12,7 @@ Source of truth: `game/data/creatures.js` (7 species + the attitude matrix + cod
 
 A forager's apprentice from outside Lanternrow. **This character has no fixed name**: the valley does not address people by name, it addresses them by *what they have done* (see §6). Wherever these documents refer to the character they say "the forager" or use the second person.
 
-- **Motivation**: they came into the valley carrying a hand-drawn fruit list. The list has 26 fruits on it; only 7 can still be found in the valley. They want to know whether the other 19 are gone, or whether the list is wrong.
+- **Motivation**: they came into the valley carrying a hand-drawn fruit list. The list has 26 fruits on it; only 4 can still be found in the valley. They want to know whether the other 22 are gone, or whether the list is wrong.
 - **No talent**: an ordinary forager, subject to every law of the valley. Eating a second fruit while already transformed costs them vitality like anyone else — one body at a time, for them too (04 §5.2).
 - **Backstory slot**: who left that list belongs to the character, not to the world. In single player it is "the grandmother"; in multiplayer each character can have a different origin (a fellow apprentice, a creditor, a former Greyglove employee) — or the list can simply be held by Old Mei and the character merely recognises it.
 - **What they do not say**: the list's original owner was driven out of the valley by the Greyglove Trading Company.
@@ -133,8 +133,8 @@ The Grey Veil takes names first — it makes you forget *why you meant to come b
 | q1 | the cellar-keeper | 存果人 |
 | q3 | nightwing | 夜翼 |
 | q4 | the one who swam Mirrorlake | 泅过镜湖的人 |
-| q5 | the one who walked the grove | 走进深林的人 |
-| q6 | the cloud-top webster | 云顶结网的人 |
+| q5 | the lamp on the lakebed | 湖底的灯 |
+| q6 | the one who carried the ridge home | 背下北岭的人 |
 | all quests | the one the valley remembers | 谷地记得的人 |
 
 A later one overrides an earlier one; when it changes the game announces it once ("the valley has started calling you …").

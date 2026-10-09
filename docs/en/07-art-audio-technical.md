@@ -54,7 +54,7 @@ Assembled from voxel parts: one mesh + one pivot + one animation per part.
 | Animation | Used for | Formula |
 |---|---|---|
 | `flap` | wings | `rz = sin(t·spd)·amp`, amp 0.85 (flying) / 0.12 (walking) |
-| `walk` | legs | `rx = sin(t·gait + phase)·move·0.75` |
+| `walk` | legs | `rx = sin(t·7 + phase)·move·0.75` — one walk rate for every body; the per-species override existed only for the spider and went with it |
 | `wag` | tail | `ry = sin(t·1.6)·(move·0.5+0.12)` |
 | `bob` | head/body | `dy = sin(t·2.2)·(move·0.12+0.05)` |
 | `sway` | fins/feathers | `rz = sin(t·2.4)·0.28` |
@@ -89,7 +89,7 @@ All code is classic `<script src>` global scripts hanging off the `window.FRUTAR
 | `src/engine.js` | mat4, MeshBuilder, shaders, Renderer (frustum culling, sky, particles) |
 | `src/world.js` | block table, voxel storage, chunked meshing (with AO), DDA ray picking |
 | `src/worldgen.js` | value-noise/fbm terrain + structure generation (castle/town/cave/lake/isles/forest) |
-| `src/models.js` | 8 creature models + 6 hands + part animation matrices |
+| `src/models.js` | 5 models + 5 first-person hands + part animation matrices |
 | `src/entities.js` | Player (AABB collision/breath/flight), Creature (attitude-driven AI), Particles |
 | `src/game.js` | main logic: fruit/backpack/spoilage/storage/quests/save/render loop |
 | `src/ui.js` | HUD, rotating minimap, item bar, storage panel, codex, help, death |

@@ -12,7 +12,7 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
         x=0        32        64        96       128      160
    z=0  ┌──────────────────────────────────────────────────┐
         │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │  ← Grey Veil (the whole ring)
-   16   │ ░ Echo Hollow ⛰          The Deep Grove ✦deer    North Ridge ❄Ashscale ░ │
+   16   │ ░ Echo Hollow ⛰          The Deep Grove (silver)  North Ridge ❄Ashscale ░ │
         │ ░  (28,30)               (104,32) r18             (142,18) r26          ░ │
    32   │ ░   ⌂cavemouth           ✦groveheart             ▲mountains            ░ │
         │ ░      ☁stepping1(66,40)      ☁highroost(96,12)                        ░ │
@@ -33,7 +33,7 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
 
   ☁ = Cloudspire isle (floating in the air; this is its shadow position;
       ☁beamisle sits at (40,20))
-  ✦ = a zone that needs the right shape   ~ = water surface
+  ⛰ = a hill hollowed out   ~ = water surface
 ```
 
 **How to read the map**: the Cloudspire isles project onto the map **above the forest** (z 12–62), but they sit in empty air at y29–40. From the ground they are only shadows; only a flying form can reach them.
@@ -45,7 +45,7 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
 | `veil` | The Grey Veil | 灰雾墙 | border | the whole ring | 5 | It does not stop you leaving, it only makes you forget why you came back |
 | `whisperwood` | Whisperwood | 低语林 | rect | (6,6)–(154,72) | 1 | Meadow and mushroom ring at the rim, ancient trees and deer paths further in |
 | `glowglade` | Glowglade | 蘑菇圈 | circle r13 | (60,56) | 1 | A ring of glowcaps that breathes in and out at night |
-| `batcave` | Echo Hollow | 回声丘·蛛洞 | circle r13 | (28,30) | 2 | The hill hollowed into three layers of tunnel; at night the floor moves first |
+| `batcave` | Echo Hollow | 回声丘 | circle r13 | (28,30) | 2 | The hill hollowed into three layers of tunnel, and nothing living at the bottom of them |
 | `deepgrove` | The Deep Grove | 深鹿林 | circle r18 | (104,32) | 3 | Silver trees; every deer path in the valley folds into this one |
 | `mountains` | Ashscale Ridge | 北岭·鹰喙峰 | circle r26 | (142,18) | 3 | The bear's slope, wind blowing snow sideways |
 | `mirrorlake` | Mirrorlake | 镜湖 | circle r34 | (78,106) | 3 | A sunken tower and a few sunken huts on the lakebed |
@@ -54,7 +54,7 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
 | `orchard` | The Old Orchard | 果园遗迹 | circle r15 | (24,104) | 2 | The ancestral ground of every fruit tree: broken walls, old burrows, the oldest tree |
 | `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 4 | Without a flying form this is only a shadow in the sky |
 
-Zone ids are historical: `batcave` is spiders now, `deepgrove` is deer now. The ids stay (saves and code use them), the display names change.
+Zone ids are historical, and so are the display names: `deepgrove` is still the Deep Grove although the herd that named it is gone, and `batcave` is a hill that somebody hollowed out. The ids stay (saves and code use them).
 
 ## 3. Points of Interest (POI)
 
@@ -77,8 +77,8 @@ The valley is not a floor, it is four:
 
 | Layer | y | What is there | How you get there |
 |---|---|---|---|
-| **Cloudspire** | 29–40 | 6 isles, the old beams | Owl (fly 5.2), or spider climbing + Leaper |
-| **Canopy** | 20–28 | Crowns, bell-tower roof, the spider beams | Jump + Leaper; or spider climbing |
+| **Cloudspire** | 29–40 | 6 isles, the old beams | Owl (fly 5.2), or the stepping isles + Leaper |
+| **Canopy** | 20–28 | Crowns, bell-tower roof, the top of the Deep Grove | Jump + Leaper |
 | **Ground** | 15–24 | Forest, town, keep, orchard | Walking |
 | **Underwater** | 0–14 | Mirrorlake, sunken tower, sunken huts, jelly fields | Frog (skin breathing); jellyfish (water only) |
 
@@ -99,8 +99,8 @@ On the island at the lake's centre: four towers and a bell, a fruit greenhouse i
 
 A rectangle over the whole northern half. Three bands:
 
-- **Rim** (z 60–72): moonlit meadow, the mushroom-ring entrance, pangolin mounds. Common fruit: owlberry.
-- **Middle** (z 30–60): old trees, deer paths, stagcap on fallen logs. Deer country.
+- **Rim** (z 60–72): moonlit meadow, the mushroom-ring entrance, the old mounds. Common fruit: owlberry.
+- **Middle** (z 30–60): old trees and the tracks the deer pressed into the ground. The fallen logs are still there; what grew on them is not.
 - **Deep**: the Deep Grove (its own zone, see §5.6).
 
 Tree kinds: oak (leaves 7 / dark leaves 27), pine (needles 8), silver (silver leaves 9, Deep Grove only), willow (willow leaves 28, lakeshore).
@@ -109,14 +109,16 @@ Tree kinds: oak (leaves 7 / dark leaves 27), pine (needles 8), silver (silver le
 
 A clearing 26 across, ringed by 24 glowcaps (block 76, emissive) that pulse on a 6 second cycle at night. The middle holds the densest **glowseeds** and is the main source of **cellar stones**. The ground stays damp, so the frogs live here too: frog-pear bushes ring the clearing.
 
-### 5.4 Echo Hollow (the spider hill)
+### 5.4 Echo Hollow (the hollowed hill)
 
-Three layers of tunnel, about 120 blocks long. The id is still `batcave`.
+Three layers of tunnel, about 120 blocks long. The id is still `batcave`, and the Chinese display name used to say *spider cave*; it does not any more.
 
-- Upper: **silkberry** (block 45) on the roof, exactly where the beams used to be.
-- Middle: beamborn spider nests. They do not spin to catch insects; they spin to **repair buildings**.
-- Lower: an underground stream, wet, frogs too.
-- By day it is only dripping. By night the floor moves before you step on it.
+- **Upper**: a low black roof with nothing hanging from it.
+- **Middle**: the three layers cross, and the hill answers anything you drop.
+- **Lower**: an underground stream, wet; frogs come in from the hillside.
+- By day it is only dripping. Sound comes back wrong, which is the whole name.
+
+**This place pays nothing.** It is dark, it is deep, it has no fruit and no door, and it is the clearest hole the roster cut left behind: the hill was built as a spider scene. What to do with it is an open question, not a solved one.
 
 ### 5.5 Mirrorlake
 
@@ -128,15 +130,15 @@ Radius 34, deepest at the centre.
 
 ### 5.6 The Deep Grove and the Old Orchard
 
-**The Deep Grove** (104,32, r18): silver-leaf wood (blocks 9/22) where every deer path folds into one. Stagcap grows on silver trunks. The gate here is shape: deer are `calm` to deer and `hostile` to everything else — to walk in, become a deer.
+**The Deep Grove** (104,32, r18): silver-leaf wood (blocks 9/22) where every old track folds into one. Nothing grows on the silver trunks now. The grove is bear country — the ridge bears come down into it and bury their own fruit here — and it has no door: no fruit, no gate, no reason. That is a hole in the design, and it is on the open list.
 
-**The Old Orchard** (24,104, r15): a ring of broken wall (30 across) plus the oldest tree in the valley (`oldtree`). Every root heap is an old pangolin burrow — the town cellar's shape is said to be copied from bears, and the bears copied it from pangolins. The ruins' beams are held up by three centuries of spider silk: take the silkberries and the beams fall, opening a new way down to the cave floor.
+**The Old Orchard** (24,104, r15): a ring of broken wall (30 across) plus the oldest tree in the valley (`oldtree`). Every root heap is an old burrow — the town cellar's shape is said to be copied from bears, and the bears copied it from whatever dug these first. The ruins' beams have been holding themselves up for three centuries; pull one brace and the roof comes down, opening a new way down to the cave floor.
 
 ### 5.7 Cloudspire Isles
 
 | Isle | Position | Radius | Top y | What is there |
 |---|---|---|---|---|
-| `beamisle` | (40,20) | 11 | 37 | **The Old Beams**: three-century-old timber, 3 silkberries, the view |
+| `beamisle` | (40,20) | 11 | 37 | **The Old Beams**: three-century-old timber that never fell, and the view |
 | `highroost` | (96,12) | 7 | 40 | The highest isle, windy, no fruit; the owls moult here |
 | `windbell` | (128,58) | 8 | 34 | Windbell isle, no fruit, viewpoint |
 | `stepping1` | (66,40) | 4 | 31 | Stepping isle |
@@ -150,25 +152,24 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
 ```
   Ground (on foot)
     │
-    ├─ mounds / low root holes ──→ pangolin (dig + size 0.7×0.75)
     ├─ the mushroom ring ───────→ no gate (teaching area)
+    ├─ mounds / low root holes ─→ no gate, and nothing down there either
     │
     ├─ Mirrorlake ──────────────→ frog (breatheAir:false, skin breathing)
-    │      └─ tower sills ──────→ frog pear (q4)
-    │
-    ├─ the Deep Grove ──────────→ deer (deer are calm to deer, hostile to the rest)
-    │      └─ silver trunks ────→ stagcap (q5)
-    │
-    ├─ vertical walls / beams ──→ spider (climb)
-    │      └─ cave roof / cloud beams ──→ silkberry (q6)
+    │      ├─ tower sills ──────→ frog pear (q4)
+    │      └─ lakebed, y<11 ────→ jellyfish (58 s of breath, a lamp of its own)
+    │             └─ the field ─→ jellybloom (q5)
     │
     ├─ canopy / bell tower ─────→ owl (fly 5.2)
     │      └─ above 30 m ───────→ quest "Nightwing" (q3)
     │
-    └─ Cloudspire isles ────────→ owl (fly) or spider + Leaper (climb + jump)
+    ├─ Cloudspire isles ────────→ owl (fly) or stepping isles + Leaper (jump)
+    │
+    └─ Ashscale Ridge ledges ───→ bear (step 1.1 m: it walks up what you must jump)
+           └─ rock face, y>20 ──→ bruin fig (q6)
 ```
 
-**The key design point**: the Deep Grove's key is not "find a stagcap", it is "become a deer". The first stagcap sits on a fallen log on the deer path **outside** the grove — follow the path, pick it, then walk in as a deer. Every door needs exactly one body, and that body always appears outside the door first.
+**The key design point**: every door needs exactly one body, and that body always appears outside the door first. The Frog Pear on the tower sill hangs four metres above the Jellybloom field: the fruit that teaches you the lake is a fruit the lake already gave you. Two places now have a shape and nothing behind it — Echo Hollow and the Deep Grove, both built for animals that were cut — and those are the honest holes in this map, not solved ones.
 
 ## 7. Danger and the Grey Veil
 
@@ -176,11 +177,11 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
 |---|---|---|
 | Lanternrow | 0 | none |
 | Starfall Keep | 1 | none (but the greenhouse fruit is unpickable) |
-| Whisperwood / Glowglade | 1 | a startled herd, rain choruses that hide footsteps |
+| Whisperwood / Glowglade | 1 | rain choruses that hide footsteps, and old tracks that lead somewhere you did not mean to go |
 | Echo Hollow | 2 | darkness (needs night vision / glow), falls |
 | Old Orchard | 2 | thief traps (block 80, needs a bear to break), collapsing beams |
-| Deep Grove | 3 | deer charges (gore, 2 damage), a bear waiting at the path mouth |
-| Ashscale Ridge | 3 | ash bear (hostile to deer and pangolin), cold (needs bear form) |
-| Mirrorlake | 3 | drowning (18 s for a human), a frog drying out on land |
-| Cloudspire | 4 | falling, beamborn spiders |
+| Deep Grove | 3 | nothing that hunts you: dense silver trunks, and a bear standing in the path you came in by |
+| Ashscale Ridge | 3 | the height, the cold (a bear body is immune — not implemented yet), a brown bear that ignores you and will not step aside |
+| Mirrorlake | 3 | drowning (18 s for a human, 58 s in a jellyfish body), a frog drying out on land |
+| Cloudspire | 4 | falling |
 | The Grey Veil | 5 | vitality drains, no sense of direction (minimap off) |

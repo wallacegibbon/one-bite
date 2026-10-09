@@ -292,6 +292,38 @@ const path = require('path');
     return { quests: g.quests.map(q => q.id + (q.done ? '✔' : '·')), log: g.log.slice(-5).map(l => l.text) };
   });
 
+  /* 9b. the two gates that are not "obtain a fruit": q5 wants a body at a depth,
+     q6 wants a fruit carried. A jellybloom in the pack is not the quest -- a
+     human can dive and take one. The quest is going down as a jellyfish. */
+  const gates = await step('quest gates', () => {
+    const g = window.game, p = g.player;
+    const was = { form: p.form, formT: p.formT, x: p.x, y: p.y, z: p.z,
+                  inv: g.inv.slice(), upg: Object.assign({}, g.upg) };
+    const q = id => g.quests.find(x => x.id === id);
+    const put = (arr, keep) => { arr.length = 0; for (const it of keep) arr.push(it); };
+    put(g.inv, []);
+    q('q5').done = false; q('q6').done = false;
+    g.addItem('fruit', 'jellybloom');
+    p.form = 'jellybloom'; p.formT = 200; p.x = 78; p.z = 106; p.y = 30;   // the fruit, but in the air
+    g.checkQuests();
+    const fruitAlone = q('q5').done;
+    p.y = 9;                                                               // and on the lakebed
+    g.checkQuests();
+    const bodyAndDepth = q('q5').done;
+    q('q5').done = false;
+    g.addItem('fruit', 'bruinfig');                                        // 12 of 24 slots
+    g.checkQuests();
+    const carried = q('q6').done;
+    Object.assign(p, { form: was.form, formT: was.formT, x: was.x, y: was.y, z: was.z });
+    put(g.inv, was.inv);
+    for (const k in g.upg) if (!(k in was.upg)) delete g.upg[k];
+    q('q5').done = false; q('q6').done = false;
+    return { fruitAlone, bodyAndDepth, carried };
+  });
+  check('q5 is not the fruit alone', gates.fruitAlone === false, gates);
+  check('q5 is a jellyfish body on the lakebed', gates.bodyAndDepth === true, gates);
+  check('q6 is a bruin fig carried home', gates.carried === true, gates);
+
   // 10. ecology: population / species mix
   await step('ecology', () => {
     const g = window.game;
@@ -466,35 +498,43 @@ const path = require('path');
     const g = window.game, N = window.FRUTARIA, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, night: g.night };
     p.x = -999; p.y = 40; p.z = -999;                 // nobody within alert range
+    /* A measured distance is only about the body if the body is the only thing
+       that varies. So: the yaw is pre-aligned with the target (an animal turns
+       at 4 rad/s, so a random starting heading spends most of a one-second run
+       curving), and every run is over open water or through open air, where
+       nothing can be in the way. */
     const run = (c, night) => {
       g.night = night;
       const dir = (c.x + 20 < g.world.w - 8) ? 20 : -20;
       c.tx = c.x + dir; c.tz = c.z; c.pause = 99; c.state = 'wander'; c.alarm = 0;
+      c.yaw = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
       const x0 = c.x, z0 = c.z;
       for (let i = 0; i < 60; i++) c.update(1 / 60, p, g.world, g);
-      c.state = 'wander'; c.alarm = 0;
       return +Math.hypot(c.x - x0, c.z - z0).toFixed(2);
     };
-    const find = id => g.creatures.find(c => c.sp.id === id);
-    const owl = find('owl'), frog = find('frog');
+    // high over the middle of the lake: a flyer is never stopped by terrain
+    const owl = g.creatures.find(c => c.sp.id === 'owl');
+    const wasOwl = { x: owl.x, y: owl.y, z: owl.z, flyY: owl.flyY };
+    owl.x = 78; owl.y = 22; owl.z = 106; owl.flyY = 22;
     const out = { owlNight: run(owl, 1), owlNoon: run(owl, 0) };
-    // 'dusk' is still part of the setting, so the branch stays covered
-    const dusk = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.frog, { active: 'dusk', locomotion: 'walk' }), frog.x, frog.y, frog.z);
+    // 'dusk' is still part of the setting, so the branch stays covered even
+    // though no animal in the valley uses it right now
+    const dusk = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.owl, { active: 'dusk' }), 78, 22, 106);
+    dusk.flyY = 22;
     out.duskNoon = run(dusk, 0); out.duskDusk = run(dusk, 0.6);
-    // the herd: put one frog well outside the middle of its own kind
-    const frogs = g.creatures.filter(c => c.sp.id === 'frog');
-    const h = g.herdCentres.frog;
-    const straggler = frogs[0];
-    const ang = Math.atan2(straggler.z - h.z, straggler.x - h.x);
-    straggler.x = h.x + Math.cos(ang) * 30; straggler.z = h.z + Math.sin(ang) * 30;
-    straggler.y = N.groundY(g.world, Math.floor(straggler.x), Math.floor(straggler.z), 40);
-    straggler.state = 'wander'; straggler.pause = 99; straggler.tx = straggler.x; straggler.tz = straggler.z;
+    Object.assign(owl, wasOwl);
+    // the herd: a synthetic one over open water, so the only thing that moves is
+    // the straggler going back to the middle of its own kind
+    const h = { x: 78, z: 106, n: 3 };
+    g.herdCentres.frog = h;
+    const straggler = new N.Creature(N.CREATURE_BY_ID.frog, 98, 10, 106);
+    straggler.state = 'wander'; straggler.pause = 99; straggler.tx = 98; straggler.tz = 106;
+    straggler.yaw = -Math.PI / 2;                     // pointing at the middle
     g.night = 0.5;
     const before = +Math.hypot(straggler.x - h.x, straggler.z - h.z).toFixed(1);
-    // three seconds: a frog walks at 1.8 m/s and only 42% of that while strolling
+    // three seconds: a frog swims at 4.6 m/s and only 42% of that while strolling
     for (let i = 0; i < 180; i++) straggler.update(1 / 60, p, g.world, g);
     out.herd = { before, after: +Math.hypot(straggler.x - h.x, straggler.z - h.z).toFixed(1) };
-    straggler.state = 'wander'; straggler.alarm = 0;
     // and the proof that none of this is keyed to a species name
     const ghost = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.owl, { locomotion: 'walk' }), 80, 30, 80);
     const wings = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.frog, { locomotion: 'fly' }), 80, 30, 80);
@@ -502,10 +542,10 @@ const path = require('path');
     g.night = was.night; Object.assign(p, was);
     return out;
   });
-  check('an owl crosses the valley at its flying speed, not its walking speed', beasts.owlNight > 2.4 && beasts.owlNight < 3.4, beasts);
+  check('an owl crosses the valley at its flying speed, not its walking speed', beasts.owlNight > 2.6 && beasts.owlNight < 3.2, beasts);
   check('an owl sleeps through the day', beasts.owlNoon === 0, beasts);
-  check('a dusk animal is asleep at noon and abroad at dusk', beasts.duskNoon === 0 && beasts.duskDusk > 0.3, beasts);
-  check('a frog that wanders off hops back to the herd', beasts.herd.after < beasts.herd.before - 1, beasts.herd);
+  check('a dusk animal is asleep at noon and abroad at dusk', beasts.duskNoon === 0 && beasts.duskDusk > 2.6, beasts);
+  check('a frog that wanders off hops back to the herd', beasts.herd.after < beasts.herd.before - 3, beasts.herd);
   check('flying comes from the body, not from the species name', beasts.flyFromData === true, beasts);
 
   console.log(log.join('\n'));

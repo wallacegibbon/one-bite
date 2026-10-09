@@ -18,7 +18,7 @@
       id: 'whisperwood', cn: '低语林', en: 'Whisperwood', kind: 'rect',
       x0: 6, z0: 6, x1: 154, z1: 72,
       danger: 1,
-      desc: '外缘是月光草地与蘑菇圈，往里是古木与鹿径，最深处是深鹿林——鹿比人多，所以那里的路都是踩出来的。'
+      desc: '外缘是月光草地与蘑菇圈，往里是古木与旧鹿径，最深处是深鹿林。路是鹿踩出来的；鹿不在了，路还在。'
     },
     {
       id: 'glowglade', cn: '蘑菇圈', en: 'Glowglade', kind: 'circle',
@@ -27,22 +27,22 @@
       desc: '一圈荧光菇围着中央的空地，夜里整圈会呼吸一样明灭。传说这是某种巨大生物曾经的脚印。'
     },
     {
-      id: 'batcave', cn: '回声丘 · 蛛洞', en: 'Echo Hollow', kind: 'circle',
+      id: 'batcave', cn: '回声丘', en: 'Echo Hollow', kind: 'circle',
       cx: 28, cz: 30, r: 13,
       danger: 2,
-      desc: '山体被掏空成三层隧道，最深处通向旧梁。白天进去只听得见滴水，夜里到处是腿。'
+      desc: '山体被掏空成三层隧道，最深处通向旧梁。白天进去只听得见滴水。'
     },
     {
       id: 'deepgrove', cn: '深鹿林', en: 'The Deep Grove', kind: 'circle',
       cx: 104, cz: 32, r: 18,
       danger: 3,
-      desc: '银色的树，没有风也会响。鹿径在这里收拢成一条；跟着走，会走到鹿群，也会走到熊。'
+      desc: '银色的树，没有风也会响。旧鹿径在这里收拢成一条；跟着走，会走到水边，也会走到熊。'
     },
     {
       id: 'mountains', cn: '北岭 · 鹰喙峰', en: 'Ashscale Ridge', kind: 'circle',
       cx: 142, cz: 18, r: 26,
       danger: 3,
-      desc: '灰熊的坡，风把雪粒横着吹。山顶能看到云顶浮岛，也能看见灰雾墙在远处缓慢地“呼吸”。'
+      desc: '棕熊的坡，风把雪粒横着吹。山顶能看到云顶浮岛，也能看见灰雾墙在远处缓慢地“呼吸”。'
     },
     {
       id: 'mirrorlake', cn: '镜湖', en: 'Mirrorlake', kind: 'circle',
@@ -66,7 +66,7 @@
       id: 'orchard', cn: '果园遗迹', en: 'The Old Orchard', kind: 'circle',
       cx: 24, cz: 104, r: 15,
       danger: 2,
-      desc: '所有果实树的祖地，如今只剩一圈断墙、几堆穿山甲的旧洞，和最老的那棵树。'
+      desc: '所有果实树的祖地，如今只剩一圈断墙、几堆废弃的旧洞，和最老的那棵树。'
     },
     {
       id: 'cloudspire', cn: '云顶浮岛', en: 'Cloudspire', kind: 'sky',

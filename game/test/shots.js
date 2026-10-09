@@ -26,10 +26,10 @@ const SHOTS = [
   ['cellarui', 'pos=136,26,134 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,jellybloom,bruinfig cellar=1'],
   // identity: the valley calls you an epithet, the name is yours (N in game)
   ['who', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3'],
-  ['journal', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3,q4 journal=1'],
+  ['journal', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3,q4,q5,q6 journal=1'],
   // the same two screens after pressing L: the interface re-translates, the world does not move
   ['inv_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,jellybloom,bruinfig lang=en'],
-  ['journal_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=Xiaoman epquest=q1,q3,q4 journal=1 lang=en'],
+  ['journal_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=Xiaoman epquest=q1,q3,q4,q5,q6 journal=1 lang=en'],
   // the help panel: the rules a player is actually told, in the other language
   ['help_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe help=1 lang=en']
 ];
