@@ -2,7 +2,7 @@
 
 [中文: ../cn/03-角色与生物.md](../cn/03-角色与生物.md)
 
-Source of truth: `game/data/creatures.js` (3 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name).
+Source of truth: `game/data/creatures.js` (3 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name, and `HUMAN_FORM` — the body you start in, which is a body record like the animals' and not a rendering detail).
 
 **One species per ecological niche.** The valley has three openings you can wear: the night sky, the shallows and the shore, the ridge. Each animal takes one opening. There is no "second fox", and no in-between species that is "half otter, half merrow".
 

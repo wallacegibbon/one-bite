@@ -98,7 +98,6 @@
       set(x, y, z, b);
     }
   }
-  function columnTop(x, z) { for (let y = W.h - 1; y >= 0; y--) if (get(x, y, z)) return y; return 0; }
   /* ground height (skips trees, plants and fruit) */
   const TREELIKE = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
   function gy(x, z) {

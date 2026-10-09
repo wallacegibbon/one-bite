@@ -356,9 +356,6 @@
                   : Math.sin(t * 2.2 + ph) * (st.move * 0.12 + 0.05);
     } else if (anim === 'pulse') {
       sc = 1 + (0.10 + 0.16 * st.move) * (0.5 + 0.5 * Math.sin(t * 2.6 + ph));
-    } else if (anim === 'sway') {
-      rz = sg * Math.sin(t * 2.4 + ph) * 0.28;
-      rx = Math.sin(t * 1.7 + ph) * 0.12;
     }
     /* the pose this part takes off the ground / loading a jump */
     if (air > 0.01 && p.air) { rx += p.air[0] * air; ry += p.air[1] * air; rz += p.air[2] * air; }
@@ -406,6 +403,5 @@
   N.buildModelMeshes = buildModelMeshes;
   N.buildHandMesh = buildHandMesh;
   N.partMatrix = partMatrix;
-  N.hexToRGB = hex;
 
 })(window.FRUTARIA = window.FRUTARIA || {});

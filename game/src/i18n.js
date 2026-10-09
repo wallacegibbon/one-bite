@@ -39,9 +39,7 @@
 
   const I18N = {
     locale: loadLocale(),
-    listeners: [],
 
-    langs() { return N.LANGS; },
     has(key) { return !!(N.T[this.locale] && key in N.T[this.locale]); },
 
     /* interface text; falls back to zh, then to the key itself, so a missing
@@ -97,11 +95,9 @@
       this.locale = id;
       try { localStorage.setItem(LS_KEY, id); } catch (e) { /* private mode: keep it in memory */ }
       if (typeof document !== 'undefined') document.documentElement.lang = id === 'zh' ? 'zh-CN' : 'en';
-      for (const f of this.listeners) f(id);
       return true;
     },
-    cycle() { return this.set(this.next().id); },
-    onChange(f) { this.listeners.push(f); }
+    cycle() { return this.set(this.next().id); }
   };
 
   N.i18n = I18N;

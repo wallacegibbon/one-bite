@@ -63,7 +63,6 @@ Assembled from voxel parts: one mesh + one pivot per part. A part may name a `pa
 | `wag` | tail | `ry = sin(t·1.6)·(move·0.5+0.12)` |
 | `bob` | body | in the air it **is** the wing beat: `dy = −max(0,beat)·0.16`, the body drops as the wings push down. Two unrelated sines is what made a flying body look like a body with two loose parts bolted to it. On foot `dy = sin(t·2.2)·(move·0.12+0.05)` |
 | `pulse` | the frog's throat | a scale, not a rotation |
-| `sway` | fins/feathers | kept for the next animal; no body in the valley uses it |
 
 A part may also declare `air:[rx,ry,rz]` and `crouch:[rx,ry,rz]`: the pose it takes when the body is off the ground, and when its legs are loaded. The weights come from the physics, not from a guess about which animal is being drawn -- `air` is how far off the ground the body actually is, `crouch` how long its feet have been down since the last launch, and `squash` the speed it arrived at the ground with, applied to the whole body as a scale. A body that does not hop is never animated as if it did.
 

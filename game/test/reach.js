@@ -53,7 +53,10 @@ const groups = {
   fruit: [...new Set(N.FRUITS.flatMap(f => Object.keys(f)))],
   form: [...new Set(N.FRUITS.flatMap(f => Object.keys(f.form)))],
   creature: [...new Set(N.CREATURES.flatMap(c => Object.keys(c)))],
-  plant: [...new Set(N.PLANTS.flatMap(p => Object.keys(p)))]
+  plant: [...new Set(N.PLANTS.flatMap(p => Object.keys(p)))],
+  /* the body you start in is a body record too (data/player.js since the
+     scale move), so it is scanned on the same terms as the animals' */
+  human: Object.keys(N.HUMAN_FORM)
   /* Zones are deliberately NOT scanned. Every zone carries a `desc`, and the
      i18n rule above would score it as read because `descOf` exists and plants
      use it -- but no zone text is ever rendered anywhere. A check that passes
@@ -91,6 +94,34 @@ for (const [name, fields] of Object.entries(groups)) {
   const n = dead.length;
   console.log(`${n ? 'dead ' : 'live  '} [${name}] ${fields.length - n}/${fields.length} read` +
     (n ? ` -- not yet implemented: ${dead.map(k => `${k} (${allowed[k]})`).join('; ')}` : ''));
+}
+
+/* ---- animation names ----
+   The same question, asked of the rig instead of the data. A part names an
+   animation and `partAngles` implements a fixed list of them. A name that is
+   implemented but used by no part is the rot that let `sway` sit in the docs
+   table for an entire audit cycle as "kept for the next animal": a row in a
+   table of features that no body in the valley performs. So the list may only
+   shrink by being deleted, in the code and in docs 07 together. */
+{
+  const mctx = { console }; mctx.window = mctx;
+  vm.createContext(mctx);
+  // models.js allocates scratch matrices at load time, so engine.js comes first
+  vm.runInContext(read('game/src/engine.js'), mctx);
+  vm.runInContext(read('game/src/models.js'), mctx);
+  const MODELS = mctx.FRUTARIA.MODELS;
+  const used = [...new Set(Object.values(MODELS).flatMap(m => m.parts.map(p => p.anim).filter(Boolean)))];
+  const impl = [...new Set([...read('game/src/models.js').matchAll(/anim === '(\w+)'/g)].map(m => m[1]))];
+  for (const a of used.filter(a => !impl.includes(a))) {
+    console.log(`UNIMPLEMENTED ANIM ${a}: a part asks for it and partAngles() has no branch for it`);
+    bad++;
+  }
+  for (const a of impl.filter(a => !used.includes(a))) {
+    console.log(`UNUSED ANIM ${a}: partAngles() implements it, no part in any model asks for it -- ` +
+      `delete the branch and the docs 07 row together`);
+    bad++;
+  }
+  console.log(`live  [anim] ${impl.length}/${impl.length} implemented names used by a part (${used.sort().join(' ')})`);
 }
 
 if (bad) { console.log(`\n✘ ${bad} field problem(s)`); process.exit(1); }

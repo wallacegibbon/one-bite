@@ -4,13 +4,10 @@
 (function (N) {
   const M4 = N.M4;
 
-  /* The body you start in. `size` is the collision box in metres (a square
-     footprint: the box does not turn with the body, so a model has to fit it at
-     any facing -- node-smoke.js measures that). `scale` converts the model's
-     authored units to metres. A model never carries its own scale: the record
-     that asks for a body says how big that body is, so an animal is declared
-     once (the animals live in data/creatures.js, this one lives here). */
-  const HUMAN = { cn: '人形', en: 'human', size: [0.62, 1.8], scale: 0.18, speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55 };
+  /* The body you start in is a data record (data/player.js), not a constant
+     here: `size` on it is a rule the world enforces, and reach.js guards the
+     fields of every body record. The alias keeps the code below readable. */
+  const HUMAN = N.HUMAN_FORM;
 
   /* The speed a body that does nothing about it falls at. `glide` is a fraction
      of this, so the number in the data file is a ratio and not a speed. */
@@ -645,7 +642,6 @@
   N.Player = Player;
   N.Creature = Creature;
   N.Particles = Particles;
-  N.HUMAN_FORM = HUMAN;
   N.groundY = groundY;
 
 })(window.FRUTARIA = window.FRUTARIA || {});
