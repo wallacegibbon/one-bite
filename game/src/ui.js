@@ -198,7 +198,7 @@
       el('cellar').classList.toggle('hidden', !on);
       el('modalRoot').classList.toggle('on', on || this.show.journal || this.show.help);
       if (on) { this.renderCellar(); document.exitPointerLock && document.exitPointerLock(); }
-      else this.g.mode = 'play';
+      else this.g.closeStashUI();
     }
     renderCellar() {
       const g = this.g, s = g.openStash;

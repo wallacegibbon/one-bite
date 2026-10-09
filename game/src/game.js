@@ -34,10 +34,9 @@
       this.seen = {};                      // codex
       this.dexFruit = {};
       this.quests = [];
-      this.mode = 'play';                  // play | cellar | journal | dead
+      this.mode = 'play';                  // play | cellar | journal | help | dead
       this.openStash = null;
       this.hover = null;                   // the block the crosshair ray points at
-      this.msgTimer = 0;
       this.prompt = '';
       this.thirdPerson = false;
       // the shot: distance / yaw / pitch / fov are state, eased every frame
@@ -464,7 +463,10 @@
       this.logMsg(N.t('log.openStore', { n: storeName(s), d: s.decay }), 'good');
       if (this.ui) this.ui.showCellar(true);
     }
-    closeStashUI() { this.mode = 'play'; this.openStash = null; if (this.ui) this.ui.showCellar(false); }
+    // the other half of openStashUI. The panel itself is the UI's business, but
+    // the shelf it was showing belongs to the game: closing the panel must not
+    // leave a stash open behind it.
+    closeStashUI() { this.mode = 'play'; this.openStash = null; }
     moveItem(dir) {
       const s = this.openStash; if (!s) return;
       const from = dir === 'in' ? this.inv : s.items;

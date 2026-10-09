@@ -196,8 +196,7 @@
                  raidChance: 0.30,     // one roll per game day
                  raidMin: 1,           // fruits taken when the raid lands
                  raidMax: 3,
-                 raidScareRadius: 45 }, // player this close always scares it off
-    pitToSeed: true   // a dormant fruit becomes a pit, which can be planted into a fruit tree
+                 raidScareRadius: 45 }  // player this close always scares it off
   };
 
   N.RARITY = RARITY;

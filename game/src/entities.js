@@ -31,7 +31,6 @@
          "is the player alive" flag -- dying always revives them at the town
          cellar -- it is a stop sign for the rest of the tick that killed them. */
       this.dead = false;
-      this.stamina = 1;
     }
     get formDef() { return this.form ? N.FRUIT_BY_ID[this.form].form : HUMAN; }
     get modelId() { return this.form ? N.FRUIT_BY_ID[this.form].creature : 'human'; }
@@ -275,11 +274,9 @@
       this.pause = Math.random() * 3;
       this.speed = 0;
       this.alarm = 0;
-      this.hp = 1;
       this.homeX = x; this.homeZ = z;
       this.flyY = y;
       this.parts = null;
-      this.dead = false;
     }
     attitudeTo(formId) {
       const a = this.sp.attitude || {};

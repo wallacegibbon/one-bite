@@ -29,9 +29,13 @@
   let rngS = 1;
   function rnd() { rngS = (Math.imul(rngS, 1664525) + 1013904223) >>> 0; return rngS / 4294967296; }
 
-  const SEA = 14;
-  const LAKE = { x: 78, z: 106, r: 34 };
-  const ISLE = { x: 78, z: 106, r: 10 };
+  /* Sea level and the lake come from the world data, so the carved lake and the
+     Mirrorlake zone are the same circle and cannot drift apart. The mountains,
+     the hollow and the isle are shapes the terrain needs that no zone claims. */
+  const SEA = N.WORLD.sea;
+  const MIRROR = N.ZONE_BY_ID.mirrorlake;
+  const LAKE = { x: MIRROR.cx, z: MIRROR.cz, r: MIRROR.r };
+  const ISLE = { x: N.ZONE_BY_ID.starfall.cx, z: N.ZONE_BY_ID.starfall.cz, r: 10 };
   const MTN = { x: 142, z: 18, r: 30 };
   const HILL = { x: 28, z: 30, r: 16 };
   const VILL = { x0: 118, z0: 116, x1: 152, z1: 150 };
@@ -190,7 +194,8 @@
 
   /* ---------------- Starfall Keep ---------------- */
   function castle() {
-    const cx = 78, cz = 106, base = 22;
+    const keep = N.ZONE_BY_ID.starfall;
+    const cx = keep.cx, cz = keep.cz, base = 22;
     // island base
     for (let z = cz - 13; z <= cz + 13; z++) for (let x = cx - 13; x <= cx + 13; x++) {
       const d = dist(x, z, cx, cz);
@@ -263,8 +268,10 @@
       // interior lamps
       set(hx, y + 4, hz, 14);
     }
-    // the main fruit cellar
-    const cx = 136, cz = 134, y = 20;
+    // the main fruit cellar: the door is a POI, and the game spawns its store
+    // at the same place, so the room is built around that point
+    const door = N.POIS.find(p => p.id === 'cellar');
+    const cx = door.x, cz = door.z, y = door.y;
     box(cx - 4, y, cz - 4, cx + 4, y + 4, cz + 4, 12, true);
     box(cx - 3, y, cz - 3, cx + 3, y, cz + 3, 17);
     for (let r = 0; r <= 5; r++) for (let a = 0; a < 6.283; a += 0.22)
@@ -428,7 +435,7 @@
     /* jittered grid planting: ground stays visible between canopies */
     for (let z = 7; z < 74; z += 3) for (let x = 7; x < 154; x += 3) {
       if (dist(x, z, LAKE.x, LAKE.z) < LAKE.r + 2) continue;
-      if (dist(x, z, 78, 106) < 16) continue;
+      if (dist(x, z, LAKE.x, LAKE.z) < 16) continue;
       if (x > VILL.x0 - 8 && z > VILL.z0 - 8) continue;
       const inGrove = dist(x, z, GROVE.x, GROVE.z) < GROVE.r;
       const inGlade = dist(x, z, 60, 56) < 12;
