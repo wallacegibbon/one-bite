@@ -159,7 +159,14 @@ Repeatedly transforming into the same form leaves traces on the human shape:
 
 Design intent: make transformation a costless tool never — it is a kind of **identity drift**.
 
-## 6. Empty fruit
+## 6. Empty fruit (not implemented, full design)
+
+Nothing in the prototype bears empty fruit: there is no such state on an item,
+no "This fruit has no taste." line in either language table, and no replant
+roll. The section below is the design, kept whole because it is cheap to build
+(one flag on the item, one log line, one roll in the planting path) and because
+it is the only mechanic that makes the codex gap in §5.3 something the player
+can push on.
 
 Some fruit trees bear **empty fruit**: identical in appearance, slot cost and dormancy, but eating one does nothing and only announces "This fruit has no taste."
 

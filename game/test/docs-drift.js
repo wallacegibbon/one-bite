@@ -29,7 +29,8 @@ const DRIFTS = [
   ['02-map-and-scenes.md', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r34 | (78,106) |', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r30 | (78,106) |', 'zone radius'],
   ['03-characters-and-creatures.md', '| `thorn` | 刺刺菇 | Thorncap |', '| `thorn` | 刺刺菇 | Thorny Cap |', 'plant name coverage'],
   ['05-backpack-and-storage.md', 'press F to use', 'press Q to use', 'unbound key claim'],
-  ['04-fruit-and-transformation.md', '### 5.2 The magic stomach', '### 5.2 The magic stomach (mixed forms: see 5.3)', 'cut design back in (mixed forms)']
+  ['04-fruit-and-transformation.md', '### 5.2 The magic stomach', '### 5.2 The magic stomach (mixed forms: see 5.3)', 'cut design back in (mixed forms)'],
+  ['00-overview-and-design-pillars.md', '| Fruits | 4 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count']
 ];
 
 let missed = 0;

@@ -56,6 +56,9 @@ const LANGS = [
     },
     nameField: 'cn',
     // cellar-tree rules are prose/regex claims rather than a table
+    scaleFile: '00-总览与设计支柱.md',
+    scaleHead: '## 8. 规模',
+    scaleLabels: { world: '世界', zones: '区域', fruits: '果实', creatures: '生物', quests: '主线', day: '一天' },
     rules: [
       [/\|\s*上限\s*\|\s*(\d+)\s*棵/, N.STORAGE.treestash.max, '窖树上限'],
       [/\|\s*最小间距\s*\|\s*(\d+)\s*m/, N.STORAGE.treestash.minDist, '窖树最小间距'],
@@ -80,6 +83,9 @@ const LANGS = [
       storage: '| Tier | Name | Slots | Decay | Count | Location |'
     },
     nameField: 'en',
+    scaleFile: '00-overview-and-design-pillars.md',
+    scaleHead: '## 8. Scale',
+    scaleLabels: { world: 'World', zones: 'Zones', fruits: 'Fruits', creatures: 'Creatures', quests: 'Main line', day: 'One day' },
     rules: [
       [/\|\s*Cap\s*\|\s*(\d+)\s*trees/, N.STORAGE.treestash.max, 'cellar-tree cap'],
       [/\|\s*Min distance\s*\|\s*(\d+)\s*m/, N.STORAGE.treestash.minDist, 'cellar-tree min distance'],
@@ -333,6 +339,39 @@ for (const L of LANGS) {
   }
   if (hits.length) bad('mental-effect language (forms inherit the body, not the mind)', hits.join(' | '), 'none');
   else good('no mental effects anywhere: a form inherits the body only');
+}
+
+/* ================= 11. the scale table (00 s8) =================
+   The table a reader trusts most was the one nobody checked: a length in three
+   data files restated as prose in doc 00. It drifted twice in a single pass
+   (fruits still said 7 after the roster cut; the quest count disagreed with the
+   English and Chinese copies of the same row). */
+{
+  const game = fs.readFileSync(path.join(base, 'src', 'game.js'), 'utf8');
+  const want = {
+    world: `${N.WORLD.w}×${N.WORLD.h}×${N.WORLD.d}`,
+    zones: N.ZONES.length,
+    fruits: N.FRUITS.length,
+    creatures: N.CREATURES.length,
+    quests: (game.match(/\{ id: 'q\d+'/g) || []).length,
+    dayLen: +(game.match(/const DAY_LEN = (\d+)/) || [])[1]
+  };
+  for (const L of LANGS) {
+    const T = `[${L.tag}]`;
+    const rows = tableAfter(readIn(L, L.scaleFile), L.scaleHead);
+    if (!rows || !rows.length) { bad(`${T} scale table`, 'missing', `00 ${L.scaleHead}`); continue; }
+    const cell = {};
+    for (const r of rows) cell[r[0]] = r[1];
+    let miss = 0;
+    for (const [key, label] of Object.entries(L.scaleLabels)) {
+      const want_ = key === 'day' ? want.dayLen : want[key];
+      const got = cell[label];
+      if (got === undefined) { bad(`${T} scale table row`, label, 'missing'); miss++; continue; }
+      const hit = typeof want_ === 'number' ? num(got) === want_ : String(got).includes(want_);
+      if (!hit) { bad(`${T} scale: ${label}`, got, String(want_)); miss++; }
+    }
+    if (!miss) good(`${T} scale table: ${N.WORLD.w}×${N.WORLD.h}×${N.WORLD.d}, ${N.ZONES.length} zones, ${N.FRUITS.length} fruits, ${N.CREATURES.length} species, ${want.quests} quests, ${want.dayLen}s day`);
+  }
 }
 
 /* ================= report ================= */
