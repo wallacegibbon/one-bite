@@ -1,4 +1,4 @@
-# 果窖 · FRUTARIA
+# 一口 · ONE BITE
 
 **中文** · [English: README.md](README.md)
 

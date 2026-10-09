@@ -27,9 +27,9 @@
 
     /* ---------------------------------------------------------------- zh */
     zh: {
-      'app.title': '果窖 · FRUTARIA（可玩原型）',
-      'start.title': '果窖',
-      'start.sub': 'FRUTARIA · 无杖魔法 · 变形探索（可玩原型）',
+      'app.title': '一口 · ONE BITE（可玩原型）',
+      'start.title': '一口',
+      'start.sub': 'ONE BITE · 无杖魔法 · 变形探索（可玩原型）',
       'start.loading': '生成世界中…',
       'start.gen': '正在长出一片谷地… {p}%',
       'start.ready': '谷地已就绪',
@@ -206,8 +206,8 @@
 
     /* ---------------------------------------------------------------- en */
     en: {
-      'app.title': 'FRUTARIA · playable prototype',
-      'start.title': 'FRUTARIA',
+      'app.title': 'ONE BITE · playable prototype',
+      'start.title': 'ONE BITE',
       'start.sub': 'wandless magic · transformation exploration (playable prototype)',
       'start.loading': 'Generating the world…',
       'start.gen': 'Growing the valley… {p}%',

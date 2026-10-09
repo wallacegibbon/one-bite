@@ -82,7 +82,7 @@ const path = require('path');
     // the brand is the one name that must not move with the language: it sits in
     // the document title in both locales, and the start screen shows it instead
     // of a name only one of the two languages can read
-    check('the document title carries the brand (' + id + ')', u.title.indexOf('FRUTARIA') >= 0, u.title);
+    check('the document title carries the brand (' + id + ')', u.title.indexOf('ONE BITE') >= 0, u.title);
     check('the start screen shows a title, not a key (' + id + ')',
       u.startTitle.length > 0 && u.startTitle.indexOf('.') < 0, u.startTitle);
   }
