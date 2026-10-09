@@ -23,6 +23,10 @@ const SHOTS = [
   ['night', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe time=385'],
   // the same town, the same hour, an owl's eyes: nightVision is the only change
   ['nightowl', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe form=owlberry time=385'],
+  // the three bodies you can wear, seen from behind: the gait and the pose come
+  // out of the same physics the displacement uses, so a shot of a body walking
+  // is a shot of the body, not of an animation pinned on top of it
+  ['human', 'pos=104,25,32 yaw=1.2 pitch=-0.05 safe tp=1'],
   // an owl no longer hangs in the air: it glides, so the shot starts high
   ['owl', 'pos=104,42,40 yaw=1.2 pitch=-0.25 form=owlberry tp=1'],
   ['frog', 'pos=92,11,120 yaw=0.5 pitch=-0.1 form=frogpear tp=1'],

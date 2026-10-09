@@ -61,7 +61,7 @@ A fruit starts counting down the moment it is picked.
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 2.4, swim 2.4, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
+| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 1.3, hop, swim 2.4, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
 
 ### Legendary (12 slots)
 
@@ -83,7 +83,8 @@ sit here looking implemented while nothing reads it.
 |---|---|---|---|
 | `size[w,h]` | collision box in metres | how low a hole you can enter; decides whether a 1×1 passage fits | live |
 | `speed` | land movement multiplier | bear 1.1 / frog 0.9 | live |
-| `jump` | jump force multiplier | frog 2.4 / bear 0.9 | live |
+| `jump` | jump force multiplier | frog 1.3 / bear 0.9 | live |
+| `hop {up,kick,period}` | the body does not walk on land, it hops: the auto-hop's fraction of its own jump, the fraction of land speed the launch throws it at, and the seconds its feet stay down between hops | only the frog: a 1.4 m arc about every second, and the same ground speed a human gets | live |
 | `swim` | underwater movement multiplier | frog 2.4 | live |
 | `fly` | flight thrust (0 = cannot fly) | only the owl, 5.2 | live |
 | `glide` | unpowered gliding: the fall speed cap, as a fraction of normal | owl 0.35 — let go of the key and the owl stops hanging in the air: it comes down at a third of the speed you do, keeping the ground speed it had | live |

@@ -914,11 +914,19 @@
         N.M4.trans(base, c.x, c.y, c.z);
         const ry = N.M4.create(); N.M4.rotY(ry, c.yaw + Math.PI);
         N.M4.mul(base, base, ry);
-        const sm = N.M4.create(); N.M4.scale(sm, sc, sc, sc);
+        // a body that just landed is briefly shorter and wider: the cheapest
+        // thing in the world that makes a hop look like a hop
+        const sq = c.squash || 0;
+        const sm = N.M4.create(); N.M4.scale(sm, sc * (1 + sq * 0.5), sc * (1 - sq), sc * (1 + sq * 0.5));
         N.M4.mul(base, base, sm);
-        const st = { t: this.time + c.phase, move: Math.min(1, c.speed / (c.sp.speed || 3)) * (c.speed > 0.2 ? 1 : 0), fly: c.isFlyer() && c.state !== 'roost', phase: c.phase };
+        const st = {
+          t: this.time + c.phase,
+          move: Math.min(1, c.speed / (c.sp.speed || 3)) * (c.speed > 0.2 ? 1 : 0),
+          fly: c.isFlyer() && c.state !== 'roost',
+          air: c.airAmt || 0, crouch: c.crouch || 0, phase: c.phase
+        };
         for (const e of parts) {
-          const m = N.partMatrix(N.M4.create(), base, e, st);
+          const m = N.partMatrix(N.M4.create(), base, e, st, parts);
           R.drawMesh(e.mesh, m, {});
         }
       }
@@ -963,10 +971,19 @@
           const rz = N.M4.create(); N.M4.rotZ(rz, p.bank);
           N.M4.mul(base, base, rz);
         }
-        const sm = N.M4.create(); N.M4.scale(sm, sc, sc, sc);
+        const sq = p.squash || 0;
+        // rising fast stretches the body the way landing flattens it
+        const stretch = p.grounded ? 0 : Math.min(0.1, Math.abs(p.vy) / 220);
+        const sm = N.M4.create();
+        N.M4.scale(sm, sc * (1 + sq * 0.5 - stretch * 0.3), sc * (1 - sq + stretch), sc * (1 + sq * 0.5 - stretch * 0.3));
         N.M4.mul(base, base, sm);
-        const st = { t: this.time, move: Math.min(1, Math.hypot(p.vx, p.vz) / 5), fly: !!p.formDef.fly && !p.grounded, phase: 0 };
-        for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st), {});
+        const st = {
+          t: this.time,
+          move: Math.min(1, Math.hypot(p.vx, p.vz) / 5),
+          fly: !!p.formDef.fly && !p.grounded,
+          air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0
+        };
+        for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), {});
       }
     }
 

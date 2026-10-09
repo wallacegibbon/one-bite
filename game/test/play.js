@@ -666,6 +666,126 @@ const path = require('path');
   check('a bear body never feels it', cold.bear.vital === 5 && cold.bear.announced === 0, cold);
   check('outside the ridge, altitude alone does not bite', cold.off.vital === 5, cold.off);
 
+  /* 10j. a hop is one event, not two stories. The body leaves the ground
+     because the physics says so, and the animation reads the same numbers off
+     it (airAmt / crouch / squash). The hopping body is measured against the
+     body that does not hop, so what is being tested is the `hop` block in
+     data/fruits.js and the one in data/creatures.js, not a coincidence about
+     frogs. A gait is only measurable on ground that cannot interrupt it: a
+     surface the same height all the way around (or the clearing found is a
+     town roof and the body spends the run falling off it) with twenty metres
+     of open corridor ahead and nothing solid for three blocks up -- longer than
+     the three seconds of walking below can ever cover, or the body walks out of
+     the clearing mid-run and what is measured is the terrain. */
+  const gait = await step('gait', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, vx: p.vx, vy: p.vy, vz: p.vz, form: p.form,
+      vital: p.vital, fright: p.fright, air: p.air, dry: p.dry, grounded: p.grounded,
+      airAmt: p.airAmt, squash: p.squash, crouch: p.crouch, hopT: p.hopT, wind: p.wind, night: g.night };
+    p.vital = 10; p.fright = 0; p.dry = 0; g.night = 0;
+    const TREE = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
+    const top = (x, z) => { for (let y = 46; y > 0; y--) if (g.world.solidAt(x, y, z)) return y; return -1; };
+    const ground = (x, z) => {
+      for (let y = 46; y > 0; y--) {
+        const b = g.world.get(x, y, z);
+        if (b && b < 40 && !TREE[b] && g.world.solidAt(x, y, z)) return y;
+      }
+      return -1;
+    };
+    let spot = null;
+    for (let x = 24; x < 150 && !spot; x += 3) for (let z = 24; z < 150 && !spot; z += 3) {
+      const gy = ground(x, z);
+      if (gy < 0 || top(x, z) !== gy) continue;                       // nothing standing on it
+      if (ground(x + 1, z) !== gy || ground(x - 1, z) !== gy ||
+          ground(x, z + 1) !== gy || ground(x, z - 1) !== gy) continue;   // not the edge of a roof
+      let open = true;
+      for (let k = 1; k <= 20 && open; k++) {
+        if (top(x, z - k) !== gy) { open = false; break; }
+        for (let h = 1; h <= 3; h++) if (g.world.solidAt(x, gy + h, z - k)) { open = false; break; }
+      }
+      if (open) spot = { x: x + 0.5, y: gy + 1, z: z + 0.5 };
+    }
+    if (!spot) { Object.assign(p, was); return { error: 'no flat open clearing' }; }
+    const walk = (form, secs) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.x = spot.x; p.y = spot.y; p.z = spot.z; p.yaw = 0;
+      p.vx = p.vy = p.vz = 0; p.grounded = false; p.air = p.maxAir();
+      p.airAmt = 0; p.squash = 0; p.crouch = 0; p.hopT = 0; p.wind = 0;
+      const inp = { fwd: true };
+      for (let i = 0; i < 40; i++) p.update(1 / 60, inp, g);          // settle onto the surface
+      const y0 = p.y, x0 = p.x, z0 = p.z;
+      let apex = 0, arcs = 0, air = 0, up = false, crouch = 0, squash = 0;
+      const n = Math.round(secs * 60);
+      for (let i = 0; i < n; i++) {
+        p.update(1 / 60, inp, g);
+        apex = Math.max(apex, p.y - y0);
+        crouch = Math.max(crouch, p.crouch); squash = Math.max(squash, p.squash);
+        /* the grounded flag flickers for a frame at a time even on flat ground
+           (gravity moves the body 0.006 m and nothing is collided with that
+           frame), so "off the ground" here means actually above the surface */
+        if (p.y > y0 + 0.06) { if (!up) { arcs++; up = true; } air++; } else up = false;
+      }
+      return { apex: +apex.toFixed(2), dist: +Math.hypot(p.x - x0, p.z - z0).toFixed(2),
+        arcs, airPct: +(air / n * 100).toFixed(0), crouch: +crouch.toFixed(2), squash: +squash.toFixed(2) };
+    };
+    // one press of the jump key, from stillness: the arc the key is worth
+    const jump = (form) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.x = spot.x; p.y = spot.y; p.z = spot.z; p.yaw = 0;
+      p.vx = p.vy = p.vz = 0; p.grounded = false; p.air = p.maxAir(); p.airAmt = 0; p.squash = 0;
+      for (let i = 0; i < 40; i++) p.update(1 / 60, {}, g);
+      const y0 = p.y;
+      let apex = 0, hang = 0, off = false;
+      for (let i = 0; i < 200; i++) {
+        p.update(1 / 60, { jump: i === 0 }, g);
+        if (p.y > y0 + 0.06) { off = true; hang += 1 / 60; }
+        apex = Math.max(apex, p.y - y0);
+        if (off && p.y <= y0 + 0.02) break;
+      }
+      return { apex: +apex.toFixed(2), hang: +hang.toFixed(2) };
+    };
+    const human = walk(null, 3), frog = walk('frogpear', 3);
+    const jumpHuman = jump(null), jumpFrog = jump('frogpear');
+    /* and the same for an animal: an amphibian used to have its height lerped
+       onto the ground every frame, which pinned it there however it moved */
+    const npc = g.creatures.find(c => c.sp.id === 'frog');
+    const wasN = { x: npc.x, y: npc.y, z: npc.z, vy: npc.vy, state: npc.state, pause: npc.pause,
+      tx: npc.tx, tz: npc.tz, yaw: npc.yaw, alarm: npc.alarm, airAmt: npc.airAmt, squash: npc.squash };
+    const gy = ground(Math.floor(spot.x), Math.floor(spot.z));
+    npc.x = spot.x; npc.z = spot.z; npc.y = gy + 1; npc.vy = 0;
+    npc.state = 'wander'; npc.pause = 99; npc.tx = spot.x; npc.tz = spot.z - 12; npc.yaw = 0; npc.alarm = 0;
+    const away = { x: -999, y: 0, z: -999, form: null, formDef: {} };
+    let rise = 0, hops = 0, airF = 0, up = false, sq = 0;
+    for (let i = 0; i < 240; i++) {
+      npc.update(1 / 60, away, g.world, g);
+      rise = Math.max(rise, npc.y - (gy + 1)); sq = Math.max(sq, npc.squash);
+      if (npc.y > gy + 1.05) { if (!up) { hops++; up = true; } airF++; } else up = false;
+    }
+    const npcFrog = { rise: +rise.toFixed(2), hops, airPct: +(airF / 240 * 100).toFixed(0), squash: +sq.toFixed(2) };
+    Object.assign(npc, wasN);
+    // a bird on a branch is not in flight: the wings fold because it is standing
+    const bird = g.creatures.find(c => c.sp.id === 'owl');
+    const wasB = { x: bird.x, y: bird.y, z: bird.z, flyY: bird.flyY, state: bird.state, airAmt: bird.airAmt };
+    g.night = 0; bird.update(1 / 60, away, g.world, g);
+    const roost = bird.airAmt;
+    g.night = 1; bird.update(1 / 60, away, g.world, g);
+    const npcOwl = { roost, abroad: bird.airAmt, state: bird.state };
+    Object.assign(bird, wasB);
+    Object.assign(p, was);
+    return { spot, human, frog, jumpHuman, jumpFrog, npcFrog, npcOwl, hop: N.FRUIT_BY_ID.frogpear.form.hop };
+  });
+  check('a flat open clearing was found to measure on', gait.spot !== undefined, gait);
+  check('a frog crosses the ground in arcs, not in a slide', gait.frog.arcs >= 2 && gait.frog.apex > 0.8 && gait.frog.apex < 3, gait);
+  check('the legs load before a hop and take the landing after it', gait.frog.crouch > 0.5 && gait.frog.squash > 0.02, gait.frog);
+  check('a hop is not a discount on walking: it covers the same ground',
+    Math.abs(gait.frog.dist - gait.human.dist) < 3, { frog: gait.frog.dist, human: gait.human.dist });
+  check('a human does not hop', gait.human.arcs === 0 && gait.human.apex < 0.2, gait.human);
+  check('the jump key is a hop and not a balloon',
+    gait.jumpFrog.apex > gait.jumpHuman.apex && gait.jumpFrog.apex < 4 && gait.jumpHuman.apex < 2.5, gait);
+  check('a frog in the valley leaves the ground', gait.npcFrog.rise > 0.3 && gait.npcFrog.hops >= 2, gait.npcFrog);
+  check('an owl folds its wings on the branch and opens them in the air',
+    gait.npcOwl.roost === 0 && gait.npcOwl.abroad === 1, gait.npcOwl);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

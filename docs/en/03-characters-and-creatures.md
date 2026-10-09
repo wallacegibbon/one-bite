@@ -65,7 +65,7 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 | id | 中文 | English | Model | scale | Habitat | Activity | Speed | Alert | Pack | Fruit |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `owl` | 猫头鹰 | Screech Owl | owl | 0.16 | Whisperwood / Starfall Keep / Glowglade / Cloudspire | night | 3.2 (fly 7.0) | 12 | 1 | Owlberry |
-| `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6) | 12 | 12 | Frog Pear |
+| `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6, hop) | 12 | 12 | Frog Pear |
 | `bear` | 棕熊 | Brown Bear | bear | 0.24 | Northern Ridge / Whisperwood | both | 5.0 | 22 | 1 | Bruin Fig |
 
 Distribution of the 20 individuals in the prototype: owl 6, frog 12, bear 2.

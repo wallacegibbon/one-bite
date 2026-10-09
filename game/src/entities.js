@@ -32,6 +32,12 @@
       this.wasCold = false;        // whether the ridge cold is already biting (drives one log line)
       this.moveAmt = 0;            // horizontal movement this frame (drives animation)
       this.bob = 0;
+      /* what the body's own motion tells the animation, in 0..1: how far off the
+         ground it is, how loaded its legs are before a hop, and how much it
+         flattened on the landing. Nothing here is a mood -- all three are read
+         off the physics, so a body that does not hop never animates as if it did. */
+      this.airAmt = 0; this.crouch = 0; this.squash = 0;
+      this.hopT = 0; this.wind = 0;
       this.lastRevert = 0;
       /* Set by Game.die() and cleared at the top of the next frame. It is not a
          "is the player alive" flag -- dying always revives them at the town
@@ -167,7 +173,9 @@
       const sprint = inp.sprint && this.air > 0 && !this.inWater;
       let speed = 4.7 * (f.speed || 1) * (sprint ? 1.45 : 1);
       if (this.inWater) speed *= (f.swim || 0.62);
-      if (!this.grounded && !f.fly && !this.inWater) speed *= 0.92;
+      // a body that hops is thrown forward by the hop; it does not bleed speed
+      // in the air the way a body that merely fell off a ledge does
+      if (!this.grounded && !f.fly && !this.inWater) speed *= (f.hop ? 1 : 0.92);
       let dx = 0, dz = 0;
       const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
       const rx = Math.cos(this.yaw), rz = Math.sin(this.yaw);
@@ -179,7 +187,7 @@
       if (len > 0) { dx /= len; dz /= len; }
 
       const fly = f.fly && !this.inWater;
-      const accel = fly ? 22 : (this.grounded ? 34 : 12);
+      const accel = fly ? 22 : (this.grounded ? 34 : (f.hop ? 18 : 12));
       this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt / Math.max(speed, 1));
       this.vz += (dz * speed - this.vz) * Math.min(1, accel * dt / Math.max(speed, 1));
 
@@ -235,12 +243,40 @@
         // glide is a property of the body, not of flapping: an owl that walks
         // off a ledge spreads its wings too
         this.vy = Math.max(-MAX_FALL * (f.glide || 1), this.vy);
-        if (inp.jump && this.grounded) { this.vy = 8.3 * (f.jump || 1); this.grounded = false; }
+        const hop = f.hop;
+        if (inp.jump && this.grounded) {
+          this.vy = 8.3 * (f.jump || 1); this.grounded = false;
+          if (hop) this.hopT = hop.period;
+        } else if (hop && this.grounded) {
+          /* A body whose data says `hop` does not walk on land: it hops. The
+             launch is an impulse and the arc is gravity's, so the animation and
+             the displacement are the same event instead of two separate stories.
+             The kick is a nudge toward the hop speed, not an addition, or every
+             hop would add to the last one and the body would accelerate away.
+             The countdown only runs with feet on the ground: a frog that lands
+             stands, loads, and pushes off again. */
+          if (len > 0) {
+            this.hopT -= dt;
+            this.wind = Math.min(1, this.wind + dt / 0.16);
+            if (this.hopT <= 0) {
+              this.vy = 8.3 * (f.jump || 1) * hop.up;
+              const k = speed * hop.kick;
+              this.vx += (dx * k - this.vx) * 0.6;
+              this.vz += (dz * k - this.vz) * 0.6;
+              this.hopT = hop.period;
+              this.wind = 0;
+              this.grounded = false;
+            }
+          } else { this.hopT = 0; this.wind = 0; }
+        }
+        // the wind-up: the legs load while the feet are on the ground
+        this.crouch = hop ? this.wind : 0;
       }
 
       // ---- displacement (sub-stepped + auto step-up) ----
       const step = f.step || 0;
       const wasGrounded = this.grounded;
+      const vyBefore = this.vy;                 // the speed it arrives at the ground with
       this.grounded = false;
       let moved = 0;
       const steps = Math.max(1, Math.ceil((Math.hypot(this.vx, this.vz) * dt) / 0.25));
@@ -273,6 +309,15 @@
       }
       this.moveAmt = moved;
       this.bob += moved * 1.6;
+      // what the animation is allowed to know
+      // eased, not snapped: a body resting on the ground flickers out of
+      // `grounded` for a frame at a time, and a pose that hiccups with it looks
+      // like a seizure rather than a breath
+      const airWant = this.grounded ? 0 : 1;
+      this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
+      if (!this.grounded) this.crouch = 0;
+      if (this.grounded && !wasGrounded) this.squash = Math.min(0.3, Math.max(0, -vyBefore) / 55);
+      this.squash = Math.max(0, this.squash - dt * 3.2);
 
       // ---- boundary: the Grey Veil ----
       const B = 6;
@@ -333,6 +378,8 @@
       this.homeX = x; this.homeZ = z;
       this.flyY = y;
       this.parts = null;
+      // the same three signals the player carries, for the same reason
+      this.airAmt = 0; this.crouch = 0; this.squash = 0; this.hopT = Math.random() * 1.2; this.wind = 0;
     }
     attitudeTo(formId) {
       const a = this.sp.attitude || {};
@@ -444,12 +491,17 @@
         }
       }
       this.speed = spd;
+      this.squash = Math.max(0, this.squash - dt * 3.2);
 
       // altitude
       if (this.isFlyer()) {
-        const base = sleeping ? groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 6)) + 1.2 : this.flyY;
+        const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 6));
+        const base = sleeping ? gy0 + 1.2 : this.flyY;
         const target = base + Math.sin(this.t * 1.1 + this.phase) * 0.9;
         this.y += (target - this.y) * Math.min(1, dt * 2.2);
+        // a roosting owl is a bird on a branch: wings folded, no beat
+        this.airAmt = sleeping ? 0 : (this.y > gy0 + 0.4 ? 1 : 0);
+        this.groundY = gy0;
       } else if (this.isAquatic()) {
         const wt = waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1);
         const depth = 1.2 + Math.sin(this.t + this.phase) * 0.8;
@@ -459,8 +511,39 @@
         // the frog sits on the bank, and floats just under the surface when it is in water
         const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
         const wt = waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1);
-        const target = (inWater && wt > gy0) ? Math.max(gy0, wt - 0.3) : gy0;
-        this.y += (target - this.y) * Math.min(1, dt * 6);
+        const hop = sp.hop;
+        if (inWater && wt > gy0) {
+          this.y += (Math.max(gy0, wt - 0.3) - this.y) * Math.min(1, dt * 6);
+          this.vy = 0; this.airAmt = 0; this.crouch = 0;
+        } else if (hop) {
+          /* On land a frog does not slide: it hops. Before this the height of an
+             amphibian was lerped onto the ground every frame, which meant the
+             twelve frogs in the valley never once left it -- the legs animated a
+             walk no body was doing. Now the launch is an impulse and the arc is
+             gravity's, and the landing is where the squash comes from. */
+          if (this.speed > 0.2) {
+            this.hopT -= dt;
+            this.wind = Math.min(1, this.wind + dt / 0.18);
+            if (this.hopT <= 0 && this.y <= gy0 + 0.02) {
+              this.vy = hop.up;
+              this.hopT = hop.period * (0.75 + Math.random() * 0.55);
+              this.wind = 0;
+            }
+          } else { this.hopT = 0; this.wind = 0; }
+          this.vy -= GRAVITY * dt;
+          this.y += this.vy * dt;
+          if (this.y <= gy0) {
+            if (this.vy < -1) this.squash = Math.min(0.3, -this.vy / 60);
+            this.y = gy0; this.vy = 0;
+          }
+          const airWant = this.y > gy0 + 0.02 ? 1 : 0;
+          this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
+          this.crouch = this.y <= gy0 + 0.02 ? this.wind : 0;
+        } else {
+          this.y += (gy0 - this.y) * Math.min(1, dt * 6);
+          this.airAmt = 0; this.crouch = 0;
+        }
+        this.groundY = gy0;
       } else {
         const gy = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
         this.y += (gy - this.y) * Math.min(1, dt * 9);

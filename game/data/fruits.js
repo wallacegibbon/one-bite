@@ -27,6 +27,11 @@
    *   size        : collision box [width, height] in metres
    *   speed       : land movement multiplier
    *   jump        : jump force multiplier
+ *   hop         : { up, kick, period } -- a body that does not walk on land, it
+ *                 hops. `up` is the fraction of its own jump the auto-hop uses,
+ *                 `kick` the fraction of its land speed the launch throws it at,
+ *                 `period` the seconds its feet stay on the ground between hops.
+ *                 Only the gait changes: the arc is still gravity's.
    *   swim        : underwater movement multiplier
    *   fly         : flight thrust (0 / undefined = cannot fly)
    *   glide       : the fraction of the normal fall speed a body accepts when it
@@ -74,7 +79,8 @@
       habitat: ['mirrorlake', 'glowglade', 'starfall'], habitatCn: '镜湖芦苇 · 雨后水洼', habitatEn: 'Mirrorlake reeds · rain pools',
       duration: 420,
       form: {
-        cn: '雨蛙', en: 'frog', size: [0.5, 0.5], speed: 0.9, jump: 2.4, swim: 2.4, breatheAir: false,
+        cn: '雨蛙', en: 'frog', size: [0.5, 0.5], speed: 0.9, jump: 1.3, hop: { up: 0.72, kick: 1.25, period: 0.22 },
+        swim: 2.4, breatheAir: false,
         dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, hand: 'web', step: 0.3
       },
       cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '太小：够不到高处的果，也推不开门'],

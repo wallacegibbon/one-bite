@@ -49,15 +49,23 @@ AO has four steps: `[1.00, 0.78, 0.60, 0.46]`, computed from each vertex's three
 
 ### Creature models
 
-Assembled from voxel parts: one mesh + one pivot + one animation per part.
+Assembled from voxel parts: one mesh + one pivot per part. A part may name a `parent`, so a limb has a joint -- shoulder to elbow, hip to knee. Parts are authored in the bind pose, and for the owl the bind pose is the folded wing: a perched owl is the shape you look at most of the day.
 
 | Animation | Used for | Formula |
 |---|---|---|
-| `flap` | wings | `rz = sin(t·spd)·amp`, amp 0.85 (flying) / 0.12 (walking) |
-| `walk` | legs | `rx = sin(t·7 + phase)·move·0.75` — one walk rate for every body; the per-species override existed only for the spider and went with it |
+| `flap` | upper wing | `rz = −sign·beat·(0.22+0.78·air)`, `beat = sin(t·11)`, the downstroke full and the recovery 0.42 of it. A symmetric sine is a windmill; a hard downstroke and a soft recovery is a wing |
+| `fold` | forewing, parented to the wing | folds on the upstroke only: `rz = sign·(beat<0 ? −beat·0.5 : 0)·air` |
+| `walk` | thigh / upper arm | `rx = sign·sin(t·7+phase)·move·0.75` — one walk rate for every body; the per-species override existed only for the spider and went with it |
+| `knee` | shin | a knee bends one way only: `rx = sign·(0.25+0.85·max(0,sin(t·7+phase)))·(0.35+0.65·move)` |
+| `elbow` | forearm | a small follow-through on the swing |
+| `twist` | torso | `ry = sin(t·7+phase+π)·move·0.16` — the shoulders counter-swing the legs |
+| `nod` | head | `rx = sin(t·1.9)·(move·0.06+0.02)` |
 | `wag` | tail | `ry = sin(t·1.6)·(move·0.5+0.12)` |
-| `bob` | head/body | `dy = sin(t·2.2)·(move·0.12+0.05)` |
-| `sway` | fins/feathers | `rz = sin(t·2.4)·0.28` |
+| `bob` | body | in the air it **is** the wing beat: `dy = −max(0,beat)·0.16`, the body drops as the wings push down. Two unrelated sines is what made a flying body look like a body with two loose parts bolted to it. On foot `dy = sin(t·2.2)·(move·0.12+0.05)` |
+| `pulse` | the frog's throat | a scale, not a rotation |
+| `sway` | fins/feathers | kept for the next animal; no body in the valley uses it |
+
+A part may also declare `air:[rx,ry,rz]` and `crouch:[rx,ry,rz]`: the pose it takes when the body is off the ground, and when its legs are loaded. The weights come from the physics, not from a guess about which animal is being drawn -- `air` is how far off the ground the body actually is, `crouch` how long its feet have been down since the last launch, and `squash` the speed it arrived at the ground with, applied to the whole body as a scale. A body that does not hop is never animated as if it did.
 
 4 models: human, owl, frog, bear.
 4 first-person hands: hand, talon, web, claw.
@@ -89,7 +97,7 @@ All code is classic `<script src>` global scripts hanging off the `window.FRUTAR
 | `src/engine.js` | mat4, MeshBuilder, shaders, Renderer (frustum culling, sky, particles) |
 | `src/world.js` | block table, voxel storage, chunked meshing (with AO), DDA ray picking |
 | `src/worldgen.js` | value-noise/fbm terrain + structure generation (castle/town/cave/lake/isles/forest) |
-| `src/models.js` | 5 models + 5 first-person hands + part animation matrices |
+| `src/models.js` | 4 models + 4 first-person hands + part animation matrices (with a parent chain, so limbs have joints) |
 | `src/entities.js` | Player (AABB collision/breath/flight), Creature (attitude-driven AI), Particles |
 | `src/game.js` | main logic: fruit/backpack/spoilage/storage/quests/save/render loop |
 | `src/ui.js` | HUD, rotating minimap, item bar, storage panel, codex, help, death |
@@ -159,7 +167,7 @@ Two consequences worth knowing:
 | `game/test/node-smoke.js` | no browser: data → generation → meshing (fake GL), verifies block distribution |
 | `game/test/heightmap.js` | prints an ASCII heightmap of the surface |
 | `game/test/probe.js` | finds a safe camera spot for every POI/zone |
-| `game/test/shots.js` | 21 screenshots in one launch (zones + transformation + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
+| `game/test/shots.js` | 22 screenshots in one launch (zones + the four bodies seen from behind + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
 | `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology; plus the world reacting to a body (block edits re-mesh, the breath ceiling, intimidation by species, a unique key per block), **one body at a time** (three fruits eaten in a row: each replaces the body, vitality never moves, each fruit is spent exactly once, and no gastric counter exists), what each quest gate actually requires, how each animal moves and when it is awake, and **the three abilities measured against the body that lacks them** (glide caps the fall at the speed the data promises, the same dark is brighter for an owl while the sky itself does not change, the ridge takes vitality from a human and never from a bear) |
 | `game/test/save.js` | the save round trip: write a save, reload the page, continue from the start screen — identity, backpack, stores, the planting queue, scattered fruit, buffs and the form bar all come back, and a save that lists no town cellar still gets one |
 | `game/test/input.js` | real key events: walk / jump / fly / time bar / Grey Veil border |
