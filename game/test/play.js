@@ -381,6 +381,36 @@ const path = require('path');
   check('the body is back at the town cellar', death.at.join(',') === death.want.join(','), death);
   check('the fall did not leave them at y=30 above the roof', death.airborne === false, death);
 
+  // 10f. an open storage panel is built when it changes, not on every frame
+  const still = await step('cellarPanelStaysStill', () => {
+    const g = window.game;
+    window.ui.showCellar(false); g.mode = 'play';
+    g.inv.length = 0;
+    g.addItem('fruit', 'owlberry', 100);
+    g.openStashUI(g.stashes[0]);
+    const node = document.getElementById('packItems');
+    let mutations = 0;
+    const obs = new MutationObserver(() => mutations++);
+    obs.observe(node, { childList: true, subtree: true, characterData: true });
+    return new Promise(res => {
+      let n = 0;
+      const tick = () => {
+        if (++n < 40) return requestAnimationFrame(tick);
+        obs.disconnect();
+        const quiet = mutations;
+        g.addItem('fruit', 'stagcap', 100);                 // now change one thing
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const shelf = node.children.length;
+          window.ui.showCellar(false); g.mode = 'play';
+          res({ frames: n, mutations: quiet, packNow: shelf });
+        }));
+      };
+      requestAnimationFrame(tick);
+    });
+  });
+  check('an open storage panel is not rebuilt while nothing changes', still.mutations === 0, still);
+  check('it is rebuilt as soon as the backpack changes', still.packNow === 2, still);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

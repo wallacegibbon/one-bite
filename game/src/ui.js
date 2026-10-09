@@ -32,6 +32,7 @@
       const b = el('btnLang');
       if (b) b.textContent = N.i18n.nextLabel();
       this.invSig = '';
+      this._cellarSig = '';
       if (this.show.cellar) this.renderCellar();
       if (this.show.journal) this.renderJournal();
     }
@@ -202,6 +203,16 @@
     renderCellar() {
       const g = this.g, s = g.openStash;
       if (!s) return;
+      // Same trick as renderInv: the panel is rebuilt every frame while it is
+      // open, and it only ever changes when something on a shelf changes.
+      // Freshness is bucketed to 5 units and transit to whole days, which is
+      // exactly what the bar and the "x days left" text show.
+      const sig = s.id + '|' + s.items.map(i => i.kind + i.id + Math.round(i.fresh / 5)).join(',') +
+        '|' + g.stashSel + '|' + g.inv.map(i => i.kind + i.id + Math.round(i.fresh / 5)).join(',') +
+        '|' + g.invSel + '|' + g.posts.map(p => p.it.id + Math.max(1, Math.ceil(p.t / 420))).join(',') +
+        '|' + (g.owlUnlocked() ? 1 : 0) + '|' + N.locale();
+      if (sig === this._cellarSig) return;
+      this._cellarSig = sig;
       el('cellarTitle').textContent = N.t('store.' + (s.kind === 'tree' ? 'tree' : 'cellar'));
       el('cellarSub').textContent = N.t('cellar.sub', { s: s.slots, d: s.decay, u: g.used(s.items) });
       el('stashItems').innerHTML = s.items.map((it, i) => this.itemHTML(it, i, i === g.stashSel)).join('') ||

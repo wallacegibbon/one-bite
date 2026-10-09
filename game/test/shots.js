@@ -93,7 +93,7 @@ const SHOTS = [
       if (c.name) g.setName(c.name);
       if (c.epquest) { for (const q of c.epquest.split(',')) g.quests.find(x => x.id === q).done = true; g.checkEpithet(); }
       g.updateEnv();
-      return { zone: g.zoneName(g.player.x, g.player.z) };
+      return { zone: g.zoneName() };
     }, c);
     if (c.journal) await page.evaluate(() => { window.game.mode = 'journal'; window.ui.showJournal(true); });
     if (c.help) await page.evaluate(() => { window.game.mode = 'help'; window.ui.showHelp(true); });

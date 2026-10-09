@@ -63,7 +63,7 @@ const path = require('path');
     return {
       draws: g.R.stats.draws, tris: Math.round(g.R.stats.tris),
       frames: g.frames || 0, fps: g.fps ? g.fps.toFixed(1) : '?',
-      zone: g.zoneName(g.player.x, g.player.z),
+      zone: g.zoneName(),
       creatures: g.creatures.length,
       pos: [g.player.x.toFixed(1), g.player.y.toFixed(1), g.player.z.toFixed(1)].join(','),
       grounded: g.player.grounded, hp: Math.round(g.player.vital),

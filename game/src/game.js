@@ -592,8 +592,12 @@
       const p = this.player;
       const q = (id) => this.quests.find(x => x.id === id);
       const done = (qq, msg) => { if (qq && !qq.done) { qq.done = true; this.logMsg(N.t('log.questDone', { n: N.disp(qq), m: msg ? N.t('log.questDoneMsg', { m: msg }) : '' }), 'good'); } };
-      const nFruit = id => this.inv.filter(i => i.kind === 'fruit' && i.id === id).length;
-      const nStash = id => this.stashes.reduce((a, s) => a + s.items.filter(i => i.id === id).length, 0);
+      /* One pass over the backpack and every shelf. This used to filter the
+         same arrays eight times over, once per quest, and it ran every frame. */
+      const have = {};
+      for (const it of this.inv) if (it.kind === 'fruit') have[it.id] = (have[it.id] || 0) + 1;
+      for (const s of this.stashes) for (const it of s.items) have[it.id] = (have[it.id] || 0) + 1;
+      const n = id => have[id] || 0;
       // backpack upgrades: cap() changes the moment one is granted, and it is announced once
       const grant = (uid) => {
         if (this.upg[uid]) return;
@@ -603,18 +607,28 @@
         this.logMsg(N.t('log.upgrade', { n: N.disp(u), e: u.slots ? N.t('log.upgSlots', { n: u.slots }) : N.t('log.upgRare'), d: N.descOf(u) }), 'good');
       };
       if (this.cellar().items.length > 0) { done(q('q1')); grant('pouch1'); }
-      if (nFruit('owlberry') + nStash('owlberry') >= 3) done(q('q2'));
+      if (n('owlberry') >= 3) done(q('q2'));
       if (p.form === 'owlberry' && p.y > 30) done(q('q3'), N.t('log.q3msg'));
-      if (nFruit('frogpear') + nStash('frogpear') >= 1) { done(q('q4')); grant('pouch2'); }
-      if (nFruit('stagcap') + nStash('stagcap') >= 1) done(q('q5'));
-      if (nFruit('silkberry') + nStash('silkberry') >= 1) done(q('q6'));
+      if (n('frogpear') >= 1) { done(q('q4')); grant('pouch2'); }
+      if (n('stagcap') >= 1) done(q('q5'));
+      if (n('silkberry') >= 1) done(q('q6'));
       // q7: walk to the Starfall fruit greenhouse (cellar door)
       const gh = N.POIS.find(x => x.id === 'greenhouse');
       if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q7'), N.t('log.q7msg')); grant('divider'); }
       this.checkEpithet();
     }
+    /* The HUD asks for this every frame. The answer only changes when the player
+       crosses into another place, so it is cached on a metre of grid -- and the
+       locale is part of the key, because the name itself is translated. */
     zoneName() {
       const p = this.player;
+      const k = (p.x | 0) + ',' + (p.y | 0) + ',' + (p.z | 0) + ',' + N.locale();
+      if (k === this._zoneKey) return this._zoneName;
+      const name = this.zoneNameAt(p);
+      this._zoneKey = k; this._zoneName = name;
+      return name;
+    }
+    zoneNameAt(p) {
       let best = null, score = -1e9;
       for (const z of N.ZONES) {
         if (z.kind === 'border') continue;
@@ -626,8 +640,8 @@
           if (p.x > z.x0 && p.x < z.x1 && p.z > z.z0 && p.z < z.z1) { const s = 60; if (s > score) { score = s; best = z; } }
         }
       }
-      if (this.player.y > 28 && (!best || best.kind !== 'sky')) {
-        const d = Math.min(...N.SKY_ISLES.map(i => Math.hypot(i.x - this.player.x, i.z - this.player.z)));
+      if (p.y > 28 && (!best || best.kind !== 'sky')) {
+        const d = Math.min(...N.SKY_ISLES.map(i => Math.hypot(i.x - p.x, i.z - p.z)));
         if (d < 26) return N.disp(N.ZONE_BY_ID.cloudspire);
       }
       return best ? N.disp(best) : N.t('log.wilderness');
@@ -750,7 +764,13 @@
           } else this.hover = null;
         } else this.hover = null;
       }
-      this.checkQuests();
+      /* Quests are an invitation, not a poll. Everything that can complete one
+         (harvest, eat, moving an item into a store) already calls checkQuests()
+         the moment it happens; the periodic pass is only there for the two that
+         depend on where the player is standing, and four times a second notices
+         that as well as every frame does. */
+      this._questT = (this._questT || 0) - dt;
+      if (this._questT <= 0) { this._questT = 0.25; this.checkQuests(); }
     }
 
     ambient(dt) {
@@ -937,12 +957,19 @@
     }
 
     /* ------------------------- identity (docs/en/03 section 6) ------------------------- */
-    // the valley's name for you: the last earned epithet wins
+    // the valley's name for you: the last earned epithet wins.
+    // The HUD reads this every frame and the answer only moves when a quest
+    // does, so it is cached on the quest flags themselves -- a test that flips
+    // a `done` by hand still gets a fresh answer, because the flags changed.
     epithet() {
+      const flags = this.quests.map(q => q.done ? 1 : 0).join('');
+      if (flags === this._epFlags) return this._ep;
+      this._epFlags = flags;
       const met = id => id === 'all' ? this.quests.every(q => q.done)
                                      : !!(this.quests.find(q => q.id === id) || {}).done;
       let cur = IDEN.epithetDefault;
       for (const e of IDEN.epithets) if (met(e.quest)) cur = e;
+      this._ep = cur;
       return cur;
     }
     // the player's own name: mutable, not unique, never used by fiction text
