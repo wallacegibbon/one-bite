@@ -460,6 +460,53 @@ const path = require('path');
   check('looking at a cellar crate asks you to open it', crate.promptIsCellar === true, crate);
   check('using it opens the store behind that crate', crate.mode === 'cellar' && crate.open === 'cellar', crate);
 
+  // 10h. how a body moves is data: the owl crosses the valley at its flying
+  // speed, the pangolin keeps the dusk, and a deer that wanders off walks back
+  const beasts = await step('creatureBehaviour', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, night: g.night };
+    p.x = -999; p.y = 40; p.z = -999;                 // nobody within alert range
+    const run = (c, night) => {
+      g.night = night;
+      const dir = (c.x + 20 < g.world.w - 8) ? 20 : -20;
+      c.tx = c.x + dir; c.tz = c.z; c.pause = 99; c.state = 'wander'; c.alarm = 0;
+      const x0 = c.x, z0 = c.z;
+      for (let i = 0; i < 60; i++) c.update(1 / 60, p, g.world, g);
+      c.state = 'wander'; c.alarm = 0;
+      return +Math.hypot(c.x - x0, c.z - z0).toFixed(2);
+    };
+    const find = id => g.creatures.find(c => c.sp.id === id);
+    const owl = find('owl'), pang = find('pangolin');
+    const out = {
+      owlNight: run(owl, 1), owlNoon: run(owl, 0),
+      pangNoon: run(pang, 0), pangDusk: run(pang, 0.6)
+    };
+    // the herd: put one deer well outside the middle of its own kind
+    const deer = g.creatures.filter(c => c.sp.id === 'deer');
+    const h = g.herdCentres.deer;
+    const straggler = deer[0];
+    const ang = Math.atan2(straggler.z - h.z, straggler.x - h.x);
+    straggler.x = h.x + Math.cos(ang) * 30; straggler.z = h.z + Math.sin(ang) * 30;
+    straggler.y = N.groundY(g.world, Math.floor(straggler.x), Math.floor(straggler.z), 40);
+    straggler.state = 'wander'; straggler.pause = 99; straggler.tx = straggler.x; straggler.tz = straggler.z;
+    g.night = 0.5;
+    const before = +Math.hypot(straggler.x - h.x, straggler.z - h.z).toFixed(1);
+    for (let i = 0; i < 60; i++) straggler.update(1 / 60, p, g.world, g);
+    out.herd = { before, after: +Math.hypot(straggler.x - h.x, straggler.z - h.z).toFixed(1) };
+    straggler.state = 'wander'; straggler.alarm = 0;
+    // and the proof that none of this is keyed to a species name
+    const ghost = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.owl, { locomotion: 'walk' }), 80, 30, 80);
+    const wings = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.deer, { locomotion: 'fly' }), 80, 30, 80);
+    out.flyFromData = wings.isFlyer() === true && ghost.isFlyer() === false;
+    g.night = was.night; Object.assign(p, was);
+    return out;
+  });
+  check('an owl crosses the valley at its flying speed, not its walking speed', beasts.owlNight > 2.4 && beasts.owlNight < 3.4, beasts);
+  check('an owl sleeps through the day', beasts.owlNoon === 0, beasts);
+  check('a dusk animal is asleep at noon and abroad at dusk', beasts.pangNoon === 0 && beasts.pangDusk > 0.3, beasts);
+  check('a deer that wanders off walks back to the herd', beasts.herd.after < beasts.herd.before - 1, beasts.herd);
+  check('flying comes from the body, not from the species name', beasts.flyFromData === true, beasts);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

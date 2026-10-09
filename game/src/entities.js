@@ -261,6 +261,19 @@
     for (let y = from; y >= 0; y--) if (w.liquidAt(x, y, z)) return y;
     return -1;
   }
+  /* The part of the day a species is out (docs/en/03 s3: day / night / both /
+     dusk). `night` is the curve the sky already runs on: 1 at midnight, 0 at
+     noon. A dusk animal is out at both ends of the day and asleep at noon and
+     at midnight -- the valley's pangolins are said to come and go with the
+     light, not with the dark. */
+  function outAt(sp, night) {
+    switch (sp.active) {
+      case 'night': return night >= 0.35;
+      case 'day':   return night < 0.65;
+      case 'dusk':  return night > 0.3 && night < 0.85;
+      default:      return true;                 // 'both', and anything unknown
+    }
+  }
 
   class Creature {
     constructor(spec, x, y, z) {
@@ -290,9 +303,9 @@
     /* which species the player is wearing right now (null in a human shape) */
     speciesOf(formId) { return formId && N.FRUIT_BY_ID[formId] ? N.FRUIT_BY_ID[formId].creature : null; }
     sameSpeciesAs(formId) { return this.speciesOf(formId) === this.sp.id; }
-    isFlyer() { return ['owl'].indexOf(this.sp.id) >= 0; }
-    isAquatic() { return ['jelly'].indexOf(this.sp.id) >= 0; }        // never leaves the water
-    isAmphibian() { return ['frog'].indexOf(this.sp.id) >= 0; }       // bank and water both
+    isFlyer() { return this.sp.locomotion === 'fly'; }
+    isAquatic() { return this.sp.locomotion === 'water'; }        // never leaves the water
+    isAmphibian() { return this.sp.locomotion === 'amphibian'; }  // bank and water both
 
     update(dt, pl, world, game) {
       const sp = this.sp;
@@ -301,9 +314,7 @@
       const dp = Math.sqrt(dxp * dxp + dzp * dzp + dyp * dyp);
 
       // time of day
-      const night = game.night;
-      const nocturnal = sp.active === 'night';
-      const sleeping = nocturnal && night < 0.35;
+      const sleeping = !outAt(sp, game.night);
 
       const att = this.attitudeTo(pl.form);
       const alert = (sp.alert || 12) * (pl.formDef.stealth || 1) * (game.playerStealth || 1);
@@ -327,19 +338,42 @@
         if (this.pause <= 0) {
           this.pause = 2 + Math.random() * 6;
           const r = this.isAquatic() ? 18 : 14;
-          this.tx = this.homeX + (Math.random() - 0.5) * 2 * r;
-          this.tz = this.homeZ + (Math.random() - 0.5) * 2 * r;
+          /* A creature that cannot leave the water should not be sent to a
+             place where it would have to. Pick again until the ground is wet;
+             after a few tries take it anyway, so a lake that has somehow
+             drained does not leave the jellyfish standing still. */
+          let tx = this.homeX, tz = this.homeZ;
+          for (let tries = 0; tries < 8; tries++) {
+            tx = this.homeX + (Math.random() - 0.5) * 2 * r;
+            tz = this.homeZ + (Math.random() - 0.5) * 2 * r;
+            if (!this.isAquatic() || world.liquidAt(Math.floor(tx), Math.floor(this.y), Math.floor(tz))) break;
+          }
+          this.tx = tx; this.tz = tz;
         }
         tgtX = this.tx; tgtZ = this.tz;
+      }
+      /* Herd: the herd is how prey survives. One that has wandered more than
+         about a throw of it walks back towards the middle of its own kind --
+         a middle the game works out once a tick, not once per animal. */
+      if ((sp.herd || 1) > 1 && this.state === 'wander') {
+        const h = game.herdCentres && game.herdCentres[sp.id];
+        if (h && h.n > 1 && Math.hypot(h.x - this.x, h.z - this.z) > 12) { tgtX = h.x; tgtZ = h.z; }
       }
       this.alarm = Math.max(0, this.alarm - dt * 0.3);
 
       // movement
+      const inWater = world.liquidAt(Math.floor(this.x), Math.floor(this.y + 0.2), Math.floor(this.z));
       const dx = tgtX - this.x, dz = tgtZ - this.z;
       const d = Math.hypot(dx, dz);
       let spd = 0;
       if (d > 0.8) {
-        const base = this.state === 'flee' || this.state === 'chase' ? (sp.speed || 3) * 1.7 : (sp.speed || 3) * 0.42;
+        /* The table gives a speed on foot and, for the bodies that have them, a
+           speed in the air and in the water (docs/en/03 s3: "3.2 (fly 7.0)").
+           The owl that crosses the valley is not doing it at walking pace. */
+        const cruise = this.isFlyer() ? (sp.flySpeed || sp.speed || 3)
+                     : (inWater && sp.swimSpeed) ? sp.swimSpeed
+                     : (sp.speed || 3);
+        const base = this.state === 'flee' || this.state === 'chase' ? cruise * 1.7 : cruise * 0.42;
         spd = sleeping ? 0 : base;
         const tgtYaw = Math.atan2(dx, -dz);
         let dy = tgtYaw - this.yaw;
@@ -351,9 +385,9 @@
         if (this.isAquatic()) {
           if (world.liquidAt(Math.floor(mx), Math.floor(this.y), Math.floor(mz))) { this.x = mx; this.z = mz; }
           else {
-            // towards the lake centre
-            const lk = N.POIS.find(p => p.id === 'sunktower');
-            const ax = lk.x - this.x, az = lk.z - this.z, al = Math.hypot(ax, az) || 1;
+            // out of the water: swim home, and home is wherever it was born --
+            // in the lake. The lake does not have to be named for it to get back.
+            const ax = this.homeX - this.x, az = this.homeZ - this.z, al = Math.hypot(ax, az) || 1;
             this.x += ax / al * spd * dt; this.z += az / al * spd * dt;
           }
         } else {
@@ -378,7 +412,6 @@
         this.y += (target - this.y) * Math.min(1, dt * 1.6);
       } else if (this.isAmphibian()) {
         // the frog sits on the bank, and floats just under the surface when it is in water
-        const inWater = world.liquidAt(Math.floor(this.x), Math.floor(this.y + 0.2), Math.floor(this.z));
         const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
         const wt = waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1);
         const target = (inWater && wt > gy0) ? Math.max(gy0, wt - 0.3) : gy0;

@@ -700,7 +700,14 @@
       for (const k in this.buffs) { this.buffs[k] -= dt; if (this.buffs[k] <= 0) delete this.buffs[k]; }
       this.playerStealth = (this.buffs.stealth ? 0.3 : 1);
 
-      // creatures
+      // creatures. The middle of a herd is worked out once a tick for the whole
+      // valley, not once per animal per neighbour.
+      this.herdCentres = {};
+      for (const c of this.creatures) {
+        const h = this.herdCentres[c.sp.id] || (this.herdCentres[c.sp.id] = { x: 0, z: 0, n: 0 });
+        h.x += c.x; h.z += c.z; h.n++;
+      }
+      for (const id in this.herdCentres) { const h = this.herdCentres[id]; h.x /= h.n; h.z /= h.n; }
       for (const c of this.creatures) {
         const d = Math.hypot(c.x - p.x, c.z - p.z);
         if (d < 160) c.update(dt, p, this.world, this);
