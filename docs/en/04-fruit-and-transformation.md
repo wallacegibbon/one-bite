@@ -70,6 +70,8 @@ A fruit starts counting down the moment it is picked.
 |---|---|---|---|---|---|---|
 | `bruinfig` | Bruin Fig | bear | 480 s | Northern Ridge rock face · hibernation den | strength, cold immune, aura 8, step 1.1, size 1.4×1.5 | **No fine motor control** (cannot pick small fruit, cannot open storage); **weight**: thin ice breaks, wooden bridges collapse |
 
+**Which of those costs the prototype enforces**: only the frog's skin. `dryTimer` is wired up — 90 s out of water and vitality drains — and it is the one cost in this table a player can die from today. Everything else in the Cost column is still design: talons and claws "cannot open storage" (every body opens it), a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body), thin ice does not break, no bridge collapses, and the owl's daylight blindness never happens because there is no night vision to invert. The Key abilities column carries the same caveat — see §4 for the six fields that are declared and inert.
+
 **Why there is no fifth**: the fruit table is a mirror of the animal table. Adding a fruit means adding a niche, a row in the attitude matrix and a new set of gates (03 §3). Four is what can be read in ten seconds; the next one has to earn that.
 
 ## 4. Form ability fields
