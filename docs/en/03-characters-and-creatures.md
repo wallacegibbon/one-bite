@@ -2,17 +2,18 @@
 
 [中文: ../cn/03-角色与生物.md](../cn/03-角色与生物.md)
 
-Source of truth: `game/data/creatures.js` (14 species + the attitude matrix + codex text).
+Source of truth: `game/data/creatures.js` (14 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name).
 
 ## 1. Characters
 
-### Linnaeus (林奈, 16)
+### The forager (16) — the name is the player's
 
-A forager's apprentice from outside Lanternrow. Her name means "the one who names all things", but the townsfolk just call her "that girl who counts fruit".
+A forager's apprentice from outside Lanternrow. **This character has no fixed name**: the valley does not address people by name, it addresses them by *what they have done* (see §6). Wherever these documents refer to the character they say "the forager" or use the second person.
 
-- **Motivation**: when she first entered the valley she carried a hand-drawn fruit list left by her grandmother. The list has 41 fruits on it; only 15 can still be found in the valley. She wants to know whether the other 26 are gone, or whether her grandmother misremembered.
-- **Ability**: no talent. What is special about her is that **she can hold the taste of two fruits at the same time** — an ordinary person eating two fruits dies of a magic-stomach churn; she only feels ill. This is the exception to the magic-stomach rule, and the precondition for the grafting route in the finale.
-- **What she does not say**: her grandmother was driven out of the valley by the Greyglove Trading Company.
+- **Motivation**: they came into the valley carrying a hand-drawn fruit list. The list has 41 fruits on it; only 15 can still be found in the valley. They want to know whether the other 26 are gone, or whether the list is wrong.
+- **Trait `mixed stomach`**: they can hold two magics down at once. An ordinary person eating two fruits dies of a magic-stomach churn; they only feel ill. This is the exception to the magic-stomach rule, and the precondition for the grafting route in the finale. **Note that it is a property of the character, not a law of the world** — in a multiplayer game it is rare, and you may never assume a given player has it (see §6).
+- **Backstory slot**: who left that list belongs to the character, not to the world. In single player it is "the grandmother"; in multiplayer each character can have a different origin (a fellow apprentice, a creditor, a former Greyglove employee) — or the list can simply be held by Old Mei and the character merely recognises it.
+- **What they do not say**: the list's original owner was driven out of the valley by the Greyglove Trading Company.
 
 ### Old Mei (老梅, ~70)
 
@@ -34,7 +35,7 @@ The valley agent of the Greyglove Trading Company. In his thirties; his gloves a
 
 | Name | Species | Location | Role |
 |---|---|---|---|
-| **White Dew** | Hoar Unicorn | Heart of the Grove | The only unicorn that knew Linnaeus's grandmother. It gored Quill twice |
+| **White Dew** | Hoar Unicorn | Heart of the Grove | The only unicorn that recognises the hand-drawn fruit list. It gored Quill twice |
 | **Pendulum** | Screech Owl | Starfall Bell Tower | Head of the volunteer patrol. Will carry fruit you dropped far away back to the nearest store (once every 3 days) |
 | **Coral Tongue** | Mirrorlake Merrow | Merrow Village | The negotiator for "restitution". Wants a brass bell back from the sunken tower |
 | **Ashfall** | Ashscale Dragon | The Cloudspire nest | The only dragon in the valley willing to land — because it is dying. All three finale routes need it |
@@ -132,3 +133,45 @@ One entry per species, always written as "verifiable fact + unverifiable rumour"
 | `cellarseed` | Cellar Stone | rare | Grows into a **cellar tree**: a 24-slot field warehouse, decay 1/3, visited by badgers and fruit thieves |
 
 Plants do not change your form, they give temporary buffs or tools. They occupy 1–4 fruit slots and compete with fruit for the same capacity — **"carry a light or carry fruit" is a decision every trip makes**.
+
+## 6. Identity and naming (multiplayer readiness)
+
+**The protagonist's name is not part of the setting.** The source of truth is `IDENTITY` in `game/data/player.js`.
+
+Identity is split into three layers, and only the first survives a move to multiple players:
+
+| Layer | Field | Decided by | Mutable | Unique | Notes |
+|---|---|---|---|---|---|
+| id | `id` | the system | no | yes | prefix `p-`, random idBytes 6 characters. This is all the world stores: cellar-tree ownership, owl post, the lake's ledger, beast residue |
+| epithet | `epithet` | the world (by your deeds) | it changes | not guaranteed | all fiction text uses only this. Default "the fruit counter", upgraded as you do things |
+| name | `name` | the player (press N) | yes | no | max nameMax 16 characters. Leaving it empty is perfectly fine |
+
+### Why the worldview demands this anyway
+
+The Grey Veil takes names first — it makes you forget *why you meant to come back*, and a name is the anchor of coming back. So every institution in the valley runs without names: the cellar keeps its books by shape and deed, the volunteer patrol recognises people by epithet, the merrow count "returns" rather than heads. **"Not using names" is a corollary of the worldview, not a concession to multiplayer.**
+
+### The epithet table (`IDENTITY.epithets`)
+
+| Trigger | Epithet | 中文 |
+|---|---|---|
+| default | the fruit counter | 数果子的 |
+| q1 | the cellar-keeper | 存果人 |
+| q3 | nightwing | 夜翼 |
+| q4 | the one who swam Mirrorlake | 泅过镜湖的人 |
+| q5 | the false unicorn | 假独角兽 |
+| q6 | the ember-bearer | 携焰者 |
+| all quests | the one the valley remembers | 谷地记得的人 |
+
+A later one overrides an earlier one; when it changes the game announces it once ("the valley has started calling you …").
+
+### Writing rules (enforced by a test)
+
+1. **No line of fiction may interpolate the player's name.** Use the epithet, or the second person. `docs-sync.js` fails when a fixed protagonist name appears in the documents.
+2. The name appears only in UI (top-left HUD, the codex "you" block) — never in NPC lines, codex entries or quest text.
+3. An epithet is **the world's verdict**, so it may be unflattering ("the false unicorn") — renaming yourself does not change what the valley thinks of you.
+
+### Multiplayer: already in place / still missing
+
+**In place**: `id` is saved, cellar trees carry an `owner`, epithets are event-driven, name and identity are decoupled, and `mixed stomach` is a character trait rather than a law of the world.
+
+**Still missing**: an identity service (the `id` issued by a server), storage ownership and sharing rights (the main cellar is currently communal), the merrow ledger keyed by id, beast residue accumulated per character, NPCs remembering dialogue per id, and the resolution of attitude-matrix conflicts such as "two players walk into the Hoar Grove as unicorns at the same time".

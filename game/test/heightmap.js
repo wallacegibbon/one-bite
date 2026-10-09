@@ -1,7 +1,7 @@
 /* ASCII inspection of the terrain heightmap */
 const path = require('path');
 global.window = {};
-for (const f of ['data/fruits.js', 'data/world.js', 'data/creatures.js', 'src/world.js', 'src/worldgen.js']) {
+for (const f of ['data/fruits.js', 'data/world.js', 'data/creatures.js', 'data/player.js', 'src/world.js', 'src/worldgen.js']) {
   require(path.join(__dirname, '..', f));
 }
 const N = global.window.FRUTARIA;

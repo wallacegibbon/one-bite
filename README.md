@@ -33,6 +33,7 @@ Requires a browser with WebGL 1.0. On first load, 100 chunks are generated acros
 | `V` | First / third person |
 | `J` | Codex (fruits / creatures / quests) |
 | `H` | Help |
+| `N` | Give yourself a name (the valley addresses you by your epithet, not your name) |
 | `1`–`9` / mouse wheel | Select item |
 | `F5` | Save (localStorage) |
 | `Esc` | Close panel |
@@ -51,6 +52,7 @@ Requires a browser with WebGL 1.0. On first load, 100 chunks are generated acros
 - Cellar-tree raids: 30% roll per game day, a badger or a fruit thief steals 1–3 fruits; the player within 45 m always scares them off (the main cellar is guarded by Old Mei and is never raided)
 - Owl post: cellar tree → main cellar, 1 fruit / 3 game days / 10% lost, decays at ×0.1 in flight, at most 3 in transit
 - 14 creatures, attitude-driven AI (they react to *the shape you are in right now*)
+- Identity layer with **no fixed protagonist name**: a stable `id` (stored by the world, cellar trees carry an `owner`), an earned epithet the valley actually uses, and an optional player-chosen name (press `N`) — designed so it survives a move to multiplayer
 - Day/night cycle (420 s per day), self-lit fruit and plants, particles, rotating minimap, codex, 7 quests, death drops and retrieval, save game
 
 ## Not implemented (but designed in the docs)
@@ -78,7 +80,7 @@ game/
 node game/test/node-smoke.js   # no browser: data → generation → meshing (fake GL)
 node game/test/probe.js        # camera spots and water depth for each zone / POI
 node game/test/docs-sync.js    # docs ↔ data consistency (exit 1 on drift, both languages)
-node game/test/docs-drift.js   # self-test: injects 11 errors into docs/en/ and docs/, confirms docs-sync catches them
+node game/test/docs-drift.js   # self-test: injects 13 errors into docs/en/ and docs/, confirms docs-sync catches them
 node game/test/play.js         # gameplay loop: harvest → respawn → capacity → transform → storage → cellar tree → raid → post → save
 node game/test/upgrade.js      # backpack upgrades and slot maths
 node game/test/input.js        # real key events: walk / jump / fly / time / Grey Veil border

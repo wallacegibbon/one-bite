@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 global.window = global;
 const base = path.join(__dirname, '..');
-for (const f of ['data/fruits.js', 'data/creatures.js', 'data/world.js']) require(path.join(base, f));
+for (const f of ['data/fruits.js', 'data/creatures.js', 'data/world.js', 'data/player.js']) require(path.join(base, f));
 const N = window.FRUTARIA;
 
 const DOCS = path.join(base, '..', 'docs');
@@ -258,6 +258,31 @@ for (const L of LANGS) {
   const loose = fs.readdirSync(DOCS).filter(f => f.endsWith('.md'));
   if (loose.length) bad('docs/ loose files', loose, 'only docs/cn/ and docs/en/ may hold .md');
   else good('docs/ holds only the sibling folders cn/ and en/');
+}
+
+/* ================= 9. identity: the protagonist has NO fixed name ================= */
+{
+  const ID = N.IDENTITY;
+  const banned = ['林奈', 'Linnaeus'];   // a fixed protagonist name must never come back
+  for (const L of LANGS) {
+    const T = `[${L.tag}]`;
+    const all = fs.readdirSync(L.dir).filter(f => f.endsWith('.md')).map(f => readIn(L, f)).join('\n');
+    for (const w of banned)
+      if (all.includes(w)) bad(`${T} fixed protagonist name`, w, 'the protagonist is not named (docs/en/03 s6)');
+    const miss = ID.epithets.map(e => e[L.nameField]).filter(x => !all.includes(x));
+    if (miss.length) bad(`${T} epithets missing from docs`, miss, 'IDENTITY.epithets');
+    if (!all.includes(ID.epithetDefault[L.nameField])) bad(`${T} default epithet`, 'missing', ID.epithetDefault[L.nameField]);
+    if (!all.includes(ID.traits.mixStomach[L.nameField])) bad(`${T} mixStomach trait`, 'missing', ID.traits.mixStomach[L.nameField]);
+    // language-neutral tokens so the numbers can be checked in either language
+    const mMax = all.match(/nameMax\s+(\d+)/), mBytes = all.match(/idBytes\s+(\d+)/);
+    if (!mMax || +mMax[1] !== ID.nameMax) bad(`${T} nameMax`, mMax && mMax[1], ID.nameMax);
+    if (!mBytes || +mBytes[1] !== ID.idBytes) bad(`${T} idBytes`, mBytes && mBytes[1], ID.idBytes);
+    if (!all.includes(ID.idPrefix)) bad(`${T} id prefix`, 'missing', ID.idPrefix);
+    good(`${T} identity: no fixed name, all ${ID.epithets.length + 1} epithets + trait + numbers documented`);
+  }
+  const main = fs.readFileSync(path.join(base, 'src', 'main.js'), 'utf8');
+  if (!new RegExp(`k === '${ID.nameKey}'`).test(main)) bad('IDENTITY.nameKey', ID.nameKey, 'not bound in main.js');
+  else good(`rename key ${ID.nameKey} is bound`);
 }
 
 /* ================= report ================= */

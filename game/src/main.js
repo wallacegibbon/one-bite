@@ -31,6 +31,10 @@
     if (k === 'v') game.thirdPerson = !game.thirdPerson;
     if (k === 'j') { game.mode = game.mode === 'journal' ? 'play' : 'journal'; ui.showJournal(game.mode === 'journal'); }
     if (k === 'h') { game.mode = game.mode === 'help' ? 'play' : 'help'; ui.showHelp(game.mode === 'help'); }
+    if (k === 'n' && game.mode === 'play') {   // IDENTITY.nameKey; docs-sync asserts this binding exists
+      const v = window.prompt('谷地不用名字。你要别人怎么叫你？（留空 = 只用谷地的称呼）', game.name);
+      if (v !== null) { game.setName(v); ui.update(); }
+    }
     if (k === 'escape') { ui.showCellar(false); ui.showJournal(false); ui.showHelp(false); ui.showDead(false); game.mode = 'play'; }
     if (k === 'f5') { game.save(); e.preventDefault(); }
     if (k >= '1' && k <= '9') { game.sel = Math.min(game.inv.length - 1, +k - 1); ui.invSig = ''; }

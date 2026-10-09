@@ -2,7 +2,7 @@
 const path = require('path');
 global.window = global;
 const base = path.join(__dirname, '..');
-for (const f of ['data/fruits.js', 'data/creatures.js', 'data/world.js', 'src/engine.js', 'src/world.js', 'src/worldgen.js']) require(path.join(base, f));
+for (const f of ['data/fruits.js', 'data/creatures.js', 'data/world.js', 'data/player.js', 'src/engine.js', 'src/world.js', 'src/worldgen.js']) require(path.join(base, f));
 const N = window.FRUTARIA;
 const W = new N.World(N.WORLD.w, N.WORLD.h, N.WORLD.d);
 N.generate(W, 20261008);

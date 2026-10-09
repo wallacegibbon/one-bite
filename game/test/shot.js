@@ -37,6 +37,8 @@ const path = require('path');
     if (c.time) g.time = +c.time;
     if (c.inv) { for (const id of c.inv.split(',')) g.addItem('fruit', id); }
     if (c.tp) g.thirdPerson = true;
+    if (c.name) g.setName(c.name);
+    if (c.epquest) { for (const q of c.epquest.split(',')) g.quests.find(x => x.id === q).done = true; g.checkEpithet(); }
     if (c.cellar) {
       // build a cellar tree, stock it, unlock Pendulum, post one fruit, then open the panel
       const F = window.FRUTARIA;
@@ -54,6 +56,7 @@ const path = require('path');
   }, cfg);
   // let the game actually run a few frames
   await new Promise(r => setTimeout(r, 2500));
+  if (cfg.journal) await page.evaluate(() => { window.game.mode = 'journal'; window.ui.showJournal(true); });
   await page.screenshot({ path: out });
   const perf = await page.evaluate(() => {
     const g = window.game;

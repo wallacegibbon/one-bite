@@ -23,6 +23,8 @@ const path = require('path');
     log.push(name + ': ' + JSON.stringify(r));
     return r;
   };
+  // value assertions (the file used to fail only on console/page errors)
+  const check = (name, cond, detail) => { if (!cond) errs.push('CHECK FAILED: ' + name + ' ' + JSON.stringify(detail)); };
 
   // 1. harvest: teleport next to an owlberry and call harvest directly
   await step('harvest', () => {
@@ -106,7 +108,7 @@ const path = require('path');
   });
 
   // 7. pit -> plant a cellar tree
-  await step('cellartree', () => {
+  const ct = await step('cellartree', () => {
     const g = window.game;
     g.inv.length = 0;
     g.addItem('fruit', 'owlberry');
@@ -115,8 +117,10 @@ const path = require('path');
     const pits = g.inv.filter(i => i.kind === 'pit');
     const before = g.stashes.length;
     g.buildCellarTree();
-    return { pitCount: pits.length, added: g.stashes.length - before, stashes: g.stashes.map(s => s.id + '@' + [s.x, s.y, s.z].join(',')) };
+    const tree = g.stashes[g.stashes.length - 1];
+    return { pitCount: pits.length, added: g.stashes.length - before, ownerIsPlayer: tree.owner === g.id, stashes: g.stashes.map(s => s.id + '@' + [s.x, s.y, s.z].join(',')) };
   });
+  check('cellar tree is owned by the player id', ct.ownerIsPlayer === true, ct);
 
   // 8. save / load
   // cellar raids: far away always loses, nearby always defends, the main cellar is never robbed
@@ -196,8 +200,31 @@ const path = require('path');
     const e = g.stashes[0].items.filter(i => i.id === 'embercore').pop();
     return { arrived: !!e, fresh: e ? +e.fresh.toFixed(1) : null, lost: g.stats.postLost || 0 };
   });
+  const idBefore = await step('idBefore', () => window.game.id);
   await step('save', () => { window.game.save(); const s = localStorage.getItem('frutaria.save.v1'); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
-  await step('load', () => { const ok = window.game.load(); return { ok, inv: window.game.inv.map(i => i.id), stashes: window.game.stashes.length }; });
+  const ld = await step('load', () => { const ok = window.game.load(); return { ok, id: window.game.id, inv: window.game.inv.map(i => i.id), stashes: window.game.stashes.length }; });
+  check('id survives save/load', ld.id === idBefore, { before: idBefore, after: ld.id });
+
+  // 8b. identity: no fixed protagonist name -- id stable, epithet earned, name is the player's and clamped
+  const ident = await step('identity', () => {
+    const g = window.game, ID = window.FRUTARIA.IDENTITY;
+    const was = g.quests.map(q => q.done);
+    g.quests.forEach(q => q.done = false);
+    const epDefault = g.epithet().cn;
+    g.quests.find(q => q.id === 'q1').done = true;
+    const epQ1 = g.epithet().cn;
+    g.quests.forEach(q => q.done = true);
+    const epAll = g.epithet().cn;
+    g.quests.forEach((q, i) => q.done = was[i]);           // leave quest state untouched
+    const nm = g.setName('abcdefghijklmnopqrstuvwx');      // 24 chars, must clamp
+    return { id: g.id, epDefault, epQ1, epAll, epDefaultExpected: ID.epithetDefault.cn, nameLen: nm.length, nameMax: ID.nameMax, trait: g.hasTrait('mixStomach') };
+  });
+  check('id looks like p-xxxxxx', /^p-[a-z0-9]{6}$/.test(ident.id), ident.id);
+  check('default epithet comes from data', ident.epDefault === ident.epDefaultExpected, ident);
+  check('epithet changes after q1', ident.epQ1 !== ident.epDefault, { a: ident.epDefault, b: ident.epQ1 });
+  check('epithet changes when all quests are done', ident.epAll !== ident.epQ1, { a: ident.epQ1, b: ident.epAll });
+  check('player name is clamped to nameMax', ident.nameLen === ident.nameMax, ident);
+  check('mixStomach is a character trait', ident.trait === true, ident.trait);
 
   // 9. quests
   await step('quests', () => {

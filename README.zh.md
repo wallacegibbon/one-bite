@@ -33,6 +33,7 @@ cd game && python3 -m http.server 8000   # 然后打开 http://localhost:8000/
 | `V` | 第一 / 第三人称 |
 | `J` | 图鉴（果实 / 生物 / 任务） |
 | `H` | 帮助 |
+| `N` | 给自己起名字（谷地用"称呼"叫你，不用名字） |
 | `1`–`9` / 滚轮 | 选择物品 |
 | `F5` | 保存（localStorage） |
 | `Esc` | 关闭面板 |
@@ -51,6 +52,7 @@ cd game && python3 -m http.server 8000   # 然后打开 http://localhost:8000/
 - 窖树掠夺：每游戏日 30% 判定，獾或灰手套偷走 1–3 颗；玩家在 45 m 内必定赶走（主果窖由老梅看守，不被抢）
 - 猫头鹰邮递：窖树 → 主果窖，1 颗 / 3 游戏日 / 10% 丢失，途中按 ×0.1 衰减，在途最多 3 颗
 - 14 种生物，态度驱动 AI（对"你现在的形状"反应）
+- 身份层，**主角没有固定名字**：稳定 `id`（世界只记这个，窖树带 `owner`）、按作为获得的"称呼"（文案只用它）、可选的玩家自定名字（按 `N`）——按可多人化的方向设计
 - 日夜循环（420 s/天）、自发光果实与植物、粒子、旋转小地图、图鉴、7 条任务、死亡掉落与捡回、存档
 
 ## 原型未实现（文档已设计）
@@ -78,7 +80,7 @@ game/
 node game/test/node-smoke.js   # 无浏览器：数据 → 生成 → 网格化（假 GL）
 node game/test/probe.js        # 各区域/POI 的取景点与水深
 node game/test/docs-sync.js    # 文档 ↔ 数据一致性（中英文两套，不一致 exit 1）
-node game/test/docs-drift.js   # 自检：向 docs/en/ 与 docs/ 注入 11 处错误，确认 docs-sync 全部能抓到
+node game/test/docs-drift.js   # 自检：向 docs/en/ 与 docs/ 注入 13 处错误，确认 docs-sync 全部能抓到
 node game/test/play.js         # 玩法闭环：采集→重生→容量→变形→存取→窖树→掠夺→邮递→存档
 node game/test/upgrade.js      # 背包升级与果格数学
 node game/test/input.js        # 真实按键：走/跳/飞/时间/灰雾墙边界

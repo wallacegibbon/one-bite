@@ -74,7 +74,7 @@ So the real choice of the main line is:
 | ~300 years ago | The Old Orchard is abandoned. The Mother Bloom's first mass amnesia: 40 kinds of fruit go empty overnight |
 | ~120 years ago | The Greyglove Trading Company is founded. Systematic export of fruit begins — the first "fruit drain" |
 | 30 years ago | **The Ridge Winter.** Ash bears vanish for a year, because every cellar they buried went dormant |
-| This year | The game begins. Linnaeus is 16 and enters the valley for the first time |
+| This year | The game begins. A sixteen-year-old forager enters the valley for the first time |
 
 ## 5. The seven main chapters (details in 06)
 

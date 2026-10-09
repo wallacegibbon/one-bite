@@ -8,7 +8,7 @@ A design-document set plus a playable prototype for an open-exploration game in 
 
 ## In one paragraph
 
-You are **Linnaeus**, sixteen, walking into **Frutaria** for the first time. The witches here do not use wands — they **eat fruit and become the animal the fruit remembers**, reverting some time later. The valley is ringed by the **Grey Veil**; inside it are forest, a lake, mountains and floating isles, home to owls, bats, otters, foxes, deer, jellyfish, merrow, unicorns, beamborn spiders, ash bears, veilbeasts, the ash phoenix and dragons. Every animal fruits on its own ground. Your backpack has only **24 fruit slots**, and the more precious the fruit the bigger it is — **you cannot carry all the magic with you**.
+You are **a sixteen-year-old forager** (the name is yours to choose — the valley does not address people by name), walking into **Frutaria** for the first time. The witches here do not use wands — they **eat fruit and become the animal the fruit remembers**, reverting some time later. The valley is ringed by the **Grey Veil**; inside it are forest, a lake, mountains and floating isles, home to owls, bats, otters, foxes, deer, jellyfish, merrow, unicorns, beamborn spiders, ash bears, veilbeasts, the ash phoenix and dragons. Every animal fruits on its own ground. Your backpack has only **24 fruit slots**, and the more precious the fruit the bigger it is — **you cannot carry all the magic with you**.
 
 ## Core loop
 
@@ -47,10 +47,10 @@ The Chinese originals sit in the sibling folder [`docs/cn/`](../cn/README.md): `
 
 `game/index.html` — a dependency-free, hand-written WebGL1 voxel renderer. Double-click it (or run `python3 -m http.server` and visit `/game/`).
 
-Implemented: terrain generation (castle/town/lake/caves/isles), 14 creature AIs (attitude-driven), 15 fruits, transformation and ability switching, the 24-slot backpack with spoilage, main cellar + cellar-tree storage, quests, codex, day/night, the Grey Veil border, death drops and retrieval, localStorage saves.
+Implemented: terrain generation (castle/town/lake/caves/isles), 14 creature AIs (attitude-driven), 15 fruits, transformation and ability switching, the 24-slot backpack with spoilage, main cellar + cellar-tree storage, quests, codex, day/night, the Grey Veil border, death drops and retrieval, the identity layer (id / epithet / name — the protagonist has no fixed name), localStorage saves.
 
 Not implemented (designed in the docs): mixed forms, the magic stomach, beast residue, NPC dialogue trees, phoenix/mother-tree avatar forms, veilbeast slot theft, the merrow restitution system.
 
 ## Data *is* the setting
 
-`game/data/fruits.js`, `game/data/creatures.js` and `game/data/world.js` are the **single source of truth**: every number in these documents (slot counts, dormancy times, attitudes, zone radii) comes from those three files. Change the setting by changing the data; the documents are regenerated to follow. `game/test/docs-sync.js` enforces this for both the Chinese and the English set.
+`game/data/fruits.js`, `game/data/creatures.js`, `game/data/world.js` and `game/data/player.js` are the **single source of truth**: every number in these documents (slot counts, dormancy times, attitudes, zone radii, the epithet table) comes from those four files. Change the setting by changing the data; the documents are regenerated to follow. `game/test/docs-sync.js` enforces this for both the Chinese and the English set.

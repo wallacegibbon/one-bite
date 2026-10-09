@@ -65,6 +65,31 @@ fs.writeFileSync(path.join(ROOT, 'docs', 'README.md'), '# stray\n');
   else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
 }
 fs.unlinkSync(path.join(ROOT, 'docs', 'README.md'));
+
+// a fixed protagonist name must never come back (Chinese set)
+{
+  const CN = path.join(ROOT, 'docs', 'cn'), f = '03-角色与生物.md', p = path.join(CN, f);
+  const bak = fs.readFileSync(p, 'utf8');
+  fs.writeFileSync(p, bak.replace('### 采集者（16 岁）—— 名字由玩家决定', '### 林奈（Linnaeus，16 岁）'));
+  const r = run();
+  console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [fixed protagonist name] exit=${r.code}`);
+  if (r.code === 0) missed++;
+  else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
+  fs.writeFileSync(p, bak);
+}
+
+// identity numbers in the English docs must match IDENTITY
+{
+  const f = '03-characters-and-creatures.md', p = path.join(EN, f);
+  const bak = fs.readFileSync(p, 'utf8');
+  fs.writeFileSync(p, bak.replace('nameMax 16 characters', 'nameMax 20 characters'));
+  const r = run();
+  console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [nameMax drift] exit=${r.code}`);
+  if (r.code === 0) missed++;
+  else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
+  fs.writeFileSync(p, bak);
+}
+
 fs.rmSync(BAK, { recursive: true, force: true });
 
 const clean = run();

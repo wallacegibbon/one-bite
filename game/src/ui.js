@@ -97,6 +97,11 @@
       el('clock').innerHTML = '<b>' + pad(h) + ':' + pad(m) + '</b> · 第 ' + g.day + ' 天 ' + icon +
         ' <span class="dim">' + (g.night > 0.55 ? '夜' : g.night > 0.25 ? '黄昏' : '昼') + '</span>';
 
+      // identity: the valley's epithet comes first; the player's own name only if they chose one
+      const ep = g.epithet();
+      el('who').innerHTML = '「' + ep.cn + '」' +
+        (g.name ? ' <span class="dim">' + g.name + '</span>' : ' <span class="dim">按 N 起个名字</span>');
+
       // vitality / air / fright
       let v = '';
       for (let i = 0; i < 5; i++) v += '<span class="hp' + (p.vital > i + 0.5 ? ' on' : '') + '">✦</span>';
@@ -205,6 +210,12 @@
     }
     renderJournal() {
       const g = this.g;
+      // identity block: the epithet is what the valley uses; the id is what the world stores
+      const ep = g.epithet();
+      let me = '<h3>你</h3><div class="dim">谷地称呼：<b>「' + ep.cn + '」</b>' +
+        (g.name ? ' · 你自己的名字：<b>' + g.name + '</b>（按 N 可改）' : ' · 还没有名字（按 N 起一个）') +
+        ' · 谷地记住的编号：<code>' + g.id + '</code>' +
+        (g.hasTrait('mixStomach') ? ' · 天赋：<b>' + N.IDENTITY.traits.mixStomach.cn + '</b>' : '') + '</div>';
       let q = '<h3>任务</h3>';
       for (const qq of g.quests) q += '<div class="q' + (qq.done ? ' done' : '') + '"><b>' + (qq.done ? '✔ ' : '○ ') + qq.cn + '</b><div class="dim">' + qq.hint + '</div></div>';
       let b = '<h3>果实图鉴</h3><div class="dex">';
@@ -227,7 +238,7 @@
           (known ? '<div class="lore">' + sp.dex + '</div>' : '<div class="dim">尚未观察</div>') + '</div>';
       }
       c += '</div>';
-      el('journalBody').innerHTML = q + b + c;
+      el('journalBody').innerHTML = me + q + b + c;
     }
 
     showHelp(on) {

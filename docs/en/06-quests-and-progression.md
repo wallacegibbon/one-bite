@@ -89,7 +89,7 @@ Quests appear as a checklist in the codex panel (J); completing one announces "�
 | Ending | Requires | Price |
 |---|---|---|
 | **Restitution** | Mother Bloom bud (12 slots) + 20 empty fruits | every fruit permanently −50% potency; you can never become a dragon |
-| **Grafting** | Mother Bloom bud + Embercore (**24 slots = backpack completely full**) + Linnaeus's magic-stomach talent | the Mother Bloom dies; every rare fruit moves to the Cloudspire and must be harvested by flight |
+| **Grafting** | Mother Bloom bud + Embercore (**24 slots = backpack completely full**) + the character's `mixed stomach` trait | the Mother Bloom dies; every rare fruit moves to the Cloudspire and must be harvested by flight |
 | **Non-intervention** | nothing | the share of empty fruit in the codex grows +2% per week; the ending shot is an ordinary hillside |
 
 The **physical difficulty of the grafting route** is deliberate: 12 + 12 = 24 = the backpack cap, meaning the player must walk the whole Old Orchard → Cloudspire → Mother Bloom route **carrying no supplies at all**. This is the game's final test of P3.

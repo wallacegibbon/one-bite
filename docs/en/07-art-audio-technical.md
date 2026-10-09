@@ -94,7 +94,7 @@ All code is classic `<script src>` global scripts hanging off the `window.FRUTAR
 | `src/game.js` | main logic: fruit/backpack/spoilage/storage/quests/save/render loop |
 | `src/ui.js` | HUD, rotating minimap, item bar, storage panel, codex, help, death |
 | `src/main.js` | input bindings, main loop, boot sequence |
-| `data/*.js` | **the source of truth**: fruits / creatures / world |
+| `data/*.js` | **the source of truth**: fruits / creatures / world / player |
 
 ### 3.2 Rendering
 
@@ -125,6 +125,7 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 | No LOD / no streaming | the 160³ world is fully resident in memory; the full scale needs chunk streaming |
 | No NPC dialogue trees | Old Mei / Quill / White Dew only have log text, no branching dialogue |
 | Cellar trees are never destroyed | the bear/dragon tree-destruction roll is not wired up (raids and owl post are implemented) |
+| No identity service | the `id` is generated locally, not issued by a server; cellar trees already carry an `owner`, but the main cellar is communal and there is no sharing-rights model (see 03 §6) |
 
 ## 4. Tests
 
@@ -140,6 +141,6 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 | `game/test/upgrade.js` | backpack upgrades: 24→30→36 slots, Silver Divider −1, q7 trigger, save round-trip |
 | `game/test/shot.js` | a single screenshot (with coordinates / yaw / form / time / `cellar=1` to open the storage panel), for eyeballing |
 | `game/test/docs-sync.js` | **docs ↔ data consistency**: zones/POIs/isles/rarity/storage/cellar-tree rules/key bindings/id coverage, checked for both the Chinese and the English document sets; exit 1 on drift |
-| `game/test/docs-drift.js` | **self-test**: injects 11 known errors into `docs/en/` and `docs/` (numbers / names / keys / a missing file / a stray file) and confirms docs-sync catches every one, then restores |
+| `game/test/docs-drift.js` | **self-test**: injects 13 known errors into `docs/en/` and `docs/` (numbers / names / keys / a missing file / a stray file / a fixed protagonist name) and confirms docs-sync catches every one, then restores |
 
 headless Chrome needs: `--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader` (WebGL 1.0 verified working).

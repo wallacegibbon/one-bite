@@ -2,7 +2,7 @@
  *  game.js -- game state: time/day-night, fruit backpack, storage, transformation, quests, interaction
  * ========================================================================== */
 (function (N) {
-  const RAR = N.RARITY, FRU = N.FRUIT_BY_ID, PLANT = N.PLANT_BY_ID, STO = N.STORAGE;
+  const RAR = N.RARITY, FRU = N.FRUIT_BY_ID, PLANT = N.PLANT_BY_ID, STO = N.STORAGE, IDEN = N.IDENTITY;
 
   const DAY_LEN = 420;          // one in-game day = 7 minutes of real time
   const SAVE_KEY = 'frutaria.save.v1';
@@ -63,6 +63,12 @@
       this.player.yaw = Math.PI; this.player.pitch = -0.1;
       // creatures
       this.spawnCreatures();
+      // identity: the protagonist has no fixed name. id is stable, the epithet is
+      // earned by deeds, the name is the player's own (docs/en/03 section 6).
+      this.id = IDEN.idPrefix + Math.random().toString(36).slice(2, 2 + IDEN.idBytes);
+      this.name = IDEN.nameDefault;
+      this.traits = { mixStomach: true };   // a character trait, not a world law
+      this.epithetSeen = this.epithet().cn;
       // quests
       this.quests = [
         { id: 'q1', cn: '认识主果窖', hint: '去灯笼镇的果窖（按 E 打开），把任意果实存进去', done: false },
@@ -383,7 +389,7 @@
           if (dx * dx + dz * dz + (dy - 5) * (dy - 5) < 7 && !(dx === 0 && dz === 0 && dy < 4)) this.setBlock(bx + dx, by + dy, bz + dz, 27);
       this.setBlock(bx, by, bz, 77);
       const id = 'tree' + (this.stashes.length);
-      this.stashes.push({ id, cn: STO.treestash.label, slots: STO.treestash.slots, decay: STO.treestash.decay, items: [], x: bx, y: by, z: bz, kind: 'tree' });
+      this.stashes.push({ id, cn: STO.treestash.label, slots: STO.treestash.slots, decay: STO.treestash.decay, items: [], x: bx, y: by, z: bz, kind: 'tree', owner: this.id });
       this.logMsg('窖树长成了：' + STO.treestash.slots + ' 果格，腐坏速度 1/3。獾会来偷，记得常回来看。', 'good');
     }
 
@@ -532,6 +538,7 @@
       // q7: walk to the Starfall fruit greenhouse (cellar door)
       const gh = N.POIS.find(x => x.id === 'greenhouse');
       if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q7'), '银丝网叠在果筐上，正好能隔开稀有果实。'); grant('divider'); }
+      this.checkEpithet();
     }
     zoneName() {
       const p = this.player;
@@ -817,13 +824,38 @@
       }
     }
 
+    /* ------------------------- identity (docs/en/03 section 6) ------------------------- */
+    // the valley's name for you: the last earned epithet wins
+    epithet() {
+      const met = id => id === 'all' ? this.quests.every(q => q.done)
+                                     : !!(this.quests.find(q => q.id === id) || {}).done;
+      let cur = IDEN.epithetDefault;
+      for (const e of IDEN.epithets) if (met(e.quest)) cur = e;
+      return cur;
+    }
+    // the player's own name: mutable, not unique, never used by fiction text
+    setName(s) {
+      this.name = String(s == null ? '' : s).trim().slice(0, IDEN.nameMax);
+      this.logMsg(this.name
+        ? '你说了个名字。谷地不怎么用名字，但别人要叫你「' + this.name + '」。'
+        : '你把名字收了回去。谷地继续叫你「' + this.epithet().cn + '」。', 'good');
+      return this.name;
+    }
+    hasTrait(t) { return !!this.traits[t]; }
+    // announce a change of epithet once, when the valley starts using it
+    checkEpithet() {
+      const e = this.epithet();
+      if (e.cn !== this.epithetSeen) { this.epithetSeen = e.cn; this.logMsg('谷地开始叫你「' + e.cn + '」。', 'good'); }
+    }
+
     /* ------------------------- save ------------------------- */
     save() {
       try {
         const s = {
+          id: this.id, name: this.name, traits: this.traits,
           time: this.time, day: this.day, seed: this.seed,
           p: { x: this.player.x, y: this.player.y, z: this.player.z, yaw: this.player.yaw, pitch: this.player.pitch, vital: this.player.vital, form: this.player.form, formT: this.player.formT },
-          inv: this.inv, stashes: this.stashes.map(s2 => ({ id: s2.id, cn: s2.cn, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind })),
+          inv: this.inv, stashes: this.stashes.map(s2 => ({ id: s2.id, cn: s2.cn, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
           diffs: this.diffs, seen: this.seen, dex: this.dexFruit, regrow: this.regrow, posts: this.posts, owl: this._owlUnlocked || false,
           quests: this.quests.map(q => [q.id, q.done]), stats: this.stats, upg: this.upg
         };
@@ -835,6 +867,10 @@
       let s;
       try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { s = null; }
       if (!s) return false;
+      // identity: keep the saved id (the world's memory is keyed on it), never a name we invented
+      this.id = s.id || this.id; this.name = s.name || '';
+      Object.assign(this.traits, s.traits || {});
+      this.epithetSeen = this.epithet().cn;
       this.time = s.time; this.day = s.day;
       this.inv = s.inv || []; this.stashes = s.stashes;
       this.seen = s.seen || {}; this.dexFruit = s.dex || {}; this.stats = s.stats || this.stats;

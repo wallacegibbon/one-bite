@@ -75,7 +75,7 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 
 ## 7. MVP boundary (prototype scope)
 
-**Inside the MVP**: terrain generation, free walking/swimming/flying, fruit picking and spoilage, backpack capacity, transformation and ability switching, creature attitudes, fixed store + field stores, day/night, quests, codex, saving.
+**Inside the MVP**: terrain generation, free walking/swimming/flying, fruit picking and spoilage, backpack capacity, transformation and ability switching, creature attitudes, fixed store + field stores, day/night, quests, codex, saving, the identity layer (id / epithet / name, see 03 §6).
 
 **Explicitly outside the MVP**: NPC dialogue trees, mixed forms, multiplayer, vehicles, weather, building, UI animation beyond the minimap, procedural audio.
 

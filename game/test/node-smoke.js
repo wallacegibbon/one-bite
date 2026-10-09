@@ -5,6 +5,7 @@ const base = path.join(__dirname, '..');
 require(path.join(base, 'data', 'fruits.js'));
 require(path.join(base, 'data', 'creatures.js'));
 require(path.join(base, 'data', 'world.js'));
+require(path.join(base, 'data', 'player.js'));
 require(path.join(base, 'src', 'engine.js'));
 require(path.join(base, 'src', 'world.js'));
 require(path.join(base, 'src', 'worldgen.js'));

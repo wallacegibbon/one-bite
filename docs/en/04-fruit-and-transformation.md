@@ -128,7 +128,7 @@ A fruit starts counting down the moment it is picked.
 - Full design (not implemented):
   - The "magic residue" of two forms coexists in the stomach for 90 seconds, during which every action check is −30%.
   - If the two forms differ in body size by ≥ 1.0 m, the churn damage doubles (human → dragon → jellyfish is the most dangerous combination).
-  - **Linnaeus's exception**: she can deliberately "mix stomachs", see 5.3.
+  - **The `mixed stomach` exception**: a character holding that trait can deliberately "mix stomachs", see 5.3.
 
 ### 5.3 Mixed forms (not implemented, full design)
 
