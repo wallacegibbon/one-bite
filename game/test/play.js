@@ -245,6 +245,22 @@ const path = require('path');
     const e = g.stashes[0].items.filter(i => i.id === 'silkberry').pop();
     return { arrived: !!e, fresh: e ? +e.fresh.toFixed(1) : null, lost: g.stats.postLost || 0 };
   });
+  // a fruit that runs out in the owl's claws goes dormant: same rule as on a shelf
+  const dorm = await step('dormantInTransit', () => {
+    const g = window.game;
+    const it = { kind: 'fruit', id: 'frogpear', fresh: 0.5, maxFresh: 900 };
+    const before = g.posts.length;
+    g.posts.push({ it, t: 999, from: 'cellar' });
+    g.updatePosts(30);
+    const mid = { kind: it.kind, fresh: it.fresh };
+    g.updatePosts(60);                       // a second round must not dig further
+    const after = { kind: it.kind, fresh: it.fresh };
+    g.posts.length = before;                 // take the test post back out
+    return { mid, after };
+  });
+  check('a fruit that runs out in flight goes dormant', dorm.mid.kind === 'pit', dorm);
+  check('dormant stops the decay instead of running into the negatives', dorm.mid.fresh === 0 && dorm.after.fresh === 0, dorm);
+
   const idBefore = await step('idBefore', () => window.game.id);
   await step('save', () => { window.game.save(); const s = localStorage.getItem('frutaria.save.v1'); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
   const ld = await step('load', () => { const ok = window.game.load(); return { ok, id: window.game.id, inv: window.game.inv.map(i => i.id), stashes: window.game.stashes.length }; });

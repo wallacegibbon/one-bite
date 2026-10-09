@@ -276,20 +276,21 @@
       this.dexFruit[id] = true;
       return true;
     }
+    /* One item, one decay step, one rule: pits and plants do not spoil, and a
+       fruit that runs out goes dormant instead of going negative (the storage
+       panel clamps at zero, which is how this stayed invisible). */
+    decayOne(it, dt, rate) {
+      if (it.kind === 'pit' || it.kind === 'plant') return false;
+      it.fresh -= dt * rate;
+      if (it.fresh > 0) return false;
+      it.fresh = 0;              // dormant, not "infinitely expired"
+      it.kind = 'pit';
+      this.logMsg(N.t('log.dormant', { n: itemName(it.id) }), 'warn');
+      return true;
+    }
     decayItems(dt) {
-      const decay = (items, rate) => {
-        for (let i = items.length - 1; i >= 0; i--) {
-          const it = items[i];
-          if (it.kind === 'pit' || it.kind === 'plant') continue;
-          it.fresh -= dt * rate;
-          if (it.fresh <= 0) {
-            it.kind = 'pit';
-            this.logMsg(N.t('log.dormant', { n: itemName(it.id) }), 'warn');
-          }
-        }
-      };
-      decay(this.inv, 1);
-      for (const s of this.stashes) decay(s.items, s.decay);
+      for (const it of this.inv) this.decayOne(it, dt, STO.backpack.decay);
+      for (const s of this.stashes) for (const it of s.items) this.decayOne(it, dt, s.decay);
     }
 
     /* ------------------------- interaction ------------------------- */
@@ -499,7 +500,9 @@
       for (let i = this.posts.length - 1; i >= 0; i--) {
         const po = this.posts[i];
         po.t -= dt;
-        po.it.fresh -= dt * STO.cellar.decay;      // decays in flight at the main cellar's rate
+        // in the owl's claws it spoils at the main cellar's rate, and it can go
+        // dormant on the way: the same rule as on any shelf, not a second one
+        this.decayOne(po.it, dt, STO.cellar.decay);
         if (po.t > 0) continue;
         this.posts.splice(i, 1);
         const name = itemName(po.it.id);
