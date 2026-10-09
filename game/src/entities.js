@@ -270,12 +270,15 @@
     attitudeTo(formId) {
       const a = this.sp.attitude || {};
       // the player's form is a fruit id; attitudes are keyed by species id
-      const species = formId && N.FRUIT_BY_ID[formId] ? N.FRUIT_BY_ID[formId].creature : formId;
-      const key = formId === null ? 'human' : species;
+      const species = this.speciesOf(formId);
+      const key = formId !== null && formId !== undefined ? species || formId : 'human';
       if (a[key]) return a[key];
       if (species && a.self && species === this.sp.id) return a.self;
       return a.default || 'ignore';
     }
+    /* which species the player is wearing right now (null in a human shape) */
+    speciesOf(formId) { return formId && N.FRUIT_BY_ID[formId] ? N.FRUIT_BY_ID[formId].creature : null; }
+    sameSpeciesAs(formId) { return this.speciesOf(formId) === this.sp.id; }
     isFlyer() { return ['owl'].indexOf(this.sp.id) >= 0; }
     isAquatic() { return ['jelly'].indexOf(this.sp.id) >= 0; }        // never leaves the water
     isAmphibian() { return ['frog'].indexOf(this.sp.id) >= 0; }       // bank and water both
@@ -379,9 +382,11 @@
         if (this.state === 'chase') game.onCreatureTouch(this, dt);
         else if (this.sp.aura && (pl.formDef.aura || 0) > 0) { /* they ignore each other */ }
       }
-      // intimidation: the player's form aura makes lesser creatures flee
+      // intimidation: the player's form aura makes lesser creatures flee.
+      // The same species is exempt -- a bear does not run from a bear, and the
+      // attitude table already says "calm" for one of its own.
       const aura = pl.formDef.aura || 0;
-      if (aura > 0 && dp < aura && att !== 'hostile' && att !== 'self' && this.state !== 'flee' && !this.isFlyer()) {
+      if (aura > 0 && dp < aura && att !== 'hostile' && !this.sameSpeciesAs(pl.form) && this.state !== 'flee' && !this.isFlyer()) {
         this.state = 'flee'; this.alarm = 1;
       }
     }

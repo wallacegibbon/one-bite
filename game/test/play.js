@@ -285,6 +285,25 @@ const path = require('path');
     return by;
   });
 
+  // 10b. intimidation belongs to the body, and one's own species is exempt
+  const intimidate = await step('intimidation', () => {
+    const g = window.game, p = g.player, N = window.FRUTARIA;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
+    const bear = g.creatures.find(c => c.sp.id === 'bear');
+    const jelly = g.creatures.find(c => c.sp.id === 'jelly');
+    p.form = 'bruinfig'; p.vital = 5;
+    const standNextTo = (c) => { p.x = c.x + 3; p.y = c.y; p.z = c.z; c.state = 'wander'; c.alarm = 0; };
+    standNextTo(bear); bear.update(0.05, p, g.world, g);
+    const bearAtt = bear.attitudeTo('bruinfig'), bearState = bear.state;
+    standNextTo(jelly); jelly.update(0.05, p, g.world, g);
+    const jellyAtt = jelly.attitudeTo('bruinfig'), jellyState = jelly.state;
+    Object.assign(p, was);
+    bear.state = 'wander'; jelly.state = 'wander'; bear.alarm = 0; jelly.alarm = 0;
+    return { aura: N.FRUIT_BY_ID.bruinfig.form.aura, bearAtt, bearState, jellyAtt, jellyState };
+  });
+  check('a bear is not intimidated by a bear', intimidate.bearState !== 'flee', intimidate);
+  check('the bear aura still scares another species', intimidate.jellyState === 'flee', intimidate);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;
