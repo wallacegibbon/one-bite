@@ -519,7 +519,7 @@
       const sx = Math.floor(p.x), sy = Math.floor(p.y), sz = Math.floor(p.z);
       for (const it of this.inv) this.drops.push({ x: sx + (Math.random() * 3 - 1.5), y: sy + 1, z: sz + (Math.random() * 3 - 1.5), item: it, t: 600 });
       this.inv = [];
-      p.vital = 5; p.air = 18; p.fright = 0; p.form = null; p.formT = 0;
+      p.vital = 5; p.air = p.maxAir(); p.fright = 0; p.form = null; p.formT = 0;
       const s = this.stashes[0];
       p.x = s.x + 2; p.y = s.y + 1; p.z = s.z + 2; p.vx = p.vy = p.vz = 0;
       this.mode = 'dead';

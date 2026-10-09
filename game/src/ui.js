@@ -124,8 +124,8 @@
       let v = '';
       for (let i = 0; i < 5; i++) v += '<span class="hp' + (p.vital > i + 0.5 ? ' on' : '') + '">✦</span>';
       el('vitals').innerHTML = v;
-      el('air').style.width = Math.max(0, Math.min(100, p.air / 18 * 100)) + '%';
-      el('airWrap').style.opacity = p.air < 17.5 ? 1 : 0;
+      el('air').style.width = Math.max(0, Math.min(100, p.air / p.maxAir() * 100)) + '%';
+      el('airWrap').style.opacity = p.air < p.maxAir() - 0.5 ? 1 : 0;
       el('fright').style.width = (p.fright * 100) + '%';
       el('frightWrap').style.opacity = p.fright > 0.02 ? 1 : 0;
 

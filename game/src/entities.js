@@ -32,6 +32,9 @@
     get formDef() { return this.form ? N.FRUIT_BY_ID[this.form].form : HUMAN; }
     get modelId() { return this.form ? N.FRUIT_BY_ID[this.form].creature : 'human'; }
     size() { return this.formDef.size || HUMAN.size; }
+    /* Held breath is a property of the body: a jellyfish body carries forty
+       seconds more than a human one (docs/en/04 s3, airBonus). */
+    maxAir() { return 18 + (this.formDef.airBonus || 0); }
     eyePos() {
       const m = N.MODELS[this.modelId];
       const h = (m && m.eye ? m.eye : 1.6);
@@ -109,7 +112,8 @@
         this.air -= dt * (this.fright > 0.4 ? 1.6 : 1);
         if (this.air <= 0) { this.air = 0; game.damage(0.55 * dt, N.t('log.causeDrown')); }
       } else {
-        this.air = Math.min(canBreathe ? 999 : 18, this.air + dt * (canBreathe ? 999 : 6));
+        const ceiling = canBreathe ? 999 : this.maxAir();
+        this.air = Math.min(ceiling, this.air + dt * (canBreathe ? 999 : 6));
       }
 
       // ---- skin must stay wet (amphibian bodies: docs/en/04 s3) ----

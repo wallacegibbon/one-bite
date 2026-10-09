@@ -86,6 +86,20 @@ const path = require('path');
     return { form: p.form, model: p.modelId, formT: +p.formT.toFixed(1), fly: !!p.formDef.fly, size: p.size(), fov: p.fov() };
   });
 
+  // 3b. held breath belongs to the body: airBonus is not decoration
+  const air = await step('airCeiling', () => {
+    const g = window.game, p = g.player, N = window.FRUTARIA;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, air: p.air, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
+    p.x = 136.5; p.y = 22; p.z = 130.5; p.vx = p.vy = p.vz = 0; p.vital = 5;
+    p.form = null; p.air = 100; p.update(0.1, {}, g);      // over-full air is clamped to the body ceiling
+    const human = p.air;
+    p.form = 'jellybloom'; p.air = 100; p.update(0.1, {}, g);
+    const jelly = p.air;
+    Object.assign(p, was);
+    return { human, jelly, bonus: N.FRUIT_BY_ID.jellybloom.form.airBonus };
+  });
+  check('airBonus raises the breath ceiling', air.jelly === air.human + air.bonus, air);
+
   // 4. flight after transforming: hold up for 1.5 seconds
   const flyY = await step('fly', () => {
     const g = window.game;
