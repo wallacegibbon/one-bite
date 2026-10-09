@@ -158,13 +158,14 @@ Two consequences worth knowing:
 | `game/test/heightmap.js` | prints an ASCII heightmap of the surface |
 | `game/test/probe.js` | finds a safe camera spot for every POI/zone |
 | `game/test/shots.js` | 20 screenshots in one launch (zones + transformation + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
-| `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology; plus the world reacting to a body (block edits re-mesh, the breath ceiling, intimidation by species, a unique key per block) |
+| `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology; plus the world reacting to a body (block edits re-mesh, the breath ceiling, intimidation by species, a unique key per block), what each quest gate actually requires, and how each animal moves and when it is awake |
 | `game/test/save.js` | the save round trip: write a save, reload the page, continue from the start screen — identity, backpack, stores, the planting queue, scattered fruit, buffs and the form bar all come back, and a save that lists no town cellar still gets one |
 | `game/test/input.js` | real key events: walk / jump / fly / time bar / Grey Veil border |
 | `game/test/lang.js` | language switch: every visible string comes from the table in use, no raw key leaks, and the save file is byte-identical across languages |
 | `game/test/upgrade.js` | backpack upgrades: 24→30→36 slots, Silver Divider −1, q7 trigger, save round-trip |
 | `game/test/shot.js` | a single screenshot (with coordinates / yaw / form / time / `cellar=1` to open the storage panel), for eyeballing |
 | `game/test/docs-sync.js` | **docs ↔ data consistency**: zones/POIs/isles/rarity/storage/cellar-tree rules/key bindings/id coverage, checked for both the Chinese and the English document sets; exit 1 on drift |
-| `game/test/docs-drift.js` | **self-test**: injects 15 known errors into `docs/en/` and `docs/` (numbers / names / keys / warehouse rules / a missing file / a stray file / a fixed protagonist name) and confirms docs-sync catches every one, then restores |
+| `game/test/reach.js` | **data ↔ code consistency**: every field on a fruit, on a fruit's ability block and on a creature must be read by some file in `game/src/`, or sit in a printed `NOT_YET_IMPLEMENTED` list with its reason. An entry that has quietly gone live fails too, so the list can only shrink by being fixed |
+| `game/test/docs-drift.js` | **self-test**: injects 17 known errors into `docs/en/` and `docs/` (numbers / names / keys / warehouse rules / a missing file / a stray file / a fixed protagonist name / a cut design coming back) and confirms docs-sync catches every one, then restores |
 
 headless Chrome needs: `--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader` (WebGL 1.0 verified working).

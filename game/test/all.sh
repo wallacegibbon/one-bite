@@ -12,6 +12,7 @@ run() {
 }
 run node-smoke 60
 run probe 60
+run reach 60
 run docs-sync 60
 run docs-drift 180
 run play 300
