@@ -402,6 +402,17 @@
       const f = FRU[fruitId];
       if (!f || !f.duration) { this.logMsg(N.t('log.notEdible'), 'warn'); return; }
       const p = this.player;
+      /* The body you are about to wear has to fit where you are standing. docs
+         04 s4 makes the collision box a hard gate -- a bear at 1.4x1.5 does not
+         fit the 1x1 crevice a frog does -- and a body that cannot fit cannot be
+         worn, so the fruit is not spent and the valley says why. A body that
+         ends on a timer cannot be refused, so `unstick` is still the net under
+         revert, death and load. */
+      const was = p.form;
+      p.form = fruitId;
+      const noRoom = p.hits(p.x, p.y, p.z);
+      p.form = was;
+      if (noRoom) { this.logMsg(N.t('log.noRoomForm', { f: N.disp(f.form) }), 'warn'); return; }
       // One body at a time: a second fruit simply replaces the body you are
       // wearing. There is no organ that holds two magics, so there is nothing
       // to churn and no counter of how many you have swallowed -- the cost is
@@ -409,6 +420,7 @@
       if (p.form) this.logMsg(N.t('log.overwrite', { a: N.disp(FRU[p.form].form), b: N.disp(f.form) }), 'warn');
       p.form = fruitId;
       p.formT = f.duration; p.formMax = f.duration;
+      p.unstick();          // the new body may not fit where the old one stood
       this.inv.splice(slotIdx, 1);
       this.stats.eaten++;
       this.dexFruit[fruitId] = true;
@@ -421,6 +433,7 @@
       const p = this.player;
       if (!p.form) return;
       p.form = null; p.formT = 0;
+      p.unstick();          // ... and neither may the body you come back to
       this.stats.reverted++;
       this.logMsg(N.t('log.revert', { w: why || N.t('log.revertTime') }), '');
     }
@@ -475,6 +488,7 @@
       this.setBlock(bx, by, bz, N.BLOCK_ID.cellarCore);
       const id = 'tree' + (this.stashes.length);
       this.stashes.push({ id, kind: 'tree', slots: STO.treestash.slots, decay: STO.treestash.decay, items: [], x: bx, y: by, z: bz, owner: this.id });
+      p.unstick();          // the trunk grows up through the body that planted it
       this.logMsg(N.t('log.treeBuilt', { s: STO.treestash.slots }), 'good');
     }
 
@@ -755,6 +769,7 @@
           const fb = N.FRUIT_BLOCK_REV[g.fruit];
           if (fb) for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1]]) if (this.world.get(g.x + dx, g.y + 5, g.z + dz) === N.BLOCK_ID.leaf) this.setBlock(g.x + dx, g.y + 5, g.z + dz, fb);
           this.growQueue.splice(i, 1);
+          this.player.unstick();   // ... and a pit that reaches your height grows past you, not through you
           this.logMsg(N.t('log.sapling'), 'good');
         }
       }
@@ -1114,6 +1129,9 @@
       Object.assign(p, { x: s.p.x, y: s.p.y, z: s.p.z, yaw: s.p.yaw, pitch: s.p.pitch,
         vital: s.p.vital, form: s.p.form, formT: s.p.formT,
         formMax: s.p.formMax || (s.p.formT || 1), dry: s.p.dry || 0 });
+      // the block diffs are applied above, so a cellar tree may have grown into
+      // the spot the save was written at: the body it restores has to fit again
+      p.unstick();
       for (const q of s.quests || []) { const qq = this.quests.find(x => x.id === q[0]); if (qq) qq.done = q[1]; }
       Object.assign(this.upg, s.upg || {});
       // read off the restored quests, so it has to come after them

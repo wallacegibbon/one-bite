@@ -135,6 +135,28 @@ const path = require('path');
   const swap = await step('oneBodyAtATime', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
     const ids = ['owlberry', 'frogpear', 'bruinfig'];
+    /* The bear body is 1.4 x 1.5 -- the widest body in the valley -- and eat()
+       refuses a body that does not fit where you stand, so the swap has to
+       happen in the open. Find a column with room for it rather than testing
+       the rule by standing in a crevice. */
+    const home = { x: p.x, y: p.y, z: p.z };
+    const gy = (x, z) => { for (let y = g.world.h - 1; y >= 0; y--) if (g.world.solidAt(x, y, z)) return y; return -1; };
+    let spot = null;
+    for (let r = 0; r < 60 && !spot; r++)
+      for (let dx = -r; dx <= r && !spot; dx++)
+        for (let dz = -r; dz <= r && !spot; dz++) {
+          const cx = Math.floor(home.x) + dx, cz = Math.floor(home.z) + dz, y = gy(cx, cz);
+          if (y < 1) continue;
+          let open = true;
+          for (let h = 1; h <= 3; h++) if (g.world.solidAt(cx, y + h, cz)) { open = false; break; }
+          if (!open) continue;
+          p.x = cx + 0.5; p.z = cz + 0.5; p.y = y + 1.0005;
+          const was = p.form; p.form = 'bruinfig';
+          const fits = !p.hits(p.x, p.y, p.z);
+          p.form = was;
+          if (fits) spot = { x: +p.x.toFixed(1), y: +p.y.toFixed(1), z: +p.z.toFixed(1) };
+        }
+    if (!spot) { p.x = home.x; p.y = home.y; p.z = home.z; return { error: 'no bear-sized spot near the player' }; }
     g.inv.length = 0;
     for (const id of ids) g.addItem('fruit', id);
     const before = { vital: p.vital, inv: g.inv.length };
@@ -143,7 +165,7 @@ const path = require('path');
     const after = { vital: p.vital, inv: g.inv.length };
     const lines = g.log.slice(-10).map(l => l.text);
     const out = {
-      before, after, forms,
+      before, after, forms, spot,
       gastric: g.gastric, gastricTime: g.gastricTime,
       overwrite: N.t('log.overwrite', {
         a: N.disp(N.FRUIT_BY_ID.owlberry.form), b: N.disp(N.FRUIT_BY_ID.frogpear.form)
@@ -155,6 +177,7 @@ const path = require('path');
         N.T[loc]['log.churn'] !== undefined || N.T[loc]['log.causeOverload'] !== undefined)
     };
     p.form = null; p.formT = 0; g.inv.length = 0;
+    p.x = home.x; p.y = home.y; p.z = home.z;
     return out;
   });
   check('each fruit replaces the body in order', JSON.stringify(swap.forms) === JSON.stringify(['owlberry', 'frogpear', 'bruinfig']), swap.forms);
@@ -878,6 +901,98 @@ const path = require('path');
   check('in first person the crosshair is the eye',
     lens.rayFirst && lens.rayFirst.want && JSON.stringify(lens.rayFirst.want) === JSON.stringify(lens.rayFirst.hover), lens.rayFirst);
   check('first person has no lens behind the head to pull in', lens.rayFirst && lens.rayFirst.d === 0, lens.rayFirst);
+
+  /* 10l. a body change cannot leave you inside the world. `axis` stops a body
+     entering a solid; it has no opinion about one that already is, and a body
+     that overlaps a solid cannot move at all -- every direction it tries still
+     hits, so the run is over. Two ways in: eating a body too big for the room
+     you are standing in, and coming back to a human body in a gap only a frog
+     fits. The first can be refused before the fruit is spent; the second cannot
+     (the timer does not ask), so the body is lifted out instead. */
+  const fit = await step('bodyFits', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player, W = g.world;
+    const home = { x: p.x, y: p.y, z: p.z, inv: g.inv.slice() };
+    // a column with four blocks of clear air over the ground: somewhere to build
+    let cx = 0, cz = 0, gy = 0, found = false;
+    for (let r = 0; r < 70 && !found; r++)
+      for (let dx = -r; dx <= r && !found; dx++)
+        for (let dz = -r; dz <= r && !found; dz++) {
+          const x = Math.floor(home.x) + dx, z = Math.floor(home.z) + dz;
+          let y = -1;
+          for (let yy = W.h - 1; yy >= 0; yy--) if (W.solidAt(x, yy, z)) { y = yy; break; }
+          if (y < 1 || y > W.h - 6) continue;
+          let open = true;
+          for (let h = 1; h <= 4; h++) if (W.get(x, y + h, z) !== 0) { open = false; break; }
+          // far enough from every existing tree that (c) can build here
+          for (const s of g.stashes) if (s.kind === 'tree' && Math.hypot(x - s.x, z - s.z) < 21) { open = false; break; }
+          if (!open) continue;
+          cx = x; cz = z; gy = y; found = true;
+        }
+    if (!found) return { error: 'no open column to build in' };
+    const roofWas = W.get(cx, gy + 2, cz);
+    W.set(cx, gy + 2, cz, 3);                       // stone roof: a one-metre gap
+    p.form = null; p.formT = 0; p.vx = p.vy = p.vz = 0;
+    p.x = cx + 0.5; p.z = cz + 0.5; p.y = gy + 1.0005;
+    const out = { at: [cx, gy, cz] };
+
+    // (a) the body that does not fit is refused, and the fruit is not spent
+    g.inv.length = 0; g.addItem('fruit', 'bruinfig');
+    g.eat('bruinfig', 0);
+    const wornAfterEat = p.form;
+    p.form = 'bruinfig';
+    const bearFits = !p.hits(p.x, p.y, p.z);
+    p.form = null;
+    out.refused = {
+      form: wornAfterEat, inv: g.inv.length, bearFits,
+      line: g.log.slice(-4).map(l => l.text)
+        .includes(N.t('log.noRoomForm', { f: N.disp(N.FRUIT_BY_ID.bruinfig.form) }))
+    };
+
+    // (b) the body that ends inside the gap is not left buried
+    g.inv.length = 0; g.addItem('fruit', 'frogpear');
+    g.eat('frogpear', 0);
+    out.frogIn = { form: p.form, y: +p.y.toFixed(2), fits: !p.hits(p.x, p.y, p.z) };
+    const was = { x: p.x, y: p.y, z: p.z };
+    g.revert('test');
+    out.outOfGap = {
+      y: +p.y.toFixed(2), rose: +(p.y - was.y).toFixed(2),
+      slid: +Math.hypot(p.x - was.x, p.z - was.z).toFixed(2),
+      fits: !p.hits(p.x, p.y, p.z)
+    };
+    const here = { x: p.x, z: p.z };
+    let free = 0;
+    for (const d of [[0.2, 0], [-0.2, 0], [0, 0.2], [0, -0.2]]) {
+      if (!p.axis('x', d[0]) && !p.axis('z', d[1])) free++;
+      p.x = here.x; p.z = here.z;
+    }
+    out.canMove = free;
+
+    // (c) a tree planted at your own feet is planted beside you, not inside you
+    W.set(cx, gy + 2, cz, roofWas);
+    p.x = cx + 0.5; p.z = cz + 0.5; p.y = gy + 1.0005;
+    const treesBefore = g.stashes.filter(s => s.kind === 'tree').length;
+    const at = { x: p.x, z: p.z };
+    g.buildCellarTree();
+    out.treeAtYourFeet = {
+      grew: g.stashes.filter(s => s.kind === 'tree').length === treesBefore + 1,
+      fits: !p.hits(p.x, p.y, p.z),
+      slid: +Math.hypot(p.x - at.x, p.z - at.z).toFixed(2)
+    };
+
+    p.form = null; p.formT = 0;
+    p.x = home.x; p.y = home.y; p.z = home.z;
+    g.inv.length = 0; for (const it of home.inv) g.inv.push(it);
+    return out;
+  });
+  check('a body too big for the room is refused', fit.refused && fit.refused.form === null && fit.refused.inv === 1, fit.refused);
+  check('the refusal is about the box, not about the fruit', fit.refused && fit.refused.bearFits === false, fit.refused);
+  check('the valley says why', fit.refused && fit.refused.line, fit.refused);
+  check('a body that does fit is still eaten', fit.frogIn && fit.frogIn.form === 'frogpear' && fit.frogIn.fits, fit.frogIn);
+  check('a body that ends inside the world gets out of it',
+    fit.outOfGap && fit.outOfGap.fits && (fit.outOfGap.slid > 0 || fit.outOfGap.rose > 0), fit.outOfGap);
+  check('and it can move again', fit.canMove >= 3, fit);
+  check('a cellar tree planted at your feet is planted beside you',
+    fit.treeAtYourFeet && fit.treeAtYourFeet.grew && fit.treeAtYourFeet.fits && fit.treeAtYourFeet.slid > 0, fit.treeAtYourFeet);
 
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');

@@ -120,6 +120,7 @@ This single idea answers Q1–Q5 at once:
 | Theft | one roll per game day, 30% chance a bear or a fruit thief takes 1–3 fruits; **if the player is within 45 m they are always scared off and nothing is lost**. The town cellar is never rolled against — it is the only storage with walls | field storage has to be **visited regularly** |
 | Destruction | a bear form can tear it down (tearing = everything drops) — **not implemented** | a big body should be able to wreck a thing |
 | Not movable | a dead cellar tree is dead, its goods scatter | there is no "pack up the warehouse" |
+| Body | the tree grows in the cell you are standing in, and the trunk grows up through you: you end up beside it, not inside it | a thing that grows at your feet should leave you standing next to it, not stuck in it |
 
 **Why cellar-tree decay is not 0**: if field storage had zero decay, players would build one per map and the capacity anxiety would vanish. ×0.33 means a cellar tree is a **waystation**, not a **safe**.
 

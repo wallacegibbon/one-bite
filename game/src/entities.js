@@ -122,6 +122,36 @@
       for (let zz = z0; zz <= z1; zz++) for (let xx = x0; xx <= x1; xx++) if (this.world.solidAt(xx, y, zz)) return true;
       return false;
     }
+    /* A body change, or a tree growing where you were standing, can leave you
+       inside the world. `axis` stops a body entering a solid; it has no opinion
+       about one that already is, and a body that overlaps a solid cannot move
+       normally -- every direction it tries hits and snaps to a block face. So
+       after any change of size, and after any tree built at your feet, get the
+       body out. Sideways first: a body inside a column belongs beside it, which
+       is what planting a tree on your own head should leave you doing (standing
+       next to it), and lifting would put you on top of a four-metre trunk. Then
+       up, because a body under a roof belongs above it. Past both the column is
+       solid all the way and the honest answer is the top of it. */
+    unstick() {
+      if (!this.hits(this.x, this.y, this.z)) return false;
+      const x0 = this.x, z0 = this.z;
+      const off = [];
+      for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++)
+        if (dx || dz) off.push([dx * 0.5, dz * 0.5, dx * dx + dz * dz]);
+      off.sort((a, b) => a[2] - b[2]);
+      for (const [dx, dz] of off) {
+        this.x = x0 + dx; this.z = z0 + dz;
+        if (!this.hits(this.x, this.y, this.z)) { this.vx = 0; this.vz = 0; return true; }
+      }
+      this.x = x0; this.z = z0;
+      for (let i = 0; i < 40; i++) {
+        this.y += 0.05;
+        if (!this.hits(this.x, this.y, this.z)) { this.vy = 0; this.grounded = false; return true; }
+      }
+      this.y = groundY(this.world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y) + 6) + 0.0005;
+      this.vy = 0; this.grounded = false;
+      return true;
+    }
 
     update(dt, inp, game) {
       const f = this.formDef;

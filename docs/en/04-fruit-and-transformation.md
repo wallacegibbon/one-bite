@@ -140,6 +140,7 @@ The one exception is a **body reflex**: this body startles before you have decid
 - Time out → you revert to human shape.
 - Revert deliberately: press `R` (ends early, no time refunded).
 - **Eat another fruit while you are already in a body and you simply change into that one.** The body you were in ends now, and the fruit you ate does exactly what it says. There is no organ that holds two magics, no counter of how many you have swallowed, and no penalty for the order you eat them in. The cost is the body you ended early and the fruit you spent — which P3 has already priced for you.
+- **The body you are about to wear has to fit where you are standing.** §4 makes the collision box a hard gate: a 1.4×1.5 bear does not fit the crevice a 0.5×0.5 frog fits. Eating it there is refused — the fruit stays in the backpack, nothing is spent, and the valley says why. A body that ends on a timer cannot be refused, so the body is moved out of the geometry instead: sideways when there is room beside it, otherwise up onto the block that was in the way.
 
 **One body at a time is a law of the world, not a difficulty setting.** No talent, plant or tool makes two bodies coexist. The moment one backpack could carry two bodies, every door in the valley stops being a decision about *which body to arrive in* and becomes a shopping list.
 
