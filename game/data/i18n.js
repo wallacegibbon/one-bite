@@ -27,7 +27,8 @@
 
     /* ---------------------------------------------------------------- zh */
     zh: {
-      'app.title': '万灵果园 · FRUTARIA（可玩原型）',
+      'app.title': '果灵谷 · FRUTARIA（可玩原型）',
+      'start.title': '果灵谷',
       'start.sub': 'FRUTARIA · 无杖魔法 · 变形探索（可玩原型）',
       'start.loading': '生成世界中…',
       'start.gen': '正在长出一片谷地… {p}%',
@@ -206,7 +207,8 @@
     /* ---------------------------------------------------------------- en */
     en: {
       'app.title': 'FRUTARIA · playable prototype',
-      'start.sub': 'FRUTARIA · wandless magic · transformation exploration (playable prototype)',
+      'start.title': 'FRUTARIA',
+      'start.sub': 'wandless magic · transformation exploration (playable prototype)',
       'start.loading': 'Generating the world…',
       'start.gen': 'Growing the valley… {p}%',
       'start.ready': 'The valley is ready',

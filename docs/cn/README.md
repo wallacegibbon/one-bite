@@ -1,4 +1,4 @@
-# 万灵果园 · FRUTARIA
+# 果灵谷 · FRUTARIA
 
 **中文** · [English: ../en/README.md](../en/README.md)
 
