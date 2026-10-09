@@ -3,6 +3,7 @@
  *  One species per ecological niche. Seven niches, seven species.
  *  attitude: reaction to the player's current form; self=same species, default=fallback
  *  active  : active period; day / night / both / dusk
+ *  dex/dexEn: the codex entry, always "a verifiable fact + an unverifiable rumour"
  * ========================================================================== */
 (function (N) {
 
@@ -14,7 +15,8 @@
       speed: 3.2, flySpeed: 7.0, alert: 12, flee: 8, herd: 1,
       fruit: 'owlberry',
       attitude: { self: 'calm', default: 'flee', frog: 'curious', bear: 'flee' },
-      dex: '白天塞在树洞里，像一截会呼吸的木头。夜里它是整片林子的耳朵。谷地里的猫头鹰不抓老鼠——它们抓"失窃的果实"，是灯笼镇义务巡逻队。'
+      dex: '白天塞在树洞里，像一截会呼吸的木头。夜里它是整片林子的耳朵。谷地里的猫头鹰不抓老鼠——它们抓"失窃的果实"，是灯笼镇义务巡逻队。',
+      dexEn: 'By day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and they are Lanternrow\'s volunteer patrol.'
     },
     {
       /* niche: the ground -- digging, and a body that is its own armour */
@@ -23,7 +25,8 @@
       speed: 2.2, alert: 10, flee: 5, herd: 1,
       fruit: 'scaleberry',
       attitude: { self: 'calm', default: 'ignore', bear: 'flee', human: 'curious' },
-      dex: '它挖的洞比灯笼镇的果窖老得多——镇上的果窖形制，据说是抄熊的，而熊是抄穿山甲的。受惊时它把自己卷成一枚鳞片球，任何牙齿都无从下口。'
+      dex: '它挖的洞比灯笼镇的果窖老得多——镇上的果窖形制，据说是抄熊的，而熊是抄穿山甲的。受惊时它把自己卷成一枚鳞片球，任何牙齿都无从下口。',
+      dexEn: 'The tunnels it digs are far older than Lanternrow\'s cellar — the shape of the town\'s cellar is said to be copied from bears, and bears copied it from pangolins. Frightened, it rolls itself into a ball of scales that no tooth can get a hold of.'
     },
     {
       /* niche: the forest -- speed and leaping, and being prey */
@@ -32,7 +35,8 @@
       speed: 5.4, alert: 20, flee: 14, herd: 6,
       fruit: 'stagcap',
       attitude: { self: 'calm', default: 'flee', bear: 'flee', frog: 'ignore', human: 'flee' },
-      dex: '鹿径不是路，是几百年里被同一群鹿踩出来的"决定"。跟着鹿径走一定能找到水，也一定能找到熊。'
+      dex: '鹿径不是路，是几百年里被同一群鹿踩出来的"决定"。跟着鹿径走一定能找到水，也一定能找到熊。',
+      dexEn: 'A deer path is not a road, it is a "decision" pressed into the ground by the same herd over centuries. Follow a deer path and you will certainly find water, and you will certainly find a bear.'
     },
     {
       /* niche: open water -- drifting light */
@@ -41,7 +45,8 @@
       speed: 0.8, swimSpeed: 2.2, alert: 4, flee: 0, herd: 10,
       fruit: 'jellybloom',
       attitude: { self: 'calm', default: 'ignore', frog: 'ignore' },
-      dex: '镜湖的灯。水母田的位置就是湖底沉塔的轮廓——从水面看下去，塔在发光。'
+      dex: '镜湖的灯。水母田的位置就是湖底沉塔的轮廓——从水面看下去，塔在发光。',
+      dexEn: 'The lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows.'
     },
     {
       /* niche: the shallows -- jumping, and breathing through the skin */
@@ -50,7 +55,8 @@
       speed: 1.8, swimSpeed: 4.6, alert: 12, flee: 7, herd: 12,
       fruit: 'frogpear',
       attitude: { self: 'calm', default: 'ignore', owl: 'flee', bear: 'ignore', deer: 'ignore' },
-      dex: '雨后整片湖岸一起叫，声音能压过钟塔。它们不喝水——它们靠皮肤喝。'
+      dex: '雨后整片湖岸一起叫，声音能压过钟塔。它们不喝水——它们靠皮肤喝。',
+      dexEn: 'After rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.'
     },
     {
       /* niche: caves and old beams -- climbing */
@@ -59,7 +65,8 @@
       speed: 3.0, alert: 10, flee: 6, herd: 1,
       fruit: 'silkberry',
       attitude: { self: 'calm', default: 'ignore', bear: 'ignore' },
-      dex: '住在梁上，不结网捕虫，结网"补房子"。果园遗迹和云顶浮岛的旧梁至今没塌，靠的是它们三百年织的梁。'
+      dex: '住在梁上，不结网捕虫，结网"补房子"。果园遗迹和云顶浮岛的旧梁至今没塌，靠的是它们三百年织的梁。',
+      dexEn: 'Lives in the beams, spins no webs for insects, spins webs to repair buildings. The old beams of the Old Orchard and of the Cloudspire isles have not collapsed, and that is thanks to three hundred years of web.'
     },
     {
       /* niche: the ridge -- strength */
@@ -68,7 +75,8 @@
       speed: 5.0, alert: 22, flee: 0, herd: 1,
       fruit: 'bruinfig',
       attitude: { self: 'calm', default: 'ignore', deer: 'hostile', pangolin: 'hostile', frog: 'ignore' },
-      dex: '北岭的熊会挖"果窖"——它们比人类更早学会把果实埋起来慢慢吃。它们也拆人类的窖树：熊不需要背包。'
+      dex: '北岭的熊会挖"果窖"——它们比人类更早学会把果实埋起来慢慢吃。它们也拆人类的窖树：熊不需要背包。',
+      dexEn: 'The bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.'
     }
   ];
 

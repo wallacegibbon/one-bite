@@ -34,6 +34,7 @@ Requires a browser with WebGL 1.0. On first load, 100 chunks are generated acros
 | `J` | Codex (fruits / creatures / quests) |
 | `H` | Help |
 | `N` | Give yourself a name (the valley addresses you by your epithet, not your name) |
+| `L` | Switch the interface language (中文 / English) |
 | `1`–`9` / mouse wheel | Select item |
 | `F5` | Save (localStorage) |
 | `Esc` | Close panel |
@@ -54,6 +55,7 @@ Requires a browser with WebGL 1.0. On first load, 100 chunks are generated acros
 - 7 creatures, attitude-driven AI (they react to *the shape you are in right now*)
 - Identity layer with **no fixed protagonist name**: a stable `id` (stored by the world, cellar trees carry an `owner`), an earned epithet the valley actually uses, and an optional player-chosen name (press `N`) — designed so it survives a move to multiplayer
 - Day/night cycle (420 s per day), self-lit fruit and plants, particles, rotating minimap, codex, 7 quests, death drops and retrieval, save game
+- **Switchable interface language** (中文 / English, `L` or the HUD button): interface text lives in one flat table per language, setting text stays as a `cn`/`en` pair on the record itself, and nothing translated is ever written to the save file (07 §3.4)
 
 ## Not implemented (but designed in the docs)
 
@@ -67,9 +69,9 @@ docs/en/         the same documents in English, same numbering
 game/
   index.html     entry point
   css/ui.css     HUD styles
-  data/          source of truth: fruits.js / creatures.js / world.js
-  src/           engine / world / worldgen / models / entities / game / ui / main
-  test/          node-smoke / heightmap / probe / docs-sync / shots / play / input / upgrade
+  data/          source of truth: fruits.js / creatures.js / world.js / player.js / i18n.js
+  src/           i18n / engine / world / worldgen / models / entities / game / ui / main
+  test/          node-smoke / heightmap / probe / docs-sync / docs-drift / shots / play / input / upgrade / lang
 ```
 
 ## Tests
@@ -84,8 +86,9 @@ node game/test/docs-drift.js   # self-test: injects 15 errors into docs/en/ and 
 node game/test/play.js         # gameplay loop: harvest → respawn → capacity → transform → storage → cellar tree → raid → post → save
 node game/test/upgrade.js      # backpack upgrades and slot maths
 node game/test/input.js        # real key events: walk / jump / fly / time / Grey Veil border
-node game/test/shots.js g      # 16 screenshots → .shots/ (zones, transformation, UI, identity)
+node game/test/lang.js         # language switch: no raw key on screen, save file identical across languages
+node game/test/shots.js g      # 20 screenshots → .shots/ (zones, transformation, UI, identity, one panel per language)
 node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # single shot, for eyeballing
 ```
 
-The last five need headless Chrome (`/usr/bin/google-chrome`) and `puppeteer-core`; SwiftShader software rendering is verified to work.
+The last six need headless Chrome (`/usr/bin/google-chrome`) and `puppeteer-core`; SwiftShader software rendering is verified to work.

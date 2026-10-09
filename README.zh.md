@@ -34,6 +34,7 @@ cd game && python3 -m http.server 8000   # 然后打开 http://localhost:8000/
 | `J` | 图鉴（果实 / 生物 / 任务） |
 | `H` | 帮助 |
 | `N` | 给自己起名字（谷地用"称呼"叫你，不用名字） |
+| `L` | 切换界面语言（中文 / English） |
 | `1`–`9` / 滚轮 | 选择物品 |
 | `F5` | 保存（localStorage） |
 | `Esc` | 关闭面板 |
@@ -54,6 +55,7 @@ cd game && python3 -m http.server 8000   # 然后打开 http://localhost:8000/
 - 7 种生物，态度驱动 AI（对"你现在的形状"反应）
 - 身份层，**主角没有固定名字**：稳定 `id`（世界只记这个，窖树带 `owner`）、按作为获得的"称呼"（文案只用它）、可选的玩家自定名字（按 `N`）——按可多人化的方向设计
 - 日夜循环（420 s/天）、自发光果实与植物、粒子、旋转小地图、图鉴、7 条任务、死亡掉落与捡回、存档
+- **界面语言可切换**（中文 / English，按 `L` 或点 HUD 按钮）：界面文案每种语言一张扁平表，设定文案仍以 `cn`/`en` 成对字段留在记录自己身上，存档里不写任何翻译（07 §3.4）
 
 ## 原型未实现（文档已设计）
 
@@ -67,9 +69,9 @@ docs/en/         同一套文档的英文版（编号相同）
 game/
   index.html     入口
   css/ui.css     HUD 样式
-  data/          设定真源：fruits.js / creatures.js / world.js
-  src/           engine / world / worldgen / models / entities / game / ui / main
-  test/          node-smoke / heightmap / probe / shots / play / input
+  data/          设定真源：fruits.js / creatures.js / world.js / player.js / i18n.js
+  src/           i18n / engine / world / worldgen / models / entities / game / ui / main
+  test/          node-smoke / heightmap / probe / docs-sync / docs-drift / shots / play / input / lang
 ```
 
 ## 测试
@@ -84,8 +86,9 @@ node game/test/docs-drift.js   # 自检：向 docs/en/ 与 docs/ 注入 15 处�
 node game/test/play.js         # 玩法闭环：采集→重生→容量→变形→存取→窖树→掠夺→邮递→存档
 node game/test/upgrade.js      # 背包升级与果格数学
 node game/test/input.js        # 真实按键：走/跳/飞/时间/灰雾墙边界
-node game/test/shots.js g      # 16 张截图 → .shots/（区域、变形、UI、身份）
+node game/test/lang.js         # 语言切换：屏幕上没有裸 key，存档文件在两种语言下逐字节相同
+node game/test/shots.js g      # 20 张截图 → .shots/（区域、变形、UI、身份、每种语言各一张面板）
 node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # 单张，肉眼检查
 ```
 
-后 5 个需要 headless Chrome（`/usr/bin/google-chrome`）与 `puppeteer-core`；SwiftShader 软渲染已验证可用。
+后 6 个需要 headless Chrome（`/usr/bin/google-chrome`）与 `puppeteer-core`；SwiftShader 软渲染已验证可用。

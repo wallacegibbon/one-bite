@@ -6,11 +6,31 @@ require(path.join(base, 'data', 'fruits.js'));
 require(path.join(base, 'data', 'creatures.js'));
 require(path.join(base, 'data', 'world.js'));
 require(path.join(base, 'data', 'player.js'));
+require(path.join(base, 'data', 'i18n.js'));
+require(path.join(base, 'src', 'i18n.js'));
 require(path.join(base, 'src', 'engine.js'));
 require(path.join(base, 'src', 'world.js'));
 require(path.join(base, 'src', 'worldgen.js'));
 
 const F = window.FRUTARIA;
+
+// every language table must cover exactly the same keys: a missing translation
+// would otherwise only surface as a raw dotted key sitting in the UI
+{
+  const ids = F.LANGS.map(l => l.id);
+  const keys = Object.keys(F.T.zh).sort();
+  let bad = 0;
+  for (const id of ids) {
+    const missing = keys.filter(k => F.T[id][k] === undefined);
+    const extra = Object.keys(F.T[id]).filter(k => F.T.zh[k] === undefined).sort();
+    if (missing.length || extra.length) {
+      bad++;
+      console.log('!! i18n table', id, 'missing', missing.length, ':', missing.join(','), ' extra:', extra.join(','));
+    }
+  }
+  console.log('i18n 语言', ids.join('/'), '每语言', keys.length, '键', bad ? '!! ' + bad + ' 张表不一致' : 'OK');
+  if (bad) process.exitCode = 1;
+}
 const gl = {
   ARRAY_BUFFER: 1, STATIC_DRAW: 2, FLOAT: 3, UNSIGNED_BYTE: 4,
   createBuffer: () => ({}), bindBuffer() {}, bufferData() {}, deleteBuffer() {}

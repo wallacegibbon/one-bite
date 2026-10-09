@@ -219,7 +219,7 @@
   class Renderer {
     constructor(canvas) {
       const gl = this.gl = canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
-      if (!gl) throw new Error('WebGL 不可用');
+      if (!gl) throw new Error(N.t('err.webgl'));
       this.canvas = canvas;
       this.pWorld = prog(gl, VS_WORLD, FS_WORLD, ['aPos', 'aCol', 'aData']);
       this.pSky = prog(gl, VS_SKY, FS_SKY, ['aCorner']);

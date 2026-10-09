@@ -4,7 +4,7 @@
 (function (N) {
   const M4 = N.M4;
 
-  const HUMAN = { cn: '人形', size: [0.62, 1.8], speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55 };
+  const HUMAN = { cn: '人形', en: 'human', size: [0.62, 1.8], speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55 };
 
   /* ============================ player ============================ */
   class Player {
@@ -107,7 +107,7 @@
       // ---- breathing ----
       if (this.headWater && !canBreathe) {
         this.air -= dt * (this.fright > 0.4 ? 1.6 : 1);
-        if (this.air <= 0) { this.air = 0; game.damage(0.55 * dt, '溺水'); }
+        if (this.air <= 0) { this.air = 0; game.damage(0.55 * dt, N.t('log.causeDrown')); }
       } else {
         this.air = Math.min(canBreathe ? 999 : 18, this.air + dt * (canBreathe ? 999 : 6));
       }
@@ -116,11 +116,11 @@
       // The frog breathes in water and on land, but its skin has to stay wet.
       // This is the cost of the water niche on land -- it drowns on the shore.
       if (f.dryTimer) {
-        if (this.inWater) { if (this.dry > f.dryTimer) game.logMsg('皮肤泡回水里了。', 'good'); this.dry = 0; }
+        if (this.inWater) { if (this.dry > f.dryTimer) game.logMsg(N.t('log.dryIn'), 'good'); this.dry = 0; }
         else this.dry += dt;
         if (this.dry > f.dryTimer) {
-          if (this.dry - dt <= f.dryTimer) game.logMsg('皮肤开始发干——这具身体要靠皮肤喝水。', 'warn');
-          game.damage(dt * 0.03, '脱水');
+          if (this.dry - dt <= f.dryTimer) game.logMsg(N.t('log.dryOut'), 'warn');
+          game.damage(dt * 0.03, N.t('log.causeDry'));
         }
       } else this.dry = 0;
 
@@ -228,7 +228,7 @@
         this.z = Math.max(B, Math.min(W.d - B, this.z));
         this.vx *= 0.2; this.vz *= 0.2;
       }
-      if (this.y < -2) { game.damage(1.2, '坠落'); this.y = 30; this.vy = 0; }
+      if (this.y < -2) { game.damage(1.2, N.t('log.causeFall')); this.y = 30; this.vy = 0; }
 
       // ---- fright decay ----
       this.fright = Math.max(0, this.fright - dt * 0.12);

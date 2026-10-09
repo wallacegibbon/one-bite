@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 global.window = global;
 const base = path.join(__dirname, '..');
-for (const f of ['data/fruits.js', 'data/creatures.js', 'data/world.js', 'data/player.js']) require(path.join(base, f));
+for (const f of ['data/fruits.js', 'data/creatures.js', 'data/world.js', 'data/player.js', 'data/i18n.js']) require(path.join(base, f));
 const N = window.FRUTARIA;
 
 const DOCS = path.join(base, '..', 'docs');
@@ -289,6 +289,9 @@ for (const L of LANGS) {
   const main = fs.readFileSync(path.join(base, 'src', 'main.js'), 'utf8');
   if (!new RegExp(`k === '${ID.nameKey}'`).test(main)) bad('IDENTITY.nameKey', ID.nameKey, 'not bound in main.js');
   else good(`rename key ${ID.nameKey} is bound`);
+  // the interface language switch is a documented control too (07 s3.4)
+  if (!new RegExp(`k === '${N.LOCALE_KEY}'`).test(main)) bad('LOCALE_KEY', N.LOCALE_KEY, 'not bound in main.js');
+  else good(`language switch key ${N.LOCALE_KEY} is bound`);
 }
 
 /* ================= 10. the mind is never affected (doc 04 in both sets) =================

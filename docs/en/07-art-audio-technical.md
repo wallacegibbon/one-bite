@@ -93,8 +93,9 @@ All code is classic `<script src>` global scripts hanging off the `window.FRUTAR
 | `src/entities.js` | Player (AABB collision/breath/flight), Creature (attitude-driven AI), Particles |
 | `src/game.js` | main logic: fruit/backpack/spoilage/storage/quests/save/render loop |
 | `src/ui.js` | HUD, rotating minimap, item bar, storage panel, codex, help, death |
+| `src/i18n.js` | locale state and lookup: `t(key)` for interface text, `disp(record)` for setting text |
 | `src/main.js` | input bindings, main loop, boot sequence |
-| `data/*.js` | **the source of truth**: fruits / creatures / world / player |
+| `data/*.js` | **the source of truth**: fruits / creatures / world / player / i18n |
 
 ### 3.2 Rendering
 
@@ -115,7 +116,25 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 - `maxY` heightmap: `Uint8Array(w*d)`, speeding up meshing and creature pathing.
 - Save: `localStorage['frutaria.save.v1']`, storing only the **block diff** (`diffs`) + player + **identity** (`id` / `name` / traits, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + backpack upgrades + quests + time. Measured 1.7 KB.
 
-### 3.4 Known technical debt
+### 3.4 Interface language
+
+The interface is switchable between Chinese and English at run time (`L`, or the button in the HUD); the choice is stored in `localStorage['frutaria.locale.v1']` and, on a first visit, taken from the browser language.
+
+Two kinds of text exist and they are translated differently, on purpose:
+
+| Kind | Where it lives | Looked up with | Examples |
+|---|---|---|---|
+| **interface text** | `data/i18n.js`, one flat key → string table per language | `N.t('hud.cap', {u, c})` | buttons, panels, prompts, log lines |
+| **setting text** | on the record itself, in `data/fruits.js` / `creatures.js` / `world.js` / `player.js`, as a `cn` / `en` pair | `N.disp(record)` | a fruit's name and lore, a creature's dex entry, a zone name, an epithet |
+
+Setting text stays next to the thing it describes because those data files are the source of truth the documents are checked against (`docs-sync.js` §7 compares the prose in `docs/cn/` and `docs/en/` with them). If the translations were moved into the language tables, the documents could drift away from the setting unnoticed.
+
+Two consequences worth knowing:
+
+- **Nothing translated is ever stored.** A store has no name of its own — the interface calls it by kind (`store.cellar` / `store.tree`) — and a quest keeps its text next to the check that completes it. So a save written in Chinese loads unchanged in English, and switching language cannot freeze a string into a warehouse. `game/test/lang.js` asserts the save file is byte-identical across languages.
+- **Adding a language is one table.** `data/i18n.js` holds `LANGS` plus one object per language; `node-smoke.js` fails the build if the tables do not cover exactly the same keys.
+
+### 3.5 Known technical debt
 
 | Item | Note |
 |---|---|
@@ -127,6 +146,7 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 | Cellar trees are never destroyed | the bear tear-down / pangolin root-digging roll is not wired up (raids and owl post are implemented) |
 | The frog does not dry out on screen | `dryTimer` is in the data and the check is wired up, but there is no skin-moisture bar in the HUD (04 §3) |
 | No identity service | the `id` is generated locally, not issued by a server; cellar trees already carry an `owner`, but the main cellar is communal and there is no sharing-rights model (see 03 §6) |
+| Only two languages | a third language means one more flat table in `data/i18n.js` plus a third field on every record that carries setting text (`cn` / `en` pairs in the data files) |
 
 ## 4. Tests
 
@@ -136,9 +156,10 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 | `game/test/node-smoke.js` | no browser: data → generation → meshing (fake GL), verifies block distribution |
 | `game/test/heightmap.js` | prints an ASCII heightmap of the surface |
 | `game/test/probe.js` | finds a safe camera spot for every POI/zone |
-| `game/test/shots.js` | 17 screenshots in one launch (zones + transformation + UI + identity), checks console errors |
+| `game/test/shots.js` | 20 screenshots in one launch (zones + transformation + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
 | `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology |
 | `game/test/input.js` | real key events: walk / jump / fly / time bar / Grey Veil border |
+| `game/test/lang.js` | language switch: every visible string comes from the table in use, no raw key leaks, and the save file is byte-identical across languages |
 | `game/test/upgrade.js` | backpack upgrades: 24→30→36 slots, Silver Divider −1, q7 trigger, save round-trip |
 | `game/test/shot.js` | a single screenshot (with coordinates / yaw / form / time / `cellar=1` to open the storage panel), for eyeballing |
 | `game/test/docs-sync.js` | **docs ↔ data consistency**: zones/POIs/isles/rarity/storage/cellar-tree rules/key bindings/id coverage, checked for both the Chinese and the English document sets; exit 1 on drift |

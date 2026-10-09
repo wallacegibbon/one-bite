@@ -83,8 +83,8 @@ button.ghost { background: transparent; }
 .postrow { margin: 10px 0; padding: 8px 10px; font-size: 12px; color: #cfe0ef; background: rgba(60,90,120,.22); border-left: 2px solid #6cb4f0; }
 .postrow b { color: #ffdc5c; }
 #capFill { height: 100%; width: 0; background: #8fbf6a; }
+#hintRow { position: absolute; left: 18px; bottom: 18px; font-size: 11px; max-width: 34vw; }
 #inv { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; max-width: 78vw; }
-#hintRow { margin-top: 7px; font-size: 11px; }
 
 .item {
   position: relative; width: 46px; height: 46px; border: 1px solid var(--ring, #888);

@@ -46,7 +46,8 @@
     traits: {
       mixStomach: {
         id: 'mixStomach', cn: '混胃', en: 'mixed stomach',
-        note: '能在体内同时压住两种魔法而不翻搅——混合形态的前提'
+        note: '能在体内同时压住两种魔法而不翻搅——混合形态的前提',
+        noteEn: 'can hold two magics in the body at once without churning — the precondition for mixed forms'
       }
     }
   };

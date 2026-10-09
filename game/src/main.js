@@ -10,6 +10,20 @@
   /* ---------------- input ---------------- */
   const keys = {};
   const inp = game.input;
+
+  /* Switching the interface language is a live operation: the static markup is
+     re-translated, any open panel is re-rendered, and the log feed is dropped
+     rather than left showing half one language and half the other. Nothing in
+     the save file is touched -- stores and quests carry no translated text. */
+  function setLocale(id) {
+    if (!N.i18n.set(id)) return false;
+    const cur = N.LANGS.find(l => l.id === N.i18n.locale);
+    game.log = [];
+    game.logMsg(N.t('log.langTo', { n: cur.label }), 'good');
+    ui.applyLang();
+    ui.update();
+    return true;
+  }
   function setKeys() {
     inp.fwd = !!(keys['w'] || keys['arrowup']);
     inp.back = !!(keys['s'] || keys['arrowdown']);
@@ -27,12 +41,13 @@
     if (!started) return;
     if (k === 'e' && game.mode === 'play') game.interact();
     if (k === 'f' && game.mode === 'play') game.useSelected();
-    if (k === 'r' && game.mode === 'play' && game.player.form) game.revert('你自己结束了它');
+    if (k === 'r' && game.mode === 'play' && game.player.form) game.revert(N.t('log.revertManual'));
     if (k === 'v') game.thirdPerson = !game.thirdPerson;
     if (k === 'j') { game.mode = game.mode === 'journal' ? 'play' : 'journal'; ui.showJournal(game.mode === 'journal'); }
     if (k === 'h') { game.mode = game.mode === 'help' ? 'play' : 'help'; ui.showHelp(game.mode === 'help'); }
+    if (k === 'l') setLocale(N.i18n.next().id);   // LOCALE_KEY; docs-sync asserts this binding exists
     if (k === 'n' && game.mode === 'play') {   // IDENTITY.nameKey; docs-sync asserts this binding exists
-      const v = window.prompt('谷地不用名字。你要别人怎么叫你？（留空 = 只用谷地的称呼）', game.name);
+      const v = window.prompt(N.t('log.nameAsk'), game.name);
       if (v !== null) { game.setName(v); ui.update(); }
     }
     if (k === 'escape') { ui.showCellar(false); ui.showJournal(false); ui.showHelp(false); ui.showDead(false); game.mode = 'play'; }
@@ -81,6 +96,7 @@
   document.getElementById('btnJournal').onclick = () => { game.mode = 'journal'; ui.showJournal(true); };
   document.getElementById('btnHelp').onclick = () => { game.mode = 'help'; ui.showHelp(true); };
   document.getElementById('btnSave').onclick = () => game.save();
+  document.getElementById('btnLang').onclick = () => setLocale(N.i18n.next().id);
 
   /* ---------------- start ---------------- */
   document.getElementById('btnStart').onclick = () => {
@@ -96,13 +112,14 @@
   const AUTO = QS.has('auto');
   game.init(20261008);
   const loadBar = document.getElementById('loadBar'), loadTxt = document.getElementById('loadTxt');
+  ui.applyLang();          // translate the static markup before the first frame
   function boot() {
     game.buildSomeChunks(22);
     loadBar.style.width = (game.progress * 100) + '%';
-    loadTxt.textContent = '正在长出一片谷地… ' + Math.round(game.progress * 100) + '%';
+    loadTxt.textContent = N.t('start.gen', { p: Math.round(game.progress * 100) });
     if (!game.ready) return requestAnimationFrame(boot);
     ui.buildMinimap();
-    loadTxt.textContent = '谷地已就绪';
+    loadTxt.textContent = N.t('start.ready');
     if (AUTO) {
       started = true;
       document.getElementById('start').classList.add('hidden');
@@ -137,6 +154,7 @@
 
   window.game = game;
   window.ui = ui;
+  window.setLocale = setLocale;
   window.startGame = () => {
     started = true;
     document.getElementById('start').classList.add('hidden');

@@ -25,7 +25,12 @@ const SHOTS = [
   ['cellarui', 'pos=136,26,134 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,silkberry,bruinfig cellar=1'],
   // identity: the valley calls you an epithet, the name is yours (N in game)
   ['who', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3'],
-  ['journal', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3,q4 journal=1']
+  ['journal', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q3,q4 journal=1'],
+  // the same two screens after pressing L: the interface re-translates, the world does not move
+  ['inv_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=owlberry,frogpear,silkberry,bruinfig lang=en'],
+  ['journal_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=Xiaoman epquest=q1,q3,q4 journal=1 lang=en'],
+  // the help panel: the rules a player is actually told, in the other language
+  ['help_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe help=1 lang=en']
 ];
 
 (async () => {
@@ -49,6 +54,10 @@ const SHOTS = [
     const info = await page.evaluate(c => {
       const g = window.game;
       g.player.form = null; g.thirdPerson = false; g.time = 210;
+      // the locale is pinned per shot: the set must look the same on any machine,
+      // and a first visit picks the browser language, which is not fixed
+      window.setLocale(c.lang || 'zh');
+      g.log = [];
       g.mode = 'play'; if (window.ui) { window.ui.showCellar(false); window.ui.showJournal(false); window.ui.showHelp(false); window.ui.showDead(false); }
       g.player.vital = 10; g.player.fright = 0; g.player.air = 18;
       g.inv.length = 0; g.sel = 0;
@@ -87,6 +96,7 @@ const SHOTS = [
       return { zone: g.zoneName(g.player.x, g.player.z) };
     }, c);
     if (c.journal) await page.evaluate(() => { window.game.mode = 'journal'; window.ui.showJournal(true); });
+    if (c.help) await page.evaluate(() => { window.game.mode = 'help'; window.ui.showHelp(true); });
     await new Promise(r => setTimeout(r, 1400));
     const st = await page.evaluate(() => {
       const g = window.game, p = g.player;

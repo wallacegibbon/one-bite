@@ -77,16 +77,16 @@
 
   /* Points of interest: minimap marker + location hint + quest anchors */
   const POIS = [
-    { id: 'cellar',      cn: '主果窖',     x: 136, z: 134, y: 20, icon: 'chest',  zone: 'lanternrow' },
-    { id: 'belltower',   cn: '星坠堡钟塔', x: 78,  z: 104, y: 34, icon: 'tower',  zone: 'starfall' },
-    { id: 'greenhouse',  cn: '果实温室（地窖）', x: 78, z: 110, y: 18, icon: 'door', zone: 'starfall' },
-    { id: 'sunktower',   cn: '沉塔',       x: 66,  z: 118, y: 8,  icon: 'water',  zone: 'mirrorlake' },
-    { id: 'frogshall',   cn: '蛙鸣泽',   x: 92,  z: 120, y: 9,  icon: 'water',  zone: 'mirrorlake' },
-    { id: 'groveheart',  cn: '深鹿林之心', x: 104, z: 32,  y: 24, icon: 'tree',   zone: 'deepgrove' },
-    { id: 'cavemouth',   cn: '回声洞口',   x: 28,  z: 34,  y: 24, icon: 'cave',   zone: 'batcave' },
-    { id: 'beams',       cn: '旧梁',       x: 40,  z: 20,  y: 38, icon: 'sky',    zone: 'cloudspire' },
-    { id: 'oldtree',     cn: '最老的树',   x: 24,  z: 104, y: 22, icon: 'tree',   zone: 'orchard' },
-    { id: 'mushring',    cn: '荧光菇环',   x: 60,  z: 56,  y: 20, icon: 'shroom', zone: 'glowglade' }
+    { id: 'cellar',      cn: '主果窖',     en: 'Main Cellar',          x: 136, z: 134, y: 20, icon: 'chest',  zone: 'lanternrow' },
+    { id: 'belltower',   cn: '星坠堡钟塔', en: 'Starfall Bell Tower',  x: 78,  z: 104, y: 34, icon: 'tower',  zone: 'starfall' },
+    { id: 'greenhouse',  cn: '果实温室（地窖）', en: 'Fruit Greenhouse (cellar)', x: 78, z: 110, y: 18, icon: 'door', zone: 'starfall' },
+    { id: 'sunktower',   cn: '沉塔',       en: 'The Sunken Tower',     x: 66,  z: 118, y: 8,  icon: 'water',  zone: 'mirrorlake' },
+    { id: 'frogshall',   cn: '蛙鸣泽',     en: 'the Frogshall',        x: 92,  z: 120, y: 9,  icon: 'water',  zone: 'mirrorlake' },
+    { id: 'groveheart',  cn: '深鹿林之心', en: 'Heart of the Deep Grove', x: 104, z: 32, y: 24, icon: 'tree', zone: 'deepgrove' },
+    { id: 'cavemouth',   cn: '回声洞口',   en: 'Echo Hollow Mouth',    x: 28,  z: 34,  y: 24, icon: 'cave',   zone: 'batcave' },
+    { id: 'beams',       cn: '旧梁',       en: 'the Old Beams',        x: 40,  z: 20,  y: 38, icon: 'sky',    zone: 'cloudspire' },
+    { id: 'oldtree',     cn: '最老的树',   en: 'the Oldest Tree',      x: 24,  z: 104, y: 22, icon: 'tree',   zone: 'orchard' },
+    { id: 'mushring',    cn: '荧光菇环',   en: 'Glowcap Ring',         x: 60,  z: 56,  y: 20, icon: 'shroom', zone: 'glowglade' }
   ];
 
   /* Cloudspire isles: x, z, radius, top surface height */

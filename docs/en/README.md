@@ -47,8 +47,7 @@ The Chinese originals sit in the sibling folder [`docs/cn/`](../cn/README.md): `
 
 `game/index.html` — a dependency-free, hand-written WebGL1 voxel renderer. Double-click it (or run `python3 -m http.server` and visit `/game/`).
 
-Implemented: terrain generation (castle/town/lake/caves/isles), 7 creature AIs (attitude-driven), 7 fruits, transformation and ability switching, the 24-slot backpack with spoilage, main cellar + cellar-tree storage, quests, codex, day/night, the Grey Veil border, death drops and retrieval, the identity layer (id / epithet / name — the protagonist has no fixed name), localStorage saves.
-
+Implemented: terrain generation (castle/town/lake/caves/isles), 7 creature AIs (attitude-driven), 7 fruits, transformation and ability switching, the 24-slot backpack with spoilage, main cellar + cellar-tree storage, quests, codex, day/night, the Grey Veil border, death drops and retrieval, the identity layer (id / epithet / name — the protagonist has no fixed name), a switchable interface language (中文 / English, 07 §3.4), localStorage saves.
 Not implemented (designed in the docs): mixed forms, the full magic-stomach rules, beast residue, NPC dialogue trees, cellar trees being torn down by bears, the skin-moisture bar for the frog form, procedural audio.
 
 ## Data *is* the setting

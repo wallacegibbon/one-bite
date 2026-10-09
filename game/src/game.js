@@ -7,6 +7,13 @@
   const DAY_LEN = 420;          // one in-game day = 7 minutes of real time
   const SAVE_KEY = 'frutaria.save.v1';
 
+  /* A fruit / plant / pit has no name of its own in the interface: it is read
+     off the record in data/fruits.js, which carries a cn/en pair. */
+  function itemName(id) { return N.disp(FRU[id] || PLANT[id] || { cn: id, en: id }); }
+  /* A store has no name either -- the interface calls it by kind, so switching
+     language cannot freeze a translated string inside a save file. */
+  function storeName(s) { return N.t('store.' + (s.kind === 'tree' ? 'tree' : 'cellar')); }
+
   class Game {
     constructor(canvas) {
       this.canvas = canvas;
@@ -59,8 +66,9 @@
       const t0 = performance.now();
       N.generate(this.world, this.seed);
       this.particles = new N.Particles(this.R.gl, 900);
-      // storage
-      this.stashes.push({ id: 'cellar', cn: STO.cellar.label, slots: STO.cellar.slots, decay: STO.cellar.decay, items: [], x: 136, y: 21, z: 134, kind: 'cellar' });
+      // storage. A store has no name of its own: the interface calls it by kind,
+      // so switching language mid-save cannot freeze a translated string in it.
+      this.stashes.push({ id: 'cellar', kind: 'cellar', slots: STO.cellar.slots, decay: STO.cellar.decay, items: [], x: 136, y: 21, z: 134 });
       // spawn
       const sp = N.spawn;
       this.player.x = sp.x; this.player.y = sp.y; this.player.z = sp.z;
@@ -72,21 +80,38 @@
       this.id = IDEN.idPrefix + Math.random().toString(36).slice(2, 2 + IDEN.idBytes);
       this.name = IDEN.nameDefault;
       this.traits = { mixStomach: true };   // a character trait, not a world law
-      this.epithetSeen = this.epithet().cn;
-      // quests
+      // quests: a quest is an invitation to use a body (docs/en/06 s3), so its
+      // text lives here next to the check that completes it
       this.quests = [
-        { id: 'q1', cn: '认识主果窖', hint: '去灯笼镇的果窖（按 E 打开），把任意果实存进去', done: false },
-        { id: 'q2', cn: '三颗猫头鹰果', hint: '低语林的橡树洞里找 3 颗猫头鹰果', done: false },
-        { id: 'q3', cn: '夜之翼', hint: '夜里吃下猫头鹰果，飞到 30 米以上', done: false },
-        { id: 'q4', cn: '镜湖的门票', hint: '变成雨蛙下水，在沉塔的窗台上取一颗蛙果', done: false },
-        { id: 'q5', cn: '深鹿林的通行证', hint: '变成白尾鹿沿鹿径走进深鹿林，摘一颗鹿茸菌果', done: false },
-        { id: 'q6', cn: '云顶的旧梁', hint: '飞到云顶，在旧梁上摘一颗丝莓（梁蛛不欢迎客人）', done: false },
-        { id: 'q7', cn: '温室的银丝网', hint: '去星坠堡的果实温室（地窖），找那张银丝隔层', done: false }
+        { id: 'q1', cn: '认识主果窖', en: 'Know the main cellar', done: false,
+          hint: { cn: '去灯笼镇的果窖（按 E 打开），把任意果实存进去',
+                  en: 'go to the Lanternrow cellar (press E to open) and store any fruit' } },
+        { id: 'q2', cn: '三颗猫头鹰果', en: 'Three Owlberries', done: false,
+          hint: { cn: '低语林的橡树洞里找 3 颗猫头鹰果',
+                  en: 'find 3 Owlberries in the oak hollows of the Whisperwood' } },
+        { id: 'q3', cn: '夜之翼', en: 'Wing of Night', done: false,
+          hint: { cn: '夜里吃下猫头鹰果，飞到 30 米以上',
+                  en: 'at night eat an Owlberry and fly above 30 metres' } },
+        { id: 'q4', cn: '镜湖的门票', en: 'The ticket to Mirrorlake', done: false,
+          hint: { cn: '变成雨蛙下水，在沉塔的窗台上取一颗蛙果',
+                  en: 'become a frog, get in the water, take a Frog Pear from the sill of the sunken tower' } },
+        { id: 'q5', cn: '深鹿林的通行证', en: 'The pass into the Deep Grove', done: false,
+          hint: { cn: '变成白尾鹿沿鹿径走进深鹿林，摘一颗鹿茸菌果',
+                  en: 'become a deer, follow the deer path into the Deep Grove, pick a Stagcap' } },
+        { id: 'q6', cn: '云顶的旧梁', en: 'The old beams of the Cloudspire', done: false,
+          hint: { cn: '飞到云顶，在旧梁上摘一颗丝莓（梁蛛不欢迎客人）',
+                  en: 'fly to the cloud tops and pick a Silkberry off the old beams (spiders do not welcome guests)' } },
+        { id: 'q7', cn: '温室的银丝网', en: 'The silver mesh in the greenhouse', done: false,
+          hint: { cn: '去星坠堡的果实温室（地窖），找那张银丝隔层',
+                  en: "go to Starfall's fruit greenhouse (the cellar) and find the silver divider" } }
       ];
+      // which epithet the valley has already been heard using. This is read off
+      // the quest list, so it has to be taken after the quests exist.
+      this.epithetSeen = this.epithet();
       this.progressStart = 0;
       this.meshTotal = this.world.cx * this.world.cz;
       this.meshDone = 0;
-      this.logMsg('欢迎来到果灵谷。按 H 看操作，按 J 看图鉴。', 'good');
+      this.logMsg(N.t('log.welcome'), 'good');
       return this;
     }
 
@@ -222,7 +247,7 @@
       const d = kind === 'fruit' ? FRU[id] : kind === 'pit' ? FRU[id] : PLANT[id];
       if (!d) return false;
       const it = { kind, id, fresh: fresh !== undefined ? fresh : (RAR[d.rarity].fresh || 9999), maxFresh: RAR[d.rarity].fresh || 9999 };
-      if (!this.canFit(this.inv, it)) { this.logMsg('背包满了（' + this.used() + '/' + this.cap() + ' 果格）——先回果窖。', 'bad'); return false; }
+      if (!this.canFit(this.inv, it)) { this.logMsg(N.t('log.packFull', { u: this.used(), c: this.cap() }), 'bad'); return false; }
       this.inv.push(it);
       this.dexFruit[id] = true;
       return true;
@@ -235,13 +260,12 @@
           it.fresh -= dt * rate;
           if (it.fresh <= 0) {
             it.kind = 'pit';
-            this.logMsg(d2cn(it.id) + ' 失活了，只剩一颗果核——种下去也许还能结果。', 'warn');
+            this.logMsg(N.t('log.dormant', { n: itemName(it.id) }), 'warn');
           }
         }
       };
       decay(this.inv, 1);
       for (const s of this.stashes) decay(s.items, s.decay);
-      function d2cn(id) { return (FRU[id] || PLANT[id] || { cn: id }).cn; }
     }
 
     /* ------------------------- interaction ------------------------- */
@@ -278,7 +302,7 @@
       if (N.FRUIT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
       if (N.PLANT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
       if (b === 78) { this.openStashUI(this.stashes[0]); return; }
-      if (b === 80) { this.logMsg('那是灰手套的捕果夹。拆掉它需要熊的爪子。', 'warn'); return; }
+      if (b === 80) { this.logMsg(N.t('log.trap'), 'warn'); return; }
     }
     harvest(x, y, z, b) {
       const fid = N.FRUIT_BLOCK[b], pid = N.PLANT_BLOCK[b];
@@ -289,7 +313,7 @@
       this.setBlock(x, y, z, 0);
       this.stats.harvested++;
       const d = fid ? FRU[fid] : PLANT[pid];
-      this.logMsg('采下 ' + d.cn + '（' + RAR[d.rarity].cn + '，占 ' + RAR[d.rarity].slots + ' 果格）', 'good');
+      this.logMsg(N.t('log.pick', { n: N.disp(d), r: N.disp(RAR[d.rarity]), s: RAR[d.rarity].slots }), 'good');
       if (fid) this.regrow.push({ x, y, z, b, t: RAR[d.rarity].regrow * DAY_LEN * (0.8 + Math.random() * 0.4) });
       if (this.quests) this.checkQuests();
     }
@@ -303,8 +327,12 @@
       const first = !this.seen[c.sp.id];
       this.seen[c.sp.id] = true;
       const att = c.attitudeTo(this.player.form);
-      this.logMsg('观察：' + c.sp.cn + (first ? '（新）' : '') + ' — 它对你（' + (this.player.form ? FRU[this.player.form].form.cn : '人形') + '）的态度：' +
-        ({ flee: '警惕逃开', hostile: '敌对', curious: '好奇', calm: '平静', ignore: '无视' }[att]), first ? 'good' : '');
+      this.logMsg(N.t('log.observe', {
+        n: N.disp(c.sp),
+        new: first ? N.t('log.observeNew') : '',
+        f: this.player.form ? N.disp(FRU[this.player.form].form) : N.t('log.humanShape'),
+        a: N.t('att.' + att)
+      }), first ? 'good' : '');
       if (first && this.ui) this.ui.onLog();
     }
 
@@ -312,14 +340,14 @@
     useSelected() {
       const p = this.player;
       const it = this.inv[this.sel || 0];
-      if (!it) { this.logMsg('没有选中东西。滚轮/数字键选择，F 使用。', 'warn'); return; }
+      if (!it) { this.logMsg(N.t('log.noSel'), 'warn'); return; }
       if (it.kind === 'fruit') this.eat(it.id, this.sel);
       else if (it.kind === 'plant') this.usePlant(it, this.sel);
       else if (it.kind === 'pit') this.plantPit(it, this.sel);
     }
     eat(fruitId, slotIdx) {
       const f = FRU[fruitId];
-      if (!f || !f.duration) { this.logMsg('这个不能吃。', 'warn'); return; }
+      if (!f || !f.duration) { this.logMsg(N.t('log.notEdible'), 'warn'); return; }
       const p = this.player;
       // magic stomach: eating several in quick succession causes confusion
       this.gastric = (this.gastric || 0) + 1;
@@ -327,19 +355,19 @@
       this.gastricTime = this.time;
       if (this.gastric >= 3) {
         this.gastric = 0;
-        this.logMsg('魔力胃翻搅——两种魔法在体内打架！', 'bad');
+        this.logMsg(N.t('log.churn'), 'bad');
         this.particleBurst(p.x, p.y + 1, p.z, [0.9, 0.4, 0.9], 26);
-        this.damage(0.8, '魔法过载');
+        this.damage(0.8, N.t('log.causeOverload'));
         this.inv.splice(slotIdx, 1);
         return;
       }
-      if (p.form) this.logMsg('（' + FRU[p.form].form.cn + ' 的形态被 ' + f.form.cn + ' 覆盖）', 'warn');
+      if (p.form) this.logMsg(N.t('log.overwrite', { a: N.disp(FRU[p.form].form), b: N.disp(f.form) }), 'warn');
       p.form = fruitId;
       p.formT = f.duration; p.formMax = f.duration;
       this.inv.splice(slotIdx, 1);
       this.stats.eaten++;
       this.dexFruit[fruitId] = true;
-      this.logMsg('吃下 ' + f.cn + '：变成 ' + f.form.cn + '。' + (f.cost.length ? '代价：' + f.cost.join('；') + '。' : ''), 'good');
+      this.logMsg(N.t('log.eat', { n: N.disp(f), f: N.disp(f.form), c: f.cost.length ? N.t('log.eatCost', { c: N.costList(f) }) : '' }), 'good');
       this.particleBurst(p.x, p.y + 1, p.z, N.RARITY[f.rarity].color, 40);
       this.ensureModel(f.creature);
       this.checkQuests();
@@ -349,7 +377,7 @@
       if (!p.form) return;
       p.form = null; p.formT = 0;
       this.stats.reverted++;
-      this.logMsg('复原为人形（' + (why || '时间到') + '）。', '');
+      this.logMsg(N.t('log.revert', { w: why || N.t('log.revertTime') }), '');
     }
     usePlant(it, slotIdx) {
       const p = this.player, pl = PLANT[it.id];
@@ -361,14 +389,14 @@
         if (by < 1) return;
         this.setBlock(bx, by, bz, N.PLANT_BLOCK_REV[it.id]);
         this.inv.splice(slotIdx, 1);
-        this.logMsg('种下 ' + pl.cn + '：它会一直亮着，当作路标。', 'good');
+        this.logMsg(N.t('log.plantSeed', { n: N.disp(pl) }), 'good');
         return;
       }
       if (pl.effect === 'build') { this.buildCellarTree(); this.inv.splice(slotIdx, 1); return; }
       const dur = pl.effect === 'light' ? 300 : pl.effect === 'jump' ? 90 : pl.effect === 'stealth' ? 120 : 90;
       this.buffs[pl.effect] = dur;
       this.inv.splice(slotIdx, 1);
-      this.logMsg('吃下 ' + pl.cn + '：' + pl.desc, 'good');
+      this.logMsg(N.t('log.eatPlant', { n: N.disp(pl), d: N.descOf(pl) }), 'good');
     }
     plantPit(it, slotIdx) {
       const p = this.player;
@@ -378,11 +406,11 @@
       this.setBlock(bx, by, bz, 6);
       this.growQueue.push({ x: bx, y: by, z: bz, t: 120, fruit: it.id });
       this.inv.splice(slotIdx, 1);
-      this.logMsg('种下果核。也许一百多年后，这里会有一棵结 ' + (FRU[it.id] || {}).cn + ' 的树。', 'good');
+      this.logMsg(N.t('log.plantPit', { n: itemName(it.id) }), 'good');
     }
     buildCellarTree() {
       const p = this.player;
-      if (this.stashes.length - 1 >= STO.treestash.max) { this.logMsg('窖树最多 ' + STO.treestash.max + ' 棵——谷地记不住更多地方。', 'warn'); return; }
+      if (this.stashes.length - 1 >= STO.treestash.max) { this.logMsg(N.t('log.treeCap', { n: STO.treestash.max }), 'warn'); return; }
       const bx = Math.floor(p.x), bz = Math.floor(p.z);
       const by = N.groundY(this.world, bx, bz, Math.floor(p.y + 3));
       if (by < 1) return;
@@ -390,7 +418,7 @@
       for (const s of this.stashes) {
         if (s.kind !== 'tree') continue;
         if (Math.hypot(bx - s.x, bz - s.z) < STO.treestash.minDist) {
-          this.logMsg('这里离另一棵窖树太近了——至少要隔 ' + STO.treestash.minDist + ' m，根系会打架。', 'warn');
+          this.logMsg(N.t('log.treeNear', { n: STO.treestash.minDist }), 'warn');
           return;
         }
       }
@@ -400,14 +428,14 @@
           if (dx * dx + dz * dz + (dy - 5) * (dy - 5) < 7 && !(dx === 0 && dz === 0 && dy < 4)) this.setBlock(bx + dx, by + dy, bz + dz, 27);
       this.setBlock(bx, by, bz, 77);
       const id = 'tree' + (this.stashes.length);
-      this.stashes.push({ id, cn: STO.treestash.label, slots: STO.treestash.slots, decay: STO.treestash.decay, items: [], x: bx, y: by, z: bz, kind: 'tree', owner: this.id });
-      this.logMsg('窖树长成了：' + STO.treestash.slots + ' 果格，腐坏速度 1/3。熊会来偷，记得常回来看。', 'good');
+      this.stashes.push({ id, kind: 'tree', slots: STO.treestash.slots, decay: STO.treestash.decay, items: [], x: bx, y: by, z: bz, owner: this.id });
+      this.logMsg(N.t('log.treeBuilt', { s: STO.treestash.slots }), 'good');
     }
 
     /* ------------------------- storage UI ------------------------- */
     openStashUI(s) {
       this.openStash = s; this.mode = 'cellar';
-      this.logMsg('打开 ' + s.cn + '（存进去的果实腐坏速度 ×' + s.decay + '）', 'good');
+      this.logMsg(N.t('log.openStore', { n: storeName(s), d: s.decay }), 'good');
       if (this.ui) this.ui.showCellar(true);
     }
     closeStashUI() { this.mode = 'play'; this.openStash = null; if (this.ui) this.ui.showCellar(false); }
@@ -418,7 +446,7 @@
       const idx = dir === 'in' ? (this.invSel || 0) : (this.stashSel || 0);
       const it = from[idx]; if (!it) return;
       const capTo = dir === 'in' ? s.slots : this.cap();
-      if (this.used(to) + this.slotOf(it) > capTo) { this.logMsg('那边放不下了。', 'bad'); return; }
+      if (this.used(to) + this.slotOf(it) > capTo) { this.logMsg(N.t('log.noRoom'), 'bad'); return; }
       from.splice(idx, 1); to.push(it);
       if (this.quests) this.checkQuests();
     }
@@ -430,16 +458,16 @@
     postItem() {
       const s = this.openStash;
       if (!s) return;
-      if (s.kind !== 'tree') { this.logMsg('钟摆只肯从窖树叼东西——果窖里有老梅。', 'warn'); return; }
-      if (!this.owlUnlocked()) { this.logMsg('主果窖里还没有猫头鹰果。先存一颗，钟摆才会来。', 'warn'); return; }
-      if (this.posts.length >= 3) { this.logMsg('钟摆一次只能叼 3 颗。', 'warn'); return; }
+      if (s.kind !== 'tree') { this.logMsg(N.t('log.postTreeOnly'), 'warn'); return; }
+      if (!this.owlUnlocked()) { this.logMsg(N.t('log.postLocked'), 'warn'); return; }
+      if (this.posts.length >= 3) { this.logMsg(N.t('log.postBusy'), 'warn'); return; }
       const it = s.items[this.stashSel || 0];
-      if (!it) { this.logMsg('先选中一颗果实。', 'warn'); return; }
+      if (!it) { this.logMsg(N.t('log.postNone'), 'warn'); return; }
       s.items.splice(this.stashSel || 0, 1);
       this.stashSel = Math.max(0, (this.stashSel || 0) - 1);
-      this.posts.push({ it, t: 3 * DAY_LEN, from: s.cn });
+      this.posts.push({ it, t: 3 * DAY_LEN, from: s.id });
       this._owlUnlocked = true;
-      this.logMsg('钟摆叼着 ' + (FRU[it.id] ? FRU[it.id].cn : it.id) + ' 飞走了。三天后到。', 'good');
+      this.logMsg(N.t('log.postSent', { n: itemName(it.id) }), 'good');
       if (this.ui) this.ui.renderCellar();
     }
     updatePosts(dt) {
@@ -449,16 +477,17 @@
         po.it.fresh -= dt * STO.cellar.decay;      // decays in flight at the main cellar's rate
         if (po.t > 0) continue;
         this.posts.splice(i, 1);
-        const name = FRU[po.it.id] ? FRU[po.it.id].cn : po.it.id;
+        const name = itemName(po.it.id);
         if (Math.random() < 0.10) {
-          this.logMsg('钟摆没有回来。第四天它自己飞回来了，嘴里是空的——丢了 ' + name + '。', 'bad');
+          this.logMsg(N.t('log.postLost', { n: name }), 'bad');
           this.stats.postLost = (this.stats.postLost || 0) + 1;
         } else if (this.used(this.stashes[0].items) + this.slotOf(po.it) > this.stashes[0].slots) {
-          this.logMsg('钟摆来了，但主果窖放不下 ' + name + '，它给叼回去了。', 'warn');
-          this.stashes.find(s => s.cn === po.from) ? this.stashes.find(s => s.cn === po.from).items.push(po.it) : this.stashes[0].items.push(po.it);
+          this.logMsg(N.t('log.postFull', { n: name }), 'warn');
+          const back = this.stashes.find(s => s.id === po.from);
+          (back || this.stashes[0]).items.push(po.it);
         } else {
           this.stashes[0].items.push(po.it);
-          this.logMsg('钟摆把 ' + name + ' 送到了主果窖。', 'good');
+          this.logMsg(N.t('log.postArrived', { n: name }), 'good');
           this.stats.postSent = (this.stats.postSent || 0) + 1;
         }
       }
@@ -473,19 +502,19 @@
     onCreatureTouch(c, dt) {
       const p = this.player;
       p.fright = Math.min(1, p.fright + dt * 0.9);
-      this.damage(dt * 0.5, c.sp.cn);
-      if (Math.random() < dt * 2) this.logMsg(c.sp.cn + ' 在追你！', 'bad');
+      this.damage(dt * 0.5, N.disp(c.sp));
+      if (Math.random() < dt * 2) this.logMsg(N.t('log.chased', { n: N.disp(c.sp) }), 'bad');
     }
     onVeil(p) {
       this.veilWarn = (this.veilWarn || 0) + 1;
-      if (this.veilWarn % 40 === 1) this.logMsg('灰雾墙。它不阻止你离开，它只是让你忘记为什么要回来。', 'warn');
+      if (this.veilWarn % 40 === 1) this.logMsg(N.t('log.veil'), 'warn');
       // no form walks the fog any more: the veil is a border, not a place
       p.vital -= 0.004;
     }
     die(cause) {
       const p = this.player;
       this.stats.deaths++;
-      this.logMsg('你在' + this.zoneName() + '倒下（' + cause + '）。果实散落在原地。', 'bad');
+      this.logMsg(N.t('log.died', { z: this.zoneName(), c: cause }), 'bad');
       // fruit scatters
       const sx = Math.floor(p.x), sy = Math.floor(p.y), sz = Math.floor(p.z);
       for (const it of this.inv) this.drops.push({ x: sx + (Math.random() * 3 - 1.5), y: sy + 1, z: sz + (Math.random() * 3 - 1.5), item: it, t: 600 });
@@ -507,10 +536,10 @@
         if (!s.items.length) continue;
         if (Math.random() >= STO.treestash.raidChance) continue;
         const near = Math.hypot(this.player.x - s.x, this.player.z - s.z) < STO.treestash.raidScareRadius;
-        const who = Math.random() < 0.6 ? '熊' : '灰手套的人';
-        const where = s.kind === 'tree' ? '你的窖树' : s.cn;
+        const who = N.t(Math.random() < 0.6 ? 'log.raiderBear' : 'log.raiderMan');
+        const where = s.kind === 'tree' ? N.t('store.yourTree') : storeName(s);
         if (near) {
-          this.logMsg('夜里' + who + '摸到' + where + '，你把它赶走了。', 'good');
+          this.logMsg(N.t('log.raidScared', { w: who, p: where }), 'good');
           this.stats.raidsScared = (this.stats.raidsScared || 0) + 1;
         } else {
           const n = Math.min(s.items.length, STO.treestash.raidMin +
@@ -519,9 +548,9 @@
           for (let k = 0; k < n; k++) {
             const j = (Math.random() * s.items.length) | 0;
             const it = s.items.splice(j, 1)[0];
-            taken.push(it ? (FRU[it.id] ? FRU[it.id].cn : it.id) : '?');
+            taken.push(it ? itemName(it.id) : '?');
           }
-          this.logMsg(who + '偷走了' + where + '里的 ' + taken.join('、') + '——下次回来也许就没了。', 'bad');
+          this.logMsg(N.t('log.raidTaken', { w: who, p: where, n: N.tlist(taken) }), 'bad');
           this.stats.raidsLost = (this.stats.raidsLost || 0) + n;
         }
       }
@@ -531,7 +560,7 @@
     checkQuests() {
       const p = this.player;
       const q = (id) => this.quests.find(x => x.id === id);
-      const done = (qq, msg) => { if (qq && !qq.done) { qq.done = true; this.logMsg('✔ 完成：' + qq.cn + (msg ? ' — ' + msg : ''), 'good'); } };
+      const done = (qq, msg) => { if (qq && !qq.done) { qq.done = true; this.logMsg(N.t('log.questDone', { n: N.disp(qq), m: msg ? N.t('log.questDoneMsg', { m: msg }) : '' }), 'good'); } };
       const nFruit = id => this.inv.filter(i => i.kind === 'fruit' && i.id === id).length;
       const nStash = id => this.stashes.reduce((a, s) => a + s.items.filter(i => i.id === id).length, 0);
       // backpack upgrades: cap() changes the moment one is granted, and it is announced once
@@ -540,17 +569,17 @@
         const u = STO.backpack.upgrades.find(x => x.id === uid);
         if (!u) return;
         this.upg[uid] = true;
-        this.logMsg('✚ 背包升级：' + u.cn + '（' + (u.slots ? '+' + u.slots + ' 果格' : '稀有果实占用 −1') + '）— ' + u.desc, 'good');
+        this.logMsg(N.t('log.upgrade', { n: N.disp(u), e: u.slots ? N.t('log.upgSlots', { n: u.slots }) : N.t('log.upgRare'), d: N.descOf(u) }), 'good');
       };
       if (this.stashes[0].items.length > 0) { done(q('q1')); grant('pouch1'); }
       if (nFruit('owlberry') + nStash('owlberry') >= 3) done(q('q2'));
-      if (p.form === 'owlberry' && p.y > 30) done(q('q3'), '夜风从翅膀下面穿过。');
+      if (p.form === 'owlberry' && p.y > 30) done(q('q3'), N.t('log.q3msg'));
       if (nFruit('frogpear') + nStash('frogpear') >= 1) { done(q('q4')); grant('pouch2'); }
       if (nFruit('stagcap') + nStash('stagcap') >= 1) done(q('q5'));
       if (nFruit('silkberry') + nStash('silkberry') >= 1) done(q('q6'));
       // q7: walk to the Starfall fruit greenhouse (cellar door)
       const gh = N.POIS.find(x => x.id === 'greenhouse');
-      if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q7'), '银丝网叠在果筐上，正好能隔开稀有果实。'); grant('divider'); }
+      if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q7'), N.t('log.q7msg')); grant('divider'); }
       this.checkEpithet();
     }
     zoneName() {
@@ -568,9 +597,9 @@
       }
       if (this.player.y > 28 && (!best || best.kind !== 'sky')) {
         const d = Math.min(...N.SKY_ISLES.map(i => Math.hypot(i.x - this.player.x, i.z - this.player.z)));
-        if (d < 26) return N.ZONE_BY_ID.cloudspire.cn;
+        if (d < 26) return N.disp(N.ZONE_BY_ID.cloudspire);
       }
-      return best ? best.cn : '荒野';
+      return best ? N.disp(best) : N.t('log.wilderness');
     }
 
     particleBurst(x, y, z, col, n) {
@@ -649,7 +678,7 @@
           const fb = N.FRUIT_BLOCK_REV[g.fruit];
           if (fb) for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1]]) if (this.world.get(g.x + dx, g.y + 5, g.z + dz) === 7) this.setBlock(g.x + dx, g.y + 5, g.z + dz, fb);
           this.growQueue.splice(i, 1);
-          this.logMsg('你种下的果核长成了一棵小树。', 'good');
+          this.logMsg(N.t('log.sapling'), 'good');
         }
       }
       // picking up scattered fruit
@@ -658,7 +687,7 @@
           const d = this.drops[i]; d.t -= dt;
           if (d.t <= 0) { this.drops.splice(i, 1); continue; }
           if (Math.hypot(d.x - p.x, d.y - p.y, d.z - p.z) < 1.6) {
-            if (this.addItem(d.item.kind, d.item.id, d.item.fresh)) { this.drops.splice(i, 1); this.logMsg('捡回 ' + (FRU[d.item.id] || PLANT[d.item.id] || { cn: d.item.id }).cn, 'good'); }
+            if (this.addItem(d.item.kind, d.item.id, d.item.fresh)) { this.drops.splice(i, 1); this.logMsg(N.t('log.pickUp', { n: itemName(d.item.id) }), 'good'); }
           }
         }
       }
@@ -668,20 +697,20 @@
       this.prompt = '';
       if (playing) {
         for (const s of this.stashes) {
-          if (Math.hypot(s.x + 0.5 - p.x, s.y + 1 - p.y, s.z + 0.5 - p.z) < 3.2) this.prompt = 'E — 打开 ' + s.cn;
+          if (Math.hypot(s.x + 0.5 - p.x, s.y + 1 - p.y, s.z + 0.5 - p.z) < 3.2) this.prompt = N.t('log.promptOpen', { n: storeName(s) });
         }
         if (!this.prompt) {
           const c = this.nearestCreature(4.5);
-          if (c) this.prompt = 'E — 观察 ' + c.sp.cn;
+          if (c) this.prompt = N.t('log.promptObserve', { n: N.disp(c.sp) });
         }
         if (!this.prompt) {
           const t = this.rayTarget();
           if (t) {
             const b = this.world.get(t.x, t.y, t.z);
             this.hover = t;
-            if (N.FRUIT_BLOCK[b]) this.prompt = 'E — 采摘 ' + FRU[N.FRUIT_BLOCK[b]].cn;
-            else if (N.PLANT_BLOCK[b]) this.prompt = 'E — 采集 ' + PLANT[N.PLANT_BLOCK[b]].cn;
-            else if (b === 78) this.prompt = 'E — 主果窖';
+            if (N.FRUIT_BLOCK[b]) this.prompt = N.t('log.promptPickFruit', { n: N.disp(FRU[N.FRUIT_BLOCK[b]]) });
+            else if (N.PLANT_BLOCK[b]) this.prompt = N.t('log.promptPickPlant', { n: N.disp(PLANT[N.PLANT_BLOCK[b]]) });
+            else if (b === 78) this.prompt = N.t('log.promptCellar');
           } else this.hover = null;
         } else this.hover = null;
       }
@@ -881,17 +910,21 @@
     }
     // the player's own name: mutable, not unique, never used by fiction text
     setName(s) {
-      this.name = String(s == null ? '' : s).trim().slice(0, IDEN.nameMax);
+      const raw = String(s == null ? '' : s).trim();
+      this.name = raw.slice(0, IDEN.nameMax);
+      if (raw.length > IDEN.nameMax) this.logMsg(N.t('log.nameTooLong', { n: IDEN.nameMax }), 'warn');
       this.logMsg(this.name
-        ? '你说了个名字。谷地不怎么用名字，但别人要叫你「' + this.name + '」。'
-        : '你把名字收了回去。谷地继续叫你「' + this.epithet().cn + '」。', 'good');
+        ? N.t('log.named', { n: this.name })
+        : N.t('log.unnamed', { e: N.disp(this.epithet()) }), 'good');
       return this.name;
     }
     hasTrait(t) { return !!this.traits[t]; }
-    // announce a change of epithet once, when the valley starts using it
+    // announce a change of epithet once, when the valley starts using it.
+    // The comparison is on the record itself, not on its text: switching
+    // language mid-session must not read as the valley having renamed you.
     checkEpithet() {
       const e = this.epithet();
-      if (e.cn !== this.epithetSeen) { this.epithetSeen = e.cn; this.logMsg('谷地开始叫你「' + e.cn + '」。', 'good'); }
+      if (e !== this.epithetSeen) { this.epithetSeen = e; this.logMsg(N.t('log.epithet', { e: N.disp(e) }), 'good'); }
     }
 
     /* ------------------------- save ------------------------- */
@@ -901,13 +934,13 @@
           id: this.id, name: this.name, traits: this.traits,
           time: this.time, day: this.day, seed: this.seed,
           p: { x: this.player.x, y: this.player.y, z: this.player.z, yaw: this.player.yaw, pitch: this.player.pitch, vital: this.player.vital, form: this.player.form, formT: this.player.formT },
-          inv: this.inv, stashes: this.stashes.map(s2 => ({ id: s2.id, cn: s2.cn, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
+          inv: this.inv, stashes: this.stashes.map(s2 => ({ id: s2.id, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
           diffs: this.diffs, seen: this.seen, dex: this.dexFruit, regrow: this.regrow, posts: this.posts, owl: this._owlUnlocked || false,
           quests: this.quests.map(q => [q.id, q.done]), stats: this.stats, upg: this.upg
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(s));
-        this.logMsg('已保存。', 'good');
-      } catch (e) { this.logMsg('保存失败：' + e.message, 'bad'); }
+        this.logMsg(N.t('log.saved'), 'good');
+      } catch (e) { this.logMsg(N.t('log.saveFail', { m: e.message }), 'bad'); }
     }
     load() {
       let s;
@@ -916,7 +949,7 @@
       // identity: keep the saved id (the world's memory is keyed on it), never a name we invented
       this.id = s.id || this.id; this.name = s.name || '';
       Object.assign(this.traits, s.traits || {});
-      this.epithetSeen = this.epithet().cn;
+      this.epithetSeen = this.epithet();
       this.time = s.time; this.day = s.day;
       this.inv = s.inv || []; this.stashes = s.stashes;
       this.seen = s.seen || {}; this.dexFruit = s.dex || {}; this.stats = s.stats || this.stats;
@@ -929,7 +962,7 @@
       Object.assign(this.upg, s.upg || {});
       for (let i = 0; i < this.world.cx * this.world.cz; i++) this.world.buildChunk(this.R.gl, i);
       this.meshDone = this.meshTotal; this.ready = true;
-      this.logMsg('读档完成。', 'good');
+      this.logMsg(N.t('log.loaded'), 'good');
       return true;
     }
   }

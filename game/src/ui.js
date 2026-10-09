@@ -18,6 +18,24 @@
       this.show = { cellar: false, journal: false, help: false, dead: false };
     }
 
+    /* ---------------- language ----------------
+       Every translatable node in index.html carries data-i18n="key". The markup
+       itself holds the Chinese text, so the page still reads correctly in a
+       browser that has not run a line of script yet. */
+    applyLang() {
+      document.querySelectorAll('[data-i18n]').forEach(n => {
+        if (N.i18n.has(n.dataset.i18n)) n.innerHTML = N.t(n.dataset.i18n);
+      });
+      document.title = N.t('app.title');
+      document.documentElement.lang = N.i18n.locale === 'zh' ? 'zh-CN' : 'en';
+      // the button names the language it switches to, not the one in use
+      const b = el('btnLang');
+      if (b) b.textContent = N.i18n.nextLabel();
+      this.invSig = '';
+      if (this.show.cellar) this.renderCellar();
+      if (this.show.journal) this.renderJournal();
+    }
+
     /* ---------------- minimap base ---------------- */
     buildMinimap() {
       const W = this.g.world, S = W.w, D = W.d;
@@ -94,13 +112,13 @@
       el('zone').textContent = g.zoneName();
       const h = Math.floor(g.hour), m = Math.floor((g.hour % 1) * 60);
       const icon = g.night > 0.55 ? '☾' : (g.hour < 7.5 || g.hour > 18 ? '☼' : '☀');
-      el('clock').innerHTML = '<b>' + pad(h) + ':' + pad(m) + '</b> · 第 ' + g.day + ' 天 ' + icon +
-        ' <span class="dim">' + (g.night > 0.55 ? '夜' : g.night > 0.25 ? '黄昏' : '昼') + '</span>';
+      el('clock').innerHTML = '<b>' + pad(h) + ':' + pad(m) + '</b> · ' + N.t('hud.dayN', { d: g.day }) + ' ' + icon +
+        ' <span class="dim">' + (g.night > 0.55 ? N.t('hud.night') : g.night > 0.25 ? N.t('hud.dusk') : N.t('hud.day')) + '</span>';
 
       // identity: the valley's epithet comes first; the player's own name only if they chose one
       const ep = g.epithet();
-      el('who').innerHTML = '「' + ep.cn + '」' +
-        (g.name ? ' <span class="dim">' + g.name + '</span>' : ' <span class="dim">按 N 起个名字</span>');
+      el('who').innerHTML = N.t('q.l') + N.disp(ep) + N.t('q.r') +
+        (g.name ? ' <span class="dim">' + g.name + '</span>' : ' <span class="dim">' + N.t('hud.namePrompt') + '</span>');
 
       // vitality / air / fright
       let v = '';
@@ -118,8 +136,8 @@
         fb.classList.remove('hidden');
         el('formfill').style.width = (p.formT / p.formMax * 100) + '%';
         el('formfill').style.background = RAR[f.rarity].ring;
-        el('formname').innerHTML = f.form.cn + ' · ' + Math.ceil(p.formT) + 's' +
-          (p.formT / p.formMax < 0.25 ? ' <span class="warn">归心</span>' : '');
+        el('formname').innerHTML = N.disp(f.form) + ' · ' + Math.ceil(p.formT) + 's' +
+          (p.formT / p.formMax < 0.25 ? ' <span class="warn">' + N.t('hud.returning') + '</span>' : '');
       } else fb.classList.add('hidden');
 
       // backpack
@@ -135,8 +153,8 @@
         box.scrollTop = box.scrollHeight;
       }
       // stats
-      el('stats').innerHTML = '采 ' + g.stats.harvested + ' · 食 ' + g.stats.eaten + ' · 复原 ' + g.stats.reverted +
-        ' · 倒下 ' + g.stats.deaths + ' <span class="dim">| ' + g.creatures.length + ' 只生物</span>';
+      el('stats').innerHTML = N.t('hud.stats', { h: g.stats.harvested, e: g.stats.eaten, r: g.stats.reverted, d: g.stats.deaths }) +
+        ' <span class="dim">| ' + N.t('hud.creatures', { n: g.creatures.length }) + '</span>';
       if (this.show.cellar) this.renderCellar();
       this.drawMinimap();
     }
@@ -149,27 +167,28 @@
       const fresh = it.kind === 'fruit' ? Math.max(0, it.fresh / it.maxFresh) : 1;
       const cls = 'item' + (sel ? ' sel' : '') + (it.kind === 'pit' ? ' pit' : '');
       const pct = Math.round(fresh * 100);
-      return '<div class="' + cls + '" data-i="' + i + '" title="' + d.cn + ' · ' + rar.cn + ' · ' + slots + ' 果格" ' +
+      return '<div class="' + cls + '" data-i="' + i + '" title="' + N.disp(d) + ' · ' + N.disp(rar) + ' · ' +
+        N.t('cellar.itemSlots', { n: slots }) + '" ' +
         'style="--ring:' + rar.ring + ';--deg:' + (fresh * 360) + 'deg">' +
         '<div class="ico" style="background:radial-gradient(circle at 35% 30%,' + rar.ring + ',rgba(0,0,0,.55))"></div>' +
         '<div class="slots">' + slots + '</div>' +
-        (it.kind === 'fruit' ? '<div class="fresh" style="width:' + pct + '%"></div>' : '<div class="pitTag">核</div>') +
+        (it.kind === 'fruit' ? '<div class="fresh" style="width:' + pct + '%"></div>' : '<div class="pitTag">' + N.t('hud.pit') + '</div>') +
         '</div>';
     }
 
     renderInv() {
       const g = this.g;
-      const sig = g.inv.map(i => i.kind + i.id + Math.round(i.fresh / 5)).join(',') + '|' + g.sel + '|' + g.cap();
+      const sig = g.inv.map(i => i.kind + i.id + Math.round(i.fresh / 5)).join(',') + '|' + g.sel + '|' + g.cap() + '|' + N.locale();
       if (sig === this.invSig) return;
       this.invSig = sig;
       el('inv').innerHTML = g.inv.map((it, i) => this.itemHTML(it, i, i === g.sel)).join('') ||
-        '<div class="empty">背包是空的。去采一颗果实吧。</div>';
+        '<div class="empty">' + N.t('hud.emptyPack') + '</div>';
       const used = g.used(), cap = g.cap();
       el('capFill').style.width = (used / cap * 100) + '%';
       el('capFill').style.background = used / cap > 0.8 ? '#e07a4a' : '#8fbf6a';
-      el('capTxt').textContent = used + ' / ' + cap + ' 果格';
+      el('capTxt').textContent = N.t('hud.cap', { u: used, c: cap });
       const owned = STO.backpack.upgrades.filter(u => g.upg[u.id]);
-      el('upgTxt').textContent = owned.length ? owned.map(u => u.slots ? '+' + u.slots : '稀−1').join(' · ') : '';
+      el('upgTxt').textContent = owned.length ? owned.map(u => u.slots ? N.t('hud.upgSlots', { n: u.slots }) : N.t('hud.upgRare')).join(' · ') : '';
     }
 
     /* ---------------- storage panel ---------------- */
@@ -183,18 +202,20 @@
     renderCellar() {
       const g = this.g, s = g.openStash;
       if (!s) return;
-      el('cellarTitle').textContent = s.cn;
-      el('cellarSub').textContent = '容量 ' + s.slots + ' 果格 · 腐坏速度 ×' + s.decay + ' · 已用 ' + g.used(s.items);
-      el('stashItems').innerHTML = s.items.map((it, i) => this.itemHTML(it, i, i === g.stashSel)).join('') || '<div class="empty">空架子。</div>';
-      el('packItems').innerHTML = g.inv.map((it, i) => this.itemHTML(it, i, i === g.invSel)).join('') || '<div class="empty">背包空。</div>';
+      el('cellarTitle').textContent = N.t('store.' + (s.kind === 'tree' ? 'tree' : 'cellar'));
+      el('cellarSub').textContent = N.t('cellar.sub', { s: s.slots, d: s.decay, u: g.used(s.items) });
+      el('stashItems').innerHTML = s.items.map((it, i) => this.itemHTML(it, i, i === g.stashSel)).join('') ||
+        '<div class="empty">' + N.t('cellar.emptyShelf') + '</div>';
+      el('packItems').innerHTML = g.inv.map((it, i) => this.itemHTML(it, i, i === g.invSel)).join('') ||
+        '<div class="empty">' + N.t('cellar.emptyPack') + '</div>';
       // owl post
       const pr = el('postRow');
-      const transit = g.posts.map(p => (FRU[p.it.id] ? FRU[p.it.id].cn : p.it.id) + '（' + Math.max(1, Math.ceil(p.t / 420)) + ' 天后到）').join('、');
+      const transit = N.tlist(g.posts.map(p => N.t('cellar.transitItem', { n: N.disp(FRU[p.it.id] || { cn: p.it.id, en: p.it.id }), d: Math.max(1, Math.ceil(p.t / 420)) })));
       let txt = '';
-      if (g.posts.length) txt += '🕊 在途：' + transit;
+      if (g.posts.length) txt += N.t('cellar.transit', { x: transit });
       if (s.kind === 'tree') {
-        if (g.owlUnlocked()) txt += (txt ? ' · ' : '') + '<b>P</b> — 让钟摆叼走选中的 1 颗（3 个游戏日送达主果窖，10% 会丢）';
-        else txt += (txt ? ' · ' : '') + '钟摆还没来：先在主果窖存一颗猫头鹰果。';
+        if (g.owlUnlocked()) txt += (txt ? ' · ' : '') + N.t('cellar.postCan');
+        else txt += (txt ? ' · ' : '') + N.t('cellar.postNot');
       }
       pr.innerHTML = txt;
       pr.classList.toggle('hidden', !txt);
@@ -212,30 +233,32 @@
       const g = this.g;
       // identity block: the epithet is what the valley uses; the id is what the world stores
       const ep = g.epithet();
-      let me = '<h3>你</h3><div class="dim">谷地称呼：<b>「' + ep.cn + '」</b>' +
-        (g.name ? ' · 你自己的名字：<b>' + g.name + '</b>（按 N 可改）' : ' · 还没有名字（按 N 起一个）') +
-        ' · 谷地记住的编号：<code>' + g.id + '</code>' +
-        (g.hasTrait('mixStomach') ? ' · 天赋：<b>' + N.IDENTITY.traits.mixStomach.cn + '</b>' : '') + '</div>';
-      let q = '<h3>任务</h3>';
-      for (const qq of g.quests) q += '<div class="q' + (qq.done ? ' done' : '') + '"><b>' + (qq.done ? '✔ ' : '○ ') + qq.cn + '</b><div class="dim">' + qq.hint + '</div></div>';
-      let b = '<h3>果实图鉴</h3><div class="dex">';
+      const tr = N.IDENTITY.traits.mixStomach;
+      let me = '<h3>' + N.t('j.you') + '</h3><div class="dim">' + N.t('j.youEpithet', { e: N.disp(ep) }) +
+        (g.name ? N.t('j.youNameSet', { n: g.name }) : N.t('j.youNameNone')) +
+        N.t('j.youId', { id: g.id }) +
+        (g.hasTrait('mixStomach') ? N.t('j.youTrait', { t: N.disp(tr) }) : '') + '</div>';
+      let q = '<h3>' + N.t('j.quests') + '</h3>';
+      for (const qq of g.quests) q += '<div class="q' + (qq.done ? ' done' : '') + '"><b>' + (qq.done ? '✔ ' : '○ ') + N.disp(qq) +
+        '</b><div class="dim">' + N.disp(qq.hint) + '</div></div>';
+      let b = '<h3>' + N.t('j.fruits') + '</h3><div class="dex">';
       for (const f of N.FRUITS) {
         const known = g.dexFruit[f.id];
         const rar = RAR[f.rarity];
         b += '<div class="card' + (known ? '' : ' unk') + '" style="--ring:' + rar.ring + '">' +
-          '<div class="cn">' + (known ? f.cn : '？？？') + '</div>' +
-          '<div class="meta"><span>' + rar.cn + '</span><span>' + rar.slots + ' 果格</span>' +
-          (f.duration ? '<span>' + f.duration + 's</span>' : '<span>不可食</span>') + '</div>' +
-          (known ? '<div class="lore">' + f.lore + '</div><div class="side">代价：' + f.cost.join('；') + '</div>' +
-            '<div class="dim">栖息：' + f.habitatCn + '</div>' : '<div class="dim">未获得</div>') +
+          '<div class="cn">' + (known ? N.disp(f) : N.t('hud.unknown')) + '</div>' +
+          '<div class="meta"><span>' + N.disp(rar) + '</span><span>' + N.t('j.slots', { n: rar.slots }) + '</span>' +
+          (f.duration ? '<span>' + f.duration + 's</span>' : '<span>' + N.t('j.inedible') + '</span>') + '</div>' +
+          (known ? '<div class="lore">' + N.loreOf(f) + '</div><div class="side">' + N.t('j.cost', { c: N.costList(f) }) + '</div>' +
+            '<div class="dim">' + N.t('j.habitat', { h: N.habitatText(f) }) + '</div>' : '<div class="dim">' + N.t('j.notFound') + '</div>') +
           '</div>';
       }
       b += '</div>';
-      let c = '<h3>生物图鉴</h3><div class="dex">';
+      let c = '<h3>' + N.t('j.creatures') + '</h3><div class="dex">';
       for (const sp of N.CREATURES) {
         const known = g.seen[sp.id];
-        c += '<div class="card' + (known ? '' : ' unk') + '"><div class="cn">' + (known ? sp.cn : '？？？') + '</div>' +
-          (known ? '<div class="lore">' + sp.dex + '</div>' : '<div class="dim">尚未观察</div>') + '</div>';
+        c += '<div class="card' + (known ? '' : ' unk') + '"><div class="cn">' + (known ? N.disp(sp) : N.t('hud.unknown')) + '</div>' +
+          (known ? '<div class="lore">' + N.dexOf(sp) + '</div>' : '<div class="dim">' + N.t('j.notSeen') + '</div>') + '</div>';
       }
       c += '</div>';
       el('journalBody').innerHTML = me + q + b + c;
