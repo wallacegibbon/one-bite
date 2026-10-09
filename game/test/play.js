@@ -121,6 +121,43 @@ const path = require('path');
     return { form: p.form, model: p.modelId, size: p.size() };
   });
 
+  // 5b. one body at a time. A second fruit replaces the body you are wearing;
+  //     it does not punish you. The magic stomach used to make the third fruit
+  //     eaten inside 90 seconds destroy itself, deal 0.8 damage and refuse the
+  //     transformation -- that concept is deleted (docs/en/04 s5.1), and this
+  //     step is what keeps it deleted.
+  const swap = await step('oneBodyAtATime', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const ids = ['owlberry', 'jellybloom', 'frogpear', 'bruinfig'];
+    g.inv.length = 0;
+    for (const id of ids) g.addItem('fruit', id);
+    const before = { vital: p.vital, inv: g.inv.length };
+    const forms = [];
+    for (const id of ids) { g.eat(id, 0); forms.push(p.form); }
+    const after = { vital: p.vital, inv: g.inv.length };
+    const lines = g.log.slice(-10).map(l => l.text);
+    const out = {
+      before, after, forms,
+      gastric: g.gastric, gastricTime: g.gastricTime,
+      overwrite: N.t('log.overwrite', {
+        a: N.disp(N.FRUIT_BY_ID.owlberry.form), b: N.disp(N.FRUIT_BY_ID.jellybloom.form)
+      }),
+      sawOverwrite: lines.some(l => l === N.t('log.overwrite', {
+        a: N.disp(N.FRUIT_BY_ID.owlberry.form), b: N.disp(N.FRUIT_BY_ID.jellybloom.form)
+      })),
+      churnKeys: Object.keys(N.T).filter(loc =>
+        N.T[loc]['log.churn'] !== undefined || N.T[loc]['log.causeOverload'] !== undefined)
+    };
+    p.form = null; p.formT = 0; g.inv.length = 0;
+    return out;
+  });
+  check('each fruit replaces the body in order', JSON.stringify(swap.forms) === JSON.stringify(['owlberry', 'jellybloom', 'frogpear', 'bruinfig']), swap.forms);
+  check('swapping bodies costs no vitality', swap.after.vital === swap.before.vital, swap);
+  check('each fruit is spent exactly once, none destroyed by a penalty', swap.after.inv === swap.before.inv - 4, swap);
+  check('the gastric counter no longer exists on the game', swap.gastric === undefined && swap.gastricTime === undefined, swap);
+  check('the replacement is announced', swap.sawOverwrite, swap.overwrite);
+  check('the churn keys stay out of both language tables', swap.churnKeys.length === 0, swap.churnKeys);
+
   // 6. cellar in / out
   await step('cellar', () => {
     const g = window.game;
@@ -368,20 +405,24 @@ const path = require('path');
   const part = await step('particleGravity', () => {
     const g = window.game, P = g.particles;
     const n0 = P.n;
+    /* The pool swap-removes dead particles, so a leftover particle dying during
+       the two seconds below would drag the three test particles into other
+       slots and the indices would lie. Start from an empty pool: these three
+       live 5 s, so nothing dies and index === identity for the whole step. */
+    P.n = 0;
     P.spawn(0, 40, 0, 0, 0.8, 0, 5, [1, 1, 1], 0.2, -0.5);   // bubble: buoyant
-    const bubble = n0;
     P.spawn(0, 40, 0, 0, 0.3, 0, 5, [1, 1, 1], 0.2, 0);      // mote / firefly: weightless
-    const mote = n0 + 1;
     P.spawn(0, 40, 0, 0, 0, 0, 5, [1, 1, 1], 0.2);           // ember: the default gravity
-    const ember = n0 + 2;
     for (let i = 0; i < 20; i++) P.update(0.1, g.world);     // two seconds
     const out = {
-      vy: [+P.vy[bubble].toFixed(2), +P.vy[mote].toFixed(2), +P.vy[ember].toFixed(2)],
-      dy: [+(P.py[bubble] - 40).toFixed(2), +(P.py[mote] - 40).toFixed(2), +(P.py[ember] - 40).toFixed(2)]
+      live: P.n,
+      vy: [+P.vy[0].toFixed(2), +P.vy[1].toFixed(2), +P.vy[2].toFixed(2)],
+      dy: [+(P.py[0] - 40).toFixed(2), +(P.py[1] - 40).toFixed(2), +(P.py[2] - 40).toFixed(2)]
     };
-    P.n = n0;                                               // drop the test particles again
+    P.n = n0;                                               // leave the pool as we found it
     return out;
   });
+  check('the three test particles are the only ones live', part.live === 3, part);
   check('a bubble rises instead of sinking', part.vy[0] > 0.8 && part.dy[0] > 1, part);
   check('a mote hovers instead of sinking into the ground', Math.abs(part.vy[1]) < 0.31, part);
   check('an ember still falls', part.vy[2] < -2, part);
