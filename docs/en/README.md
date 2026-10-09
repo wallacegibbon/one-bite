@@ -38,7 +38,7 @@ Three tensions that mesh into each other:
 | [03-characters-and-creatures.md](03-characters-and-creatures.md) | Protagonist, NPCs, 4 creatures, attitude matrix, named individuals |
 | [04-fruit-and-transformation.md](04-fruit-and-transformation.md) | Full table of 4 fruits, form abilities, side effects |
 | [05-backpack-and-storage.md](05-backpack-and-storage.md) | **The storage mechanism (the one open question in the original brief)**: 3 options compared + the recommended design |
-| [06-quests-and-progression.md](06-quests-and-progression.md) | The seven invitations, 12 side quests, codex, death and time |
+| [06-quests-and-progression.md](06-quests-and-progression.md) | The seven invitations, why there are no side quests, the codex, death and time |
 | [07-art-audio-technical.md](07-art-audio-technical.md) | Voxel art rules, palette, audio, rendering and data structures |
 
 The Chinese originals sit in the sibling folder [`docs/cn/`](../cn/README.md): `docs/cn/` is Chinese, `docs/en/` is English, same numbering, same table column order. `game/test/docs-sync.js` validates both sets against `game/data/`.

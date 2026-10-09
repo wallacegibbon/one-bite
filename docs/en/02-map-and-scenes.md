@@ -118,7 +118,7 @@ Three layers of tunnel, about 120 blocks long. The id is still `batcave`, and th
 - **Lower**: an underground stream, wet; frogs come in from the hillside.
 - By day it is only dripping. Sound comes back wrong, which is the whole name.
 
-**This place pays nothing.** It is dark, it is deep, it has no fruit and no door, and it is the clearest hole the roster cut left behind: the hill was built as a spider scene. What to do with it is an open question, not a solved one.
+**This place pays nothing, and that is now the design.** It is dark, it is deep, it has no fruit and no door. The hill was built as a spider scene and the spider is gone — and nothing is coming to hand it a purpose, because the quest that would have is deleted (06 §4). A hollow may just be a hollow. The valley is not obliged to pay for every place it built.
 
 ### 5.5 Mirrorlake
 
@@ -130,9 +130,9 @@ Radius 34, deepest at the centre.
 
 ### 5.6 The Deep Grove and the Old Orchard
 
-**The Deep Grove** (104,32, r18): silver-leaf wood (blocks 9/22) where every old track folds into one. Nothing grows on the silver trunks now. The grove is bear country — the ridge bears come down into it and bury their own fruit here — and it has no door: no fruit, no gate, no reason. That is a hole in the design, and it is on the open list.
+**The Deep Grove** (104,32, r18): silver-leaf wood (blocks 9/22) where every old track folds into one. Nothing grows on the silver trunks now. The grove is bear country — the ridge bears come down into it and bury their own fruit here — and it has no door: no fruit, no gate, no reason. That is no longer a hole in the design: the valley keeps its animals until each one arrives with a fruit, a niche and a door only it can open (03 §3), and a wood is allowed to be bear country and nothing else.
 
-**The Old Orchard** (24,104, r15): a ring of broken wall (30 across) plus the oldest tree in the valley (`oldtree`). Every root heap is an old burrow — the town cellar's shape is said to be copied from bears, and the bears copied it from whatever dug these first. The ruins' beams have been holding themselves up for three centuries; pull one brace and the roof comes down, opening a new way down to the cave floor.
+**The Old Orchard** (24,104, r15): a ring of broken wall (30 across) plus the oldest tree in the valley (`oldtree`). Every root heap is an old burrow — the town cellar's shape is said to be copied from bears, and the bears copied it from whatever dug these first. The ruins' beams have been holding themselves up for three centuries. They stay up.
 
 ### 5.7 Cloudspire Isles
 
@@ -179,7 +179,7 @@ The stepping isles form a route from the forest canopy (y28) up to Cloudspire �
 | Starfall Keep | 1 | none (but the greenhouse fruit is unpickable) |
 | Whisperwood / Glowglade | 1 | rain choruses that hide footsteps, and old tracks that lead somewhere you did not mean to go |
 | Echo Hollow | 2 | darkness (needs night vision / glow), falls |
-| Old Orchard | 2 | thief traps (block 80, needs a bear to break), collapsing beams |
+| Old Orchard | 2 | thief traps (block 80, needs a bear to break) |
 | Deep Grove | 3 | nothing that hunts you: dense silver trunks, and a bear standing in the path you came in by |
 | Ashscale Ridge | 3 | the height, the cold (a bear body is immune — not implemented yet), a brown bear that ignores you and will not step aside |
 | Mirrorlake | 3 | drowning (18 s for a human, 58 s in a jellyfish body), a frog drying out on land |

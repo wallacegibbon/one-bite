@@ -38,7 +38,7 @@ The valley agent of the Greyglove Trading Company. In his thirties; his gloves a
 | Name | Species | Location | Role |
 |---|---|---|---|
 | **Pendulum** | Screech Owl | Starfall Bell Tower | Head of the volunteer patrol. Will carry fruit you dropped far away back to the nearest store (once every 3 days) |
-| **Old Drum** | Mirrorlake Frog | the Frogshall | The first frog to start calling after rain — the Frogshall is named after it. Wants a brass bell back from the sunken tower |
+| **Old Drum** | Mirrorlake Frog | the Frogshall | The first frog to start calling after rain — the Frogshall is named after it |
 | **One-Eye** | Brown Bear | the Northern Ridge | The bear that has torn down three cellar trees. The town treats it as a colleague, not a disaster |
 
 ## 2. The creature attitude system

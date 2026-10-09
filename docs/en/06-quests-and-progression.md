@@ -50,22 +50,15 @@ Nothing in the valley is waiting to be fixed. Do none of these and the valley is
 
 > Removed with the simplification of the setting (01): the mother tree's amnesia, the three endings, and the fruit and creatures that existed only for them. The Greyglove Trading Company stayed — it is not a villain, it is an institution that ships fruit out, and the valley's border (01 §3) is its opponent.
 
-## 4. Side quests (12, full design)
+## 4. No side quests
 
-| Side quest | Trigger | Content |
-|---|---|---|
-| The chorus after rain | listen to the shore of Mirrorlake after rain | follow the first frog that starts calling (Old Drum) and it takes you to the only tower entrance the reeds have not blocked |
-| A deer path is not a road | walk one of the old tracks in the middle wood | the deer that pressed them into the ground are gone and the tracks are not: an old track always leads to water; along it you unlock 3 hidden cellar-tree anchors |
-| The brass bell in the sunken tower | after the lake's ticket (q4) | carry the bell off the tower sill back to the Frogshall — Old Drum recognises it |
-| The bear's cellar | find a bear-dug hole on the Northern Ridge | inside are pits that went dormant 300 years ago — planting one revives 1 missing fruit species |
-| The empty burrow | the mounds of the Old Orchard | dig out a burrow that is already empty: at the bottom is a whole store of pits that someone carried off, and nobody knows who |
-| The beams that never fell | the Old Orchard | those beams should have come down centuries ago and did not; pull one brace and the roof follows, opening a new way down to the cave floor (a shortcut) |
-| Pendulum's three | store an Owlberry in the main cellar | unlocks owl post (once every 3 days, fruit you dropped far away is carried to the nearest store) |
-| The empty slot in the fog | after losing a fruit at the fog's edge | that fruit turns up on a different tree — not the same tree, not even the same kind |
-| Why Old Mei does not eat | store 50 fruit in total | the Bruin Fig scent event: she only says "I smelled one. That was enough." |
-| Greyglove's ledger | Quill's camp | shows which fruits were shipped out (codex-completion clues) |
-| Empty seedlings | plant 20 empty pits | a 15% revival rate, the player's own "restoration garden" |
-| The name on the old beam | after reaching the old beams of the Cloudspire | a name carved into the beam three hundred years ago, which is not yours and not anyone's |
+There is no second tier of content. The seven invitations are the whole quest set: nothing waits in a hollow, no named animal asks you to fetch a thing for it, no name carved on a beam is waiting to be read.
+
+This section used to be a 12-row design table. After the roster and the magic were simplified it was the odd thing out: **every row in it was unimplemented**, and together the rows were the reason the map promised more than it paid — the hollow that answers dropped stones, the mounds in the orchard, the beams that never fell, the grove with no door. Each of those was a place held open for a quest that was never going to arrive, and two of the rows depended on animals the valley no longer has.
+
+What stands in their place is the sentence the creature chapter already uses: the valley keeps its animals to itself until each one arrives with a fruit, a niche and a door only it can open. Until then a place may simply **be** there — dark, deep, good for nothing. That is not a hole to fill; it is the same kind of absence the fog is made of.
+
+If a place ever earns a quest, that quest has to teach a gate: a place only one body can reach, or a thing only one body can carry. That is the only kind of quest this game has, and there are exactly seven of them.
 
 ## 5. The codex (J key)
 
