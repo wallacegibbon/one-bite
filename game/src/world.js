@@ -109,8 +109,13 @@
       this.cx = Math.ceil(w / this.cs); this.cz = Math.ceil(d / this.cs);
       this.chunks = new Array(this.cx * this.cz);
       this.dirty = new Uint8Array(this.cx * this.cz).fill(1);
-      this.maxY = new Uint8Array(w * d);
     }
+    /* No heightmap. A `maxY` map -- Uint8Array(w*d), kept up to date on every
+       write, exactly as docs/en/07 s3.3 still plans for the full game -- was
+       tried here to bound the meshing loop. Rebuilding all 100 chunks costs
+       about 1.0 ms per chunk with it or without it, so the empty sky above the
+       treetops is not where the time goes; the faces are. And it had to be
+       right on every single write, or geometry would quietly be clipped. */
     idx(x, y, z) { return (y * this.d + z) * this.w + x; }
     inside(x, y, z) { return x >= 0 && z >= 0 && y >= 0 && x < this.w && z < this.d && y < this.h; }
     get(x, y, z) { return this.inside(x, y, z) ? this.blocks[(y * this.d + z) * this.w + x] : 0; }
@@ -119,11 +124,6 @@
       const i = (y * this.d + z) * this.w + x;
       if (this.blocks[i] === b) return;
       this.blocks[i] = b;
-      if (b) { if (y >= this.maxY[z * this.w + x]) this.maxY[z * this.w + x] = y + 1; }
-      else if (y + 1 === this.maxY[z * this.w + x]) {
-        let yy = y; while (yy > 0 && !this.blocks[(yy * this.d + z) * this.w + x]) yy--;
-        this.maxY[z * this.w + x] = yy + 1;
-      }
       this.markDirty(x, z);
     }
     solidAt(x, y, z) { const b = B[this.get(x | 0, y | 0, z | 0)]; return !!(b && b.solid); }
@@ -153,7 +153,6 @@
       }
       return n;
     }
-    topAt(x, z) { return this.maxY[z * this.w + x]; }
     /* One integer naming one block, used as a cache key. Mixed radix (x, z, y)
        over the world bounds, so two different blocks can never share a key --
        a decimal packing like x*10000 + y*100 + z collides as soon as an axis

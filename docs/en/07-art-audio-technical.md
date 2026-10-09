@@ -113,7 +113,7 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 ### 3.3 Data and saving
 
 - Voxels: `Uint8Array(w*h*d)` = 160×48×160 = 1.23 MB.
-- `maxY` heightmap: `Uint8Array(w*d)`, speeding up meshing and creature pathing.
+- **Heightmap**: planned (`Uint8Array(w*d)`), not in the prototype. Bounding the meshing loop with one measured no faster — rebuilding all 100 chunks costs about 1.0 ms per chunk with it or without it — and it has to be right on every block write or geometry gets quietly clipped. Meshing scans the full chunk height; the time goes into the faces, not into the empty sky.
 - Save: `localStorage['frutaria.save.v1']`, storing only the **block diff** (`diffs`) + player (position, vitality, current form and its remaining time) + **identity** (`id` / `name` / traits, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + planting queue (`growQueue`) + fruit scattered by death (`drops`) + plant buffs + owl post + backpack upgrades + quests + time. Measured 2.4 KB with a cellar tree, a sapling and a post in flight.
 - A save is **offered back, never silently loaded**: the start screen quotes it (day, hour, pack, trees) and Continue walks you back to it. The town cellar belongs to the valley rather than to the save, so it is rebuilt from the map data and every store is looked up by `id` — a save that lists only cellar trees still has a town to walk into.
 

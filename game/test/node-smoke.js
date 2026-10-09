@@ -63,7 +63,8 @@ console.log('三角面总数', tris, ' 分块', w.cx * w.cz);
 console.log('果实分布', counts);
 console.log('出生点脚下方块', below, '身上方块', at, at === 0 ? 'OK' : '!! 出生点被埋');
 
-for (const p of F.POIS) console.log('POI', p.cn, 'topY=', w.topAt(p.x, p.z));
+const topAt = (x, z) => { for (let y = w.h - 1; y >= 0; y--) if (w.get(x, y, z)) return y; return -1; };
+for (const p of F.POIS) console.log('POI', p.cn, 'topY=', topAt(p.x, p.z));
 
 // key interaction points
 const chest = w.get(136, 21, 134);
