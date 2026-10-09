@@ -139,7 +139,7 @@ Two consequences worth knowing:
 | Item | Note |
 |---|---|
 | No occlusion culling | blocks outside are still drawn while you are inside a cave |
-| No async meshing | chunk meshing is budgeted at 22 ms per frame during boot, but player edits rebuild synchronously |
+| No async meshing | chunk meshing is budgeted at 22 ms per frame during boot; a player edit flags its chunk and the flagged chunks are re-meshed on a 6 ms per frame budget |
 | Creatures have no pathfinding | only "steer toward target + height correction + random deflection on hitting a wall", so they get stuck on terrain |
 | No LOD / no streaming | the 160³ world is fully resident in memory; the full scale needs chunk streaming |
 | No NPC dialogue trees | Old Mei / Quill / White Dew only have log text, no branching dialogue |

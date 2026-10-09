@@ -123,9 +123,29 @@
     solidAt(x, y, z) { const b = B[this.get(x | 0, y | 0, z | 0)]; return !!(b && b.solid); }
     liquidAt(x, y, z) { return this.get(x | 0, y | 0, z | 0) === WATER; }
     markDirty(x, z) {
-      const c0x = Math.max(0, (x - 1) >> 4), c1x = Math.min(this.cx - 1, (x + 1) >> 4);
-      const c0z = Math.max(0, (z - 1) >> 4), c1z = Math.min(this.cz - 1, (z + 1) >> 4);
+      const c0x = Math.max(0, Math.floor((x - 1) / this.cs)), c1x = Math.min(this.cx - 1, Math.floor((x + 1) / this.cs));
+      const c0z = Math.max(0, Math.floor((z - 1) / this.cs)), c1z = Math.min(this.cz - 1, Math.floor((z + 1) / this.cs));
       for (let cz = c0z; cz <= c1z; cz++) for (let cx = c0x; cx <= c1x; cx++) this.dirty[cz * this.cx + cx] = 1;
+    }
+    anyDirty() {
+      for (let ci = 0; ci < this.dirty.length; ci++) if (this.dirty[ci]) return true;
+      return false;
+    }
+    /* Re-mesh the chunks a block edit flagged. The game calls this once per
+       frame with a millisecond budget: picking a fruit must not stall the
+       frame, so the geometry catches up over the next few frames instead
+       (docs/en/07 s3.5, "no async meshing"). At least one chunk is always
+       rebuilt, so a flagged chunk can never stay stale. */
+    rebuildDirty(gl, budgetMs) {
+      const t0 = performance.now();
+      let n = 0;
+      for (let ci = 0; ci < this.dirty.length; ci++) {
+        if (!this.dirty[ci]) continue;
+        this.buildChunk(gl, ci);
+        n++;
+        if (performance.now() - t0 > budgetMs) break;
+      }
+      return n;
     }
     topAt(x, z) { return this.maxY[z * this.w + x]; }
 

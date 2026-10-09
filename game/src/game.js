@@ -693,6 +693,10 @@
       }
       this.decayItems(dt);
 
+      // geometry catches up with the world: harvesting, planting, regrowth and
+      // cellar trees all edit blocks, and each edit flags its chunk
+      if (this.world.anyDirty()) this.world.rebuildDirty(this.R.gl, 6);
+
       // interaction prompt
       this.prompt = '';
       if (playing) {

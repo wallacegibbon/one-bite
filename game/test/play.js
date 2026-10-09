@@ -34,7 +34,10 @@ const path = require('path');
       if (W.get(x, y, z) === 40) found = { x, y, z };   // 40 = owlberry
     if (!found) return 'no owlberry block';
     g.player.x = found.x + 0.5; g.player.y = found.y - 1; g.player.z = found.z + 0.5;
+    const ci = ((found.z >> 4) * g.world.cx) + (found.x >> 4);
+    window.__ci = ci; window.__meshBefore = g.world.chunks[ci];
     g.harvest(found.x, found.y, found.z, 40);
+    window.__flagged = g.world.dirty[ci];
     return { at: found, inv: g.inv.map(i => i.id), used: g.used(), cap: g.cap() };
   });
 
@@ -48,6 +51,15 @@ const path = require('path');
     return { at: [r.x, r.y, r.z], block: r.b, daysUntilRegrow: +(r.t / 420).toFixed(3), blockNow: g.world.get(r.x, r.y, r.z) };
   });
   await new Promise(r => setTimeout(r, 500));
+  // 1a. a block edit must reach the rendered geometry, not only the voxel array
+  const mesh = await step('meshFollowsEdits', () => {
+    const W = window.game.world, ci = window.__ci;
+    return { flaggedOnEdit: window.__flagged, remeshed: W.chunks[ci] !== window.__meshBefore, anyDirtyLeft: W.anyDirty() };
+  });
+  check('the edit flagged its chunk', mesh.flaggedOnEdit === 1, mesh);
+  check('the flagged chunk is re-meshed within a few frames', mesh.remeshed, mesh);
+  check('no chunk is left flagged', mesh.anyDirtyLeft === false, mesh);
+
   await step('regrown', () => {
     const g = window.game, [x, y, z, b] = window.__rg || [0, 0, 0, 0];
     return { blockAfter: g.world.get(x, y, z), expect: b, restored: g.world.get(x, y, z) === b, queueLen: g.regrow.length };
