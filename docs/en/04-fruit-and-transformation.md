@@ -74,27 +74,42 @@ A fruit starts counting down the moment it is picked.
 
 ## 4. Form ability fields
 
-| Field | Meaning | What the player feels |
-|---|---|---|
-| `size[w,h]` | collision box in metres | how low a hole you can enter; decides whether a 1×1 passage fits |
-| `speed` | land movement multiplier | bear 1.1 / frog 0.9 / jellyfish 0.5 |
-| `jump` | jump force multiplier | frog 2.4 / bear 0.9 |
-| `swim` | underwater movement multiplier | frog 2.4 / jellyfish 1.6 |
-| `fly` | flight thrust (0 = cannot fly) | only the owl, 5.2 |
-| `glide` | unpowered gliding (fall speed cap) | owl 0.35 |
-| `breatheAir:false` | breathe underwater | only the frog |
-| `airBonus` | extra seconds of held breath | jellyfish +40 |
-| `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 |
-| `nightVision` | brightening in the dark, 0–1 | owl 0.75 / frog 0.3 |
-| `glow[r,g,b]` | self-illumination | jellyfish |
-| `stealth` | creature alert-radius multiplier | owl 0.45 / frog 0.5 = hard to spot |
-| `aura` | intimidation radius | bear 8 = small animals scatter as you approach |
-| `tongue` | metres of reach when plucking / grabbing | frog 4 |
-| `step` | auto step-up height in metres | bear 1.1 = walks up any stair |
-| `fov` | field of view | frog 100 / bear 68 |
-| `hand` | first-person hand model | hand/talon/web/claw/tentacle |
+The last column is the state of the prototype, not the ambition. `game/test/reach.js`
+reads the data and the code and prints this split on every run, so a field cannot
+sit here looking implemented while nothing reads it.
 
-There are three further pure boolean switches, which change checks rather than numbers: `strength` (pushes obstacles, breaks doors), `poisonImmune`, `coldImmune`.
+| Field | Meaning | What the player feels | Prototype |
+|---|---|---|---|
+| `size[w,h]` | collision box in metres | how low a hole you can enter; decides whether a 1×1 passage fits | live |
+| `speed` | land movement multiplier | bear 1.1 / frog 0.9 / jellyfish 0.5 | live |
+| `jump` | jump force multiplier | frog 2.4 / bear 0.9 | live |
+| `swim` | underwater movement multiplier | frog 2.4 / jellyfish 1.6 | live |
+| `fly` | flight thrust (0 = cannot fly) | only the owl, 5.2 | live |
+| `glide` | unpowered gliding (fall speed cap) | owl 0.35 | **not implemented** |
+| `breatheAir:false` | breathe underwater | only the frog | live |
+| `airBonus` | extra seconds of held breath | jellyfish +40 | live |
+| `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 | live |
+| `nightVision` | brightening in the dark, 0–1 | owl 0.75 / frog 0.3 | **not implemented** |
+| `glow[r,g,b]` | self-illumination | jellyfish | live |
+| `stealth` | creature alert-radius multiplier | owl 0.45 / frog 0.5 = hard to spot | live |
+| `aura` | intimidation radius | bear 8 = small animals scatter as you approach | live |
+| `tongue` | metres of reach when plucking / grabbing | frog 4 | **not implemented** |
+| `step` | auto step-up height in metres | bear 1.1 = walks up any stair | live |
+| `fov` | field of view | frog 100 / bear 68 | live |
+| `hand` | first-person hand model | hand/talon/web/claw/tentacle | live |
+
+There are three further pure boolean switches, which change checks rather than
+numbers: `strength` (pushes obstacles, breaks doors), `poisonImmune`,
+`coldImmune`. **None of the three is implemented either**, and neither is
+`glide`, `nightVision` or `tongue` — six of the twenty-two fields on the four
+forms are declared and inert.
+
+That is the honest list, and it matters more than it looks, because two of them
+are load-bearing on content the valley already advertises: the Ashscale Ridge
+text promises that a bear body shrugs off the cold (`coldImmune`), and the Old
+Orchard traps are supposed to need a bear's claws (`strength`). Until those two
+are built, the bear's advertised difference from a human is its collision box,
+its speed and its intimidation radius.
 
 **Note that `size` is a hard gate**: a frog at 0.5×0.5 fits a 1×1 root hole and the gaps between reeds; a bear at 1.4×1.5 does not — that is the physical implementation of "weight collapses the bridge" and "this body will not fit that door", not just flavour text.
 

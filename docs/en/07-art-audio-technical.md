@@ -148,6 +148,8 @@ Two consequences worth knowing:
 | The frog does not dry out on screen | `dryTimer` is in the data and the check is wired up, but there is no skin-moisture bar in the HUD (04 §3) |
 | No identity service | the `id` is generated locally, not issued by a server; cellar trees already carry an `owner`, but the main cellar is communal and there is no sharing-rights model (see 03 §6) |
 | Only two languages | a third language means one more flat table in `data/i18n.js` plus a third field on every record that carries setting text (`cn` / `en` pairs in the data files) |
+| Six form abilities are declared and inert | `glide`, `nightVision`, `tongue`, `strength`, `coldImmune` and `poisonImmune` sit in `data/fruits.js` and in the 04 §4 table, and no file in `game/src/` reads any of them. `game/test/reach.js` prints the list on every run, and fails if an entry goes live without the list being updated — the list can only shrink by a field actually being built (04 §4) |
+| Zone prose is never displayed | every zone in `data/world.js` carries a `desc`, and no interface reads it. The map bible in 02 is the only place that writing reaches a reader, and it is Chinese-only, so it is not covered by the language switch either |
 
 ## 4. Tests
 
