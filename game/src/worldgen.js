@@ -344,7 +344,7 @@
       set(tx + dx, 10, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
       set(tx + dx, 13, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
     }
-    // sunken huts: the valley had people in it before the fog
+    // sunken huts: a ring of them on the lakebed, now the frogs' place
     for (const [hx, hz] of [[90, 120], [96, 116], [94, 124], [88, 126]]) {
       box(hx - 2, 7, hz - 2, hx + 2, 10, hz + 2, 3, true);
       set(hx, 11, hz, 22); set(hx - 2, 9, hz, 21);
