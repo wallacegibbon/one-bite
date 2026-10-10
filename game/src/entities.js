@@ -485,8 +485,10 @@
              drained does not leave a water animal standing still. */
           let tx = this.homeX, tz = this.homeZ;
           for (let tries = 0; tries < 8; tries++) {
-            tx = this.homeX + (Math.random() - 0.5) * 2 * r;
-            tz = this.homeZ + (Math.random() - 0.5) * 2 * r;
+            // the same radius the spawn used: a spread is a radius, not a half-width
+            const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * r;
+            tx = this.homeX + Math.cos(a) * rr;
+            tz = this.homeZ + Math.sin(a) * rr;
             if (!this.isAquatic() || waterColumn(world, tx, tz) >= 0) break;
           }
           this.tx = tx; this.tz = tz;

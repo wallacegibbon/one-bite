@@ -154,8 +154,13 @@
       for (let t = 0; t < 300; t++) {
         let x, zz;
         if (at) {
-          x = at[0] + (Math.random() - 0.5) * 2 * spread;
-          zz = at[1] + (Math.random() - 0.5) * 2 * spread;
+          /* A spread is a radius, not a half-width: every other branch below
+             samples a disc, and the creature data, the dex ("the field sits on
+             the tower's outline") and the test all read it that way. Sampling a
+             square instead let a lamp stand 5.7 m from a 4 m spread, and the
+             field's honest bound -- twice the spread -- came out wrong. */
+          const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * spread;
+          x = at[0] + Math.cos(a) * r; zz = at[1] + Math.sin(a) * r;
         } else if (z.kind === 'circle') {
           const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * z.r;
           x = z.cx + Math.cos(a) * r; zz = z.cz + Math.sin(a) * r;
