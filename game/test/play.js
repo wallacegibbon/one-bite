@@ -1136,7 +1136,12 @@ const path = require('path');
      fog you breathe with your head under. Nothing else in the build could see
      it, because every other test reads the world and this one has to read the
      frame: draw, draw again with the water meshes switched off, and the two
-     frames must differ -- and differ in the direction of the water's own blue. */
+     frames must differ -- and differ in the direction of the water's own blue.
+     The second question is how much of the bottom survives the surface. At
+     alpha 0.62 the lakebed kept 38% of its contrast seen through the water, and
+     the lake read as a pit in the ground rather than as water, so the block
+     table now says 0.72 (0.68 measures 0.33, 0.78 measures 0.24) and the bound
+     sits at 0.34. */
   const frame = await step('lakeHasColour', () => {
     const g = window.game, W = g.world, R = g.R, p = g.player, gl = R.gl;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
@@ -1155,22 +1160,38 @@ const path = require('path');
     const dry = grab();
     for (const [ci, c] of off) W.chunks[ci][2].count = c;
     let changed = 0, bluer = 0;
+    const lum = (px, i) => px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
+    const over = [];
     for (let i = 0; i < wet.length; i += 4) {
       const d = Math.abs(wet[i] - dry[i]) + Math.abs(wet[i + 1] - dry[i + 1]) + Math.abs(wet[i + 2] - dry[i + 2]);
       if (d <= 6) continue;
       changed++;
+      over.push(i);
       if (wet[i + 2] - wet[i] > 20 && dry[i + 2] - dry[i] <= 20) bluer++;
     }
+    /* How much of the lakebed's own contrast survives the surface. The lake used
+       to be so clear that the bottom was almost as varied through the water as
+       out of it, and the lake read as a pit in the ground rather than as water.
+       The ratio is the spread of luminance seen through the surface over the
+       spread of the same pixels with the surface switched off. */
+    let mw = 0, md = 0;
+    for (const i of over) { mw += lum(wet, i); md += lum(dry, i); }
+    mw /= over.length; md /= over.length;
+    let sw = 0, sd = 0;
+    for (const i of over) { sw += (lum(wet, i) - mw) ** 2; sd += (lum(dry, i) - md) ** 2; }
+    const contrast = Math.sqrt(sw / over.length) / Math.sqrt(sd / over.length);
     // the water pass is still one blended draw per chunk, not one per block
     const waterTris = W.chunks.reduce((a, m) => a + (m && m[2] ? m[2].count / 3 : 0), 0);
     g._camFrame = null; g.render();
     p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
     p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
-    return { px: w * h, changed, bluer, share: +(changed / (w * h)).toFixed(3), waterTris };
+    return { px: w * h, changed, bluer, share: +(changed / (w * h)).toFixed(3), waterTris,
+      contrast: +contrast.toFixed(3) };
   });
   check('the lake is drawn at all', frame.waterTris > 1000, frame);
   check('the water changes the frame from outside the lake', frame.changed > 5000, frame);
   check('and it changes it towards the colour of water', frame.bluer > 5000, frame);
+  check('the lakebed does not stay as sharp through the water as out of it', frame.contrast < 0.34, frame);
 
   /* 10n. the body faces the way it walks. Models are authored facing +Z (the
      human's eyes and nose sit at +Z, its hair at -Z) while a heading of `yaw`
