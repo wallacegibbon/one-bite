@@ -1172,6 +1172,105 @@ const path = require('path');
   check('the water changes the frame from outside the lake', frame.changed > 5000, frame);
   check('and it changes it towards the colour of water', frame.bluer > 5000, frame);
 
+  /* 10n. the body faces the way it walks. Models are authored facing +Z (the
+     human's eyes and nose sit at +Z, its hair at -Z) while a heading of `yaw`
+     means the direction (sin yaw, -cos yaw), so the rotation that carries +Z
+     onto a heading is PI - yaw. Every call site used `yaw + PI` instead, which
+     is exact only when heading due north or due south and mirrors the body
+     about the Z axis everywhere else: seen from behind, a body walking east
+     showed its face. Nothing else in the build can see this -- the `camera`
+     step's angle checks compare numbers, and a mirrored model has the same
+     numbers. So this reads the frame: stand the body at each of the four
+     cardinal headings with the lens behind it, project the head to the screen,
+     and the patch of pixels there has to be hair, not a face. */
+  const facing = await step('bodyFacesItsWalk', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player, R = g.R, gl = R.gl;
+    const was = { tp: g.thirdPerson, x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      form: p.form, time: g.time, mode: g.mode, hover: g.hover, creatures: g.creatures, frame: g._camFrame,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady };
+    // (a) the rotation itself: the image of local +Z must be the heading
+    const unit = [];
+    for (const y of [0, 0.7, Math.PI / 2, Math.PI, -2.2]) {
+      const m = N.M4.create(); N.M4.faceY(m, y);
+      unit.push({ y: +y.toFixed(2), dx: +(m[8] - Math.sin(y)).toFixed(4), dz: +(m[10] + Math.cos(y)).toFixed(4) });
+    }
+    // (b) a clearing with clear air in all four directions: the lens must not be
+    // pulled in by a wall, or what is measured is the wall
+    g.thirdPerson = true; p.form = null; p.vital = 10; p.fright = 0;
+    g.mode = 'play'; g.time = 210; g.hover = null; g.creatures = [];
+    const TREE = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
+    const floorAt = (x, z) => { for (let y = 46; y > 0; y--) { const b = g.world.get(x, y, z); if (b && b < 40 && !TREE[b] && g.world.solidAt(x, y, z)) return y; } return -1; };
+    let spot = null;
+    for (let x = 26; x < 148 && !spot; x += 2) for (let z = 26; z < 148 && !spot; z += 2) {
+      const gy = floorAt(x, z);
+      if (gy < 2) continue;
+      let open = true;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (let k = 1; k <= 5 && open; k++) {
+          const xx = x + dx * k, zz = z + dz * k;
+          // floor at the same height, then two blocks of air: gy is the ground
+          // block itself, the body stands on top of it at gy + 1
+          if (!g.world.solidAt(xx, gy, zz) || g.world.solidAt(xx, gy + 1, zz) ||
+              g.world.solidAt(xx, gy + 2, zz) || g.world.liquidAt(xx, gy + 1, zz)) open = false;
+        }
+      }
+      if (open) spot = { x: x + 0.5, y: gy + 1, z: z + 0.5 };
+    }
+    if (!spot) { Object.assign(g, { creatures: was.creatures }); return { unit, error: 'no clearing clear on all four sides' }; }
+    p.x = spot.x; p.y = spot.y; p.z = spot.z;
+    p.vx = p.vy = p.vz = 0; p.pitch = 0; p.bank = 0; p.squash = 0; p.crouch = 0; p.airAmt = 0; p.moveAmt = 0;
+    g.camReady = true; g.cam.d = 4; g.cam.fov = 68;
+    const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
+    const sc = p.bodyScale();
+    const proj = (x, y, z) => {
+      const v = R.view, q = R.proj;
+      const vx = v[0] * x + v[4] * y + v[8] * z + v[12];
+      const vy = v[1] * x + v[5] * y + v[9] * z + v[13];
+      const vz = v[2] * x + v[6] * y + v[10] * z + v[14];
+      const cx = q[0] * vx + q[4] * vy + q[8] * vz + q[12];
+      const cy = q[1] * vx + q[5] * vy + q[9] * vz + q[13];
+      const cw = q[3] * vx + q[7] * vy + q[11] * vz + q[15];
+      return [(cx / cw * 0.5 + 0.5) * W, (1 - (cy / cw * 0.5 + 0.5)) * H];
+    };
+    const px = new Uint8Array(W * H * 4);
+    // the skull is 2.6 model units wide, so a 20 px box around its centre is
+    // head at any heading: the face is skin (#d8a884), the back of the head is hair (#33241d)
+    const head = () => {
+      const c = proj(p.x, p.y + 8.5 * sc, p.z);
+      const x0 = Math.round(c[0]) - 10, y0 = Math.round(c[1]) - 10;
+      let sum = 0, n = 0;
+      for (let dy = 0; dy < 20; dy++) for (let dx = 0; dx < 20; dx++) {
+        const X = x0 + dx, Y = y0 + dy;
+        if (X < 0 || Y < 0 || X >= W || Y >= H) continue;
+        const i = (((H - 1 - Y) * W) + X) * 4;
+        sum += px[i] + px[i + 1] + px[i + 2]; n++;
+      }
+      return { at: [Math.round(c[0]), Math.round(c[1])], lum: Math.round(sum / (3 * n)) };
+    };
+    const shoot = (yaw, faceYaw) => {
+      p.yaw = yaw; p.faceYaw = faceYaw;
+      g.updateEnv(); g._camFrame = g.shootCamera(p); g.render();
+      gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return head();
+    };
+    const away = [], toward = [];
+    for (const y of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      away.push(shoot(y, y));            // the lens is behind the body: it sees the back of the head
+      toward.push(shoot(y, y + Math.PI)); // the body turns round: it sees a face
+    }
+    g.creatures = was.creatures; g.thirdPerson = was.tp; g.hover = was.hover; g.time = was.time; g.mode = was.mode;
+    g._camFrame = was.frame; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.faceYaw = was.faceYaw; p.form = was.form;
+    return { unit, spot, sc: +sc.toFixed(3), away, toward };
+  });
+  check('the model rotation carries +Z onto the heading',
+    facing.unit && facing.unit.every(u => Math.abs(u.dx) < 1e-3 && Math.abs(u.dz) < 1e-3), facing.unit);
+  check('the clearing is clear on all four sides', facing.spot !== undefined, facing);
+  check('from behind, every heading shows the back of the head', facing.away && facing.away.every(v => v.lum < 55), facing);
+  check('turned round, every heading shows a face', facing.toward && facing.toward.every(v => v.lum > 65), facing);
+  check('the two are the same body seen from two sides, not an empty frame',
+    facing.away && facing.away.every((v, i) => facing.toward[i].lum - v.lum > 25), facing);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

@@ -52,6 +52,15 @@
       M4.ident(o); o[0] = c; o[2] = -s; o[8] = s; o[10] = c; return o;
     },
     rotX(o, a) { const c = Math.cos(a), s = Math.sin(a); M4.ident(o); o[5] = c; o[6] = s; o[9] = -s; o[10] = c; return o; },
+    /* The one rotation that turns a model to a heading. Models are authored
+       facing +Z (the human's eyes and nose sit at +Z, its hair at -Z), while a
+       heading of `yaw` means the direction (sin yaw, -cos yaw): yaw 0 is north
+       (-Z) and yaw grows toward +X. The angle that carries +Z onto that
+       direction is PI - yaw. Writing `yaw + PI` -- which every call site used
+       to do -- is right only when heading exactly north or exactly south, and
+       mirrors the body about the Z axis everywhere else: walk east and the
+       character walks backwards, seen from behind as a face. */
+    faceY(o, yaw) { return M4.rotY(o, Math.PI - yaw); },
     rotZ(o, a) { const c = Math.cos(a), s = Math.sin(a); M4.ident(o); o[0] = c; o[1] = s; o[4] = -s; o[5] = c; return o; }
   };
   const tmp16 = new Float32Array(16);

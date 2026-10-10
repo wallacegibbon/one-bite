@@ -977,7 +977,7 @@
         const sc = c.sp.scale;
         const base = N.M4.create();
         N.M4.trans(base, c.x, c.y, c.z);
-        const ry = N.M4.create(); N.M4.rotY(ry, c.yaw + Math.PI);
+        const ry = N.M4.create(); N.M4.faceY(ry, c.yaw);
         N.M4.mul(base, base, ry);
         // a body that just landed is briefly shorter and wider: the cheapest
         // thing in the world that makes a hop look like a hop
@@ -1017,7 +1017,7 @@
         const right = [Math.cos(p.yaw), 0, Math.sin(p.yaw)];
         const swing = Math.sin(p.bob * 2) * 0.05 * (p.moveAmt > 0.01 ? 1 : 0);
         N.M4.trans(m, cam.x + fwd[0] * 0.58 + right[0] * 0.30, cam.y + fwd[1] * 0.58 + right[1] * 0.30 - 0.36 + swing, cam.z + fwd[2] * 0.58 + right[2] * 0.30 - 0.02);
-        const ry = N.M4.create(); N.M4.rotY(ry, p.yaw + Math.PI);
+        const ry = N.M4.create(); N.M4.faceY(ry, p.yaw);
         N.M4.mul(m, m, ry);
         const sc = 0.24;
         const sm = N.M4.create(); N.M4.scale(sm, sc, sc, sc);
@@ -1032,7 +1032,7 @@
         const sc = p.bodyScale();
         const base = N.M4.create();
         N.M4.trans(base, p.x, p.y, p.z);
-        const ry = N.M4.create(); N.M4.rotY(ry, p.faceYaw + Math.PI);
+        const ry = N.M4.create(); N.M4.faceY(ry, p.faceYaw);
         N.M4.mul(base, base, ry);
         if (Math.abs(p.bank) > 0.002) {          // lean into the turn, like a filmed one
           const rz = N.M4.create(); N.M4.rotZ(rz, p.bank);
