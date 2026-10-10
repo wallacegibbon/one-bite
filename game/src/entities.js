@@ -432,6 +432,8 @@
       // and the fourth: the draw needs to know whether this body is moving
       // through water, because a body built for water kicks instead of walking
       this.inWater = false;
+      // and the fifth: a body in the air or in the water turns by tilting
+      this.bank = 0;
     }
     attitudeTo(formId) {
       const a = this.sp.attitude || {};
@@ -510,6 +512,7 @@
       // movement
       const inWater = world.liquidAt(Math.floor(this.x), Math.floor(this.y + 0.2), Math.floor(this.z));
       this.inWater = inWater;      // the draw reads it: a body built for water kicks, it does not run
+      const yaw0 = this.yaw;       // before steering, so the turn rate is measurable
       const dx = tgtX - this.x, dz = tgtZ - this.z;
       const d = Math.hypot(dx, dz);
       let spd = 0;
@@ -589,6 +592,17 @@
       }
       this.speed = spd;
       this.squash = Math.max(0, this.squash - dt * 3.2);
+
+      /* A body that is supported by air or by water turns by tilting; a body on
+         foot does not, because nothing at these speeds leans into a turn. Same
+         rule and same numbers as the player's own lean (Player.update): an owl
+         crossing the valley with its yaw swinging through ninety degrees and the
+         body dead level was the tell, and it is the one body the player spends
+         the most time watching. */
+      const lean = (this.isFlyer() && this.state !== 'roost') || inWater
+        ? Math.max(-0.45, Math.min(0.45, (N.angleDelta(yaw0, this.yaw) / Math.max(dt, 0.001)) * 0.11))
+        : 0;
+      this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
       // altitude
       if (this.isFlyer()) {

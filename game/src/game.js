@@ -992,6 +992,10 @@
         N.M4.trans(base, c.x, c.y, c.z);
         const ry = N.M4.create(); N.M4.faceY(ry, c.yaw);
         N.M4.mul(base, base, ry);
+        if (Math.abs(c.bank || 0) > 0.002) {    // the same lean the player's body gets
+          const rz = N.M4.create(); N.M4.rotZ(rz, c.bank);
+          N.M4.mul(base, base, rz);
+        }
         // a body that just landed is briefly shorter and wider: the cheapest
         // thing in the world that makes a hop look like a hop
         const sq = c.squash || 0;

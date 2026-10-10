@@ -1723,6 +1723,67 @@ const path = require('path');
     stride.swim.front.every(d => d === 0) && stride.swim.held > 0.3, stride);
   check('and the kick swings the hind legs as hard as a stride', stride.swim.swing > 0.3, stride);
 
+  /* A body in the air turns by tilting. The player's own body has leaned into a
+     turn for a long time; nothing else in the world did, so an owl crossing the
+     valley with its yaw swinging through ninety degrees stayed dead level. */
+  const lean = await step('turningBodyLeans', () => {
+    const N = window.FRUTARIA, g = window.game;
+    const p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch };
+    const owl = g.creatures.find(c => c.sp.id === 'owl');
+    const bear = g.creatures.find(c => c.sp.id === 'bear');
+    if (!owl || !bear) return { error: 'no owl or bear in the roster' };
+    // a lens nowhere near either of them: nothing here should be fleeing
+    p.x = owl.x > 80 ? 12 : 148; p.z = owl.z > 80 ? 12 : 148; p.y = 30;
+    /* and the hour each of them is awake: an owl that is roosting on a branch
+       turns its head and its body in place, which is not a lean, and a bear
+       asleep in its den is not evidence of anything. */
+    const t0 = g.time;
+    const at = h => { g.time = 420 * h / 24; g.updateEnv(); };
+
+    const drive = c => {
+      c.state = 'wander'; c.sleeping = false; c.pause = 999;   // hold the target
+      c.bank = 0; c.yaw = 0;                                   // facing north
+      c.tx = c.x + 40; c.tz = c.z;                             // target due east: a quarter turn
+      let peak = 0;
+      for (let i = 0; i < 40; i++) { c.update(1 / 60, p, g.world, g); peak = Math.max(peak, Math.abs(c.bank)); }
+      return { peak: +peak.toFixed(3), turned: +N.angleDelta(0, c.yaw).toFixed(2), state: c.state };
+    };
+    at(21); const fly = drive(owl);
+    at(9); const walk = drive(bear);
+    g.time = t0; g.updateEnv();
+
+    // and the draw reads it: one body, level and tilted, two frames
+    const gl = g.R.gl, w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const D = 6.0, UP = 3.2;
+    p.x = 136.5; p.z = 128.5; p.y = 22; p.yaw = -Math.PI / 2; p.pitch = Math.atan2(UP, D);
+    g.update(0.05);
+    const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
+    const grab = bank => {
+      owl.x = p.x + fx * D; owl.z = p.z + fz * D; owl.y = p.y + UP;
+      owl.yaw = p.yaw; owl.state = 'wander'; owl.sleeping = false; owl.flyY = owl.y;
+      owl.airAmt = 1; owl.bank = bank;
+      const cf = g.shootCamera(p); g._camFrame = cf;
+      g.render();
+      const b = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, b);
+      return b;
+    };
+    const level = grab(0), tilted = grab(0.42);
+    let diff = 0;
+    for (let i = 0; i < level.length; i += 4) {
+      if (Math.abs(level[i] - tilted[i]) + Math.abs(level[i + 1] - tilted[i + 1]) + Math.abs(level[i + 2] - tilted[i + 2]) > 24) diff++;
+    }
+    Object.assign(p, was);
+    return { fly, walk, diff };
+  });
+  check('the turn is real: the owl is awake, flying, and ends up facing a quarter away from where it started',
+    Math.abs(lean.fly.turned) > 0.5 && lean.fly.state !== 'roost', lean);
+  check('a flying body leans into it', lean.fly.peak > 0.15, lean);
+  check('a body on foot does not: a bear turning at speed stays level', lean.walk.peak < 0.02, lean);
+  check('and the renderer reads the lean: the same body level and tilted is not the same frame',
+    lean.diff > 300, lean);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;
