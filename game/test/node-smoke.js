@@ -120,6 +120,24 @@ const sp = F.spawn;
 const below = w.get(sp.x | 0, (sp.y | 0) - 1, sp.z | 0);
 const at = w.get(sp.x | 0, sp.y | 0, sp.z | 0);
 
+/* The opening view. The game turns the camera to yaw = pi (+Z) when it opens, so
+   a spawn with a wall that way means the first frame of the game is a wall: the
+   old search checked the column under the player and its two side columns, never
+   the direction it faces, and landed half a block in front of the main cellar --
+   91% of the first frame hit a block 0.6 m away at a mean brightness of 57/255.
+   Three blocks of clear air at head height is the least that reads as standing
+   somewhere rather than being pressed against something. */
+{
+  const head = (sp.y | 0) + 1;          // the body occupies y+1 and y+2 above the ground
+  // the direction the game actually opens facing, which the spawn search picks
+  const y0 = sp.yaw === undefined ? Math.PI : sp.yaw;
+  const dx = Math.round(Math.sin(y0)), dz = -Math.round(Math.cos(y0));
+  let clear = 0;
+  while (clear < 8 && !w.solidAt((sp.x | 0) + dx * (clear + 1), head, (sp.z | 0) + dz * (clear + 1))) clear++;
+  console.log('出生点面向方向净空', clear, '格', clear >= 3 ? 'OK' : '!! 出生点面对墙');
+  if (clear < 3) process.exitCode = 1;
+}
+
 console.log('生成耗时', (t1 - t0) + 'ms  网格化耗时', (t2 - t1) + 'ms');
 console.log('三角面总数', tris, ' 分块', w.cx * w.cz);
 console.log('果实分布', counts);

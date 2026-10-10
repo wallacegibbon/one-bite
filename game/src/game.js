@@ -79,7 +79,13 @@
       // spawn
       const sp = N.spawn;
       this.player.x = sp.x; this.player.y = sp.y; this.player.z = sp.z;
-      this.player.yaw = Math.PI; this.player.pitch = -0.1;
+      /* Which way the game opens is the world's business, not the camera's: the
+         spawn search only accepts a column whose opening frame has sky in it, and
+         it records the direction that frame looks. The old code turned the lens to
+         +Z whatever was standing there, and in Lanternrow that was the main
+         cellar's north wall. */
+      this.player.yaw = sp.yaw === undefined ? Math.PI : sp.yaw;
+      this.player.pitch = -0.1;
       // creatures
       this.spawnCreatures();
       // identity: the protagonist has no fixed name. id is stable, the epithet is

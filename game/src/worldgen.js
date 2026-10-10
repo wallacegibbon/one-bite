@@ -288,10 +288,13 @@
     set(cx, y + 1, cz, N.BLOCK_ID.cellarCrate);   // * the cellar chest (interaction point)
     set(cx - 2, y + 2, cz - 4, 14); set(cx + 2, y + 2, cz - 4, 14);
     set(cx, y + 4, cz, 14);
-    // the lantern road
+    // the lantern road. One post is skipped: the spacing puts a post at x = 136,
+    // which is the cellar door's own column, so it stood dead in front of the
+    // door -- from the road the door was invisible, and a spawn facing the door
+    // had a lamp trunk in the middle of its first frame.
     for (let x = 118; x <= 150; x += 6) {
       const z = 128;
-      set(x, 21, z, 6); set(x, 22, z, 6); set(x, 23, z, 14);
+      if (x !== door.x) { set(x, 21, z, 6); set(x, 22, z, 6); set(x, 23, z, 14); }
       for (let xx = x; xx < x + 6 && xx <= 150; xx++) set(xx, 21, z, 17);
     }
     // orchards outside town
@@ -532,18 +535,86 @@
         for (let yy = y; yy <= y + 6; yy++) set(x, yy, z, 16);
       }
     }
-    // spawn: the Lanternrow clearing
-    let sx = 133, sz = 129;
-    for (let i = 0; i < 400; i++) {
-      const y = gy(sx, sz);
-      if (y > SEA && !get(sx, y + 1, sz) && !get(sx, y + 2, sz) && !get(sx - 1, y + 1, sz) && !get(sx + 1, y + 1, sz)) break;
-      sx = 120 + (rnd() * 28 | 0); sz = 118 + (rnd() * 28 | 0);
-    }
-    N.spawn = { x: sx + 0.5, y: gy(sx, sz) + 1.05, z: sz + 0.5 };
+    /* spawn: Lanternrow, on the street outside the main cellar.
+       A spawn is only good if the player starts out with somewhere to look. The
+       old test asked whether the column under the player and its two side
+       columns were clear, and never looked in the direction the camera is turned
+       when the game opens -- init() set yaw = pi, so the player started facing
+       +Z. It accepted (133,129), half a block from the main cellar's north wall:
+       the first frame of the game was a wall, 91% of the pixels hitting a block
+       0.6 m away at a mean brightness of 57/255, and the sky only came back once
+       you had walked away from the building.
+       The rule now reads the opening frame itself. For every column on the
+       cellar's own street height (a rooftop has plenty of sky, but you would
+       start on top of a house) the four street directions are shot with the
+       opening camera -- yaw, pitch -0.1, fov 76 (the human body's), 16:10 --
+       eighty rays through the world's own DDA. A column is fit to start at when
+       at least 8% of that frame reaches sky and no more than 15% of it is a
+       block within two metres: a street, not a wall. The column nearest the
+       cellar door that passes wins, and the direction that passes there is the
+       direction the game opens facing: the world decides which way you look when
+       you start, because it is the world that knows where the walls are. The
+       whole scan costs 3 ms. */
+    const door = N.POIS.find(p => p.id === 'cellar');
+    const room = (x, z) => {
+      const y = gy(x, z);
+      if (y <= SEA || Math.abs(y - door.y) > 1) return -1;   // the same street, not a roof
+      // the body has to fit, and neither shoulder may be inside a wall
+      if (get(x, y + 1, z) || get(x, y + 2, z) || get(x - 1, y + 1, z) || get(x + 1, y + 1, z)) return -1;
+      return y;
+    };
+    const FAN = (yaw) => {
+      const tanY = Math.tan(76 * Math.PI / 360), tanX = tanY * 1.6;
+      const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(-0.1), sp = Math.sin(-0.1);
+      const f = [sy * cp, sp, -cy * cp], r = [cy, 0, sy];
+      const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+      const out = [];
+      for (let j = 0; j < 8; j++) for (let i = 0; i < 10; i++) {
+        const nx = (i + 0.5) / 10 * 2 - 1, ny = 1 - (j + 0.5) / 8 * 2;
+        const dx = f[0] + r[0] * nx * tanX + u[0] * ny * tanY;
+        const dy = f[1] + r[1] * nx * tanX + u[1] * ny * tanY;
+        const dz = f[2] + r[2] * nx * tanX + u[2] * ny * tanY;
+        const L = Math.hypot(dx, dy, dz);
+        out.push([dx / L, dy / L, dz / L]);
+      }
+      return out;
+    };
+    // the fan carries the yaw it was built for, so the winner can report it
+    const FANS = [Math.PI, 0, Math.PI / 2, -Math.PI / 2].map((y) => { const f = FAN(y); f.yaw = y; return f; });
+    const pick = (skyFloor, wallCeil) => {
+      let found = null, bestD = 1e9;
+      for (let z = VILL.z0; z < VILL.z1; z++) for (let x = VILL.x0; x < VILL.x1; x++) {
+        const d = dist(x, z, door.x, door.z);
+        if (d >= bestD) continue;                  // nearest wins, so a worse one cannot displace it
+        const y = room(x, z);
+        if (y < 0) continue;
+        // eye height: the body stands on y+1, the human eye sits 1.55 m up it
+        let best = null;
+        for (const rays of FANS) {
+          let open = 0, wall = 0;
+          for (const [dx, dy, dz] of rays) {
+            const h = W.raycast(x + 0.5, y + 2.6, z + 0.5, dx, dy, dz, 64, false);
+            if (!h) open++; else if (h.t < 2) wall++;
+          }
+          const sky = open / rays.length, near = wall / rays.length;
+          if (sky < skyFloor || near > wallCeil) continue;
+          if (!best || sky > best.sky) best = { yaw: rays.yaw, sky };
+        }
+        if (!best) continue;
+        bestD = d; found = { x, y, z, yaw: best.yaw };
+      }
+      return found;
+    };
+    // if the village ever gets dense enough that no street passes, take the
+    // least bad one rather than dropping the player through a wall
+    const spot = pick(0.08, 0.15) || pick(0.03, 0.3);
+    N.spawn = spot ? { x: spot.x + 0.5, y: spot.y + 1.05, z: spot.z + 0.5, yaw: spot.yaw }
+      : { x: door.x + 0.5, y: door.y + 1.05, z: door.z - 7.5, yaw: Math.PI };
     return W;
   }
 
   N.generate = generate;
-  N.spawn = { x: 136.5, y: 22, z: 128.5 };
+  // overwritten by generate(); the fallback is Lanternrow's road, facing west
+  N.spawn = { x: 136.5, y: 22.05, z: 128.5, yaw: -Math.PI / 2 };
 
 })(window.FRUTARIA = window.FRUTARIA || {});

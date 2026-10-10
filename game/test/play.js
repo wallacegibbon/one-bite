@@ -1372,6 +1372,59 @@ const path = require('path');
   check('what comes through the pane is the lamp, not the pane',
     glass.warm > 20 && glass.cold < 10, glass);
 
+  /* 10p. the game opens on somewhere you can see. The spawn search used to ask
+     only whether the column under the player and its two side columns were clear
+     -- it never looked in the direction the camera is turned when the game opens,
+     and init() turned the lens to +Z whatever was standing there. It accepted a
+     spot half a block in front of the main cellar's north wall, so the first
+     frame of the game was a wall: 91% of the pixels hit a block 0.6 m away at a
+     mean brightness of 57/255, and the sky only came back once you had walked
+     away from the building. The reading is the opening frame itself, and the
+     bounds are the ones src/worldgen.js uses to choose the spot: at least 8% of
+     the frame reaches sky, no more than 15% of it is a block within two metres. */
+  const opening = await step('openingView', () => {
+    const g = window.game, N = window.FRUTARIA, gl = g.R.gl, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame };
+    const sp = N.spawn;
+    p.form = null; p.x = sp.x; p.y = sp.y; p.z = sp.z; p.vx = p.vy = p.vz = 0;
+    p.yaw = sp.yaw === undefined ? Math.PI : sp.yaw; p.pitch = -0.1;   // the pose init() gives the player
+    g.mode = 'play'; g.time = N.DAY_LEN * (7 / 24);   // the clock the game opens on
+    g.updateEnv();
+    const cf = g._camFrame = g.shootCamera(p);
+    g.render();
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const px = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const tanY = Math.tan(cf.fov * Math.PI / 360), tanX = tanY * R.aspect;
+    let near = 0, open = 0, n = 0, sum = 0, lum = 0;
+    for (let Y = 0; Y < h; Y += 2) {
+      const gy = h - 1 - Y, ndcY = 1 - (Y + 0.5) / h * 2;
+      for (let X = 0; X < w; X += 2) {
+        const ndcX = (X + 0.5) / w * 2 - 1;
+        let dx = R.fwd[0] + R.right[0] * ndcX * tanX + R.up[0] * ndcY * tanY;
+        let dy = R.fwd[1] + R.right[1] * ndcX * tanX + R.up[1] * ndcY * tanY;
+        let dz = R.fwd[2] + R.right[2] * ndcX * tanX + R.up[2] * ndcY * tanY;
+        const L = Math.hypot(dx, dy, dz); dx /= L; dy /= L; dz /= L;
+        const hit = g.world.raycast(R.cam.x, R.cam.y, R.cam.z, dx, dy, dz, 300, false);
+        n++;
+        if (!hit) open++;
+        else { if (hit.t < 2) near++; sum += Math.min(hit.t, 60); }
+        const i = (gy * w + X) * 4;
+        lum += px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
+      }
+    }
+    g._camFrame = null; g.render();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    return { spawn: [+sp.x.toFixed(1), +sp.y.toFixed(1), +sp.z.toFixed(1)],
+      yawDeg: Math.round((sp.yaw || 0) * 180 / Math.PI),
+      nearShare: +(near / n).toFixed(3), skyShare: +(open / n).toFixed(3),
+      meanDist: +(sum / Math.max(1, n - open)).toFixed(2), meanLum: +(lum / n).toFixed(0) };
+  });
+  check('the opening frame is not a wall pressed against the lens', opening.nearShare <= 0.15, opening);
+  check('and the opening frame has sky in it', opening.skyShare >= 0.08, opening);
+
   /* 10q. a cloud is not a hole in the sky. The face/AO table is the brightness
      of a face relative to the ground it stands on: a bottom face is dark
      because it is under a slab and never sees the sky. A cloud's bottom face is
