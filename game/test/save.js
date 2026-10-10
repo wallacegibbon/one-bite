@@ -39,14 +39,30 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'frogpear'); g.addItem('plant', 'cellarseed');
     // the town cellar gets a fruit, so q1 / owl post state is non-trivial
     g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 500, maxFresh: 900 });
-    // a cellar tree
-    g.player.x = 120.5; g.player.y = 22; g.player.z = 120.5;
+    // a cellar tree. The spot is found, not remembered: it has to be open
+    // ground with ten clear cells above it, because the pit planted in the same
+    // breath grows into a tree and the checks that follow read that tree. A
+    // remembered coordinate stopped working the day the village roofs were
+    // fixed -- they now stand over ground that used to be bare grass, and a
+    // roof is solid ground to `groundY`, so the tree was being built on a roof.
+    const spot = (() => {
+      for (let z = 100; z < 152; z += 2) for (let x = 112; x < 152; x += 2) {
+        const y = N.groundY(g.world, x, z, 40);
+        if (y < 15 || y > 34) continue;
+        let clear = true;
+        for (let dy = 1; dy <= 10; dy++) if (g.world.get(x, y + dy, z)) { clear = false; break; }
+        if (clear) return { x, y, z };
+      }
+      return null;
+    })();
+    if (!spot) throw new Error('no open ground near Lanternrow to plant on');
+    g.player.x = spot.x + 0.5; g.player.y = spot.y; g.player.z = spot.z + 0.5;
     g.buildCellarTree();
     // a planted pit: the growth queue is the thing a save used to forget
     g.addItem('pit', 'owlberry');
     g.plantPit(g.inv[g.inv.length - 1], g.inv.length - 1);
     // fruit scattered by a death
-    g.drops.push({ x: 120, y: 22, z: 118, item: { kind: 'fruit', id: 'frogpear', fresh: 700, maxFresh: 900 }, t: 600 });
+    g.drops.push({ x: spot.x, y: spot.y, z: spot.z - 2, item: { kind: 'fruit', id: 'frogpear', fresh: 700, maxFresh: 900 }, t: 600 });
     // a plant buff and a form in progress
     g.buffs.stealth = 60;
     g.addItem('fruit', 'owlberry');

@@ -155,3 +155,96 @@ console.log('水方块', water);
   console.log('沉塔窗/窗台', want.length, '格', wrong.length ? '!! ' + wrong.join('; ') : 'OK');
   if (wrong.length) process.exitCode = 1;
 }
+
+/* A roof has to point up, and it has to keep the rain out. The roofs were
+   written by walking a ring at a fixed angle step and raising the height with
+   the radius: `y0 + r` grows outward, so the cone came out upside down -- a rim
+   of tiles standing above a low centre, the point at the bottom -- and the arc
+   between two samples is r*da, so a step that is tight at r=1 skips whole cells
+   by r=4. Every house had two or three columns open to the sky, and from the
+   street the roof read as a band of black squares against the sky. No
+   coordinate is named here: the roofs are found in the world, and each one is
+   asked two questions -- is its footprint whole, and is its high point in its
+   middle? */
+{
+  const TILE = 13;
+  const top = new Map();                       // column -> the highest tile in it
+  for (let y = 0; y < w.h; y++) for (let z = 0; z < w.d; z++) for (let x = 0; x < w.w; x++)
+    if (w.get(x, y, z) === TILE) top.set(x + ',' + z, y);
+  const has = new Set(top.keys()), seen = new Set(), roofs = [];
+  for (const start of has) {
+    if (seen.has(start)) continue;
+    seen.add(start);
+    const stack = [start], group = [];
+    while (stack.length) {
+      const k = stack.pop(); group.push(k);
+      const [x, z] = k.split(',').map(Number);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const n = (x + dx) + ',' + (z + dz);
+        if (has.has(n) && !seen.has(n)) { seen.add(n); stack.push(n); }
+      }
+    }
+    if (group.length >= 12) roofs.push(group);
+  }
+  const bad = [];
+  for (const g of roofs) {
+    const cs = g.map(s => s.split(',').map(Number));
+    const x0 = Math.min(...cs.map(c => c[0])), x1 = Math.max(...cs.map(c => c[0]));
+    const z0 = Math.min(...cs.map(c => c[1])), z1 = Math.max(...cs.map(c => c[1]));
+    // the high point of a roof is its apex, so it belongs in the middle of the
+    // footprint; if the high tiles are the outer ones the cone is upside down
+    const mx = cs.reduce((a, c) => a + c[0], 0) / cs.length;
+    const mz = cs.reduce((a, c) => a + c[1], 0) / cs.length;
+    const h = (c) => top.get(c.join(','));
+    let hi = cs[0], lo = cs[0];
+    for (const c of cs) { if (h(c) > h(hi)) hi = c; if (h(c) < h(lo)) lo = c; }
+    const hlo = h(lo);
+    // an empty column inside the outline is a hole: flood the empty columns in
+    // the bounding box from its edge, and whatever the flood cannot reach is
+    // closed off -- a hole you would see the sky through. A column counts as
+    // closed if it carries a tile or anything solid above the eaves: the bell
+    // tower's apex is glowstone, not a tile, and that is a roof, not a hole.
+    const inG = new Set(g), closedAbove = (x, z) => {
+      for (let y = hlo + 1; y < w.h; y++) { const b = w.get(x, y, z); if (b && F.BLOCKS[b] && F.BLOCKS[b].opaque) return true; }
+      return false;
+    };
+    const reach = new Set(), st = [];
+    for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) {
+      if (inG.has(x + ',' + z) || closedAbove(x, z)) continue;
+      if (x > x0 && x < x1 && z > z0 && z < z1) continue;
+      st.push(x + ',' + z); reach.add(x + ',' + z);
+    }
+    while (st.length) {
+      const [x, z] = st.pop().split(',').map(Number);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, nz = z + dz, k = nx + ',' + nz;
+        if (nx < x0 || nx > x1 || nz < z0 || nz > z1) continue;
+        if (inG.has(k) || reach.has(k) || closedAbove(nx, nz)) continue;
+        reach.add(k); st.push(k);
+      }
+    }
+    let holes = 0;
+    for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++)
+      if (!inG.has(x + ',' + z) && !reach.has(x + ',' + z) && !closedAbove(x, z)) holes++;
+    if (holes) bad.push(`roof near ${g[0]}: ${holes} columns open to the sky`);
+    const out = (c) => Math.hypot(c[0] - mx, c[1] - mz);
+    if (h(hi) - h(lo) < 2) bad.push(`roof near ${g[0]}: flat, apex ${h(hi)} eave ${h(lo)}`);
+    if (out(hi) > out(lo))
+      bad.push(`roof near ${g[0]}: upside down, the high tile ${h(hi)} at ${hi} sits further out than the low tile ${h(lo)} at ${lo}`);
+  }
+  console.log('屋顶', roofs.length, '座', bad.length ? '!! ' + bad.join('; ') : 'OK');
+  if (bad.length) process.exitCode = 1;
+
+  // the cellar dome is brick, not tile, so it is not in that set: the one
+  // structure the POI table already names gets asked the simpler question --
+  // stand in the room and look straight up
+  const cell = F.POIS.find(p => p.id === 'cellar');
+  let wet = 0;
+  for (let z = cell.z - 3; z <= cell.z + 3; z++) for (let x = cell.x - 3; x <= cell.x + 3; x++) {
+    let y = cell.y + 1;
+    while (y < w.h) { const b = w.get(x, y, z); if (b && F.BLOCKS[b] && F.BLOCKS[b].opaque) break; y++; }
+    if (y >= w.h) wet++;
+  }
+  console.log('果窖穹顶', wet ? '!! ' + wet + ' 列漏天' : 'OK');
+  if (wet) process.exitCode = 1;
+}

@@ -98,6 +98,22 @@
       set(x, y, z, b);
     }
   }
+  /* A conical roof, one column at a time. The obvious way to write one walks a
+     ring by angle and writes `y0 + r`, and that fails twice over. The arc
+     between two samples is r*da, so an angle step that is tight at r=1 skips
+     whole cells by r=4: the roof has holes you can see the sky through. And
+     `y0 + r` grows with the radius, which builds the cone upside down -- a rim
+     of tiles standing above a low centre, the point at the bottom, a funnel
+     instead of a roof. Here the height falls away from the apex, and every
+     column inside the eaves gets a tile, so the building keeps the rain out. */
+  function cone(cx, cz, apexY, rMax, b, rise) {
+    const k = rise === undefined ? 1 : rise;
+    for (let dz = -rMax - 1; dz <= rMax + 1; dz++) for (let dx = -rMax - 1; dx <= rMax + 1; dx++) {
+      const r = dist(cx + dx, cz + dz, cx, cz);
+      if (r > rMax + 0.75) continue;
+      set(cx + dx, apexY - Math.round(r * k), cz + dz, b);
+    }
+  }
   /* ground height (skips trees, plants and fruit) */
   const TREELIKE = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
   function gy(x, z) {
@@ -216,8 +232,7 @@
     for (const [tx, tz] of [[cx - 8, cz - 8], [cx + 8, cz - 8], [cx - 8, cz + 8], [cx + 8, cz + 8]]) {
       cyl(tx, tz, 0, 3.2, base, base + 11, 11, true);
       for (let y = base; y <= base + 11; y++) set(tx, y, tz, 0);       // hollow interior
-      for (let r = 0; r <= 3; r++) for (let a = 0; a < 6.283; a += 0.2)
-        set(Math.round(tx + Math.cos(a) * r), base + 12 + r, Math.round(tz + Math.sin(a) * r), 13);
+      cone(tx, tz, base + 15, 3, 13);
       for (let y = base + 2; y <= base + 10; y += 3) {
         set(tx + 3, y, tz, 14); set(tx - 3, y, tz, 14); set(tx, y, tz + 3, 14); set(tx, y, tz - 3, 14);
       }
@@ -227,8 +242,7 @@
     for (let y = base + 1; y <= base + 13; y++) for (let z = cz - 3; z <= cz + 3; z++) for (let x = cx - 3; x <= cx + 3; x++) set(x, y, z, 0);
     box(cx - 3, base, cz - 3, cx + 3, base, cz + 3, 17);
     box(cx - 3, base + 7, cz - 3, cx + 3, base + 7, cz + 3, 17);   // storeys
-    for (let r = 0; r <= 5; r++) for (let a = 0; a < 6.283; a += 0.18)
-      set(Math.round(cx + Math.cos(a) * r), base + 15 + r, Math.round(cz + Math.sin(a) * r), 13);
+    cone(cx, cz, base + 20, 5, 13);
     set(cx, base + 20, cz, 14); set(cx, base + 19, cz, 19);        // the bell (gold + glowstone)
     for (let y = base + 2; y <= base + 13; y += 3) {
       for (let z = cz - 4; z <= cz + 4; z += 4) { set(cx - 4, y, z, 14); set(cx + 4, y, z, 14); }
@@ -254,8 +268,7 @@
       const y = 20;
       box(hx - 3, y + 1, hz - 3, hx + 3, y + 4, hz + 3, 10, true);
       box(hx - 2, y + 1, hz - 2, hx + 2, y + 1, hz + 2, 26);
-      for (let r = 0; r <= 4; r++) for (let a = 0; a < 6.283; a += 0.25)
-        set(Math.round(hx + Math.cos(a) * r), y + 5 + r, Math.round(hz + Math.sin(a) * r), 13);
+      cone(hx, hz, y + 9, 4, 13);
       // doors + windows + lamps
       const dx = hx < 136 ? 1 : -1;
       set(hx + dx * 3, y + 2, hz, 0); set(hx + dx * 3, y + 3, hz, 0);
@@ -270,8 +283,7 @@
     const cx = door.x, cz = door.z, y = door.y;
     box(cx - 4, y, cz - 4, cx + 4, y + 4, cz + 4, 12, true);
     box(cx - 3, y, cz - 3, cx + 3, y, cz + 3, 17);
-    for (let r = 0; r <= 5; r++) for (let a = 0; a < 6.283; a += 0.22)
-      set(Math.round(cx + Math.cos(a) * r), y + 5 + Math.round(r * 0.8), Math.round(cz + Math.sin(a) * r), 11);
+    cone(cx, cz, y + 9, 5, 11, 0.8);
     set(cx, y + 2, cz - 4, 0); set(cx, y + 3, cz - 4, 0);
     set(cx, y + 1, cz, N.BLOCK_ID.cellarCrate);   // * the cellar chest (interaction point)
     set(cx - 2, y + 2, cz - 4, 14); set(cx + 2, y + 2, cz - 4, 14);
