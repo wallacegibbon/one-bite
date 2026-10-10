@@ -164,11 +164,11 @@
   const FS_WORLD = `
   precision mediump float;
   varying vec4 vCol; varying float vFog;
-  uniform vec3 uFogCol; uniform float uAlpha, uTintA; uniform vec3 uTint;
+  uniform vec3 uFogCol; uniform float uTintA; uniform vec3 uTint;
   void main(){
     vec3 c = mix(vCol.rgb, uFogCol, clamp(vFog, 0.0, 1.0));
     c = mix(c, uTint, uTintA);
-    gl_FragColor = vec4(c, vCol.a * uAlpha);
+    gl_FragColor = vec4(c, vCol.a);
   }`;
 
   const VS_SKY = `
@@ -332,7 +332,7 @@
         u.uModel = gl.getUniformLocation(P.p, 'uModel'); u.uFogDen = gl.getUniformLocation(P.p, 'uFogDen');
         u.uFogCol = gl.getUniformLocation(P.p, 'uFogCol'); u.uDay = gl.getUniformLocation(P.p, 'uDay');
         u.uTime = gl.getUniformLocation(P.p, 'uTime'); u.uWave = gl.getUniformLocation(P.p, 'uWave');
-        u.uAlpha = gl.getUniformLocation(P.p, 'uAlpha'); u.uTint = gl.getUniformLocation(P.p, 'uTint');
+        u.uTint = gl.getUniformLocation(P.p, 'uTint');
         u.uTintA = gl.getUniformLocation(P.p, 'uTintA');
         u.uEmisBoost = gl.getUniformLocation(P.p, 'uEmisBoost');
         u._done = 1;
@@ -346,7 +346,8 @@
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);
       gl.uniform1f(u.uTime, e.time);
       gl.uniform1f(u.uWave, opts.wave ? 1 : 0);
-      gl.uniform1f(u.uAlpha, opts.alpha !== undefined ? opts.alpha : 1);
+      // no alpha uniform: the alpha is a vertex attribute, uploaded from the
+      // block table, so two blocks in one mesh may be two different opacities
       gl.uniform3fv(u.uTint, opts.tint || [0, 0, 0]);
       gl.uniform1f(u.uTintA, opts.tintA || 0);
       gl.uniform1f(u.uEmisBoost, opts.emisBoost || 0);

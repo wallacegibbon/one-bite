@@ -7,7 +7,17 @@
   /* ------------------------- block table ------------------------- */
   // c=[r,g,b]  ct=top colour  solid=collides  opaque=culls faces  liquid  alpha  emis  micro=[[x,y,z,w,h,d]...]
   const B = [];
-  function def(id, o) { B[id] = Object.assign({ id, solid: true, opaque: true, alpha: 1, emis: 0, c: [0.8, 0.8, 0.8] }, o); }
+  function def(id, o) {
+    const b = B[id] = Object.assign({ id, solid: true, opaque: true, alpha: 1, emis: 0, c: [0.8, 0.8, 0.8] }, o);
+    /* The colour the mesher uploads is rgb **plus the block's own alpha**, and it
+       is made here, once, rather than at each face. A block therefore owns its
+       transparency the way it owns its colour: water has always said 0.62 in this
+       table, and the number used to be written down a second time at the draw
+       call. Glass said 0.34 here and nothing ever read it. */
+    b.c = b.c.length > 3 ? b.c : b.c.concat(b.alpha);
+    if (b.ct) b.ct = b.ct.length > 3 ? b.ct : b.ct.concat(b.alpha);
+    return b;
+  }
 
   def(0, { id: 0, cn: '空气', solid: false, opaque: false });
   def(1, { cn: '草地', c: [0.36, 0.30, 0.22], ct: [0.29, 0.50, 0.24] });
@@ -162,7 +172,7 @@
     buildChunk(gl, ci) {
       const cx = ci % this.cx, cz = (ci / this.cx) | 0;
       const x0 = cx * this.cs, z0 = cz * this.cs, y0 = 0, y1 = this.h;
-      const op = new MB(), em = new MB(), wa = new MB(), mi = new MB(), miE = new MB();
+      const op = new MB(), em = new MB(), wa = new MB(), mi = new MB(), miE = new MB(), tr = new MB();
       const blocks = this.blocks, W = this.w, D = this.d;
       const at = (x, y, z) => (x >= 0 && z >= 0 && y >= 0 && x < W && z < D && y < this.h) ? blocks[(y * D + z) * W + x] : 0;
 
@@ -200,7 +210,9 @@
               const nbd = B[nb];
               if (nb && nbd && nbd.opaque) continue;           // occluded
               if (nb && nbd && !nbd.liquid && bd.id === nb) continue; // adjacent blocks of the same transparent kind (glass)
-              const tgt = bd.emis ? em : op;
+              // a block that culls nothing and is not water rides in its own
+              // mesh, so it can be drawn blended with its own per-vertex alpha
+              const tgt = bd.emis ? em : (bd.opaque ? op : tr);
               // AO
               const sh = [];
               for (const c of f.c) {
@@ -228,7 +240,7 @@
       const old = this.chunks[ci];
       if (old) for (const m of old) if (m) { gl.deleteBuffer(m.pos); gl.deleteBuffer(m.col); gl.deleteBuffer(m.dat); }
       const mk = (mb) => mb.empty() ? null : mb.upload(gl);
-      this.chunks[ci] = [mk(op), mk(em), mk(wa), mk(mi), mk(miE)];
+      this.chunks[ci] = [mk(op), mk(em), mk(wa), mk(mi), mk(miE), mk(tr)];
       this.dirty[ci] = 0;
       return this.chunks[ci];
     }

@@ -923,8 +923,10 @@
       R.begin(cam, env);
 
       const IDENT = N.M4.create();
-      // world
+      // world. Glass is collected here and drawn later, after the bodies: the
+      // depth they wrote decides whether a body shows through a window
       const W = this.world;
+      const glass = [];
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const ci = cz * W.cx + cx;
         const m = W.chunks[ci];
@@ -935,6 +937,7 @@
         R.drawMesh(m[1], IDENT, { emisBoost: 0.15 });
         R.drawMesh(m[3], IDENT, {});
         R.drawMesh(m[4], IDENT, { emisBoost: 0.2 });
+        if (m[5]) glass.push(m[5]);
       }
       // highlight (wireframe, not a solid cube)
       if (this.hover && this.mode === 'play') {
@@ -994,17 +997,20 @@
           R.drawMesh(e.mesh, m, {});
         }
       }
-      // water. The block table owns the colour (the mesher uploads bd.c) and it
-      // owns the alpha too: the number used to be written down a second time
-      // here, so changing the water meant remembering to change two files
-      const wAlpha = N.BLOCKS[N.WATER].alpha;
+      // glass, drawn over the world and the bodies it is in front of. It writes
+      // no depth (blend does that), so what shows through it is decided by the
+      // depth the opaque pass and the bodies already left behind
+      for (const gm of glass) R.drawMesh(gm, IDENT, { blend: true });
+      // water. Its colour and its alpha both come from the block table now --
+      // the mesher uploads bd.c, which carries the alpha as its fourth byte --
+      // so there is no second copy of 0.62 to keep in step at this draw call
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const ci = cz * W.cx + cx;
         const m = W.chunks[ci];
         if (!m || !m[2]) continue;
         const mx = cx * W.cs + 8, mz = cz * W.cs + 8;
         if (!R.visible(mx, W.h / 2, mz, 15)) continue;
-        R.drawMesh(m[2], IDENT, { blend: true, alpha: wAlpha, wave: true });
+        R.drawMesh(m[2], IDENT, { blend: true, wave: true });
       }
       // particles
       this.particles.draw(R);

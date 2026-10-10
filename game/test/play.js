@@ -1271,6 +1271,86 @@ const path = require('path');
   check('the two are the same body seen from two sides, not an empty frame',
     facing.away && facing.away.every((v, i) => facing.toward[i].lum - v.lum > 25), facing);
 
+  /* 10o. glass is glass. The block table has always said glass is 34% opaque
+     and the mesher put every glass face in the opaque mesh, so nothing ever
+     read the number: the keep's greenhouse was a solid box with two fruit
+     hanging inside it out of sight, and every window in Lanternrow was a wall.
+     The rig is a 2x2 glass pane with a glowstone a metre behind it. A pane you
+     can see through shows the lamp; a pane you cannot shows only itself. The
+     third reading sets BLOCKS[21].opaque back to true and re-meshes, which is
+     exactly how glass used to be built -- so the comparison is with the old
+     render, not with an invented one. */
+  const glass = await step('glassIsGlass', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl;
+    const p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      hover: g.hover, mode: g.mode, frame: g._camFrame, tp: g.thirdPerson };
+    let spot = null;
+    for (let x = 20; x < W.w - 12 && !spot; x++) for (let z = 20; z < W.d - 12 && !spot; z++) {
+      let gy = -1;
+      for (let y = W.h - 1; y >= 1; y--) if (W.solidAt(x, y, z)) { gy = y; break; }
+      if (gy < 1) continue;
+      let open = true;
+      for (let dx = -3; dx <= 3 && open; dx++) for (let dz = -3; dz <= 3 && open; dz++)
+        for (let h = 1; h <= 4; h++) if (W.solidAt(x + dx, gy + h, z + dz)) { open = false; break; }
+      if (open) spot = { x, y: gy, z };
+    }
+    if (!spot) return {};
+    const X = spot.x, Y = spot.y, Z = spot.z;
+    /* The lens sits at Z-1.5 and yaw PI looks down +Z, so the pane has to be the
+       nearer of the two: a lamp at Z+1 would sit between the lens and the glass
+       and the frame would prove nothing about transparency. */
+    const pane = [], lamp = [];
+    for (const dy of [1, 2]) for (const dx of [0, 1]) {
+      pane.push([X + dx, Y + dy, Z + 1]);
+      lamp.push([X + dx, Y + dy, Z + 2]);
+    }
+    const undo = [];
+    const put = (x, y, z, b) => { undo.push([x, y, z, W.get(x, y, z)]); W.set(x, y, z, b); };
+    for (const [x, y, z] of pane) put(x, y, z, 21);   // 21 = glass
+    for (const [x, y, z] of lamp) put(x, y, z, 14);   // 14 = glowstone
+    const restore = () => { for (const [x, y, z, b] of undo) W.set(x, y, z, b); };
+    const remesh = () => { for (let c = 0; c < W.cx * W.cz; c++) W.dirty[c] = 1; W.rebuildDirty(gl, 1e9); };
+    const sample = () => {
+      p.x = X + 0.5; p.y = Y + 1.0005; p.z = Z - 1.5; p.vx = p.vy = p.vz = 0;
+      p.yaw = Math.PI; p.pitch = 0;                   // yaw PI faces +Z, straight at the pane
+      g.hover = null; g.thirdPerson = false;
+      g._camFrame = g.shootCamera(p); g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      let r = 0, gg = 0, b = 0, n = 0;
+      for (let dy = -12; dy <= 12; dy++) for (let dx = -12; dx <= 12; dx++) {
+        const PX = Math.floor(w / 2) + dx, PY = Math.floor(h / 2) + dy;
+        const i = ((h - 1 - PY) * w + PX) * 4;
+        r += px[i]; gg += px[i + 1]; b += px[i + 2]; n++;
+      }
+      return { r: +(r / n).toFixed(1), g: +(gg / n).toFixed(1), b: +(b / n).toFixed(1),
+        lum: +((r / n) * 0.3 + (gg / n) * 0.59 + (b / n) * 0.11).toFixed(1) };
+    };
+    remesh();
+    const through = sample();                         // the lamp, seen through the pane
+    for (const [x, y, z] of lamp) W.set(x, y, z, 0);
+    remesh();
+    const empty = sample();                           // the same pane with nothing behind it
+    restore();
+    N.BLOCKS[21].opaque = true; remesh();             // how glass used to be built
+    const solid = sample();
+    N.BLOCKS[21].opaque = false;
+    restore(); remesh();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.hover = was.hover; g.mode = was.mode; g.thirdPerson = was.tp; g._camFrame = was.frame;
+    return { spot, through, empty, solid,
+      showsThrough: +(through.lum - empty.lum).toFixed(1),
+      differsFromSolid: +Math.abs(through.lum - solid.lum).toFixed(1),
+      warm: +(through.r - through.b).toFixed(1), cold: +(empty.r - empty.b).toFixed(1) };
+  });
+  check('the clearing is clear on every side', glass.spot !== undefined, glass);
+  check('a lamp behind glass is seen through it', glass.showsThrough > 40, glass);
+  check('glass is not drawn as a solid block of itself', glass.differsFromSolid > 40, glass);
+  check('what comes through the pane is the lamp, not the pane',
+    glass.warm > 20 && glass.cold < 10, glass);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;
