@@ -88,3 +88,5 @@ Codex completion is the **only growth metric that is recorded**, and it grants n
 | what night does | nocturnal creatures emerge, fruit self-glow becomes visible, some creatures change attitude | + the frogs after rain, the Glowglade pulsing |
 
 Time is not a pressure source (the player never starves); the pressure comes only from **the shelf life of fruit**.
+
+The HUD's phase word follows **which way the sun is moving**, not only how high it is. `night` is symmetric about noon, so 07:00 and 19:00 carry the same value, and the game opens at 07:00 — which the label used to call *dusk*, in the morning. Before noon the word is dawn, after it dusk, and both are keyed (`hud.dawn` / `hud.dusk`) rather than assembled from parts.

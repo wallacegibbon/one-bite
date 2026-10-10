@@ -113,8 +113,15 @@
       el('zone').textContent = g.zoneName();
       const h = Math.floor(g.hour), m = Math.floor((g.hour % 1) * 60);
       const icon = g.night > 0.55 ? '☾' : (g.hour < 7.5 || g.hour > 18 ? '☼' : '☀');
+      /* The phase word has to follow which way the sun is moving, not only how
+         high it is: `night` is symmetric about noon, so 07:00 and 19:00 carry the
+         same value, and the game opens at 07:00 -- which the old label called
+         "dusk", in the morning. */
+      const phase = g.night > 0.55 ? N.t('hud.night')
+        : g.night > 0.25 ? N.t(g.hour < 12 ? 'hud.dawn' : 'hud.dusk')
+        : N.t('hud.day');
       el('clock').innerHTML = '<b>' + pad(h) + ':' + pad(m) + '</b> · ' + N.t('hud.dayN', { d: g.day }) + ' ' + icon +
-        ' <span class="dim">' + (g.night > 0.55 ? N.t('hud.night') : g.night > 0.25 ? N.t('hud.dusk') : N.t('hud.day')) + '</span>';
+        ' <span class="dim">' + phase + '</span>';
 
       // identity: the valley's epithet comes first; the player's own name only if they chose one
       const ep = g.epithet();

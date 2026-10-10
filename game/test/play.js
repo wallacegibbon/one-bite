@@ -1521,6 +1521,26 @@ const path = require('path');
   check('no stars are out while the sun is up', stars.day.spikes <= 2, stars);
   check('the stars are still there at midnight', stars.night.spikes > 50, stars);
 
+  /* 10t. the phase word has to follow which way the sun is moving. `night` is
+     symmetric about noon, and the HUD picked dawn/dusk/night/day from that value
+     alone, so the hour the game opens on -- 07:00, night 0.37 -- was labelled
+     "dusk" in the morning. */
+  const phase = await step('phaseWordFollowsTheSun', () => {
+    const g = window.game, N = window.FRUTARIA;
+    const was = { time: g.time, mode: g.mode };
+    g.mode = 'play';
+    const word = (hour) => {
+      g.time = N.DAY_LEN * (hour / 24); g.updateEnv(); window.ui.update();
+      return (document.getElementById('clock').textContent || '').trim();
+    };
+    const morning = word(7), evening = word(17);
+    g.time = was.time; g.mode = was.mode; window.ui.update();
+    return { morning, evening, dawn: N.t('hud.dawn'), dusk: N.t('hud.dusk') };
+  });
+  check('the morning is called dawn, not dusk',
+    phase.morning.includes(phase.dawn) && !phase.morning.includes(phase.dusk), phase);
+  check('and the evening is called dusk', phase.evening.includes(phase.dusk), phase);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;
