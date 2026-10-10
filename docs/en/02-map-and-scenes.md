@@ -48,7 +48,7 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
 | `batcave` | Echo Hollow | 回声丘 | circle r13 | (28,30) | 2 | The hill hollowed into three layers of tunnel, and nothing living at the bottom of them |
 | `deepgrove` | The Deep Grove | 深鹿林 | circle r18 | (104,32) | 3 | Silver trees; every deer path in the valley folds into this one |
 | `mountains` | Ashscale Ridge | 北岭·鹰喙峰 | circle r26 | (142,18) | 3 | The bear's slope, wind blowing snow sideways |
-| `mirrorlake` | Mirrorlake | 镜湖 | circle r34 | (78,106) | 3 | A sunken tower and a few sunken huts on the lakebed |
+| `mirrorlake` | Mirrorlake | 镜湖 | circle r34 | (78,106) | 3 | A sunken tower and a few sunken huts on the lakebed; the tower is lit from inside by jellyfish |
 | `starfall` | Starfall Keep | 星坠堡 | circle r12 | (78,106) | 1 | The school on the island: four towers and a bell, a greenhouse in the cellar |
 | `lanternrow` | Lanternrow | 灯笼镇 | rect | (116,114)–(154,152) | 0 | Where the main cellar stands |
 | `orchard` | The Old Orchard | 果园遗迹 | circle r15 | (24,104) | 2 | The ancestral ground of every fruit tree: broken walls, old burrows, the oldest tree |
@@ -128,6 +128,7 @@ Radius 34, deepest at the centre.
 
 - **Sunken Tower** (66,118): top at y12 (two blocks under the surface), base at y5. The window sills carry **frog pear**. Picking it requires breathing underwater.
 - **Frogshall** (92,120): y9, a ring of sunken huts. The frogs' place; after rain their chorus drowns the bell.
+- **The lamps**: ten jellyfish sit on the outline of the tower (`mirrorlake.tower` in `data/world.js` — the same constant `worldgen.js` uses to build the tower), hovering about a metre under the surface. They are the only self-lit models in the game, so the lake carries a light of its own at night and the tower reads as lit from the shore. They bear no fruit, are not a body you can wear, and do not read bodies at all (03 §3).
 
 ### 5.6 The Deep Grove and the Old Orchard
 

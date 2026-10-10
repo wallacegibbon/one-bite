@@ -466,13 +466,13 @@
         this.pause -= dt;
         if (this.pause <= 0) {
           this.pause = 2 + Math.random() * 6;
-          const r = this.isAquatic() ? 18 : 14;
+          /* A species with a landmark and a spread stays near its landmark: the
+             lamp field is a field, not a survey of the whole lake. */
+          const r = this.isAquatic() ? (sp.spread || 6) : 14;
           /* A creature that cannot leave the water should not be sent to a
              place where it would have to. Pick again until the ground is wet;
              after a few tries take it anyway, so a lake that has somehow
-             drained does not leave a water animal standing still. (No species
-             in the valley has locomotion 'water' right now; the mode stays
-             because the data still documents it.) */
+             drained does not leave a water animal standing still. */
           let tx = this.homeX, tz = this.homeZ;
           for (let tries = 0; tries < 8; tries++) {
             tx = this.homeX + (Math.random() - 0.5) * 2 * r;
@@ -543,9 +543,15 @@
         this.groundY = gy0;
       } else if (this.isAquatic()) {
         const wt = waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1);
+        const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
+        /* Hover a metre or two under the surface -- but never through the
+           bottom. The lake is only two blocks deep at its edges, and a fixed
+           depth below the surface puts an animal inside the lakebed there, which
+           is a water animal standing in the mud. */
         const depth = 1.2 + Math.sin(this.t + this.phase) * 0.8;
-        const target = Math.max(1, wt - depth);
+        const target = Math.max(gy0 + 0.35, wt - depth);
         this.y += (target - this.y) * Math.min(1, dt * 1.6);
+        this.groundY = gy0;
       } else if (this.isAmphibian()) {
         // the frog sits on the bank, and floats just under the surface when it is in water
         const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));

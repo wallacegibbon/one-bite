@@ -10,7 +10,7 @@ Three hard rules:
 
 1. **Every plant has something it "wants to do"**: fruit self-glows (wants to be seen), vines grow down (looking for water), mushrooms ring up (claiming ground).
 2. **Buildings are grown, not laid**: Lanternrow's houses are timber frames with mossy-soil infill; Starfall Keep is brick plus lumenstone lamps; the Old Orchard is a ring of broken wall around the oldest tree in the valley.
-3. **There are only three light sources**: sun/moon, lumenstone and embers (self-lit blocks), and fruit (a fruit block lights itself, and so does one you carry — no body in the valley glows). **There is no ambient fill light** — at night, without a Glowcap, you genuinely cannot see.
+3. **There are only three light sources**: sun/moon, lumenstone and embers (self-lit blocks), fruit (a fruit block lights itself, and so does one you carry), and one animal (the lamp jellyfish parts are built emissive — but **no body you can wear glows**). **There is no ambient fill light** — at night, without a Glowcap, you genuinely cannot see.
 
 ### Palette (the values actually used in the prototype)
 
@@ -62,13 +62,15 @@ Assembled from voxel parts: one mesh + one pivot per part. A part may name a `pa
 | `nod` | head | `rx = sin(t·1.9)·(move·0.06+0.02)` |
 | `wag` | tail | `ry = sin(t·1.6)·(move·0.5+0.12)` |
 | `bob` | body | in the air it **is** the wing beat: `dy = −max(0,beat)·0.16`, the body drops as the wings push down. Two unrelated sines is what made a flying body look like a body with two loose parts bolted to it. On foot `dy = sin(t·2.2)·(move·0.12+0.05)` |
-| `pulse` | the frog's throat | a scale, not a rotation |
+| `pulse` | the frog's throat, the jellyfish bell | a scale, not a rotation |
 
 A part may also declare `air:[rx,ry,rz]` and `crouch:[rx,ry,rz]`: the pose it takes when the body is off the ground, and when its legs are loaded. The weights come from the physics, not from a guess about which animal is being drawn -- `air` is how far off the ground the body actually is, `crouch` how long its feet have been down since the last launch, and `squash` the speed it arrived at the ground with, applied to the whole body as a scale. A body that does not hop is never animated as if it did.
 
 A model carries **no scale of its own**. One number sizes a body: the collision box in `data/creatures.js` (`size`, in metres). The model is authored in unit boxes, and the creature's `scale` turns them into metres — so the model and the box are the same body twice, and if they disagree the player is clipped by geometry they can see themselves not touching. `game/test/node-smoke.js` measures every model against the box its creature declares and fails the build when it overhangs: the model's horizontal radius may exceed the box's half-width by at most 0.1 m, its top the box's height by at most 0.06 m. A **radius**, not a width, because the box is a square footprint that does not turn with the body — a model that fits face-on still sticks through a wall sideways. Before the gate existed the bear reached 1.26 m from its centre while its box was 0.70 m across: 0.56 m of bear inside the wall it was leaning against, and the frog's snout 0.13 m past its own box.
 
-4 models: human, owl, frog, bear.
+The lamp jellyfish is the one model with **no box to be measured against**: nothing in the game collides with it (you swim through the lamps), and it bears no fruit, so no player ever wears it. It is checked against the size the codex gives it instead — **0.61 m across, 0.74 m from the top of the dome to the tip of the longest arm**, measured at its `scale` of 0.16.
+
+5 models: human, owl, frog, bear, jelly.
 4 first-person hands: hand, talon, web, claw.
 
 ## 2. Audio direction (not implemented, full design)
@@ -173,8 +175,8 @@ Two consequences worth knowing:
 | `game/test/node-smoke.js` | no browser: data → generation → meshing (fake GL), verifies block distribution |
 | `game/test/heightmap.js` | prints an ASCII heightmap of the surface |
 | `game/test/probe.js` | finds a safe camera spot for every POI/zone |
-| `game/test/shots.js` | 22 screenshots in one launch (zones + the four bodies seen from behind + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
-| `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology; plus the world reacting to a body (block edits re-mesh, the breath ceiling, intimidation by species, a unique key per block), **one body at a time** (three fruits eaten in a row: each replaces the body, vitality never moves, each fruit is spent exactly once, and no gastric counter exists), what each quest gate actually requires, how each animal moves and when it is awake, and **the three abilities measured against the body that lacks them** (glide caps the fall at the speed the data promises, the same dark is brighter for an owl while the sky itself does not change, the ridge takes vitality from a human and never from a bear) |
+| `game/test/shots.js` | 23 screenshots in one launch (zones + the four bodies seen from behind + UI + identity + one panel in each language), checks console errors; the language of every shot is pinned, so the set is reproducible on any machine |
+| `game/test/play.js` | the gameplay loop: harvest → capacity → transform → fly → revert → storage → cellar tree → save → quests → ecology; plus the world reacting to a body (block edits re-mesh, the breath ceiling, intimidation by species, a unique key per block), **one body at a time** (three fruits eaten in a row: each replaces the body, vitality never moves, each fruit is spent exactly once, and no gastric counter exists), what each quest gate actually requires, how each animal moves and when it is awake, and **the three abilities measured against the body that lacks them** (glide caps the fall at the speed the data promises, the same dark is brighter for an owl while the sky itself does not change, the ridge takes vitality from a human and never from a bear), and **the lamps of Mirrorlake** — an animal with no fruit: ten of them, never out of the water, never off the sunken tower, and one answer whatever body you are wearing |
 | `game/test/save.js` | the save round trip: write a save, reload the page, continue from the start screen — identity, backpack, stores, the planting queue, scattered fruit, buffs and the form bar all come back, and a save that lists no town cellar still gets one |
 | `game/test/input.js` | real key events: walk / jump / fly / time bar / Grey Veil border |
 | `game/test/lang.js` | language switch: every visible string comes from the table in use, no raw key leaks, and the save file is byte-identical across languages |

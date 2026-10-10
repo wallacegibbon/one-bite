@@ -87,6 +87,6 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 | World | 160×48×160 voxels | 1024×128×1024 |
 | Zones | 11 | 20–24 |
 | Fruits | 3 | 12–16 |
-| Creatures | 3 species | 12–16 species + named individuals |
+| Creatures | 4 species (3 with a fruit) | 12–16 species + named individuals |
 | Main line | 6 quests | 7 chapters × 4–6 quests |
 | One day | 420 seconds | 1200 seconds |

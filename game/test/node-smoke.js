@@ -42,9 +42,7 @@ const F = window.FRUTARIA;
    so the allowance is 0.1 m. Before this check existed nothing in the build
    could see it: the bear's head hung 0.56 m outside its box and the frog's
    snout 0.13 m. */
-{
-  const TOL_R = 0.1, TOL_H = 0.06;
-  const extents = (modelId, sc) => {
+const extents = (modelId, sc) => {
     let r = 0, top = 0, bottom = 0;
     for (const part of F.MODELS[modelId].parts) {
       for (const b of part.boxes) {
@@ -54,8 +52,10 @@ const F = window.FRUTARIA;
         bottom = Math.min(bottom, b[1] * sc);
       }
     }
-    return { r, top, bottom };
-  };
+  return { r, top, bottom };
+};
+{
+  const TOL_R = 0.1, TOL_H = 0.06;
   const bodies = [['human', F.HUMAN_FORM.scale, F.HUMAN_FORM.size]];
   for (const fruit of F.FRUITS)
     bodies.push([fruit.creature, F.CREATURE_BY_ID[fruit.creature].scale, fruit.form.size]);
@@ -70,6 +70,27 @@ const F = window.FRUTARIA;
   }
   console.log('模型/碰撞盒', bodies.length, '个身体', bad ? '!! ' + bad + ' 个穿模' : 'OK');
   if (bad) process.exitCode = 1;
+}
+
+/* The lamp jellyfish has no fruit, so there is no collision box for the gate
+   above to measure it against -- it is the only model in the game nobody
+   measures. Its size is pinned anyway, because a model nobody measures is a
+   model that quietly grows: 0.61 m across, 0.74 m from the top of the dome to
+   the tip of the longest arm, at its scale of 0.16 (docs/en/07 s1). */
+{
+  const sc = F.CREATURE_BY_ID.jelly.scale, e = extents('jelly', sc);
+  const bad = [];
+  if (F.FRUITS.some(f => f.creature === 'jelly')) bad.push('a fruit claims a bodyless animal');
+  if (F.CREATURE_BY_ID.jelly.fruit) bad.push('the animal claims a fruit');
+  if (Math.abs(e.r * 2 - 0.61) > 0.02) bad.push(`宽 ${(e.r * 2).toFixed(3)} != 0.61`);
+  if (Math.abs((e.top - e.bottom) - 0.74) > 0.02) bad.push(`高 ${(e.top - e.bottom).toFixed(3)} != 0.74`);
+  /* The one self-lit model in the game, and the only one: no body you can wear
+     carries a light (docs/en/07 s1). */
+  if (!F.MODELS.jelly.parts.every(p => p.emis)) bad.push('a lamp part is not lit');
+  for (const id of ['human', 'owl', 'frog', 'bear'])
+    if (F.MODELS[id].parts.some(p => p.emis)) bad.push(`${id} glows`);
+  console.log('灯水母', bad.length ? '!! ' + bad.join(', ') : `OK ${e.r * 2} m 宽 / ${e.top - e.bottom} m 高`);
+  if (bad.length) process.exitCode = 1;
 }
 
 const gl = {

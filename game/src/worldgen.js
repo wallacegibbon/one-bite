@@ -334,8 +334,9 @@
 
   /* ---------------- lakebed: sunken tower / the sunken huts ---------------- */
   function lakebed() {
-    // sunken tower
-    const tx = 66, tz = 118;
+    // sunken tower -- the landmark lives in the zone data, because the lamp
+    // jellyfish field is defined as its outline and spawns from there
+    const [tx, tz] = MIRROR.tower;
     box(tx - 3, 6, tz - 3, tx + 3, 15, tz + 3, 12, true);
     for (let y = 7; y <= 14; y += 3) { set(tx - 3, y, tz, 21); set(tx + 3, y, tz, 21); set(tx, y, tz - 3, 21); set(tx, y, tz + 3, 21); }
     set(tx, 16, tz, 12); set(tx, 17, tz, 12);

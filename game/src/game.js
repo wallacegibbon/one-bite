@@ -131,11 +131,17 @@
     }
 
     spawnCreatures() {
-      const counts = { owl: 6, frog: 12, bear: 2 };
+      const counts = { owl: 6, frog: 12, bear: 2, jelly: 10 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
+        /* A species may name a landmark of its habitat zone instead of the
+           whole zone. The lamp field is the sunken tower's outline, not
+           "somewhere in a lake of radius 34" -- from the surface the field is
+           what traces the tower, so the tower is what places the field. */
+        const zone = N.ZONE_BY_ID[sp.habitat[0]];
+        const at = sp.at && zone ? zone[sp.at] : null;
         for (let i = 0; i < n; i++) {
-          const p = this.samplePos(sp.habitat[0]);
+          const p = this.samplePos(sp.habitat[0], at, sp.spread || 4);
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);
           if (c.isFlyer()) c.flyY = p.y + 5 + Math.random() * 8;
@@ -143,12 +149,15 @@
         }
       }
     }
-    samplePos(zoneId) {
+    samplePos(zoneId, at, spread) {
       const z = N.ZONE_BY_ID[zoneId] || N.ZONE_BY_ID.whisperwood;
       const W = this.world;
       for (let t = 0; t < 300; t++) {
         let x, zz;
-        if (z.kind === 'circle') {
+        if (at) {
+          x = at[0] + (Math.random() - 0.5) * 2 * spread;
+          zz = at[1] + (Math.random() - 0.5) * 2 * spread;
+        } else if (z.kind === 'circle') {
           const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * z.r;
           x = z.cx + Math.cos(a) * r; zz = z.cz + Math.sin(a) * r;
         } else if (z.kind === 'rect') {

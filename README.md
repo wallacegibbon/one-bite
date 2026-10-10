@@ -50,7 +50,7 @@ Requires a browser with WebGL 1.0. On first load, 100 chunks are generated acros
 - **3 fruits, 3 bodies, one animal per niche**: owl, frog, bear. The rarity ladder has five rungs and the valley currently grows three of them (common / rare / legendary); one fruit occupies 1, 4 or 12 of your 24 slots.
 - **Transformation**: one body at a time. Eating a second fruit replaces the body you are wearing; the cost is the body you ended early and the fruit you spent.
 - **Body abilities the code actually runs**: collision size, walk / swim / fly speed, jump force, auto step-up, gliding (an owl that stops flapping comes down at a third of your speed), held breath, breathing water, skin that dries out of it, night vision — and the same eye washed out by daylight —, stealth, intimidation radius, immunity to the ridge cold, field of view, first-person hand.
-- **3 species, 20 animals**, attitude-driven AI: they react to the shape you are wearing right now, and no animal hunts you on its own initiative. Danger is the water, the height, the cold, the fog, and what your current body cannot do.
+- **4 species, 30 animals**, attitude-driven AI: three of them are bodies you can wear, they react to the shape you are wearing right now, and no animal hunts you on its own initiative. Danger is the water, the height, the cold, the fog, and what your current body cannot do.
 - **Storage**: 24-slot backpack, the main cellar (96 slots, decay ×0.1), and up to 3 cellar trees in the field (24 slots, ×0.33, at least 20 m apart).
 - **3 backpack upgrades**: Pouch +6 (first quest), Deep Pouch +6 (sunken tower), Silver Divider (rare fruit costs one slot less, greenhouse) → 36 slots at full upgrade.
 - **Spoilage and regrowth**: a picked fruit goes dormant (rarer fruit faster) and can be planted from its pit; fruiting sites bear again after 1 / 1.5 / 2 / 2.5 / 3 game days (±20%), and the regrow queue is saved.
@@ -97,7 +97,7 @@ node game/test/upgrade.js      # backpack upgrades and slot maths
 node game/test/input.js        # real key events: walk / jump / fly / time / Grey Veil border / camera comfort
 node game/test/lang.js         # language switch: no raw key on screen, save file identical across languages
 
-node game/test/shots.js g      # 20 screenshots → .shots/ (zones, transformation, UI, identity, one panel per language)
+node game/test/shots.js g      # 23 screenshots → .shots/ (zones, transformation, UI, identity, one panel per language)
 node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # single shot, for eyeballing
 node game/test/heightmap.js    # ASCII dump of the terrain heightmap, for eyeballing
 node game/test/meshbench.js    # what a chunk costs to build; a measurement, not a test

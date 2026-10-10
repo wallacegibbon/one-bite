@@ -398,6 +398,47 @@ const path = require('path');
     return by;
   });
 
+  // 10b. the lamps of Mirrorlake: an animal with no fruit and no body to wear, a
+  //      field that sits on one landmark instead of being scattered over the
+  //      lake, and -- the interesting part -- the only species whose locomotion
+  //      is 'water', so the only one that must never end up on dry land.
+  const lamps = await step('lamps', () => {
+    const g = window.game, p = g.player, N = window.FRUTARIA;
+    const sp = N.CREATURE_BY_ID.jelly, tower = N.ZONE_BY_ID.mirrorlake.tower;
+    const herd = () => g.creatures.filter(c => c.sp.id === 'jelly');
+    const wet = () => herd().filter(c =>
+      g.world.liquidAt(Math.floor(c.x), Math.floor(c.y + 0.2), Math.floor(c.z))).length;
+    // home is picked within `spread` of the landmark and a wander target within
+    // `spread` of home, so the honest bound is twice the spread
+    const far = () => herd().filter(c =>
+      Math.hypot(c.x - tower[0], c.z - tower[1]) > sp.spread * 2 + 1).length;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z };
+    const one = herd()[0];
+    const atts = [null, 'owlberry', 'frogpear', 'bruinfig'].map((f) => {
+      p.form = f; p.x = one.x + 1.5; p.y = one.y; p.z = one.z;
+      return one.attitudeTo(f);
+    });
+    const before = { n: herd().length, wet: wet(), far: far() };
+    // 90 seconds of game time, animals only: enough for a hundred wander targets,
+    // and every one of those targets has to be water
+    for (let i = 0; i < 1800; i++) for (const c of herd()) c.update(0.05, p, g.world, g);
+    const after = { wet: wet(), far: far() };
+    Object.assign(p, was);
+    return {
+      n: before.n, wet: before.wet, far: before.far, after, atts,
+      bears: !!sp.fruit, worn: N.FRUITS.some(f => f.creature === 'jelly'),
+      name: N.disp(sp), lore: N.dexOf(sp)
+    };
+  });
+  check('the lamps are an animal and bear no fruit',
+    lamps.n === 10 && lamps.bears === false && lamps.worn === false, lamps);
+  check('the lamps never leave the water',
+    lamps.wet === lamps.n && lamps.after.wet === lamps.n, lamps);
+  check('the lamp field is the sunken tower, not the whole lake',
+    lamps.far === 0 && lamps.after.far === 0, lamps);
+  check('the lamps do not read bodies', lamps.atts.every(a => a === 'ignore'), lamps);
+  check('the lamps have a dex entry', lamps.name.length > 0 && lamps.lore.length > 20, lamps);
+
   // 10b. intimidation belongs to the body, and one's own species is exempt
   const intimidate = await step('intimidation', () => {
     const g = window.game, p = g.player, N = window.FRUTARIA;

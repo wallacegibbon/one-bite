@@ -2,9 +2,9 @@
 
 [中文: ../cn/03-角色与生物.md](../cn/03-角色与生物.md)
 
-Source of truth: `game/data/creatures.js` (3 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name, and `HUMAN_FORM` — the body you start in, which is a body record like the animals' and not a rendering detail).
+Source of truth: `game/data/creatures.js` (4 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name, and `HUMAN_FORM` — the body you start in, which is a body record like the animals' and not a rendering detail).
 
-**One species per ecological niche.** The valley has three openings you can wear: the night sky, the shallows and the shore, the ridge. Each animal takes one opening. There is no "second fox", and no in-between species that is "half otter, half merrow".
+**One species per ecological niche.** The valley has three openings you can wear: the night sky, the shallows and the shore, the ridge. Each animal takes one opening. There is no "second fox", and no in-between species that is "half otter, half merrow". A fourth niche — open water — is filled by an animal **you cannot wear**: the lamps of Mirrorlake bear no fruit, so they change nothing about what a door or a crevice means.
 
 ## 1. Characters
 
@@ -53,6 +53,9 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 | Screech Owl | flee | calm | curious | flee |
 | Mirrorlake Frog | · | flee | calm | ignore |
 | Brown Bear | · | · | ignore | calm |
+| Lamp Jellyfish | · | · | · | · |
+
+**There is no `jelly` column.** A column is a body the player is wearing, and the lamps bear no fruit, so nobody can arrive in one. The row exists because the animal exists; every cell falls through to `default`, which is `ignore`.
 
 **Three design intentions you can read off the matrix:**
 
@@ -67,10 +70,13 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 | `owl` | 猫头鹰 | Screech Owl | owl | 0.15 | Whisperwood / Starfall Keep / Glowglade / Cloudspire | night | 3.2 (fly 7.0) | 12 | 1 | Owlberry |
 | `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6, hop) | 12 | 12 | Frog Pear |
 | `bear` | 棕熊 | Brown Bear | bear | 0.24 | Northern Ridge / Whisperwood | both | 5.0 | 22 | 1 | Bruin Fig |
+| `jelly` | 灯水母 | Lamp Jellyfish | jelly | 0.16 | Mirrorlake, on the outline of the sunken tower | both | 0.8 (swim 2.2) | 4 | 10 | **none** |
 
-Distribution of the 20 individuals in the prototype: owl 6, frog 12, bear 2.
+Distribution of the 30 individuals in the valley: owl 6, frog 12, bear 2, jelly 10.
 
-**Why only 3 species**: every species you add costs a fruit, a habitat, a row in the attitude matrix, and a whole set of "where can this body go" gates. A 3 × 4 matrix can be read at a glance; a 14 × 15 matrix has to be memorised. Once the setting was simplified, **the readability of the gates became content in its own right**.
+The lamps are the one species placed by a **landmark** instead of a zone: `at: 'tower'`, `spread: 4` in the record, resolved against the habitat zone (`mirrorlake.tower`, which is also where `worldgen` builds the tower). The field is the tower's outline, so the tower is what places the field — "anywhere in a lake of radius 34" would put the lamps anywhere except over the tower.
+
+**Why only 3 wearable species**: every species you can wear costs a fruit, a habitat, a row in the attitude matrix, and a whole set of "where can this body go" gates. A 3 × 4 matrix can be read at a glance; a 14 × 15 matrix has to be memorised. Once the setting was simplified, **the readability of the gates became content in its own right**. The lamps are the deliberate exception that prices the rule: a fruitless species still costs a model, a habitat, a row in the matrix and a place in the world, but it buys **no gate at all** — it is the cheapest animal to add and the least interesting one. It is in the valley to be light in the water, not to be a door.
 
 **The valley still holds animals it will not give you.** The places kept their names — the Deep Grove, the deer paths, Echo Hollow, the mounds in the Old Orchard — and the animals that made those names are not coming back until each one arrives with a fruit, a niche and a door only it can open. Until then they are absence, which is what the valley is made of.
 
@@ -81,6 +87,7 @@ One entry per species, always written as "verifiable fact + unverifiable rumour"
 - **Screech Owl**: by day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and form Lanternrow's volunteer patrol.
 - **Mirrorlake Frog**: after rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.
 - **Brown Bear**: the bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.
+- **Lamp Jellyfish**: the lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; swim through them and they treat you as water. Nobody knows why they are lit.
 
 ## 5. Magic plants (not creatures, but spread by creatures)
 

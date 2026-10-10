@@ -22,7 +22,10 @@
   }
 
   /* Part shape: { name, parent, pivot:[x,y,z], anim, sign:+-1, air:[rx,ry,rz],
-                  crouch:[rx,ry,rz], boxes:[[x,y,z,w,h,d,'#hex'],...] } */
+                  crouch:[rx,ry,rz], emis:true, boxes:[[x,y,z,w,h,d,'#hex'],...] }
+     `emis` makes the part self-lit in the shader -- the same switch a fruit
+     block uses. Only the lamps of Mirrorlake use it: no body you can wear
+     carries a light (docs/en/07 s1). */
   const MODELS = {
     /* ---------------- human (untransformed) ----------------
        1.80 m tall, about 3.7 heads. A body you look at for an hour in third
@@ -257,6 +260,43 @@
           boxes: [[0.9, 0, -2.4, 1.1, 1.0, 1.55, '#4c453d']] }
       ]
     },
+
+    /* ---------------- lamp jellyfish ----------------
+       The lamps of Mirrorlake, and the only animal in the valley that bears no
+       fruit. A bell that squeezes and releases -- `pulse` is how a jellyfish
+       swims, not a decoration -- four oral arms gathered under it and a frill
+       of short tentacles along the rim, all hanging under the anchor, which is
+       where the animal sits in the water. Every part is emissive: at night the
+       lake is black and this is the only thing down there that is not. It has
+       no collision box because nothing in the game collides with it: you swim
+       through it and it treats you as water. */
+    jelly: {
+      parts: [
+        { name: 'bell', anim: 'pulse', emis: true, boxes: [
+          [-1.2, 1.0, -1.2, 2.4, 1.5, 2.4, '#8fd0ff'],            // the bell
+          [-0.7, 2.5, -0.7, 1.4, 0.9, 1.4, '#bfe8ff'],            // the dome over it
+          [-1.35, 0.85, -1.35, 2.7, 0.25, 2.7, '#6fb8e8']         // the rim, the darkest part
+        ] },
+        { name: 'arm0', parent: 'bell', pivot: [-0.55, 1.1, -0.55], anim: 'wag', sign: 1, emis: true,
+          boxes: [[-0.7, -1.2, -0.7, 0.3, 2.3, 0.3, '#a8dcff']] },
+        { name: 'arm1', parent: 'bell', pivot: [0.55, 1.1, 0.55], anim: 'wag', sign: -1, emis: true,
+          boxes: [[0.4, -1.2, 0.4, 0.3, 2.3, 0.3, '#a8dcff']] },
+        { name: 'arm2', parent: 'bell', pivot: [-0.55, 1.1, 0.55], anim: 'wag', sign: -1, emis: true,
+          boxes: [[-0.7, -1.0, 0.4, 0.3, 2.1, 0.3, '#8fd0ff']] },
+        { name: 'arm3', parent: 'bell', pivot: [0.55, 1.1, -0.55], anim: 'wag', sign: 1, emis: true,
+          boxes: [[0.4, -1.0, -0.7, 0.3, 2.1, 0.3, '#8fd0ff']] },
+        /* the frill: short tentacles along the rim, so the silhouette is not
+           four legs under a slab */
+        { name: 'fr0', parent: 'bell', pivot: [-1.2, 0.9, 0], anim: 'wag', sign: 1, emis: true,
+          boxes: [[-1.3, -0.9, -0.1, 0.2, 1.8, 0.2, '#bfe8ff']] },
+        { name: 'fr1', parent: 'bell', pivot: [1.2, 0.9, 0], anim: 'wag', sign: -1, emis: true,
+          boxes: [[1.1, -0.9, -0.1, 0.2, 1.8, 0.2, '#bfe8ff']] },
+        { name: 'fr2', parent: 'bell', pivot: [0, 0.9, -1.2], anim: 'wag', sign: -1, emis: true,
+          boxes: [[-0.1, -0.8, -1.3, 0.2, 1.7, 0.2, '#bfe8ff']] },
+        { name: 'fr3', parent: 'bell', pivot: [0, 0.9, 1.2], anim: 'wag', sign: 1, emis: true,
+          boxes: [[-0.1, -0.8, 1.1, 0.2, 1.7, 0.2, '#bfe8ff']] }
+      ]
+    },
   };
 
   /* ---------------- first-person hands (anchored bottom-right) ---------------- */
@@ -291,7 +331,7 @@
     const out = [];
     for (const part of model.parts) {
       const mb = new N.MeshBuilder();
-      for (const b of part.boxes) mb.box(b[0], b[1], b[2], b[3], b[4], b[5], typeof b[6] === 'string' ? hex(b[6]) : b[6], false, 1);
+      for (const b of part.boxes) mb.box(b[0], b[1], b[2], b[3], b[4], b[5], typeof b[6] === 'string' ? hex(b[6]) : b[6], !!part.emis, 1);
       out.push({ part, mesh: mb.upload(gl), pivot: part.pivot || [0, 0, 0] });
     }
     return out;

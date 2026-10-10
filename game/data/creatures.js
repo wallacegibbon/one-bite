@@ -1,13 +1,17 @@
 /* ==========================================================================
  *  Creature data -- mirrors docs/en/03-characters-and-creatures.md
- *  Three species, one per niche, and every one of them has a fruit: each is a
- *  body the player can wear. An animal without a fruit is allowed later (the
- *  valley is full of places named after animals that are no longer here), but
- *  it would be scenery, not a transformation.
+ *  Four species, one per niche. Three of them bear a fruit and so are a body the
+ *  player can wear; the fourth -- the lamps of Mirrorlake -- bears nothing. It
+ *  is the exception that shows what the rule costs: a fruitless species still
+ *  costs a model, a habitat, a row in the attitude matrix and a place in the
+ *  world, but it never changes what a door or a crevice means.
  *  attitude  : reaction to the player's current form; self=same species, default=fallback
  *  locomotion: walk / fly / water / amphibian -- how the body moves. The code
  *              asks this instead of asking "is this the owl?", so a second flying
  *              species would fly without anyone editing the movement code.
+ *  at/spread : spawn at a named landmark of the habitat zone (not anywhere in
+ *              the zone) within `spread` metres -- the lamp field is the sunken
+ *              tower's outline, so it is placed by the tower, not by the lake.
  *  active    : active period; day / night / both / dusk
  *  dex/dexEn: the codex entry, always "a verifiable fact + an unverifiable rumour"
  * ========================================================================== */
@@ -43,6 +47,18 @@
       attitude: { self: 'calm', default: 'ignore', frog: 'ignore' },
       dex: '北岭的熊会挖"果窖"——它们比人类更早学会把果实埋起来慢慢吃。它们也拆人类的窖树：熊不需要背包。',
       dexEn: 'The bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.'
+    },
+    {
+      /* niche: open water -- drifting light. The one species in the valley that
+         bears no fruit: it is not a body you can wear, it is the lamp the lake
+         keeps. It never leaves the water (locomotion 'water'), and nobody can
+         wear it, so no other animal has an opinion about it. */
+      id: 'jelly', cn: '灯水母', en: 'Lamp Jellyfish', model: 'jelly', scale: 0.16,
+      habitat: ['mirrorlake'], at: 'tower', spread: 4, active: 'both',
+      locomotion: 'water', speed: 0.8, swimSpeed: 2.2, alert: 4, herd: 10,
+      attitude: { self: 'calm', default: 'ignore' },
+      dex: '镜湖的灯。水母田的位置就是湖底沉塔的轮廓——从水面看下去，塔在发光。它们不追人，也不躲人；你从它们中间游过去，它们只当你是水。没人知道它们为什么亮着。',
+      dexEn: 'The lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; swim through them and they treat you as water. Nobody knows why they are lit.'
     }
   ];
 
