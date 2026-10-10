@@ -1594,6 +1594,135 @@ const path = require('path');
     phase.morning.includes(phase.dawn) && !phase.morning.includes(phase.dusk), phase);
   check('and the evening is called dusk', phase.evening.includes(phase.dusk), phase);
 
+  /* 10u. a frog in the water kicks, it does not run. The model had one leg cycle
+     for every body: in the lake a frog moves at its swim speed (4.6 m/s against a
+     walk speed of 1.8) and the legs still ran the walk cycle -- front against hind,
+     left against right -- so a frog paddled across the surface. A part may now
+     declare swimKick (this part drives the kick, both legs in the same phase) or
+     swimPose (this part is held while swimming), and the caller says `swim` only
+     for a body the data gives a swim speed to, so a human in the lake still wades:
+     the human model has no swim parts and the game has no human stroke.
+     What the frame has to show is that the body agrees with itself about its own
+     mid-plane. The mask is the body alone: draw, zero the body's own meshes, draw
+     again, and the pixels that changed are the body. The lens sits directly behind
+     the body, where the model's mid-plane is the vertical line through the
+     projected origin, so mirroring the mask about that line is mirroring the model
+     about x = 0. A body that runs has one hind foot forward and one back, and the
+     two halves of its silhouette stop agreeing. */
+  const swim = await step('frogKicksNotRuns', () => {
+    const g = window.game, R = g.R, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, vx: p.vx, vz: p.vz,
+      faceYaw: p.faceYaw, form: p.form, time: g.time, mode: g.mode, tp: g.thirdPerson,
+      cam: { d: g.cam.d, fov: g.cam.fov }, frame: g._camFrame };
+    p.form = 'frogpear';
+    p.x = 92.5; p.y = 13.4; p.z = 118.5;            // Mirrorlake, at the surface
+    p.vx = 1.2; p.vy = 0; p.vz = 0;
+    p.yaw = Math.PI / 2; p.faceYaw = Math.PI / 2; p.pitch = -0.06;
+    p.inWater = true; p.airAmt = 0; p.crouch = 0; p.squash = 0; p.bank = 0;
+    g.mode = 'play'; g.thirdPerson = true; g.camReady = true; g.cam.d = 1.8; g.cam.fov = 50;
+    const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
+    const grab = () => { const b = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+    const parts = g.ensureModel('frog');
+    /* The body alone: the mesh a body is drawn from is shared with every animal of
+       that species, so zeroing it to find its pixels also blanks the twelve frogs
+       that live in this lake -- and one of them wandering into the frame is worth
+       2,000 pixels of mask and wrecks the symmetry. The animals are put away for
+       the two draws and handed back after. */
+    const wasCreatures = g.creatures;
+    g.creatures = [];
+    const saved = parts.map(e => e.mesh.count);
+    const maskAt = (time) => {
+      g.time = time; g.updateEnv();
+      const cf = g.shootCamera(p);
+      g._camFrame = cf; g.render(); const a = grab();
+      parts.forEach(e => { e.mesh.count = 0; });
+      g._camFrame = cf; g.render(); const b = grab();
+      parts.forEach((e, i) => { e.mesh.count = saved[i]; });
+      const m = new Uint8Array(W * H);
+      let n = 0;
+      for (let i = 0, j = 0; i < a.length; i += 4, j++) {
+        if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 8) { m[j] = 1; n++; }
+      }
+      return { m, n };
+    };
+    /* the kick phase is the clock: sin(t * SWIM_RATE + phase), and the player's
+       phase is 0. Pick the clock so the kick is at the tucked and the extended
+       extreme while the hour stays near 07:00, which is when there is light. */
+    const RATE = 4.2, per = 2 * Math.PI / RATE, base = 420 * 7 / 24;
+    const at = (want) => base + (((want - base * RATE) % per) + per) % per / RATE;
+    const A = maskAt(at(Math.PI / 2)), B = maskAt(at(3 * Math.PI / 2));
+    const v = R.view, q = R.proj;
+    const projX = (x, y, z) => {
+      const vx = v[0] * x + v[4] * y + v[8] * z + v[12];
+      const vy = v[1] * x + v[5] * y + v[9] * z + v[13];
+      const vz = v[2] * x + v[6] * y + v[10] * z + v[14];
+      const cx = q[0] * vx + q[4] * vy + q[8] * vz + q[12];
+      const cw = q[3] * vx + q[7] * vy + q[11] * vz + q[15];
+      return Math.round((cx / cw * 0.5 + 0.5) * W);
+    };
+    const cx = projX(p.x, p.y + 0.3, p.z);
+    const mirror = (m) => {
+      const o = new Uint8Array(W * H);
+      for (let y = 0; y < H; y++) {
+        const row = y * W;
+        for (let x = 0; x < W; x++) { const mx = 2 * cx - x; if (mx >= 0 && mx < W) o[row + x] = m[row + mx]; }
+      }
+      return o;
+    };
+    const iou = (a, b) => { let inter = 0, uni = 0; for (let i = 0; i < a.length; i++) { if (a[i] || b[i]) { uni++; if (a[i] && b[i]) inter++; } } return uni ? inter / uni : 0; };
+    const symTuck = iou(A.m, mirror(A.m)), symKick = iou(B.m, mirror(B.m)), moved = iou(A.m, B.m);
+    g._camFrame = null; g.render();
+    Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch, vy: was.vy,
+      vx: was.vx, vz: was.vz, faceYaw: was.faceYaw, form: was.form });
+    g.time = was.time; g.mode = was.mode; g.thirdPerson = was.tp;
+    g.creatures = wasCreatures;
+    g.cam.d = was.cam.d; g.cam.fov = was.cam.fov; g._camFrame = was.frame;
+    return { maskPx: A.n, cx, hourAt: +(at(Math.PI / 2) / 420 * 24).toFixed(2),
+      symTuck: +symTuck.toFixed(3), symKick: +symKick.toFixed(3), moved: +moved.toFixed(3) };
+  });
+  check('the frog body is big enough in the frame to judge', swim.maskPx > 3000, swim);
+  check('a swimming frog is mirror-symmetric about its own mid-plane',
+    swim.symTuck > 0.96 && swim.symKick > 0.96, swim);
+  check('and the kick moves the legs between its extremes', swim.moved < 0.97, swim);
+
+  /* 10v. the gait itself, read where the claim is actually made. The frame check
+     above can only see the silhouette a body leaves from directly behind, and from
+     there a leg forward and a leg back move 6% of the outline -- the bound between
+     0.944 and 0.976 is set by eye, and a bound set by eye is a bound that will be
+     loosened the first time it annoys someone. So the same claim is read again off
+     the angles the renderer is about to upload: a walk alternates (left = -right),
+     a kick does not (left = right). */
+  const stride = await step('swimPoseIsSynchronous', () => {
+    const N = window.FRUTARIA, g = window.game;
+    const parts = g.ensureModel('frog');
+    const angles = (sw, t) => {
+      const st = { t, phase: 0, move: 1, air: 0, crouch: 0, swim: sw };
+      const a = {};
+      for (const e of parts) a[e.part.name] = N.partAngles(e, st);
+      return a;
+    };
+    const out = {};
+    for (const [name, sw] of [['walk', 0], ['swim', 1]]) {
+      // three samples a third of a cycle apart: caught mid-swing, not at a zero crossing
+      const s = [0, 1, 2].map(k => angles(sw, 0.31 + k * 0.37));
+      out[name] = {
+        thigh: s.map(a => +(a.thighL.rx - a.thighR.rx).toFixed(3)),
+        shin: s.map(a => +(a.shinL.rx - a.shinR.rx).toFixed(3)),
+        front: s.map(a => +(a.legFL.rx - a.legFR.rx).toFixed(3)),
+        swing: +Math.max(...s.map(a => Math.abs(a.thighL.rx))).toFixed(3),
+        held: +Math.abs(s[0].legFL.rx).toFixed(3),
+      };
+    }
+    return out;
+  });
+  check('on land the hind legs alternate: left is the mirror of right',
+    stride.walk.thigh.every(d => Math.abs(d) > 0.3) && stride.walk.shin.every(d => Math.abs(d) > 0.3), stride);
+  check('in the water they are in the same phase: a kick is both legs at once',
+    stride.swim.thigh.every(d => d === 0) && stride.swim.shin.every(d => d === 0), stride);
+  check('in the water the front legs are held, not walked',
+    stride.swim.front.every(d => d === 0) && stride.swim.held > 0.3, stride);
+  check('and the kick swings the hind legs as hard as a stride', stride.swim.swing > 0.3, stride);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

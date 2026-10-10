@@ -1001,7 +1001,9 @@
           t: this.time + c.phase,
           move: Math.min(1, c.speed / (c.sp.speed || 3)) * (c.speed > 0.2 ? 1 : 0),
           fly: c.isFlyer() && c.state !== 'roost',
-          air: c.airAmt || 0, crouch: c.crouch || 0, phase: c.phase
+          air: c.airAmt || 0, crouch: c.crouch || 0, phase: c.phase,
+          // only a body the data gives a swim speed to: a bear wading still walks
+          swim: (c.inWater && c.sp.swimSpeed) ? 1 : 0
         };
         for (const e of parts) {
           const m = N.partMatrix(N.M4.create(), base, e, st, parts);
@@ -1064,7 +1066,9 @@
           t: this.time,
           move: Math.min(1, Math.hypot(p.vx, p.vz) / 5),
           fly: !!p.formDef.fly && !p.grounded,
-          air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0
+          air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0,
+          // the form decides, not the water: a human in the lake wades, a frog kicks
+          swim: (p.inWater && p.formDef.swim) ? 1 : 0
         };
         for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), {});
       }

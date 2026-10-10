@@ -429,6 +429,9 @@
       this.flyY = y;
       // the same three signals the player carries, for the same reason
       this.airAmt = 0; this.crouch = 0; this.squash = 0; this.hopT = Math.random() * 1.2; this.wind = 0;
+      // and the fourth: the draw needs to know whether this body is moving
+      // through water, because a body built for water kicks instead of walking
+      this.inWater = false;
     }
     attitudeTo(formId) {
       const a = this.sp.attitude || {};
@@ -506,6 +509,7 @@
 
       // movement
       const inWater = world.liquidAt(Math.floor(this.x), Math.floor(this.y + 0.2), Math.floor(this.z));
+      this.inWater = inWater;      // the draw reads it: a body built for water kicks, it does not run
       const dx = tgtX - this.x, dz = tgtZ - this.z;
       const d = Math.hypot(dx, dz);
       let spd = 0;
