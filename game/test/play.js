@@ -410,22 +410,66 @@ const path = require('path');
       g.world.liquidAt(Math.floor(c.x), Math.floor(c.y + 0.2), Math.floor(c.z))).length;
     // home is picked within `spread` of the landmark and a wander target within
     // `spread` of home, so the honest bound is twice the spread
-    const far = () => herd().filter(c =>
-      Math.hypot(c.x - tower[0], c.z - tower[1]) > sp.spread * 2 + 1).length;
-    const was = { form: p.form, x: p.x, y: p.y, z: p.z };
+    let maxFar = 0;
+    const far = () => {
+      let n = 0;
+      for (const c of herd()) {
+        const d = Math.hypot(c.x - tower[0], c.z - tower[1]);
+        if (d > maxFar) maxFar = d;
+        if (d > sp.spread * 2 + 1) n++;
+      }
+      return n;
+    };
+    // standing in the field is not free (see the sting step), and this step
+    // parks the player in it for 90 seconds, so the body is put back after
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital };
     const one = herd()[0];
     const atts = [null, 'owlberry', 'frogpear', 'bruinfig'].map((f) => {
       p.form = f; p.x = one.x + 1.5; p.y = one.y; p.z = one.z;
       return one.attitudeTo(f);
     });
     const before = { n: herd().length, wet: wet(), far: far() };
-    // 90 seconds of game time, animals only: enough for a hundred wander targets,
-    // and every one of those targets has to be water
-    for (let i = 0; i < 1800; i++) for (const c of herd()) c.update(0.05, p, g.world, g);
+    const where = herd().map(c => [c.x, c.z]);
+    // five minutes of game time, animals only: enough for several hundred wander
+    // targets, and every one of those targets has to be water. Long, because the
+    // way an aquatic animal used to escape the lake was a slow one -- it took the
+    // field a while to walk one of its own into the tower wall
+    for (let i = 0; i < 6000; i++) for (const c of herd()) c.update(0.05, p, g.world, g);
+    /* The exact way an aquatic animal used to walk out of the lake: home on the
+       far side of the sunken tower, the tower in between. The homeward step is
+       tested like every other step now; unchecked, it dragged the animal through
+       the brick, and the altitude code -- finding no water in that column --
+       left it standing on the tower's roof for good. */
+    const stuck = herd()[0];
+    const keep = { x: stuck.x, y: stuck.y, z: stuck.z, homeX: stuck.homeX, homeZ: stuck.homeZ };
+    stuck.x = 63.2; stuck.y = 13; stuck.z = 114.6;         // wet, just off the tower wall
+    stuck.homeX = 69.5; stuck.homeZ = 121.5;               // wet, on the far side
+    stuck.tx = stuck.homeX; stuck.tz = stuck.homeZ;        // head home the whole way:
+    stuck.pause = 1e9;                                     // the wander roll is not the thing under test
+    const startD = Math.hypot(stuck.x - stuck.homeX, stuck.z - stuck.homeZ);
+    let dryFrames = 0, solidFrames = 0, swum = 0, px = stuck.x, pz = stuck.z;
+    for (let i = 0; i < 1800; i++) {      // 90 s: a jellyfish crosses 0.34 m of
+      stuck.update(0.05, p, g.world, g);  // water per second, so give it a minute
+      if (!g.world.liquidAt(Math.floor(stuck.x), Math.floor(stuck.y + 0.2), Math.floor(stuck.z))) dryFrames++;
+      if (g.world.solidAt(Math.floor(stuck.x), Math.floor(stuck.y), Math.floor(stuck.z))) solidFrames++;
+      swum += Math.hypot(stuck.x - px, stuck.z - pz); px = stuck.x; pz = stuck.z;
+    }
+    /* Not "it arrives": the lake's water is one basin, but the sunken tower and
+       the island rock leave a dead-end pocket on its north side, and nothing in
+       this game path-finds. What has to be true is that the animal keeps
+       swimming, stays in the water and never ends up inside rock. */
+    const swumM = +swum.toFixed(1);
+    void startD;
+    Object.assign(stuck, keep);
     const after = { wet: wet(), far: far() };
+    // an animal that cannot leave the water can also be frozen by it: every
+    // step it tries runs into the tower, so "still wet" alone is not alive
+    const drift = herd().map((c, i) => Math.hypot(c.x - where[i][0], c.z - where[i][1])).sort((a, b) => a - b);
     Object.assign(p, was);
     return {
       n: before.n, wet: before.wet, far: before.far, after, atts,
+      drift: +drift[Math.floor(drift.length / 2)].toFixed(1),
+      dryFrames, solidFrames, swumM, maxFar: +maxFar.toFixed(1),
       bears: !!sp.fruit, worn: N.FRUITS.some(f => f.creature === 'jelly'),
       name: N.disp(sp), lore: N.dexOf(sp)
     };
@@ -435,9 +479,58 @@ const path = require('path');
   check('the lamps never leave the water',
     lamps.wet === lamps.n && lamps.after.wet === lamps.n, lamps);
   check('the lamp field is the sunken tower, not the whole lake',
-    lamps.far === 0 && lamps.after.far === 0, lamps);
+    lamps.far === 0 && lamps.after.far === 0 && lamps.maxFar <= 9, lamps);
   check('the lamps do not read bodies', lamps.atts.every(a => a === 'ignore'), lamps);
   check('the lamps have a dex entry', lamps.name.length > 0 && lamps.lore.length > 20, lamps);
+  check('the lamps still get around the tower', lamps.drift > 1, lamps);
+  check('a lamp is never dragged through the tower out of the water',
+    lamps.dryFrames === 0 && lamps.solidFrames === 0, lamps);
+  check('a lamp against the tower is still swimming', lamps.swumM > 3, lamps);
+
+  // 10c. the lamps sting. This is measured rather than asserted loosely, because
+  //      the number is the design: the field has to cost something to loiter in
+  //      and must not kill the 18-second dive to the tower sills, which is the
+  //      one fruit the lake gives you before it asks anything (docs/en/02 s4).
+  const sting = await step('sting', () => {
+    const g = window.game, p = g.player, N = window.FRUTARIA;
+    const herd = g.creatures.filter(c => c.sp.id === 'jelly');
+    const mid = (k) => herd.reduce((a, c) => a + c[k], 0) / herd.length;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
+    const run = (form, y, secs) => {
+      p.form = form; p.vital = 10; p.x = mid('x'); p.y = y; p.z = mid('z');
+      g.log.length = 0;
+      g._stungAt = undefined;                       // the throttle is per wade, not per run
+      let frames = 0;
+      for (let i = 0; i < secs / 0.05 && p.vital > 0; i++) {
+        for (const c of herd) c.update(0.05, p, g.world, g);
+        frames++;
+      }
+      const warn = N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.jelly) });
+      // the death line is 'bad' too, so the warning is matched by text
+      return {
+        lost: +(10 - p.vital).toFixed(2), secs: +(frames * 0.05).toFixed(1),
+        warns: g.log.filter(l => l.text === warn).length,
+        line: (g.log.filter(l => l.text === warn)[0] || {}).text || ''
+      };
+    };
+    const surface = mid('y');
+    const human = run(null, surface, 18);
+    const frog = run('frogpear', surface, 18);
+    const sill = run(null, 9, 18);            // the tower sills the frog pear hangs on
+    Object.assign(p, was);
+    return {
+      rate: N.CREATURE_BY_ID.jelly.sting, human, frog, sill, surface: +surface.toFixed(1),
+      immune: N.FRUITS.filter(f => f.form.poisonImmune).map(f => f.id),
+      cause: N.t('log.causeSting'),
+      warnText: N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.jelly) })
+    };
+  });
+  check('the lamps sting a body that is not immune', sting.human.lost > 1, sting);
+  check('the lamps do not sting the body the lake already gave you', sting.frog.lost === 0, sting);
+  check('the dive to the tower sills stays out of reach of the lamps', sting.sill.lost === 0, sting);
+  check('the sting warning names the body that answers it', /雨蛙|frog/.test(sting.warnText), sting);
+  check('the sting warns once, not every frame', sting.human.warns >= 1 && sting.human.warns <= 2, sting);
+  check('exactly one body shrugs the sting off', sting.immune.length === 1 && sting.immune[0] === 'frogpear', sting);
 
   // 10b. intimidation belongs to the body, and one's own species is exempt
   const intimidate = await step('intimidation', () => {

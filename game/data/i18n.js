@@ -199,6 +199,8 @@
       'log.causeCold': '失温',
       'log.coldIn': '北岭的冷开始咬人了——越高越狠。变成棕熊就感觉不到这个。',
       'log.coldOff': '冷松开了。',
+      'log.causeSting': '水母蜇伤',
+      'log.stung': '{n}的触须蜇进来了——变成雨蛙就不怕它。',
       'log.nameAsk': '给自己起个名字（留空 = 不要名字）：',
       'log.nameTooLong': '名字最多 {n} 个字。',
       'log.langTo': '界面语言：{n}'
@@ -378,6 +380,8 @@
       'log.causeCold': 'exposure',
       'log.coldIn': 'The ridge cold starts biting — harder the higher you go. A bear body never feels this.',
       'log.coldOff': 'The cold lets go.',
+      'log.causeSting': 'a jellyfish sting',
+      'log.stung': '{n} tentacles sting you — only a frog body shrugs this off.',
       'log.nameAsk': 'Choose a name (leave empty = no name):',
       'log.nameTooLong': 'A name is {n} characters at most.',
       'log.langTo': 'Interface language: {n}'

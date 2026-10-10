@@ -94,14 +94,17 @@ sit here looking implemented while nothing reads it.
 | `stealth` | creature alert-radius multiplier | owl 0.45 / frog 0.5 = hard to spot | live |
 | `aura` | intimidation radius | bear 8 = small animals scatter as you approach | live |
 | `coldImmune` | the altitude cold of the northern ridge does not bite | bear | live |
+| `poisonImmune` | the lamp jellyfish sting does not bite | only the frog | live |
 | `step` | auto step-up height in metres | bear 1.1 = walks up any stair | live |
 | `fov` | field of view | frog 100 / bear 68 | live |
 | `hand` | first-person hand model | hand/talon/web/claw | live |
 
-One of those fields is a switch rather than a number: `coldImmune` changes what
-can hurt you at all, not how much. It is also the one the valley advertises
-hardest — the Ashscale text promises that a bear body shrugs off the cold. That
-is a rule the code runs now.
+Two of those fields are switches rather than numbers: `coldImmune` and
+`poisonImmune` change what can hurt you at all, not how much. Each one is the
+animal-shaped answer to a place — the ridge for the cold, the lamps of Mirrorlake
+for the sting — and the log line that reports a sting says the answer out loud
+("only a frog body shrugs this off"). The Ashscale text has always advertised
+`coldImmune` hardest; both are rules the code runs now.
 
 `tongue` used to sit on this table (frog, 4 m of plucking reach). It is gone: the
 frog's niche is swimming and breathing water, and a second way of reaching

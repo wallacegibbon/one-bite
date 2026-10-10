@@ -60,7 +60,7 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 **Three design intentions you can read off the matrix:**
 
 1. **The diagonal is all `calm`** — becoming that species is the pass. It is not a disguise: the grove, the lake and the ridge read the body.
-2. **No row contains `hostile`** — there are no monsters in the valley. Nothing here attacks the player on its own initiative any more: the two animals the bear used to hunt are gone, and what is left of danger is the weather, the water, the height, the cold on the ridge, and what your own body cannot do. All of it comes from the ground and from the body — none of it comes from what an animal intends.
+2. **No row contains `hostile`** — there are no monsters in the valley. Nothing here attacks the player on its own initiative any more: the two animals the bear used to hunt are gone, and what is left of danger is the weather, the water, the height, the cold on the ridge, and what your own body cannot do. All of it comes from the ground and from the body — none of it comes from what an animal intends. The lamps of Mirrorlake sting, and that is the same kind of danger rather than an exception to it: the animal does not react to you at all, it simply is stinging, the way the ridge simply is cold — and the answer is a body, not a weapon.
 3. **Frogs fear owls, owls are curious about frogs** — a complete predator chain you can read straight out of the table: whatever you become, you receive both that species' pass and that species' predator. And an owl leaves the moment a bear walks in.
 
 ## 3. Creature table
@@ -78,6 +78,23 @@ The lamps are the one species placed by a **landmark** instead of a zone: `at: '
 
 **Why only 3 wearable species**: every species you can wear costs a fruit, a habitat, a row in the attitude matrix, and a whole set of "where can this body go" gates. A 3 × 4 matrix can be read at a glance; a 14 × 15 matrix has to be memorised. Once the setting was simplified, **the readability of the gates became content in its own right**. The lamps are the deliberate exception that prices the rule: a fruitless species still costs a model, a habitat, a row in the matrix and a place in the world, but it buys **no gate at all** — it is the cheapest animal to add and the least interesting one. It is in the valley to be light in the water, not to be a door.
 
+It has one effect on the player, and the effect is not a body: **it stings** —
+`sting: 0.25` on the animal record, vitality per second for every lamp you are
+standing inside. Contacts stack, because a field is a field: the middle costs
+more than the edge. The immunity sits on the **frog** body — the body this lake
+already gave you is the body its lamps are lit for — and the log line that
+reports a sting names the answer out loud. The lamps hang a metre or two under
+the surface, so the breath-hold dive to the tower sills stays out of reach of
+them.
+
+They are also the first animal to actually use `locomotion: 'water'`, and that
+mode had to be made honest: an animal that cannot leave the water is placed and
+moved by the **water column** — a column has to hold at least two blocks of
+water for the animal to be in it, the same test the spawn code makes — and it
+hovers a metre or two under the surface without ever latching onto whatever is
+above it. The sunken tower stands inside the lamp field, so the mode also had to
+learn to swim **round** a wall rather than through one.
+
 **The valley still holds animals it will not give you.** The places kept their names — the Deep Grove, the deer paths, Echo Hollow, the mounds in the Old Orchard — and the animals that made those names are not coming back until each one arrives with a fruit, a niche and a door only it can open. Until then they are absence, which is what the valley is made of.
 
 ## 4. Codex text (implemented in game)
@@ -87,7 +104,7 @@ One entry per species, always written as "verifiable fact + unverifiable rumour"
 - **Screech Owl**: by day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and form Lanternrow's volunteer patrol.
 - **Mirrorlake Frog**: after rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.
 - **Brown Bear**: the bears of the northern ridge dig "fruit cellars" — they learned to bury fruit and eat it slowly long before humans did. They also tear down human cellar trees: a bear needs no backpack.
-- **Lamp Jellyfish**: the lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; swim through them and they treat you as water. Nobody knows why they are lit.
+- **Lamp Jellyfish**: the lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; swim through them and they treat you as water, which your body is not. Nobody knows why they are lit.
 
 ## 5. Magic plants (not creatures, but spread by creatures)
 

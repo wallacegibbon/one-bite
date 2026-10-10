@@ -579,6 +579,16 @@
       this.damage(dt * 0.5, N.disp(c.sp));
       if (Math.random() < dt * 2) this.logMsg(N.t('log.chased', { n: N.disp(c.sp) }), 'bad');
     }
+    /* The lamp jellyfish is not chasing anyone -- you are standing inside it.
+       The warning is throttled so wading through a field of ten does not fill
+       the log, and it says what the answer is, because the answer is a body. */
+    onSting(c, dt) {
+      this.damage(dt * c.sp.sting, N.t('log.causeSting'));
+      if (this._stungAt === undefined || this.time - this._stungAt > 12) {
+        this._stungAt = this.time;
+        this.logMsg(N.t('log.stung', { n: N.disp(c.sp) }), 'bad');
+      }
+    }
     onVeil(p) {
       this.veilWarn = (this.veilWarn || 0) + 1;
       if (this.veilWarn % 40 === 1) this.logMsg(N.t('log.veil'), 'warn');

@@ -12,6 +12,11 @@
  *  at/spread : spawn at a named landmark of the habitat zone (not anywhere in
  *              the zone) within `spread` metres -- the lamp field is the sunken
  *              tower's outline, so it is placed by the tower, not by the lake.
+ *  sting     : vitality per second spent inside this animal, for touching it.
+ *              A sting is not an attack -- no animal in the valley hunts the
+ *              player. It is a property of the animal's body, the way the ridge
+ *              cold and the water are, and `poisonImmune` on a body shrugs it
+ *              off. Contacts stack: the middle of a field is not its edge.
  *  active    : active period; day / night / both / dusk
  *  dex/dexEn: the codex entry, always "a verifiable fact + an unverifiable rumour"
  * ========================================================================== */
@@ -52,13 +57,16 @@
       /* niche: open water -- drifting light. The one species in the valley that
          bears no fruit: it is not a body you can wear, it is the lamp the lake
          keeps. It never leaves the water (locomotion 'water'), and nobody can
-         wear it, so no other animal has an opinion about it. */
+         wear it, so no other animal has an opinion about it. It stings, which is
+         not an attitude: it does not react to you at all, it simply is stinging,
+         the way the ridge simply is cold. */
       id: 'jelly', cn: '灯水母', en: 'Lamp Jellyfish', model: 'jelly', scale: 0.16,
       habitat: ['mirrorlake'], at: 'tower', spread: 4, active: 'both',
       locomotion: 'water', speed: 0.8, swimSpeed: 2.2, alert: 4, herd: 10,
+      sting: 0.25,
       attitude: { self: 'calm', default: 'ignore' },
-      dex: '镜湖的灯。水母田的位置就是湖底沉塔的轮廓——从水面看下去，塔在发光。它们不追人，也不躲人；你从它们中间游过去，它们只当你是水。没人知道它们为什么亮着。',
-      dexEn: 'The lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; swim through them and they treat you as water. Nobody knows why they are lit.'
+      dex: '镜湖的灯。水母田的位置就是湖底沉塔的轮廓——从水面看下去，塔在发光。它们不追人，也不躲人；你从它们中间游过去，它们只当你是水，而你的身体不是。没人知道它们为什么亮着。',
+      dexEn: 'The lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; swim through them and they treat you as water, which your body is not. Nobody knows why they are lit.'
     }
   ];
 

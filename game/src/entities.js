@@ -384,6 +384,18 @@
     for (let y = from; y > 0; y--) if (w.solidAt(x, y, z)) return y + 1;
     return 1;
   }
+  /* Whether a water animal may be in this column at all -- the same test the
+     spawn code makes: the column has to hold at least two blocks of water, so
+     there is somewhere to hover. Testing one cell at the animal's feet instead
+     rejects an animal that bobs, and testing only "is there water anywhere"
+     lets it climb a one-block shelf, stand above the surface, and walk out of
+     the lake on its own feet. Returns the water top, or -1 for "not water". */
+  function waterColumn(w, x, z) {
+    const wt = waterTop(w, Math.floor(x), Math.floor(z), w.h - 1);
+    if (wt < 0) return -1;
+    const gy = groundY(w, Math.floor(x), Math.floor(z), wt + 2);
+    return wt + 1 - gy >= 2 ? wt : -1;
+  }
   function waterTop(w, x, z, from) {
     for (let y = from; y >= 0; y--) if (w.liquidAt(x, y, z)) return y;
     return -1;
@@ -477,7 +489,7 @@
           for (let tries = 0; tries < 8; tries++) {
             tx = this.homeX + (Math.random() - 0.5) * 2 * r;
             tz = this.homeZ + (Math.random() - 0.5) * 2 * r;
-            if (!this.isAquatic() || world.liquidAt(Math.floor(tx), Math.floor(this.y), Math.floor(tz))) break;
+            if (!this.isAquatic() || waterColumn(world, tx, tz) >= 0) break;
           }
           this.tx = tx; this.tz = tz;
         }
@@ -514,12 +526,54 @@
         const nz = this.z - Math.cos(this.yaw) * spd * dt;
         const mx = nx, mz = nz;
         if (this.isAquatic()) {
-          if (world.liquidAt(Math.floor(mx), Math.floor(this.y), Math.floor(mz))) { this.x = mx; this.z = mz; }
-          else {
-            // out of the water: swim home, and home is wherever it was born --
-            // in the lake. The lake does not have to be named for it to get back.
+          /* An animal that cannot leave the water is moved by the water column,
+             not by the single cell at its feet: it bobs a metre up and down
+             while it hovers, and a one-cell test rejects most of its steps --
+             and then rejects the way home as well, which is how one of them
+             ended up parked against the sunken tower for the rest of the day. */
+          const wet = (x, z) => waterColumn(world, x, z) >= 0;
+          if (wet(mx, mz)) { this.x = mx; this.z = mz; }
+          else if (inWater) {
+            /* In the water, and something dry is in the way: turn back for home,
+               and test that way the same way. The sunken tower stands in the
+               middle of the lamp field, and an unchecked homeward step used to
+               drag a jellyfish through the tower wall -- the altitude code then
+               finds no water in that column and leaves the animal standing on
+               the tower's roof, out of the lake for good. */
             const ax = this.homeX - this.x, az = this.homeZ - this.z, al = Math.hypot(ax, az) || 1;
-            this.x += ax / al * spd * dt; this.z += az / al * spd * dt;
+            const hx = this.x + ax / al * spd * dt, hz = this.z - az / al * spd * dt;
+            /* A slide only counts if it actually moves: pressed flat against a
+               wall the animal's homeward step along the wall is zero, and taking
+               that branch anyway (the cell beside it is wet, so the test passes)
+               is how it used to sit on the tower's north face for the rest of
+               the run. */
+            const canX = Math.abs(hx - this.x) > 1e-4 && wet(hx, this.z);
+            const canZ = Math.abs(hz - this.z) > 1e-4 && wet(this.x, hz);
+            if (canX && (Math.abs(ax) >= Math.abs(az) || !canZ)) this.x = hx;
+            else if (canZ) this.z = hz;
+            else {
+              /* The corner: neither slide goes anywhere, so step round the
+                 obstacle -- of the four directions that are wet, take the one
+                 that closes on home most. Without this an animal whose home is
+                 straight through the tower presses its nose to the wall for the
+                 rest of the run. */
+              let bx = null, bz = null, best = Math.hypot(ax, az);
+              for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nx = this.x + ox * spd * dt, nz = this.z + oz * spd * dt;
+                if (!wet(nx, nz)) continue;
+                const d = Math.hypot(this.homeX - nx, this.homeZ - nz);
+                if (d < best - 1e-6) { best = d; bx = nx; bz = nz; }
+              }
+              if (bx === null) { this.tx = this.x; this.tz = this.z; this.pause = 0.5; }
+              else { this.x = bx; this.z = bz; }
+            }
+          } else {
+            // already out of the water, which should not happen: take the
+            // shortest way back that is not through rock, and let the altitude
+            // sit on whatever it is standing on until the lake takes it back
+            const ax = this.homeX - this.x, az = this.homeZ - this.z, al = Math.hypot(ax, az) || 1;
+            const hx = this.x + ax / al * spd * dt, hz = this.z - az / al * spd * dt;
+            if (!world.solidAt(Math.floor(hx), Math.floor(this.y), Math.floor(hz))) { this.x = hx; this.z = hz; }
           }
         } else {
           const gy = groundY(world, Math.floor(mx), Math.floor(mz), Math.floor(this.y + 3));
@@ -542,8 +596,12 @@
         this.airAmt = sleeping ? 0 : (this.y > gy0 + 0.4 ? 1 : 0);
         this.groundY = gy0;
       } else if (this.isAquatic()) {
-        const wt = waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1);
-        const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
+        const wt = waterColumn(world, this.x, this.z);          // -1: no water to hover in
+        /* Search down from the animal's own feet, not from above its head: a
+           tree standing in shallow water is solid all the way up, and a search
+           that starts over the body lets the animal latch onto the trunk and
+           climb it out of the lake, block by block, into the sky. */
+        const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y));
         /* Hover a metre or two under the surface -- but never through the
            bottom. The lake is only two blocks deep at its edges, and a fixed
            depth below the surface puts an animal inside the lakebed there, which
@@ -597,6 +655,12 @@
       // contact effects
       if (dp < (this.sp.scale || 0.2) * 8 + 0.8) {
         if (this.state === 'chase') game.onCreatureTouch(this, dt);
+        /* A sting is not an attack. Nothing in the valley hunts the player; the
+           lamp jellyfish simply is stinging, the way the ridge simply is cold,
+           and a body that is immune to it stands in the middle of the field.
+           Contacts stack, because a field is a field: the middle of it costs
+           more than its edge. */
+        else if (this.sp.sting && !pl.formDef.poisonImmune) game.onSting(this, dt);
         else if (this.sp.aura && (pl.formDef.aura || 0) > 0) { /* they ignore each other */ }
       }
       // intimidation: the player's form aura makes lesser creatures flee.

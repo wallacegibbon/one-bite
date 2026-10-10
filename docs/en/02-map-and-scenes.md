@@ -128,7 +128,7 @@ Radius 34, deepest at the centre.
 
 - **Sunken Tower** (66,118): top at y12 (two blocks under the surface), base at y5. The window sills carry **frog pear**. Picking it requires breathing underwater.
 - **Frogshall** (92,120): y9, a ring of sunken huts. The frogs' place; after rain their chorus drowns the bell.
-- **The lamps**: ten jellyfish sit on the outline of the tower (`mirrorlake.tower` in `data/world.js` — the same constant `worldgen.js` uses to build the tower), hovering about a metre under the surface. They are the only self-lit models in the game, so the lake carries a light of its own at night and the tower reads as lit from the shore. They bear no fruit, are not a body you can wear, and do not read bodies at all (03 §3).
+- **The lamps**: ten jellyfish sit on the outline of the tower (`mirrorlake.tower` in `data/world.js` — the same constant `worldgen.js` uses to build the tower), hovering about a metre under the surface. They are the only self-lit models in the game, so the lake carries a light of its own at night and the tower reads as lit from the shore. They bear no fruit, are not a body you can wear, and do not read bodies at all (03 §3). They sting: 0.25 vitality a second for every lamp you are inside, and the lamps hang a metre or two under the surface — so loitering at the top of the tower costs, while the breath-hold dive to the sills where the **frog pear** hangs stays free. The answer to the lamps is the frog body, and the warning says so.
 
 ### 5.6 The Deep Grove and the Old Orchard
 
