@@ -1128,6 +1128,50 @@ const path = require('path');
   check('a cellar tree planted at your feet is planted beside you',
     fit.treeAtYourFeet && fit.treeAtYourFeet.grew && fit.treeAtYourFeet.fits && fit.treeAtYourFeet.slid > 0, fit.treeAtYourFeet);
 
+  /* 10m. the lake has a colour from the shore. The water pass is the only
+     blended draw in the game, and the world shader used to divide the alpha
+     byte by 255 a second time after the attribute pointer had already
+     normalized it, which left the surface 0.4% opaque: standing outside
+     Mirrorlake you saw no lake at all, and the only water with a colour was the
+     fog you breathe with your head under. Nothing else in the build could see
+     it, because every other test reads the world and this one has to read the
+     frame: draw, draw again with the water meshes switched off, and the two
+     frames must differ -- and differ in the direction of the water's own blue. */
+  const frame = await step('lakeHasColour', () => {
+    const g = window.game, W = g.world, R = g.R, p = g.player, gl = R.gl;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame };
+    // high above the south rim, looking down at the water: the lens is outside
+    // the lake, which is the whole point of the shot
+    p.form = null; p.x = 66.5; p.y = 40; p.z = 95.5; p.vy = 0; p.yaw = Math.PI; p.pitch = -0.7;
+    g.mode = 'play'; g.time = 210; g.updateEnv();
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const grab = () => { const px = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
+    g._camFrame = null; g.render();
+    const wet = grab();
+    const off = [];
+    for (let ci = 0; ci < W.chunks.length; ci++) { const m = W.chunks[ci]; if (m && m[2]) { off.push([ci, m[2].count]); m[2].count = 0; } }
+    g._camFrame = null; g.render();
+    const dry = grab();
+    for (const [ci, c] of off) W.chunks[ci][2].count = c;
+    let changed = 0, bluer = 0;
+    for (let i = 0; i < wet.length; i += 4) {
+      const d = Math.abs(wet[i] - dry[i]) + Math.abs(wet[i + 1] - dry[i + 1]) + Math.abs(wet[i + 2] - dry[i + 2]);
+      if (d <= 6) continue;
+      changed++;
+      if (wet[i + 2] - wet[i] > 20 && dry[i + 2] - dry[i] <= 20) bluer++;
+    }
+    // the water pass is still one blended draw per chunk, not one per block
+    const waterTris = W.chunks.reduce((a, m) => a + (m && m[2] ? m[2].count / 3 : 0), 0);
+    g._camFrame = null; g.render();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    return { px: w * h, changed, bluer, share: +(changed / (w * h)).toFixed(3), waterTris };
+  });
+  check('the lake is drawn at all', frame.waterTris > 1000, frame);
+  check('the water changes the frame from outside the lake', frame.changed > 5000, frame);
+  check('and it changes it towards the colour of water', frame.bluer > 5000, frame);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

@@ -995,14 +995,17 @@
           R.drawMesh(e.mesh, m, {});
         }
       }
-      // water
+      // water. The block table owns the colour (the mesher uploads bd.c) and it
+      // owns the alpha too: the number used to be written down a second time
+      // here, so changing the water meant remembering to change two files
+      const wAlpha = N.BLOCKS[N.WATER].alpha;
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const ci = cz * W.cx + cx;
         const m = W.chunks[ci];
         if (!m || !m[2]) continue;
         const mx = cx * W.cs + 8, mz = cz * W.cs + 8;
         if (!R.visible(mx, W.h / 2, mz, 15)) continue;
-        R.drawMesh(m[2], IDENT, { blend: true, alpha: 0.62, wave: true });
+        R.drawMesh(m[2], IDENT, { blend: true, alpha: wAlpha, wave: true });
       }
       // particles
       this.particles.draw(R);

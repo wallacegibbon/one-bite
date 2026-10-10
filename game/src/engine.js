@@ -147,7 +147,10 @@
     float fog = 1.0 - exp(-uFogDen*uFogDen*d*d);
     vFog = fog * (1.0 - emis*0.75);
     float lit = mix(max(uDay, 0.10), 1.25 + uEmisBoost, emis);
-    vCol = vec4(aCol.rgb * aData.x * lit, aCol.a/255.0);
+    // aCol is uploaded with normalized=TRUE, so aCol.a is already 0..1: dividing
+    // it by 255 again made every blended surface 0.4% opaque, and the lake had no
+    // colour at all until your head went under and the fog did the colouring
+    vCol = vec4(aCol.rgb * aData.x * lit, aCol.a);
   }`;
   const FS_WORLD = `
   precision mediump float;
