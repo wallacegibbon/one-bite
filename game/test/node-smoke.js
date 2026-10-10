@@ -135,3 +135,23 @@ console.log('果窖箱(136,21,134) =', chest, chest === 78 ? 'OK' : '!!');
 // water check
 let water = 0; for (let i = 0; i < w.blocks.length; i++) if (w.blocks[i] === 5) water++;
 console.log('水方块', water);
+
+/* The sunken tower: worldgen declares three rows of windows and then, a few lines
+   later, hung the frog pear on the sills -- at the window cells, so two of the
+   three rows were silently replaced by fruit and the tower came out with one
+   window. Nothing in the suite looked at a block the generator had overwritten,
+   so it shipped. This asks the general question for this one structure: is every
+   cell the tower declares still the block it was declared to be? */
+{
+  const [tx, tz] = F.ZONE_BY_ID.mirrorlake.tower;
+  const faces = [[-3, 0], [3, 0], [0, -3], [0, 3]];
+  const want = [];
+  for (const [dx, dz] of faces) {
+    for (const y of [7, 10, 13]) want.push([tx + dx, y, tz + dz, 21, 'tower window']);
+    for (const y of [9, 12]) want.push([tx + dx, y, tz + dz, F.FRUIT_BLOCK_REV['frogpear'], 'frog pear sill']);
+  }
+  const wrong = want.filter(([x, y, z, b]) => w.get(x, y, z) !== b)
+    .map(([x, y, z, b, what]) => `${what} (${x},${y},${z}) wants ${b} got ${w.get(x, y, z)}`);
+  console.log('沉塔窗/窗台', want.length, '格', wrong.length ? '!! ' + wrong.join('; ') : 'OK');
+  if (wrong.length) process.exitCode = 1;
+}

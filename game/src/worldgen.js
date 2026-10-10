@@ -340,9 +340,13 @@
     box(tx - 3, 6, tz - 3, tx + 3, 15, tz + 3, 12, true);
     for (let y = 7; y <= 14; y += 3) { set(tx - 3, y, tz, 21); set(tx + 3, y, tz, 21); set(tx, y, tz - 3, 21); set(tx, y, tz + 3, 21); }
     set(tx, 16, tz, 12); set(tx, 17, tz, 12);
+    /* The frog pear hangs on the **sills**, one block under a window, not in the
+       window: written at y10/y13 it overwrote the glass the line above had just
+       put there, and the tower the docs describe -- three rows of windows, the
+       glow of the field showing through them -- came out with one row at y7. */
     for (const [dx, dz] of [[-3, 0], [3, 0], [0, -3], [0, 3]]) {
-      set(tx + dx, 10, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
-      set(tx + dx, 13, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
+      set(tx + dx, 9, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
+      set(tx + dx, 12, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
     }
     // sunken huts: a ring of them on the lakebed, now the frogs' place
     for (const [hx, hz] of [[90, 120], [96, 116], [94, 124], [88, 126]]) {

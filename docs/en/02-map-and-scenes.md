@@ -82,7 +82,7 @@ The valley is not a floor, it is four:
 | **Ground** | 15–24 | Forest, town, keep, orchard | Walking |
 | **Underwater** | 0–14 | Mirrorlake, sunken tower, sunken huts | Only the frog (skin breathing) |
 
-**Mirrorlake depth**: surface y14, bottom y5 — nine blocks down. A human holds breath for 18 seconds, exactly enough to reach the tower windows and come back up, not enough to pick a fruit off the sill. That is the whole argument for "become the frog first": in this water exactly one animal breathes for you.
+**Mirrorlake depth**: surface y14, and the lakebed is a slope rather than a floor — the water stands anywhere from **1 to 10 blocks** deep (measured over all 1,856 water columns inside the circle: 44% of them are 4 blocks or less, the deepest at (79,92) where the water runs y5..y14). A human holds breath for 18 seconds, exactly enough to reach the tower windows and come back up, not enough to pick a fruit off the sill. That is the whole argument for "become the frog first": in this water exactly one animal breathes for you.
 
 **The ridge is not on that ladder.** Ashscale's own ground is y33–45, above the canopy, and its cold starts at y26 — you are already cold before you get near the top, and it reaches its full bite at y36, which is where every bruin fig grows. A human can cross the ridge and come back with a fig if it hurries; a bear body simply is not cold.
 
@@ -126,7 +126,7 @@ Three layers of tunnel, about 120 blocks long. The id is still `batcave`, and th
 
 Radius 34, deepest at the centre.
 
-- **Sunken Tower** (66,118): top at y12 (two blocks under the surface), base at y5. The window sills carry **frog pear**. Picking it requires breathing underwater.
+- **Sunken Tower** (66,118): a 7×7 shell from **y6 to y15** with a spire at **y16/y17**, so the top of the ruin stands three blocks **above** the water line — drowned to the shoulders, not under it. Windows on all four faces at **y7/y10/y13**, and the **frog pear** hangs on the sills one block under two of them (**y9/y12**). Picking it requires breathing underwater.
 - **Frogshall** (92,120): y9, a ring of sunken huts. The frogs' place; after rain their chorus drowns the bell.
 - **The lamps**: ten jellyfish sit on the outline of the tower (`mirrorlake.tower` in `data/world.js` — the same constant `worldgen.js` uses to build the tower), hovering about a metre under the surface. They are the only self-lit models in the game, so the lake carries a light of its own at night and the tower reads as lit from the shore. They bear no fruit, are not a body you can wear, and do not read bodies at all (03 §3). They sting: 0.25 vitality a second for every lamp you are inside, and the lamps hang a metre or two under the surface — so loitering at the top of the tower costs, while the breath-hold dive to the sills where the **frog pear** hangs stays free. The answer to the lamps is the frog body, and the warning says so.
 
