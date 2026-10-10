@@ -439,7 +439,6 @@
   }
 
   N.MODELS = MODELS;
-  N.HANDS = HANDS;
   N.buildModelMeshes = buildModelMeshes;
   N.buildHandMesh = buildHandMesh;
   N.partMatrix = partMatrix;

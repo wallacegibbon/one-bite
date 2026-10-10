@@ -528,7 +528,6 @@
   }
 
   N.generate = generate;
-  N.terrainH = (x, z) => terrainH(x, z);
   N.spawn = { x: 136.5, y: 22, z: 128.5 };
 
 })(window.FRUTARIA = window.FRUTARIA || {});

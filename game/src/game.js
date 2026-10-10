@@ -111,7 +111,6 @@
       // which epithet the valley has already been heard using. This is read off
       // the quest list, so it has to be taken after the quests exist.
       this.epithetSeen = this.epithet();
-      this.progressStart = 0;
       this.meshTotal = this.world.cx * this.world.cz;
       this.meshDone = 0;
       this.logMsg(N.t('log.welcome'), 'good');

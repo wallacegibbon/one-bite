@@ -5,7 +5,7 @@
   const MB = N.MeshBuilder;
 
   /* ------------------------- block table ------------------------- */
-  // c=[r,g,b]  ct=top colour  cb=bottom colour  solid=collides  opaque=culls faces  liquid  alpha  emis  micro=[[x,y,z,w,h,d]...]
+  // c=[r,g,b]  ct=top colour  solid=collides  opaque=culls faces  liquid  alpha  emis  micro=[[x,y,z,w,h,d]...]
   const B = [];
   function def(id, o) { B[id] = Object.assign({ id, solid: true, opaque: true, alpha: 1, emis: 0, c: [0.8, 0.8, 0.8] }, o); }
 
@@ -80,7 +80,7 @@
   def(78, { cn: '果窖箱', store: true, c: [0.44, 0.31, 0.19], ct: [0.66, 0.48, 0.24] });
   def(79, { cn: '窖树', c: [0.40, 0.31, 0.21] });
 
-  const AIR = 0, WATER = 5;
+  const WATER = 5;
 
   /* The blocks the game itself places and breaks. A block number is what a save
      file stores, so it is named once here rather than written out at every call
@@ -192,7 +192,7 @@
               }
               continue;
             }
-            const col = bd.c, ct = bd.ct || col, cb = bd.cb || col;
+            const col = bd.c, ct = bd.ct || col;
             for (let fi = 0; fi < 6; fi++) {
               const f = FACES[fi];
               const nx = x + f.n[0], ny = y + f.n[1], nz = z + f.n[2];
@@ -215,7 +215,7 @@
                 const lvl = s1 + s2 + ((s1 && s2) ? 1 : co ? 1 : 0);
                 sh.push(f.s * AO_L[Math.min(3, lvl)]);
               }
-              const faceCol = fi === 0 ? ct : (fi === 1 ? cb : col);
+              const faceCol = fi === 0 ? ct : col;
               const p = [];
               for (const c of f.c) p.push(x + c[0], y + c[1], z + c[2]);
               tgt.quadAO(p, faceCol, sh, !!bd.emis);
@@ -261,7 +261,7 @@
   }
 
   N.BLOCKS = B;
-  N.AIR = AIR; N.WATER = WATER;
+  N.WATER = WATER;
   N.BLOCK_ID = BLOCK_ID;
   N.FRUIT_BLOCK = FRUIT_BLOCK; N.FRUIT_BLOCK_REV = FRUIT_BLOCK_REV;
   N.PLANT_BLOCK = PLANT_BLOCK; N.PLANT_BLOCK_REV = PLANT_BLOCK_REV;

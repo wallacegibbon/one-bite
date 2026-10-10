@@ -164,12 +164,11 @@
   const FS_WORLD = `
   precision mediump float;
   varying vec4 vCol; varying float vFog;
-  uniform vec3 uFogCol; uniform float uAlpha, uTintA, uTintB; uniform vec3 uTint;
+  uniform vec3 uFogCol; uniform float uAlpha, uTintA; uniform vec3 uTint;
   void main(){
     vec3 c = mix(vCol.rgb, uFogCol, clamp(vFog, 0.0, 1.0));
     c = mix(c, uTint, uTintA);
     gl_FragColor = vec4(c, vCol.a * uAlpha);
-    if (gl_FragColor.a < uTintB) discard;
   }`;
 
   const VS_SKY = `
@@ -246,7 +245,6 @@
       gl.cullFace(gl.BACK);
       this.proj = M4.create(); this.view = M4.create(); this.mvp = M4.create();
       this.planes = [new Float32Array(4), new Float32Array(4), new Float32Array(4), new Float32Array(4), new Float32Array(4), new Float32Array(4)];
-      this.modelTmp = M4.create();
       this.stats = { draws: 0, tris: 0 };
       this.resize();
     }
@@ -335,21 +333,22 @@
         u.uFogCol = gl.getUniformLocation(P.p, 'uFogCol'); u.uDay = gl.getUniformLocation(P.p, 'uDay');
         u.uTime = gl.getUniformLocation(P.p, 'uTime'); u.uWave = gl.getUniformLocation(P.p, 'uWave');
         u.uAlpha = gl.getUniformLocation(P.p, 'uAlpha'); u.uTint = gl.getUniformLocation(P.p, 'uTint');
-        u.uTintA = gl.getUniformLocation(P.p, 'uTintA'); u.uTintB = gl.getUniformLocation(P.p, 'uTintB');
+        u.uTintA = gl.getUniformLocation(P.p, 'uTintA');
         u.uEmisBoost = gl.getUniformLocation(P.p, 'uEmisBoost');
         u._done = 1;
       }
       gl.uniformMatrix4fv(u.uProj, false, this.proj);
       gl.uniformMatrix4fv(u.uView, false, this.view);
-      gl.uniform1f(u.uFogDen, opts.fogDen !== undefined ? opts.fogDen : e.fogDen);
-      gl.uniform3fv(u.uFogCol, opts.fogCol || e.fogCol);
+      // fog belongs to the environment, not to the draw: the only per-draw fog
+      // overrides this used to take (opts.fogDen / opts.fogCol) had no caller
+      gl.uniform1f(u.uFogDen, e.fogDen);
+      gl.uniform3fv(u.uFogCol, e.fogCol);
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);
       gl.uniform1f(u.uTime, e.time);
       gl.uniform1f(u.uWave, opts.wave ? 1 : 0);
       gl.uniform1f(u.uAlpha, opts.alpha !== undefined ? opts.alpha : 1);
       gl.uniform3fv(u.uTint, opts.tint || [0, 0, 0]);
       gl.uniform1f(u.uTintA, opts.tintA || 0);
-      gl.uniform1f(u.uTintB, opts.discardA || 0);
       gl.uniform1f(u.uEmisBoost, opts.emisBoost || 0);
     }
 

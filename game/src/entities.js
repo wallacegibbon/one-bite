@@ -41,7 +41,6 @@
          off the physics, so a body that does not hop never animates as if it did. */
       this.airAmt = 0; this.crouch = 0; this.squash = 0;
       this.hopT = 0; this.wind = 0;
-      this.lastRevert = 0;
       /* Set by Game.die() and cleared at the top of the next frame. It is not a
          "is the player alive" flag -- dying always revives them at the town
          cellar -- it is a stop sign for the rest of the tick that killed them. */
@@ -428,7 +427,6 @@
       this.alarm = 0;
       this.homeX = x; this.homeZ = z;
       this.flyY = y;
-      this.parts = null;
       // the same three signals the player carries, for the same reason
       this.airAmt = 0; this.crouch = 0; this.squash = 0; this.hopT = Math.random() * 1.2; this.wind = 0;
     }
@@ -594,7 +592,6 @@
         this.y += (target - this.y) * Math.min(1, dt * 2.2);
         // a roosting owl is a bird on a branch: wings folded, no beat
         this.airAmt = sleeping ? 0 : (this.y > gy0 + 0.4 ? 1 : 0);
-        this.groundY = gy0;
       } else if (this.isAquatic()) {
         const wt = waterColumn(world, this.x, this.z);          // -1: no water to hover in
         /* Search down from the animal's own feet, not from above its head: a
@@ -609,7 +606,6 @@
         const depth = 1.2 + Math.sin(this.t + this.phase) * 0.8;
         const target = Math.max(gy0 + 0.35, wt - depth);
         this.y += (target - this.y) * Math.min(1, dt * 1.6);
-        this.groundY = gy0;
       } else if (this.isAmphibian()) {
         // the frog sits on the bank, and floats just under the surface when it is in water
         const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
@@ -646,7 +642,6 @@
           this.y += (gy0 - this.y) * Math.min(1, dt * 6);
           this.airAmt = 0; this.crouch = 0;
         }
-        this.groundY = gy0;
       } else {
         const gy = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
         this.y += (gy - this.y) * Math.min(1, dt * 9);
