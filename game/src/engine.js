@@ -196,12 +196,16 @@
     float mdot = dot(d, md);
     col += vec3(0.85,0.88,0.95) * smoothstep(0.9993, 0.9997, mdot) * uNight * 2.0;
     col += vec3(0.35,0.4,0.55) * pow(max(mdot,0.0), 60.0) * uNight * 0.5;
-    // stars
-    if (uNight > 0.05 && d.y > 0.02) {
+    // stars. uNight alone is not enough: the day/night curve is symmetric about
+    // noon, so at 07:00 it still says 37% night while the sun is 29 degrees up,
+    // and 217 star spikes were measured in a daylight sky next to the sun. A
+    // star needs the sun properly down -- out of the sky, not merely low in it.
+    float starLit = uNight * smoothstep(0.0, 0.12, -uSunDir.y);
+    if (starLit > 0.05 && d.y > 0.02) {
       vec3 g = floor(d*160.0);
       float h = hash(g);
       float star = step(0.9965, h) * (0.6 + 0.4*sin(uTime*2.0 + h*40.0));
-      col += vec3(star) * uNight * smoothstep(0.02, 0.35, d.y);
+      col += vec3(star) * starLit * smoothstep(0.02, 0.35, d.y);
     }
     gl_FragColor = vec4(col, 1.0);
   }`;
@@ -270,9 +274,20 @@
       const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
       this.fwd = [sy * cp, sp, -cy * cp];
       this.right = [cy, 0, sy];
-      this.up = [this.fwd[1] * this.right[2] - this.fwd[2] * this.right[1],
-                 this.fwd[2] * this.right[0] - this.fwd[0] * this.right[2],
-                 this.fwd[0] * this.right[1] - this.fwd[1] * this.right[0]];
+      /* up = right x fwd, the same basis M4.lookYaw builds the view matrix from.
+         It used to be fwd x right, which is the same vector negated. Nothing else
+         in the frame noticed, because only the sky quad reads this vector -- and
+         the sky quad maps the top of the screen to fwd + up*tanY, so the whole
+         sky was mirrored about the horizon: the top of the screen sampled
+         *below* the horizon and got uGround, a dark brownish grey, while the
+         bright horizon band and the sun glow sat at the bottom of the frame.
+         Measured at 07:00 with the lens level and the sun 31 degrees up: the
+         glow landed 135 px below the centre of a 300 px frame. That is the
+         "black blocks in the sky" -- a dark mass overhead where the zenith
+         should be, with clouds lit against it. */
+      this.up = [this.right[1] * this.fwd[2] - this.right[2] * this.fwd[1],
+                 this.right[2] * this.fwd[0] - this.right[0] * this.fwd[2],
+                 this.right[0] * this.fwd[1] - this.right[1] * this.fwd[0]];
       this.cam = cam; this.env = env;
 
       // frustum planes

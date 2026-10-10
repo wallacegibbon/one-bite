@@ -1372,6 +1372,83 @@ const path = require('path');
   check('what comes through the pane is the lamp, not the pane',
     glass.warm > 20 && glass.cold < 10, glass);
 
+  /* 10r. the sky is not mirrored. The renderer keeps a camera basis for the sky
+     quad, and the sky quad is the only thing in the frame that reads it, so an
+     error there hides everywhere else: it was built as fwd x right instead of
+     right x fwd, which is the same vector negated. The sky shader maps the top of
+     the screen to fwd + up*tanY, so the whole sky was upside down -- the top of
+     the frame sampled *below* the horizon and got the dark ground colour, the
+     bright horizon band sat at the bottom, and the sun glow sat under the
+     horizon. Measured at 07:00 with the lens level and facing the sun's azimuth:
+     the glow landed 135 px below the centre of a 300 px frame, with the sun 31
+     degrees above the horizon. The lens is lifted above the world so nothing but
+     sky is in the way. */
+  const sky = await step('skyNotMirrored', () => {
+    const g = window.game, N = window.FRUTARIA, gl = g.R.gl, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame };
+    p.form = null; p.x = 80.5; p.y = 90.5; p.z = 80.5; p.vx = p.vy = p.vz = 0;
+    g.mode = 'play'; g.time = N.DAY_LEN * (7 / 24); g.updateEnv();
+    const sd = g.env.sunDir;
+    p.yaw = Math.atan2(sd[0], -sd[2]); p.pitch = 0;      // face the sun's azimuth, level
+    const cf = g._camFrame = g.shootCamera(p);
+    g.render();
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const px = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    let best = -1, bestRow = -1;
+    for (let Y = 0; Y < h; Y++) {                        // image row 0 is the top
+      const gy = h - 1 - Y;
+      for (let X = 0; X < w; X++) {
+        const i = (gy * w + X) * 4;
+        const L = px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
+        if (L > best) { best = L; bestRow = Y; }
+      }
+    }
+    g._camFrame = null; g.render();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    return { sunElevDeg: +(Math.asin(Math.max(-1, Math.min(1, sd[1]))) * 180 / Math.PI).toFixed(1),
+      glowRow: bestRow, middleRow: h / 2, above: bestRow < h / 2, lum: Math.round(best) };
+  });
+  check('the sun glow is above the middle of the frame, not mirrored below it', sky.above, sky);
+
+  /* 10s. stars belong to the dark. The day/night curve is symmetric about noon,
+     so at 07:00 -- the hour the game opens on -- it still says 37% night while
+     the sun is 29 degrees up, and the sky shader drew stars next to it: 217 sharp
+     spikes counted in a daylight sky looking straight up. A star is a one or two
+     pixel jump over its neighbours; the sun's halo is broad, so counting jumps
+     separates "speckled" from "smooth" without needing to know where the sun is. */
+  const stars = await step('starsOnlyInDark', () => {
+    const g = window.game, N = window.FRUTARIA, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame };
+    p.form = null; p.x = 80.5; p.y = 90.5; p.z = 80.5; p.vx = p.vy = p.vz = 0;   // above the world
+    p.yaw = Math.PI; p.pitch = 1.5; g.mode = 'play';
+    const look = (hour) => {
+      g.time = N.DAY_LEN * (hour / 24); g.updateEnv();
+      g._camFrame = g.shootCamera(p); g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const L = (X, Y) => { const i = (Y * w + X) * 4; return px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11; };
+      let spikes = 0;
+      for (let Y = 1; Y < h - 1; Y++) for (let X = 1; X < w - 1; X++) {
+        let nb = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) nb += L(X + dx, Y + dy);
+        if (L(X, Y) - nb / 8 > 40) spikes++;
+      }
+      return { hour, sunY: +g.env.sunDir[1].toFixed(2), night: +g.night.toFixed(2), spikes };
+    };
+    const day = look(7), night = look(0);
+    g._camFrame = null; g.render();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    return { day, night };
+  });
+  check('no stars are out while the sun is up', stars.day.spikes <= 2, stars);
+  check('the stars are still there at midnight', stars.night.spikes > 50, stars);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;
