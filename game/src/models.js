@@ -348,6 +348,7 @@
   const WALK_RATE = 7;    // leg cycle per second at full speed; every legged body shares it
   const FLAP_RATE = 11;   // wing beat per second in the air
   const SWIM_RATE = 4.2;  // hind-leg kicks per second. Slower than a walk, and both legs at once
+  const KNEE_LAG = 2.4;   // how far ahead of "leg forward" the knee is at its most bent
 
   /* The angles one part takes this frame, in model space.
      st: { t, phase, move, air, crouch, beat, swim } -- `air` is how far the body
@@ -379,8 +380,12 @@
     } else if (anim === 'walk') {
       rx = sg * Math.sin(t * WALK_RATE + ph) * st.move * 0.75;
     } else if (anim === 'knee') {
-      /* a knee only bends one way, and it bends most as the leg comes forward */
-      const s = Math.sin(t * WALK_RATE + ph + (sg > 0 ? 2.4 : 2.4));
+      /* a knee only bends one way, and it bends most as the leg comes forward.
+         The lag is the same on both sides on purpose: the `sign` mirror already
+         turns the bend the right way round for a left and a right knee, so a
+         per-side phase offset here would desync the pair and give one leg a
+         longer stride than the other. */
+      const s = Math.sin(t * WALK_RATE + ph + KNEE_LAG);
       rx = sg * (0.25 + 0.85 * Math.max(0, s)) * (0.35 + 0.65 * st.move);
     } else if (anim === 'elbow') {
       rx = sg * (0.12 + 0.3 * Math.max(0, Math.sin(t * WALK_RATE + ph + 1.2)) * st.move);
