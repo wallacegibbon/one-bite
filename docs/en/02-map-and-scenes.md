@@ -77,14 +77,16 @@ The valley is not a floor, it is four:
 
 | Layer | y | What is there | How you get there |
 |---|---|---|---|
-| **Cloudspire** | 29–40 | 6 isles, the old beams | Owl (fly 5.2), or the stepping isles + Leaper |
-| **Canopy** | 20–28 | Crowns, bell-tower roof, the top of the Deep Grove | Jump + Leaper |
-| **Ground** | 15–24 | Forest, town, keep, orchard | Walking |
-| **Underwater** | 0–14 | Mirrorlake, sunken tower, sunken huts | Only the frog (skin breathing) |
+| **Cloudspire** | isle surfaces 29–40; what stands on them up to 47 | 6 isles, the old beams | Owl (fly 5.2), or the stepping isles + Leaper |
+| **Canopy** | 20–31 over the town, to 47 where the forest stands on the northern slopes | Crowns, the bell tower's roof (42), the top of the Deep Grove (35) | Jump + Leaper |
+| **Ground** | 20–29 in the town and the orchard (mean 22) | Forest, town, keep, orchard | Walking |
+| **Underwater** | 0–14; the water itself is y5..14 | Mirrorlake, sunken tower, sunken huts | Only the frog (skin breathing) |
+
+**These numbers are measured off the generated world, not remembered** (seed 20261008): the topmost solid block per column, plants excluded for the ground rows and leaves counted for the canopy. `node-smoke.js` prints all of it and fails if the chapter's numbers stop matching. The table used to say Canopy 20–28 and Ground 15–24; measured, the town's crowns top out at 31 and the forest's at **47**, because the trees there stand on the northern slopes rather than on the valley floor. And the isles sit **inside** Whisperwood's rectangle — beamisle (40,20), highroost (96,12), stepping3 (20,62) — so a zone query over Whisperwood answers with sky: its leaves run 20..47.
 
 **Mirrorlake depth**: surface y14, and the lakebed is a slope rather than a floor — the water stands anywhere from **1 to 10 blocks** deep (measured over all 1,856 water columns inside the circle: 44% of them are 4 blocks or less, the deepest at (79,92) where the water runs y5..y14). A human holds breath for 18 seconds, exactly enough to reach the tower windows and come back up, not enough to pick a fruit off the sill. That is the whole argument for "become the frog first": in this water exactly one animal breathes for you.
 
-**The ridge is not on that ladder.** Ashscale's own ground is y33–45, above the canopy, and its cold starts at y26 — you are already cold before you get near the top, and it reaches its full bite at y36, which is where every bruin fig grows. A human can cross the ridge and come back with a fig if it hurries; a bear body simply is not cold.
+**The ridge is not on that ladder.** Ashscale's own surface is **y23–36** (mean 30, measured over the zone's columns), and its cold starts at y26 — 88% of the ridge's columns are already cold — and reaches its full bite at y36, which is the top of it: 258 columns stand at or above that line, and the 25 bruin figs hang at **y29..37**, one block above the ground they grow on, most of them at 37. A human can cross the ridge and come back with a fig if it hurries; a bear body simply is not cold.
 
 ## 5. Scene detail
 

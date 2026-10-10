@@ -146,6 +146,72 @@ console.log('出生点脚下方块', below, '身上方块', at, at === 0 ? 'OK' 
 const topAt = (x, z) => { for (let y = w.h - 1; y >= 0; y--) if (w.get(x, y, z)) return y; return -1; };
 for (const p of F.POIS) console.log('POI', p.cn, 'topY=', topAt(p.x, p.z));
 
+/* The four vertical layers the map chapter claims (docs 02 s4), measured off the
+   generated world instead of remembered: the topmost solid block per column, with
+   plants excluded for the ground and the ridge and leaves counted for the canopy.
+   The chapter used to say "Canopy 20-28" and "Ashscale y33-45". Measured, the
+   forest crowns reach 47 where they stand on the northern slopes, and the ridge
+   tops out at 36 -- which is also where its cold reaches full bite, so the wrong
+   number was hiding the one design fact that matters up there. Printed so the next
+   drift is visible, and guarded so it cannot drift again unnoticed. */
+{
+  const LEAF = { 7: 1, 8: 1, 9: 1, 27: 1, 28: 1 };
+  const onIsle = (x, z) => F.SKY_ISLES.some(i => Math.hypot(x - i.x, z - i.z) <= i.r);
+  const topSolid = (x, z, skipPlants) => {
+    for (let y = w.h - 1; y >= 0; y--) {
+      const b = w.get(x, y, z);
+      if (!b || !F.BLOCKS[b].solid) continue;
+      if (skipPlants && (b === 16 || LEAF[b] || b === 6 || b === 22)) continue;
+      return y;
+    }
+    return -1;
+  };
+  const range = (pred, skipPlants) => {
+    let lo = 999, hi = -1, n = 0, sum = 0;
+    for (let x = 0; x < w.w; x += 2) for (let z = 0; z < w.d; z += 2) {
+      if (!pred(x, z)) continue;
+      const y = topSolid(x, z, skipPlants);
+      if (y < 0) continue;
+      n++; sum += y; if (y < lo) lo = y; if (y > hi) hi = y;
+    }
+    return n ? { lo, hi, mean: +(sum / n).toFixed(1), n } : null;
+  };
+  const leafTop = (pred) => {
+    let hi = -1;
+    for (let x = 0; x < w.w; x++) for (let z = 0; z < w.d; z++) {
+      if (!pred(x, z)) continue;
+      for (let y = w.h - 1; y >= 0; y--) if (LEAF[w.get(x, y, z)]) { if (y > hi) hi = y; break; }
+    }
+    return hi;
+  };
+  const inZone = (id) => {
+    const zn = F.ZONE_BY_ID[id];
+    return zn.kind === 'rect'
+      ? (x, z) => x >= zn.x0 && x <= zn.x1 && z >= zn.z0 && z <= zn.z1
+      : (x, z) => Math.hypot(x - zn.cx, z - zn.cz) <= zn.r;
+  };
+  const floor = (x, z) => !onIsle(x, z);
+  const ground = range(floor, true), ridge = range(inZone('mountains'), true);
+  const town = range((x, z) => inZone('lanternrow')(x, z) || inZone('orchard')(x, z), true);
+  const canopyFloor = leafTop(floor), canopyTown = leafTop(inZone('lanternrow'));
+  let wlo = 999, whi = -1;
+  for (let i = 0; i < w.blocks.length; i++) if (w.blocks[i] === 5) { const y = (i / (w.w * w.d)) | 0; if (y < wlo) wlo = y; if (y > whi) whi = y; }
+  console.log('层 地面(不含岛)', JSON.stringify(ground), '镇/果园', JSON.stringify(town));
+  console.log('层 树冠', '谷地最高', canopyFloor, '镇上方', canopyTown, '水', `${wlo}..${whi}`);
+  console.log('层 北岭', JSON.stringify(ridge), '云顶岛面', F.SKY_ISLES.map(i => i.top).join('/'));
+  const bad = [];
+  // what docs 02 s4 claims, in the same words the chapter uses
+  if (wlo !== 5 || whi !== 14) bad.push(`water y${wlo}..${whi}, the chapter says 5..14`);
+  if (canopyTown > 35) bad.push(`town canopy tops at ${canopyTown}, the chapter says 20-35`);
+  if (canopyFloor < 45 || canopyFloor > 48) bad.push(`valley canopy tops at ${canopyFloor}, the chapter says 47`);
+  if (ridge.lo < 22 || ridge.hi > 37) bad.push(`ridge surface y${ridge.lo}..${ridge.hi}, the chapter says 23-36`);
+  for (const i of F.SKY_ISLES) if (i.top < 29 || i.top > 40) bad.push(`isle ${i.id} surface y${i.top}, the chapter says 29-40`);
+  // the ridge's cold: the chapter says the full bite lands at the top of it
+  const cold = F.ZONE_BY_ID['mountains'].cold;
+  if (ridge.hi < cold.above + cold.ramp - 2) bad.push(`ridge tops at ${ridge.hi} but the cold only reaches full bite at ${cold.above + cold.ramp}`);
+  if (bad.length) { console.log('!! 层表与地图不符:', bad.join('; ')); process.exitCode = 1; }
+}
+
 // key interaction points
 const chest = w.get(136, 21, 134);
 console.log('果窖箱(136,21,134) =', chest, chest === 78 ? 'OK' : '!!');
