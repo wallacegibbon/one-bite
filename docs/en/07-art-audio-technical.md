@@ -47,6 +47,8 @@ Each face gets a fixed brightness by normal, then vertex AO is multiplied in:
 
 AO has four steps: `[1.00, 0.78, 0.60, 0.46]`, computed from each vertex's three neighbours (edge, edge, corner).
 
+That table is for blocks with hard edges. A block may declare `soft: 1` instead, and then it keeps the same ordering of faces but never drops below **0.74** and takes no AO at all (`SOFT_S = 0.55 + 0.45·s`). Cloud (16) is the one that needed it: cloud is a block, so it went through the face table and the ambient occlusion of the cloud deck around it, and a bottom face in the shade of the block above measured 0.42 × 0.46 = 0.19 of its own colour. Cloud is 94% white, so the result was a dark grey lump floating in a bright sky — a black block in the sky, which is what it looked like. Measured in the frame: a cloud now averages **113** against the sky's 92; with the flag removed it averaged **70**, darker than the sky behind it. The Grey Veil wall is built out of the same block, so the veil reads as pale mist columns rather than as stone.
+
 ### Creature models
 
 Assembled from voxel parts: one mesh + one pivot per part. A part may name a `parent`, so a limb has a joint -- shoulder to elbow, hip to knee. Parts are authored in the bind pose, and for the owl the bind pose is the folded wing: a perched owl is the shape you look at most of the day.

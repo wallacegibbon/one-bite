@@ -35,7 +35,7 @@
   def(13, { cn: '屋顶瓦', c: [0.47, 0.21, 0.19] });
   def(14, { cn: '辉石', c: [1.00, 0.86, 0.52], emis: 1 });
   def(15, { cn: '雪', c: [0.92, 0.94, 0.98] });
-  def(16, { cn: '云', c: [0.94, 0.95, 1.00], solid: false, opaque: true });
+  def(16, { cn: '云', c: [0.94, 0.95, 1.00], solid: false, opaque: true, soft: 1 });
   def(17, { cn: '石板路', c: [0.58, 0.56, 0.52] });
   def(18, { cn: '余烬', c: [1.00, 0.44, 0.14], emis: 1 });
   def(19, { cn: '金', c: [0.86, 0.72, 0.30] });
@@ -108,6 +108,16 @@
     { n: [0, 0, -1], c: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]], u: [1, 0, 0], v: [0, 1, 0], s: 0.58 }
   ];
   const AO_L = [1.0, 0.78, 0.60, 0.46];
+  /* A cloud is not a slab. The face table above is the brightness of a face
+     relative to the ground it stands on: a bottom face is dark because it is
+     under something and never sees the sky. For a cloud the bottom face IS the
+     face you look at from the ground, and a cloud blob is nothing but corners,
+     so face shade times AO drove the underside of every cloud to 0.19 of its
+     own colour -- measured 0.32 on average, 0.19 at worst, i.e. RGB (61,65,72)
+     against a sky at (102,127,163). Dark grey lumps hanging in a bright sky:
+     black blocks in the sky. A soft block keeps the same ordering of faces but
+     never drops below 0.74 and takes no AO, so the blob still has a shape. */
+  const SOFT_S = FACES.map(f => 0.55 + 0.45 * f.s);
 
   /* ------------------------- world ------------------------- */
   class World {
@@ -213,9 +223,11 @@
               // a block that culls nothing and is not water rides in its own
               // mesh, so it can be drawn blended with its own per-vertex alpha
               const tgt = bd.emis ? em : (bd.opaque ? op : tr);
-              // AO
+              // AO. A soft block takes the flat table instead -- cloud, and the
+              // Grey Veil wall, which is built out of the same block. See SOFT_S.
               const sh = [];
-              for (const c of f.c) {
+              if (bd.soft) for (let k = 0; k < 4; k++) sh.push(SOFT_S[fi]);
+              else for (const c of f.c) {
                 const cu = c[0] * f.u[0] + c[1] * f.u[1] + c[2] * f.u[2];
                 const cv = c[0] * f.v[0] + c[1] * f.v[1] + c[2] * f.v[2];
                 const su = cu ? 1 : -1, sv = cv ? 1 : -1;
