@@ -6,6 +6,43 @@
         quest that froze a translated string into the save file would break here. */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
+const fs = require('fs');
+
+/* The HTML carries Chinese text inline so the page is readable before the table
+   is applied. That text is a second copy, and a second copy drifts: it used to
+   promise deer herds and pangolin forms in a valley that no longer has either.
+   Checked here, in node, because it needs no browser and no render. */
+global.window = global;
+require('../data/i18n.js');
+const fallbackBad = [];
+{
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const T = global.FRUTARIA.T;
+  const flat = s => s.replace(/<[^>]*>/g, '').replace(/\s+/g, '');
+  const re = /<(\w+)[^>]*\bdata-i18n="([^"]+)"[^>]*>([\s\S]*?)<\/\1>/g;
+  let m, n = 0;
+  while ((m = re.exec(html))) {
+    const [, , key, inline] = m;
+    n++;
+    if (!T.zh[key]) { fallbackBad.push('no zh table entry for ' + key); continue; }
+    if (!inline.trim()) continue;                       // no fallback is allowed
+    const a = flat(inline), b = flat(T.zh[key]);
+    if (a !== b) {
+      let k = 0; while (k < a.length && k < b.length && a[k] === b[k]) k++;
+      fallbackBad.push(key + ' differs at char ' + k + ': inline "' + a.slice(Math.max(0, k - 12), k + 18) +
+        '" vs table "' + b.slice(Math.max(0, k - 12), k + 18) + '"');
+    }
+  }
+  // and every key the page asks for must be inside one of the two tables
+  const keys = html.match(/data-i18n="[^"]+"/g) || [];
+  for (const k of keys) {
+    const key = k.slice(11, -1);
+    if (!T.zh[key] || !T.en[key]) fallbackBad.push('data-i18n="' + key + '" is in neither table');
+  }
+  fallbackBad.unshift('inline fallbacks checked: ' + n + ' elements, ' + keys.length + ' keys');
+}
+const preFail = fallbackBad.slice(1);
+console.log(fallbackBad.join('\n'));
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -153,7 +190,8 @@ const path = require('path');
 
   console.log(out.join('\n'));
   console.log(errs.length ? 'ERRORS: ' + errs.slice(0, 5).join(' | ') : 'no errors');
+  if (preFail.length) console.log('!! inline fallback text is out of step with the zh table:\n' + preFail.join('\n'));
   if (bad.length) console.log(bad.join('\n'));
-  process.exitCode = (errs.length || bad.length) ? 1 : 0;
+  process.exitCode = (errs.length || bad.length || preFail.length) ? 1 : 0;
   await browser.close();
 })();
