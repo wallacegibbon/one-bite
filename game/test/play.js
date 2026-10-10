@@ -503,6 +503,14 @@ const path = require('path');
       let frames = 0;
       for (let i = 0; i < secs / 0.05 && p.vital > 0; i++) {
         for (const c of herd) c.update(0.05, p, g.world, g);
+        /* Stay in the middle of the field. The lamps wander -- a spread is a
+           radius and they pick a new point inside it every few seconds -- so a
+           body left where it was dropped can find the field has walked off
+           without it, and then this measures luck rather than the cost of
+           loitering in the lamps. The claim being tested is "you are standing
+           in it", so the test keeps it standing in it. */
+        p.x = mid('x'); p.z = mid('z');
+        p.x = mid('x'); p.z = mid('z');
         frames++;
       }
       const warn = N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.jelly) });
@@ -525,7 +533,12 @@ const path = require('path');
       warnText: N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.jelly) })
     };
   });
-  check('the lamps sting a body that is not immune', sting.human.lost > 1, sting);
+  /* Measured with the body held in the middle of the field: 5.0 and 9.5 vitality
+     over 18 seconds on two runs (0.25 a second per lamp, and contacts stack, so
+     the middle of a ten-lamp field costs more than its edge). The bound is the
+     loose half on purpose -- what it must never do is come back near zero, which
+     is what a body the field has walked away from reports. */
+  check('the lamps sting a body that is not immune', sting.human.lost > 2, sting);
   check('the lamps do not sting the body the lake already gave you', sting.frog.lost === 0, sting);
   check('the dive to the tower sills stays out of reach of the lamps', sting.sill.lost === 0, sting);
   check('the sting warning names the body that answers it', /雨蛙|frog/.test(sting.warnText), sting);
