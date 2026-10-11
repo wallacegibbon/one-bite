@@ -1899,6 +1899,107 @@ const path = require('path');
   check('the flag is not glue: walking off a step leaves the ground at once',
     !wade.off.error && wade.off.airFrames >= 2 && wade.off.airMax > 0.2 && wade.off.drop > 0.3, wade);
 
+  /* 10x. an underside is not a hole in the sky. 10q fixed the cloud; the same
+     face table was still driving everything else that hangs in open air to
+     black. Face shade times crevice darkening is 0.42 x 0.46 = 0.19 of a
+     block's own colour, and the crevice test reads a canopy as a crevice --
+     the ring of solid it samples under a tree IS the tree. Measured over the
+     whole map: 60,506 of the 107,880 faces that have eight blocks of clear air
+     along their normal rendered under 60/255, 56% of them, worst 10. Two cases
+     a player actually stands in: under a conifer crown, and under the roof of
+     the town, where the reading from the lantern road was grey lumps against a
+     sky at 150.
+     The reading is the frame itself: stand under the face, look up, march every
+     other pixel through the block grid, and sort what comes back. A hanging
+     face may be darker than the sky -- that is the fake sun -- but a quarter of
+     its pixels have to be at least 45/255 and the darkest twentieth have to be
+     past 35. Measured before: a quarter of the crown's pixels were 31 and the
+     darkest twentieth 24; of the roof, 22 and 19. Measured after: 55 and 48,
+     53 and 43. */
+  const under = await step('undersideIsNotAHole', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame };
+    const LEAF = { 7: 1, 8: 1, 9: 1, 27: 1, 28: 1 };
+    const ROOF = { 10: 1, 11: 1, 12: 1, 13: 1, 78: 1 };
+    /* a face that hangs: three cells of open space under it and eight of clear
+       air above it, so it is an underside seen against the sky. The search runs
+       down the column from the top, because the ground under a roof is not the
+       ground the column's own top block stands on. */
+    const hangs = (x, z, want) => {
+      for (let y = 34; y >= 14; y--) {
+        const b = W.get(x, y, z);
+        if (!b || !want[b]) continue;
+        let open = true;
+        for (let k = y + 1; k <= y + 8 && k < W.h; k++) if (W.get(x, k, z)) { open = false; break; }
+        if (!open) continue;
+        for (let k = y - 1; k >= y - 3; k--) if (W.solidAt(x, k, z) || W.liquidAt(x, k, z)) { open = false; break; }
+        if (!open) continue;
+        let g0 = -1;
+        for (let k = y - 3; k >= 8; k--) if (W.solidAt(x, k, z)) { g0 = k; break; }
+        if (g0 < 12 || g0 > 30) continue;
+        if (W.solidAt(x, g0 + 1, z) || W.solidAt(x, g0 + 2, z)) continue;   // headroom
+        return { x: x + 0.5, z: z + 0.5, y: g0 + 1.0001, at: [x, y, z], b, floor: g0 };
+      }
+      return null;
+    };
+    let tree = null, roof = null;
+    for (let z = 10; z < W.d - 10 && !tree; z += 2) for (let x = 10; x < W.w - 10 && !tree; x += 2) tree = hangs(x, z, LEAF);
+    for (let z = 118; z < 142 && !roof; z++) for (let x = 126; x < 148 && !roof; x++) roof = hangs(x, z, ROOF);
+    if (!tree || !roof) { Object.assign(p, was); return { error: 'no hanging face to look at', tree: !!tree, roof: !!roof }; }
+    const first = (ox, oy, oz, dx, dy, dz) => {
+      for (let t = 0.3; t < 90; t += 0.4) {
+        const b = W.get(Math.floor(ox + dx * t), Math.floor(oy + dy * t), Math.floor(oz + dz * t));
+        if (b) return b;
+      }
+      return 0;
+    };
+    const look = (spot) => {
+      p.form = null; p.x = spot.x; p.y = spot.y; p.z = spot.z; p.vx = p.vy = p.vz = 0;
+      p.grounded = false; p.airAmt = 0;
+      p.yaw = Math.PI; p.pitch = 1.2;
+      g.mode = 'play'; g.time = N.DAY_LEN * (12 / 24); g.updateEnv();
+      const cf = g._camFrame = g.shootCamera(p);
+      g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const tanY = Math.tan(cf.fov * Math.PI / 360), tanX = tanY * R.aspect;
+      const lum = (i) => px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
+      let n = 0, sum = 0, sn = 0, ss = 0;
+      const vals = [];
+      for (let Y = 0; Y < h; Y += 2) {
+        const gy = h - 1 - Y, ndcY = 1 - (Y + 0.5) / h * 2;
+        for (let X = 0; X < w; X += 2) {
+          const ndcX = (X + 0.5) / w * 2 - 1;
+          let dx = R.fwd[0] + R.right[0] * ndcX * tanX + R.up[0] * ndcY * tanY;
+          let dy = R.fwd[1] + R.right[1] * ndcX * tanX + R.up[1] * ndcY * tanY;
+          let dz = R.fwd[2] + R.right[2] * ndcX * tanX + R.up[2] * ndcY * tanY;
+          const L = Math.hypot(dx, dy, dz); dx /= L; dy /= L; dz /= L;
+          const id = first(R.cam.x, R.cam.y, R.cam.z, dx, dy, dz);
+          const i = (gy * w + X) * 4;
+          if (id === 0) { sn++; ss += lum(i); }
+          else if (id === spot.b) { n++; sum += lum(i); vals.push(lum(i)); }
+        }
+      }
+      // sorted, not averaged: one dark corner in a bright field is exactly the
+      // complaint, and a mean hides it
+      vals.sort((a, b) => a - b);
+      const q = (f) => vals.length ? +vals[Math.floor(vals.length * f)].toFixed(1) : 0;
+      return { px: n, mean: +(sum / Math.max(1, n)).toFixed(1), p05: q(0.05), p25: q(0.25),
+        skyPx: sn, skyMean: +(ss / Math.max(1, sn)).toFixed(1) };
+    };
+    const t = look(tree), r = look(roof);
+    g._camFrame = null; g.render();
+    Object.assign(p, was); g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    return { tree, roof, t, r };
+  });
+  check('there is a crown and a roof rim hanging overhead', !under.error, under);
+  check('a conifer crown seen from below is not a hole in the sky',
+    under.t && under.t.px > 1500 && under.t.p05 >= 35 && under.t.p25 >= 45 && under.t.mean > 0.25 * under.t.skyMean, under);
+  check('and neither is the roof of the town over the lantern road',
+    under.r && under.r.px > 1500 && under.r.p05 >= 35 && under.r.p25 >= 45 && under.r.mean > 0.25 * under.r.skyMean, under);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

@@ -26,9 +26,9 @@
   def(4, { cn: '沙', c: [0.80, 0.74, 0.53] });
   def(5, { cn: '水', solid: false, opaque: false, liquid: true, c: [0.13, 0.34, 0.52], alpha: 0.72 });
   def(6, { cn: '树干', c: [0.38, 0.27, 0.17], ct: [0.46, 0.34, 0.21] });
-  def(7, { cn: '树叶', c: [0.20, 0.40, 0.18] });
-  def(8, { cn: '针叶', c: [0.14, 0.30, 0.20] });
-  def(9, { cn: '银叶', c: [0.60, 0.71, 0.68] });
+  def(7, { cn: '树叶', c: [0.20, 0.40, 0.18], soft: 1 });
+  def(8, { cn: '针叶', c: [0.14, 0.30, 0.20], soft: 1 });
+  def(9, { cn: '银叶', c: [0.60, 0.71, 0.68], soft: 1 });
   def(10, { cn: '木板', c: [0.62, 0.45, 0.28] });
   def(11, { cn: '城砖', c: [0.56, 0.56, 0.61] });
   def(12, { cn: '暗城砖', c: [0.36, 0.36, 0.42] });
@@ -46,8 +46,8 @@
   def(24, { cn: '山岩', c: [0.42, 0.42, 0.46] });
   def(25, { cn: '淤泥', c: [0.30, 0.25, 0.19] });
   def(26, { cn: '暗木板', c: [0.34, 0.25, 0.17] });
-  def(27, { cn: '暗叶', c: [0.12, 0.24, 0.13] });
-  def(28, { cn: '柳叶', c: [0.33, 0.45, 0.23] });
+  def(27, { cn: '暗叶', c: [0.12, 0.24, 0.13], soft: 1 });
+  def(28, { cn: '柳叶', c: [0.33, 0.45, 0.23], soft: 1 });
   def(29, { cn: '干草', c: [0.72, 0.66, 0.36] });
   def(30, { cn: '地毯苔', c: [0.20, 0.38, 0.24] });
 
@@ -116,8 +116,19 @@
      own colour -- measured 0.32 on average, 0.19 at worst, i.e. RGB (61,65,72)
      against a sky at (102,127,163). Dark grey lumps hanging in a bright sky:
      black blocks in the sky. A soft block keeps the same ordering of faces but
-     never drops below 0.74 and takes no AO, so the blob still has a shape. */
+     never drops below 0.74 and takes no AO, so the blob still has a shape.
+     A canopy is the same object for the same reason: a crown is a blob of leaf
+     blocks, its underside is the face you look at when you stand under the
+     tree, and the ring of solid its crevice samples are is the crown itself.
+     Leaf blocks are soft too. */
   const SOFT_S = FACES.map(f => 0.55 + 0.45 * f.s);
+  /* How far a face has to look clear, along its own normal, before it is taken
+     to face open sky. Four cells: a roof rim hangs over a street, a sky isle
+     hangs over a valley, the flank of a cliff looks down it -- all of them
+     clear for more than this. A face that really is in a crevice, the lip of a
+     cave, the underside of a stair, a face between two roofs, is blocked by the
+     next block within two. See the exposure term in buildChunk. */
+  const OPEN_R = 4;
 
   /* ------------------------- world ------------------------- */
   class World {
@@ -223,21 +234,60 @@
               // a block that culls nothing and is not water rides in its own
               // mesh, so it can be drawn blended with its own per-vertex alpha
               const tgt = bd.emis ? em : (bd.opaque ? op : tr);
-              // AO. A soft block takes the flat table instead -- cloud, and the
-              // Grey Veil wall, which is built out of the same block. See SOFT_S.
+              /* AO. A soft block takes the flat table instead -- cloud, the Grey
+                 Veil wall built out of the same block, every canopy block. See
+                 SOFT_S. Everything else takes face shade times crevice table,
+                 and that product is where the black holes in the sky came from:
+                 0.42 (a bottom face) times 0.46 (crevice level 3) is 0.19 of the
+                 block's own colour. Measured over the whole map before this: of
+                 the 107,880 faces that have eight blocks of clear air along
+                 their normal -- faces that can be seen from far off, against the
+                 sky -- 60,506 of them, 56%, rendered under 60/255, the worst at
+                 10. A needles crown seen from below came out at 12 -- a needles
+                 block is 66/255 and 0.19 of it is 12 -- while the sky behind it
+                 measured 198; the rim of the town roof over the lantern road was
+                 grey lumps against a sky at 150.
+                 The crevice table asks how many of the four neighbours in the
+                 face's own plane are solid. That is a crevice test, and a face
+                 looking out at open sky is by definition not in one: under a
+                 crown the ring of solid IS the crown, and on a hillside the dark
+                 notch it carves is the next block of the same hill. So each face
+                 is also asked how far it looks before it hits anything. OPEN_R
+                 cells of clear air along its normal and it takes no crevice
+                 darkening at all; a face blocked within two keeps all of it,
+                 which is the contact shadow that gives a cliff and a roof their
+                 shape; in between the two are interpolated. A bottom face lifts
+                 toward the soft bottom shade as well, because the reason a
+                 bottom face is dark in the face table -- you never look at one --
+                 is not true of a face that hangs in open air.
+                 Measured after: 15,421 of the same faces under 60, 14%, worst 39
+                 instead of 10. In the rendered frame, over 216 views across the
+                 map, pixels darker than 55 sitting next to sky brighter than 130
+                 fell from 1.46% of the frame to 0.68%. What is left is the face
+                 table itself -- a -z face of a dark block is dark -- and that is
+                 the fake sun, not a hole. */
               const sh = [];
               if (bd.soft) for (let k = 0; k < 4; k++) sh.push(SOFT_S[fi]);
-              else for (const c of f.c) {
-                const cu = c[0] * f.u[0] + c[1] * f.u[1] + c[2] * f.u[2];
-                const cv = c[0] * f.v[0] + c[1] * f.v[1] + c[2] * f.v[2];
-                const su = cu ? 1 : -1, sv = cv ? 1 : -1;
-                const o1 = [f.u[0] * su, f.u[1] * su, f.u[2] * su];
-                const o2 = [f.v[0] * sv, f.v[1] * sv, f.v[2] * sv];
-                const s1 = occ(at(nx + o1[0], ny + o1[1], nz + o1[2]));
-                const s2 = occ(at(nx + o2[0], ny + o2[1], nz + o2[2]));
-                const co = occ(at(nx + o1[0] + o2[0], ny + o1[1] + o2[1], nz + o1[2] + o2[2]));
-                const lvl = s1 + s2 + ((s1 && s2) ? 1 : co ? 1 : 0);
-                sh.push(f.s * AO_L[Math.min(3, lvl)]);
+              else {
+                let e = 1;
+                {
+                  let k = 1;
+                  while (k < OPEN_R && !occ(at(nx + f.n[0] * k, ny + f.n[1] * k, nz + f.n[2] * k))) k++;
+                  e = (k - 1) / (OPEN_R - 1);
+                }
+                const fs = fi === 1 ? f.s + (SOFT_S[1] - f.s) * e : f.s;
+                for (const c of f.c) {
+                  const cu = c[0] * f.u[0] + c[1] * f.u[1] + c[2] * f.u[2];
+                  const cv = c[0] * f.v[0] + c[1] * f.v[1] + c[2] * f.v[2];
+                  const su = cu ? 1 : -1, sv = cv ? 1 : -1;
+                  const o1 = [f.u[0] * su, f.u[1] * su, f.u[2] * su];
+                  const o2 = [f.v[0] * sv, f.v[1] * sv, f.v[2] * sv];
+                  const s1 = occ(at(nx + o1[0], ny + o1[1], nz + o1[2]));
+                  const s2 = occ(at(nx + o2[0], ny + o2[1], nz + o2[2]));
+                  const co = occ(at(nx + o1[0] + o2[0], ny + o1[1] + o2[1], nz + o1[2] + o2[2]));
+                  const lvl = s1 + s2 + ((s1 && s2) ? 1 : co ? 1 : 0);
+                  sh.push(fs * (1 - (1 - AO_L[Math.min(3, lvl)]) * (1 - e)));
+                }
               }
               const faceCol = fi === 0 ? ct : col;
               const p = [];
