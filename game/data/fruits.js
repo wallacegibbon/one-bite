@@ -32,8 +32,20 @@
  *                 `kick` the fraction of its land speed the launch throws it at,
  *                 `period` the seconds its feet stay on the ground between hops.
  *                 Only the gait changes: the arc is still gravity's.
-   *   swim        : underwater movement multiplier
+   *   swim        : underwater movement multiplier. 1.1 on the frog body puts it
+   *                 at 4.65 m/s -- the wild frog's own `swimSpeed` -- because the
+   *                 body you wear and the animal you wear are one animal.
    *   fly         : flight thrust (0 / undefined = cannot fly)
+   *   flySpeed    : the speed a body with wings holds in level flight, m/s. It
+   *                 is not derived from walking speed: an owl that putters along
+   *                 at a jog is a body with a speed problem. This is the wild
+   *                 owl's own `flySpeed` from data/creatures.js written down a
+   *                 second time, and play.js checks the two agree.
+   *   turn        : the most radians a second the body can add to its heading at
+   *                 its own cruising speed. Air and water hold a body up by
+   *                 carrying it forward, so neither can change course on the
+   *                 spot -- the course bends (Player.update, Creature.update).
+   *                 The same number the species has in data/creatures.js.
    *   glide       : the fraction of the normal fall speed a body accepts when it
    *                 is not flapping -- 0.35 = it comes down at a third of the
    *                 speed you do. Unpowered: it buys distance, never height.
@@ -68,7 +80,8 @@
       habitat: ['whisperwood', 'starfall'], habitatCn: '低语林 · 钟塔树洞', habitatEn: 'Whisperwood · bell-tower hollow',
       duration: 240,
       form: {
-        cn: '猫头鹰', en: 'owl', size: [0.55, 0.7], speed: 0.9, jump: 0.8, fly: 5.2, glide: 0.35,
+        cn: '猫头鹰', en: 'owl', size: [0.55, 0.7], speed: 0.9, jump: 0.8, fly: 5.2, flySpeed: 7.0,
+        turn: 1.4, glide: 0.35,
         nightVision: 0.75, stealth: 0.45, fov: 88, hand: 'talon', step: 0.3
       },
       cost: ['白昼畏光：夜视在白天反成致盲', '爪无法操作门闩与果袋（不能开仓库）'],
@@ -84,7 +97,7 @@
       duration: 420,
       form: {
         cn: '雨蛙', en: 'frog', size: [0.5, 0.5], speed: 0.9, jump: 1.3, hop: { up: 0.72, kick: 1.25, period: 0.22 },
-        swim: 2.4, breatheAir: false, poisonImmune: true,
+        swim: 1.1, turn: 1.9, breatheAir: false, poisonImmune: true,
         dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, hand: 'web', step: 0.3
       },
       cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '太小：够不到高处的果，也推不开门'],
@@ -100,7 +113,7 @@
       duration: 480,
       form: {
         cn: '棕熊', en: 'bear', size: [1.4, 1.5], speed: 1.1, jump: 0.9, coldImmune: true,
-        aura: 8, step: 1.1, fov: 68, hand: 'claw'
+        turn: 1.6, aura: 8, step: 1.1, fov: 68, hand: 'claw'
       },
       cost: ['无法精细操作（不能采摘小果、不能开仓库）', '体重：薄冰会裂，木桥会塌'],
       costEn: ['no fine motor control (cannot pick small fruit, cannot open storage)', 'weight: thin ice breaks, wooden bridges collapse'],

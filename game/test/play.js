@@ -1,6 +1,7 @@
 /* gameplay loop: harvest -> capacity -> eat & transform -> revert -> cellar in/out -> cellar tree -> save -> quests */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
+const { sim } = require('./simwait');
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -15,7 +16,8 @@ const path = require('path');
   await page.goto('file://' + path.join(__dirname, '..', 'index.html'), { waitUntil: 'load' });
   await page.waitForFunction('window.game && window.game.ready', { timeout: 120000 });
   await page.evaluate(() => window.startGame());
-  await new Promise(r => setTimeout(r, 800));
+  // half a second of the game's own clock, not of the wall's (see simwait.js)
+  await sim(page, 0.5);
 
   const log = [];
   const step = async (name, fn) => {
@@ -50,7 +52,7 @@ const path = require('path');
     r.t = 0.05;
     return { at: [r.x, r.y, r.z], block: r.b, daysUntilRegrow: +(r.t / 420).toFixed(3), blockNow: g.world.get(r.x, r.y, r.z) };
   });
-  await new Promise(r => setTimeout(r, 500));
+  await sim(page, 0.3);
   // 1a. a block edit must reach the rendered geometry, not only the voxel array
   const mesh = await step('meshFollowsEdits', () => {
     const W = window.game.world, ci = window.__ci;
@@ -112,7 +114,7 @@ const path = require('path');
     g.input.jump = true;
     return { y0: +g.player.y.toFixed(2) };
   });
-  await new Promise(r => setTimeout(r, 1500));
+  await sim(page, 1.5);
   await step('flyAfter', () => { window.game.input.jump = false; return { y1: +window.game.player.y.toFixed(2), grounded: window.game.player.grounded }; });
 
   // 5. revert
@@ -121,7 +123,7 @@ const path = require('path');
     g.player.formT = 0.05;
     return { form: g.player.form };
   });
-  await new Promise(r => setTimeout(r, 700));
+  await sim(page, 0.3);
   await step('afterRevert', () => {
     const p = window.game.player;
     return { form: p.form, model: p.modelId, size: p.size() };
@@ -288,7 +290,7 @@ const path = require('path');
     for (const p of g.posts) p.t = 0.05;
     return { inTransit: g.posts.length };
   });
-  await new Promise(r => setTimeout(r, 500));
+  await sim(page, 0.3);
   await step('postDone', () => {
     const g = window.game;
     return { inTransit: g.posts.length, cellar: g.stashes[0].items.map(i => i.id), sent: g.stats.postSent || 0, lost: g.stats.postLost || 0 };
@@ -305,7 +307,7 @@ const path = require('path');
     p.t = 0.05;
     return { freshStart: f0, note: '送达时按 ×0.1 衰减 3 游戏日 = −126' };
   });
-  await new Promise(r => setTimeout(r, 500));
+  await sim(page, 0.3);
   await step('postArrivedFresh', () => {
     const g = window.game;
     // the posted fruit is appended when it arrives, so the last one is it
@@ -496,35 +498,64 @@ const path = require('path');
     const herd = g.creatures.filter(c => c.sp.id === 'jelly');
     const mid = (k) => herd.reduce((a, c) => a + c[k], 0) / herd.length;
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
-    const run = (form, y, secs) => {
+    const run = (form, y, secs, among) => {
       p.form = form; p.vital = 10; p.x = mid('x'); p.y = y; p.z = mid('z');
       g.log.length = 0;
       g._stungAt = undefined;                       // the throttle is per wade, not per run
-      let frames = 0;
+      let frames = 0, contacts = 0, worstNear = 0, spread = 0;
       for (let i = 0; i < secs / 0.05 && p.vital > 0; i++) {
         for (const c of herd) c.update(0.05, p, g.world, g);
-        /* Stay in the middle of the field. The lamps wander -- a spread is a
-           radius and they pick a new point inside it every few seconds -- so a
-           body left where it was dropped can find the field has walked off
-           without it, and then this measures luck rather than the cost of
-           loitering in the lamps. The claim being tested is "you are standing
-           in it", so the test keeps it standing in it. */
-        p.x = mid('x'); p.z = mid('z');
-        p.x = mid('x'); p.z = mid('z');
+        /* Stay where the lamps are. They wander -- a spread is a radius and
+           they pick a new point inside it every few seconds -- so a body left
+           where it was dropped can find the field has walked off without it,
+           and then this measures luck rather than the cost of standing in the
+           field. And the field is a ring: the lamps sit on the outline of the
+           sunken tower, so the middle of the ten of them is the tower, and no
+           lamp is within reach of that middle (measured: the nearest lamp to
+           it sits 1.7-2.3 m off, and the reach is 2.08 m). The claim being
+           tested is "you are standing among the lamps", so the body stands at
+           the lamp nearest the middle of the field -- the point of the field
+           closest to its own middle. The dive to the sills is the exception:
+           down there, out of reach of every lamp, is the thing that run is
+           checking. */
+        let bx = mid('x'), bz = mid('z'), by = y;
+        if (among) {
+          const cy = mid('y');
+          let best = null, bd = 1e9;
+          for (const c of herd) {
+            const d = Math.hypot(c.x - bx, c.y - cy, c.z - bz);
+            if (d < bd) { bd = d; best = c; }
+          }
+          bx = best.x; by = best.y; bz = best.z;
+        }
+        p.x = bx; p.y = by; p.z = bz;
+        let n = 0, near = 1e9;
+        for (const c of herd) {
+          const d = Math.hypot(c.x - p.x, c.y - p.y, c.z - p.z);
+          if (d < (c.sp.scale || 0.2) * 8 + 0.8) n++;
+          if (d < near) near = d;
+          spread = Math.max(spread, d);
+        }
+        contacts += n; if (near > worstNear) worstNear = near;
         frames++;
       }
       const warn = N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.jelly) });
       // the death line is 'bad' too, so the warning is matched by text
       return {
         lost: +(10 - p.vital).toFixed(2), secs: +(frames * 0.05).toFixed(1),
+        // how much field the body was standing in, and how far the field's own
+        // middle was from its nearest lamp: the number below means nothing
+        // without these
+        lamps: +(contacts / frames).toFixed(2), near: +worstNear.toFixed(2),
+        spread: +spread.toFixed(2),
         warns: g.log.filter(l => l.text === warn).length,
         line: (g.log.filter(l => l.text === warn)[0] || {}).text || ''
       };
     };
     const surface = mid('y');
-    const human = run(null, surface, 18);
-    const frog = run('frogpear', surface, 18);
-    const sill = run(null, 9, 18);            // the tower sills the frog pear hangs on
+    const human = run(null, surface, 18, true);
+    const frog = run('frogpear', surface, 18, true);
+    const sill = run(null, 9, 18, false);    // the tower sills the frog pear hangs on
     Object.assign(p, was);
     return {
       rate: N.CREATURE_BY_ID.jelly.sting, human, frog, sill, surface: +surface.toFixed(1),
@@ -533,11 +564,11 @@ const path = require('path');
       warnText: N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.jelly) })
     };
   });
-  /* Measured with the body held in the middle of the field: 5.0 and 9.5 vitality
-     over 18 seconds on two runs (0.25 a second per lamp, and contacts stack, so
-     the middle of a ten-lamp field costs more than its edge). The bound is the
-     loose half on purpose -- what it must never do is come back near zero, which
-     is what a body the field has walked away from reports. */
+  /* Measured with the body held among the lamps, at the lamp nearest the middle
+     of the field: about two lamps are inside it at any moment, so at 0.25 a
+     second each it loses all 10 vitality in about 10 seconds. The bound is the
+     loose half on purpose -- what it must never do is come back near zero,
+     which is what a body the field has walked away from reports. */
   check('the lamps sting a body that is not immune', sting.human.lost > 2, sting);
   check('the lamps do not sting the body the lake already gave you', sting.frog.lost === 0, sting);
   check('the dive to the tower sills stays out of reach of the lamps', sting.sill.lost === 0, sting);
@@ -2279,6 +2310,653 @@ const path = require('path');
   check('a level view out over the water wets the same half',
     wetBody.level && wetBody.level.below.pct >= 90 && wetBody.level.below.meanShift > 60 &&
     wetBody.level.dry.pct === 0, wetBody);
+
+  /* 11. A body in the air or in the water is a body that has to travel.
+     Three things were wrong with how such a body moved, and they showed up
+     together as one: it went where the mouse pointed, instantly, at a speed that
+     had nothing to do with the animal wearing it, and its body stayed dead level
+     whatever its path was doing. Measured before any of this: a swimming body
+     peaked at a course change of 94 rad/s and came about 45 degrees in 0.17 s;
+     a worn owl body puttered through the air at 4.2 m/s while the wild owls of
+     the valley fly at 7.0; a worn frog body tore through the lake at 9.9 m/s
+     while the wild frogs swim at 4.6; a diving frog swam along horizontally like
+     a periscope; and an owl that let go of the climb key beat its wings at full
+     stroke while it fell at its glide speed.
+     The spots to measure at are the ones with nothing in the way, and the world
+     has to be searched for them: Mirrorlake has a dry island in the middle, so
+     the widest stretch of open water is only about 7 m across, and a body
+     swimming in a straight line runs into a bank inside a second. Two tricks get
+     round that. A body whose aim is held a quarter turn off its own course
+     carves a circle and stays where it is, so the lake it needs is the lake it
+     already has -- and the radius it holds is its speed over its turn rate,
+     which is a second measurement for free. And every heading number is guarded
+     by a speed floor on both frames it is taken between, because a body pressed
+     against a wall has its velocity zeroed by the collision code, and the
+     heading of a body that is not moving is noise. */
+  const spots = await step('moveSpots', () => {
+    const g = window.game, W = g.world;
+    const depthAt = (x, z) => {
+      let top = -1, n = 0;
+      for (let y = 40; y >= 0; y--) {
+        if (W.liquidAt(x, y, z)) { if (top < 0) top = y; n++; }
+        else if (top >= 0 && W.solidAt(x, y, z)) break;
+      }
+      return { top, n };
+    };
+    let lake = null;
+    for (let x = 20; x < W.w - 20 && !lake; x += 2)
+      for (let z = 20; z < W.d - 20 && !lake; z += 2) {
+        const d = depthAt(x, z);
+        if (d.n < 4) continue;
+        let ok = true;
+        for (let r = 6; r <= 6 && ok; r++)
+          for (let a = 0; a < 16 && ok; a++)
+            if (depthAt(Math.round(x + Math.cos(a / 16 * 6.283) * r),
+                        Math.round(z + Math.sin(a / 16 * 6.283) * r)).n < 4) ok = false;
+        if (ok) lake = { x: x + 0.5, z: z + 0.5, top: d.top, n: d.n };
+      }
+    let sky = null;
+    for (let x = 40; x < W.w - 40 && !sky; x += 3)
+      for (let z = 40; z < W.d - 40 && !sky; z += 3) {
+        let ok = true;
+        for (let dx = -12; dx <= 12 && ok; dx++)
+          for (let dz = -12; dz <= 12 && ok; dz++)
+            for (let yy = 36; yy <= 52 && ok; yy++)
+              if (W.solidAt(x + dx, yy, z + dz)) ok = false;
+        if (ok) sky = { x: x + 0.5, z: z + 0.5, y: 46 };
+      }
+    // a one-block shore shelf: water over bed, air above, dry land next door
+    let shelf = null;
+    for (let x = 20; x < W.w - 20 && !shelf; x++)
+      for (let z = 20; z < W.d - 20 && !shelf; z++) {
+        if (!W.liquidAt(x, 14, z) || W.liquidAt(x, 15, z) || !W.solidAt(x, 13, z)) continue;
+        if (W.liquidAt(x + 1, 14, z) || !W.solidAt(x + 1, 14, z)) continue;
+        shelf = { x: x + 0.5, z: z + 0.5, top: 14, shore: 15 };
+      }
+    window.__mv = { lake, sky, shelf };
+    return { lake, sky, shelf };
+  });
+  check('the valley has open water, open air and a one-block shore shelf to measure on',
+    !!spots.lake && !!spots.sky && !!spots.shelf, spots);
+
+  /* 11a. The worn body and the animal are one animal, so they move at one speed
+     and turn at one rate. The wild animal's record is the source: an owl body
+     flies at the valley's owl speed, a frog body swims at the valley's frog
+     speed, and the turn rate is the same number in both records. */
+  const pace = await step('bodyTravelsAtItsAnimalPace', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player;
+    const { lake, sky } = window.__mv;
+    if (!lake || !sky) return { error: 'no open water or open air' };
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
+      pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
+      dry: p.dry, fright: p.fright, grounded: p.grounded };
+    const circle = (form, at, keys) => {
+      p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+      p.x = at.x; p.z = at.z; p.y = at.y;
+      p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
+      const spds = [];
+      let t = 0, path = 0, px = p.x, pz = p.z, rate = 0;
+      for (let i = 0; i < 240; i++) {
+        const dt = 1 / 60; t += dt;
+        const hv = Math.hypot(p.vx, p.vz) > 0.05 ? Math.atan2(p.vx, -p.vz) : 0;
+        p.yaw = hv + Math.PI / 2;                 // always a quarter off: a full carve
+        g.input = keys(); g.particles.n = 0; g.hover = null;
+        p.update(dt, g.input, g);
+        if (t > 1.5) {
+          const h2 = Math.hypot(p.vx, p.vz) > 0.05 ? Math.atan2(p.vx, -p.vz) : hv;
+          spds.push(Math.hypot(p.vx, p.vz));
+          rate = Math.max(rate, Math.abs(N.angleDelta(hv, h2)) / dt);
+          path += Math.hypot(p.x - px, p.z - pz); px = p.x; pz = p.z;
+        }
+      }
+      const mean = spds.reduce((a, b) => a + b, 0) / spds.length;
+      const dev = Math.sqrt(spds.reduce((a, b) => a + (b - mean) * (b - mean), 0) / spds.length);
+      return { mean: +mean.toFixed(2), dev: +dev.toFixed(2), rate: +rate.toFixed(2),
+        radius: +(path / (2 * Math.PI)).toFixed(2) };
+    };
+    const frog = circle('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 },
+      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }));
+    const owl = circle('owlberry', { x: sky.x, z: sky.z, y: sky.y },
+      () => ({ fwd: true, jump: p.y < sky.y + 6, sneak: false, sprint: false }));
+    Object.assign(p, was);
+    return { frog, owl,
+      wild: { swim: N.CREATURE_BY_ID.frog.swimSpeed, fly: N.CREATURE_BY_ID.owl.flySpeed },
+      turn: { frog: N.FRUIT_BY_ID.frogpear.form.turn === N.CREATURE_BY_ID.frog.turn,
+              owl: N.FRUIT_BY_ID.owlberry.form.turn === N.CREATURE_BY_ID.owl.turn } };
+  });
+  check('a worn frog body swims at the speed the wild frogs swim at',
+    !pace.error && Math.abs(pace.frog.mean / pace.wild.swim - 1) < 0.05, pace);
+  check('a worn owl body flies at the speed the wild owls fly at',
+    !pace.error && Math.abs(pace.owl.mean / pace.wild.fly - 1) < 0.05, pace);
+  check('and it holds that speed while it carves, so the number is a cruise and not a peak',
+    !pace.error && pace.frog.dev < 0.3 && pace.owl.dev < 0.3, pace);
+  check('the body and the animal turn at one rate: one animal, one number',
+    pace.turn.frog && pace.turn.owl, pace);
+
+  /* 11b. The course bends. `turn` is the most radians a second the body may add
+     to its heading at its own cruising speed, and it is a limit the body
+     actually presses against when the aim is snapped round a quarter turn. */
+  const carve = await step('fluidBodyCarves', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player;
+    const { lake, sky } = window.__mv;
+    if (!lake || !sky) return { error: 'no open water or open air' };
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
+      pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
+      dry: p.dry, fright: p.fright, grounded: p.grounded };
+    const WINDOW = 45;
+    const run = (form, at, turn, keys, frames) => {
+      p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+      p.x = at.x; p.z = at.z; p.y = at.y;
+      p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
+      const rec = [];
+      let t = 0;
+      for (let i = 0; i < frames; i++) {
+        const dt = 1 / 60; t += dt;
+        p.yaw = t < WINDOW / 60 ? 0 : -Math.PI / 2 * turn;
+        g.input = keys(); g.particles.n = 0; g.hover = null;
+        p.update(dt, g.input, g);
+        rec.push({ t, x: p.x, y: p.y, z: p.z, spd: Math.hypot(p.vx, p.vz),
+          h: Math.atan2(p.vx, -p.vz), bank: p.bank });
+      }
+      const base = rec[WINDOW];
+      let peak = 0, t45 = -1, bank = 0, path = 0;
+      for (let i = WINDOW + 1; i < rec.length; i++) {
+        const r = rec[i], q = rec[i - 1];
+        if (r.spd > 0.5 && q.spd > 0.5) peak = Math.max(peak, Math.abs(N.angleDelta(q.h, r.h)) * 60);
+        if (t45 < 0 && Math.abs(N.angleDelta(base.h, r.h)) > 0.785 && r.spd > 1) t45 = r.t - base.t;
+        bank = Math.max(bank, Math.abs(r.bank));
+        path += Math.hypot(r.x - q.x, r.z - q.z);
+      }
+      const chord = Math.hypot(rec[rec.length - 1].x - base.x, rec[rec.length - 1].z - base.z);
+      return { peak: +peak.toFixed(2), to45: t45 < 0 ? null : +t45.toFixed(2),
+        arc: +path.toFixed(2), chord: +chord.toFixed(2), bank: +bank.toFixed(3),
+        limit: p.formDef.turn };
+    };
+    const frog = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 }, 1,
+      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 90);
+    const frogStraight = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 }, 0,
+      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 90);
+    const owl = run('owlberry', { x: sky.x, z: sky.z, y: sky.y }, 1,
+      () => ({ fwd: true, jump: true, sneak: false, sprint: false }), 165);
+    const owlStraight = run('owlberry', { x: sky.x, z: sky.z, y: sky.y }, 0,
+      () => ({ fwd: true, jump: true, sneak: false, sprint: false }), 165);
+    Object.assign(p, was);
+    return { frog, frogStraight, owl, owlStraight };
+  });
+  check('a swimming body presses against its own turn limit and no further',
+    !carve.error && carve.frog.peak <= carve.frog.limit + 0.15 && carve.frog.peak > carve.frog.limit * 0.9, carve);
+  check('a flying body does the same',
+    !carve.error && carve.owl.peak <= carve.owl.limit + 0.15 && carve.owl.peak > carve.owl.limit * 0.9, carve);
+  check('ninety-four radians a second is gone: a quarter course change takes a third of a second or more',
+    !carve.error && carve.frog.to45 !== null && carve.frog.to45 >= 0.3 &&
+    carve.owl.to45 !== null && carve.owl.to45 >= 0.3, carve);
+  check('the path is an arc, not a polyline: it is longer than the line it spans',
+    !carve.error && carve.frog.arc > carve.frog.chord * 1.03 && carve.owl.arc > carve.owl.chord * 1.03, carve);
+  check('an aim that does not move is not a turn: the course holds',
+    !carve.error && carve.frogStraight.peak < 0.05 && carve.owlStraight.peak < 0.05, carve);
+  check('and a body holding its arc rolls into it',
+    !carve.error && carve.frog.bank > 0.3 && carve.owl.bank > 0.3, carve);
+
+  /* 11c. A body does not push at full sideways effort over a few degrees of
+     error. The correction it aims for is proportional to how far off course it
+     is, and only a wide correction is a full-effort one: without that, a mouse
+     jitter of 0.3 rad at 3 Hz had the body carving at its limit on every frame
+     and rolling with it, which is the single most unpleasant thing in the game
+     to fly. */
+  const wiggle = await step('wiggleIsNotSwerve', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player;
+    const { lake } = window.__mv;
+    if (!lake) return { error: 'no open water' };
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
+      pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
+      dry: p.dry, fright: p.fright, grounded: p.grounded };
+    p.form = 'frogpear'; p.vital = 10; p.dry = 0; p.air = 999; p.fright = 0;
+    p.x = lake.x; p.z = lake.z; p.y = lake.top - 1.0;
+    p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
+    let t = 0, bank = 0, swing = 0, minSpd = 99, spd = 0;
+    for (let i = 0; i < 105; i++) {
+      const dt = 1 / 60; t += dt;
+      p.yaw = Math.sin(t * 6.283 * 3) * 0.3;                 // 3 Hz, +-0.3 rad
+      g.input = { fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false };
+      g.particles.n = 0; g.hover = null;
+      p.update(dt, g.input, g);
+      spd = Math.hypot(p.vx, p.vz);
+      bank = Math.max(bank, Math.abs(p.bank));
+      if (t > 0.7) { minSpd = Math.min(minSpd, spd); if (spd > 2) swing = Math.max(swing, Math.abs(N.angleDelta(0, Math.atan2(p.vx, -p.vz)))); }
+    }
+    Object.assign(p, was);
+    return { swing: +swing.toFixed(3), bank: +bank.toFixed(3), spd: +spd.toFixed(2), minSpd: +minSpd.toFixed(2) };
+  });
+  check('a wiggled aim is not a swerved body: the course barely moves',
+    !wiggle.error && wiggle.swing < 0.15, wiggle);
+  check('and the body does not roll with it', !wiggle.error && wiggle.bank < 0.3, wiggle);
+  check('it keeps swimming at its cruise while it does so',
+    !wiggle.error && wiggle.minSpd > 3, wiggle);
+
+  /* 11d. A body the air or the water is holding up points along the path it is
+     taking: a diving frog noses down, a climbing owl noses up, a body on foot
+     stays level. Nothing in the game had a pitch angle at all. */
+  const attitude = await step('divingBodyNosesDown', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
+    const { lake, sky } = window.__mv;
+    if (!lake || !sky) return { error: 'no open water or open air' };
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
+      pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
+      dry: p.dry, fright: p.fright, grounded: p.grounded };
+    const run = (form, at, keys, secs) => {
+      p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+      p.x = at.x; p.z = at.z; p.y = at.y;
+      p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
+      for (let i = 0; i < Math.round(secs * 60); i++) {
+        p.yaw = 0;
+        g.input = keys(); g.particles.n = 0; g.hover = null;
+        p.update(1 / 60, g.input, g);
+      }
+      return { tilt: +(p.tilt || 0).toFixed(3), vy: +p.vy.toFixed(2), y: +p.y.toFixed(2), g: p.grounded ? 1 : 0 };
+    };
+    const sink = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.5 },
+      () => ({ fwd: true, jump: false, sneak: true, sprint: false }), 2.5);
+    const rise = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 3.0 },
+      () => ({ fwd: true, jump: true, sneak: false, sprint: false }), 1.2);
+    const climb = run('owlberry', { x: sky.x, z: sky.z, y: sky.y },
+      () => ({ fwd: true, jump: true, sneak: false, sprint: false }), 2.0);
+    // a dry flat stretch to walk: eight columns ahead, the same height, no water
+    const dry = (x, z) => {
+      let gy = 0;
+      for (let y = 46; y > 0; y--) if (W.solidAt(x, y, z)) { gy = y + 1; break; }
+      if (gy < 12) return -1;
+      for (let y = gy; y <= gy + 3; y++) if (W.liquidAt(x, y, z)) return -1;
+      return gy;
+    };
+    let field = null;
+    for (let x = 55; x < 75 && !field; x++) for (let z = 100; z < 140 && !field; z++) {
+      const gy = dry(x, z);
+      if (gy < 0) continue;
+      let ok = true;
+      for (let k = 1; k <= 8 && ok; k++) if (dry(x, z - k) !== gy) ok = false;
+      if (ok) field = { x: x + 0.5, z: z + 0.5, y: gy + 0.01 };
+    }
+    const walk = field ? run(null, field, () => ({ fwd: true, jump: false, sneak: false, sprint: false }), 2.0)
+                       : { error: 'no dry flat stretch' };
+    Object.assign(p, was);
+
+    // and the draw reads it: one body, level and tilted, two frames
+    const owl = g.creatures.find(c => c.sp.id === 'owl');
+    if (!owl) return { sink, rise, climb, walk, error: 'no owl in the roster' };
+    const t0 = g.time;
+    g.time = 420 * 21 / 24; g.updateEnv();
+    const gl = g.R.gl, w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const D = 6.0, UP = 3.2;
+    p.x = 136.5; p.z = 128.5; p.y = 22; p.yaw = -Math.PI / 2; p.pitch = Math.atan2(UP, D);
+    g.update(0.05);
+    const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
+    const grab = tilt => {
+      owl.x = p.x + fx * D; owl.z = p.z + fz * D; owl.y = p.y + UP;
+      owl.yaw = p.yaw; owl.state = 'wander'; owl.sleeping = false; owl.flyY = owl.y;
+      owl.airAmt = 1; owl.bank = 0; owl.tilt = tilt;
+      const cf = g.shootCamera(p); g._camFrame = cf;
+      g.render();
+      const b = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, b);
+      return b;
+    };
+    const level = grab(0), nosed = grab(0.42);
+    let diff = 0;
+    for (let i = 0; i < level.length; i += 4) {
+      if (Math.abs(level[i] - nosed[i]) + Math.abs(level[i + 1] - nosed[i + 1]) + Math.abs(level[i + 2] - nosed[i + 2]) > 24) diff++;
+    }
+    g.time = t0; g.updateEnv();
+    Object.assign(p, was);
+    return { sink, rise, climb, walk, diff };
+  });
+  check('a body sinking through water noses down the way it is going',
+    !attitude.error && attitude.sink.tilt > 0.2 && attitude.sink.vy < 0, attitude);
+  check('a body climbing through water noses up',
+    !attitude.error && attitude.rise.tilt < -0.1 && attitude.rise.vy > 0, attitude);
+  check('a body climbing through the air noses up too',
+    !attitude.error && attitude.climb.tilt < -0.1 && attitude.climb.vy > 0, attitude);
+  check('a body on foot stays level: feet hold a body level',
+    !attitude.error && attitude.walk.g === 1 && Math.abs(attitude.walk.tilt) < 0.02, attitude);
+  check('and the renderer reads the pitch: the same body level and nosed is not the same frame',
+    !attitude.error && attitude.diff > 300, attitude);
+
+  /* 11e. Feet on the bottom are feet that can push off it, water around them or
+     not. That is the whole of getting out of a lake: the shore of Mirrorlake is
+     one block of water deep for 183 columns, so the way out is to swim into the
+     shallows, stand up, and go. The water branch used to be picked by `inWater`
+     alone, which left a body standing on the lakebed with the water at its chest
+     no ground under it and no way to launch. */
+  const launch = await step('pushOffTheLakebed', () => {
+    const g = window.game, p = g.player;
+    const { shelf } = window.__mv;
+    if (!shelf) return { error: 'no one-block shore shelf' };
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
+      pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
+      dry: p.dry, fright: p.fright, grounded: p.grounded };
+    const out = {};
+    for (const form of ['frogpear', null]) {
+      p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+      p.x = shelf.x; p.z = shelf.z; p.y = shelf.top + 0.0001; p.yaw = Math.PI / 2; p.pitch = 0;
+      p.vx = p.vy = p.vz = 0; p.faceYaw = Math.PI / 2; p.bank = 0; p.tilt = 0; p.grounded = false;
+      // settle: the feet find the bottom before any key is held
+      for (let i = 0; i < 40; i++) { g.input = {}; g.particles.n = 0; g.hover = null; p.update(1 / 60, g.input, g); }
+      const settled = { y: +p.y.toFixed(3), g: p.grounded ? 1 : 0, w: p.inWater ? 1 : 0 };
+      let maxY = p.y, gotOut = false;
+      for (let i = 0; i < 300; i++) {
+        g.input = { fwd: true, jump: true, sneak: false, sprint: false };
+        g.particles.n = 0; g.hover = null;
+        p.update(1 / 60, g.input, g);
+        maxY = Math.max(maxY, p.y);
+        if (p.x > shelf.x + 1.1 && p.y >= shelf.shore - 0.02) { gotOut = true; break; }
+      }
+      out[form || 'human'] = { settled, gotOut, maxY: +maxY.toFixed(3), shore: shelf.shore };
+    }
+    Object.assign(p, was);
+    return out;
+  });
+  check('a body in a one-block shore shelf is standing on the bottom, in water',
+    !launch.error && launch.frogpear.settled.g === 1 && launch.frogpear.settled.w === 1, launch);
+  check('and it can push off that bottom out onto the dry shore',
+    !launch.error && launch.frogpear.gotOut && launch.frogpear.maxY >= launch.frogpear.shore, launch);
+  check('the same is true of a human body in the same shelf',
+    !launch.error && launch.human.gotOut && launch.human.maxY >= launch.human.shore, launch);
+
+  /* 11f. The beat belongs to what the body asks for. A body with wings that can
+     glide, and that is not asking for height, rides them: the stroke eases out
+     to a faint one, the wings stay spread, and the heave the stroke gives the
+     body goes with the stroke instead of with the clock. */
+  const beat = await step('wingsEaseOutInGlide', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player;
+    const { sky } = window.__mv;
+    if (!sky) return { error: 'no open air' };
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
+      pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
+      dry: p.dry, fright: p.fright, grounded: p.grounded };
+    const glide = (keys, secs) => {
+      p.form = 'owlberry'; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+      p.x = sky.x; p.z = sky.z; p.y = sky.y;
+      p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
+      for (let i = 0; i < Math.round(secs * 60); i++) {
+        p.yaw = 0;
+        g.input = keys(); g.particles.n = 0; g.hover = null;
+        p.update(1 / 60, g.input, g);
+      }
+      return { flap: +(p.flap === undefined ? 1 : p.flap).toFixed(3), vy: +p.vy.toFixed(2) };
+    };
+    const down = glide(() => ({ fwd: true, jump: false, sneak: false, sprint: false }), 1.2);
+    const up = glide(() => ({ fwd: true, jump: true, sneak: false, sprint: false }), 2.0);
+    Object.assign(p, was);
+    // and the stroke the renderer is about to upload goes with it
+    const entries = g.ensureModel('owl');
+    const stroke = flap => {
+      let peak = 0, heave = 0;
+      for (let i = 0; i < 60; i++) {
+        const st = { t: i / 60, fly: true, air: 1, crouch: 0, phase: 0, move: 1, flap };
+        for (const e of entries) {
+          const a = N.partAngles(e, st);
+          if (e.part.anim === 'flap') peak = Math.max(peak, Math.abs(a.rz));
+          if (e.part.anim === 'bob') heave = Math.max(heave, Math.abs(a.dy));
+        }
+      }
+      return { stroke: +peak.toFixed(3), heave: +heave.toFixed(3) };
+    };
+    return { down, up, full: stroke(1), riding: stroke(0.15) };
+  });
+  check('a flying body that is not asking for height rides its wings',
+    !beat.error && beat.down.flap < 0.3 && beat.down.vy < 0, beat);
+  check('and beats full stroke the moment it climbs for height',
+    !beat.error && beat.up.flap > 0.9 && beat.up.vy > 0, beat);
+  check('the stroke the renderer uploads goes with the beat, not with the clock',
+    !beat.error && beat.riding.heave < beat.full.heave * 0.3 && beat.riding.stroke < beat.full.stroke - 0.1, beat);
+
+  /* 11g. The animals the game drives are the same kind of body. What it replaced
+     was an ease toward the target bearing at 4 a second: an owl started a turn
+     at 6.3 rad/s -- a full revolution a second -- and came about 90 degrees in
+     1.03 s, and a frog in the water did it in 0.57 s. */
+  const animals = await step('animalsCarveToo', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player;
+    const { lake } = window.__mv;
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form };
+    p.form = null; p.x = 12; p.z = 148; p.y = 30;      // nowhere near any of them
+    const turnOf = c => {
+      c.state = 'wander'; c.sleeping = false; c.pause = 999;   // hold the target
+      for (let i = 0; i < 60; i++) c.update(1 / 60, p, g.world, g);
+      c.yaw = 0; c.bank = 0; c.tilt = 0;             // settled, and now facing north
+      c.tx = c.x + 40; c.tz = c.z;                     // due east: a quarter turn
+      let peak = 0, reach = -1, tt = 0;
+      for (let i = 0; i < 180; i++) {
+        const dt = 1 / 60; tt += dt;
+        const before = c.yaw;
+        c.update(dt, p, g.world, g);
+        peak = Math.max(peak, Math.abs(N.angleDelta(before, c.yaw)) / dt);
+        if (reach < 0 && Math.abs(N.angleDelta(0, c.yaw)) > 1.5708) reach = tt;
+      }
+      return { peak: +peak.toFixed(2), limit: c.sp.turn || 0,
+        to90: reach < 0 ? null : +reach.toFixed(2), spd: +c.speed.toFixed(2) };
+    };
+    const out = {};
+    const owl = g.creatures.find(c => c.sp.id === 'owl');
+    const jelly = g.creatures.find(c => c.isAquatic());
+    const bear = g.creatures.find(c => c.sp.id === 'bear');
+    const frog = g.creatures.find(c => c.isAmphibian());
+    const t0 = g.time;
+    g.time = 420 * 21 / 24; g.updateEnv();
+    if (owl) out.owl = turnOf(owl);
+    if (jelly) out.jelly = turnOf(jelly);
+    if (bear) out.bear = turnOf(bear);
+    g.time = 420 * 9 / 24; g.updateEnv();
+    if (frog && lake) {
+      frog.x = lake.x; frog.z = lake.z; frog.y = lake.top - 0.6;
+      frog.homeX = frog.x; frog.homeZ = frog.z;
+      out.frog = turnOf(frog);
+    }
+    g.time = t0; g.updateEnv();
+    Object.assign(p, was);
+    return out;
+  });
+  for (const who of ['owl', 'jelly', 'bear', 'frog']) {
+    check(`the wild ${who} turns at its own rate and no faster`,
+      !!animals[who] && animals[who].peak <= animals[who].limit + 0.15 && animals[who].peak > 0.3, animals);
+  }
+  check('an owl crossing the valley takes more than a second to come about ninety degrees',
+    !!animals.owl && animals.owl.to90 !== null && animals.owl.to90 >= 1.2, animals);
+
+  /* 11h. And an animal spends its afternoon walking. This is the one claim about
+     the animals that is not about a single manoeuvre: put every animal in the
+     valley through ninety seconds of its own wandering and count the frames it
+     is actually moving. What it caught: the two bears of the northern ridge
+     moved in 20% of those frames and covered 24 m between them, because in
+     front of a cliff the old behaviour was to give up, drop a new errand and
+     walk into the same rock again (a closer look at the same two bears had the
+     step in front of them rejected 2024 times in 2400 frames). Going round the
+     obstacle took them to 94% of the frames and 51 m, and the frogs, which meet
+     the same walls all along the lakeshore, from 76% to 93%. */
+  const roaming = await step('animalsWalkTheirAfternoon', () => {
+    const g = window.game, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form, time: g.time, night: g.night };
+    p.form = null; p.vx = p.vy = p.vz = 0;
+    const out = {}, prev = new Map();
+    for (const c of g.creatures) { out[c.sp.id] = { n: 0, moving: 0, path: 0 }; prev.set(c, { x: c.x, z: c.z }); }
+    const t0 = g.time;
+    g.time = 420 * 21 / 24; g.updateEnv();          // night: every one of them is out
+    for (let i = 0; i < 1800; i++) {
+      g.herdCentres = {};
+      for (const c of g.creatures) {
+        const h = g.herdCentres[c.sp.id] || (g.herdCentres[c.sp.id] = { x: 0, z: 0, n: 0 });
+        h.x += c.x; h.z += c.z; h.n++;
+      }
+      for (const id in g.herdCentres) { const h = g.herdCentres[id]; h.x /= h.n; h.z /= h.n; }
+      for (const c of g.creatures) {
+        const pv = prev.get(c);
+        c.update(0.05, p, g.world, g);
+        const s = out[c.sp.id];
+        s.n++;
+        if (c.speed > 0.1) s.moving++;
+        s.path += Math.hypot(c.x - pv.x, c.z - pv.z); pv.x = c.x; pv.z = c.z;
+      }
+    }
+    g.time = t0; g.updateEnv();
+    Object.assign(p, was);
+    const res = {};
+    for (const id in out) {
+      const s = out[id];
+      res[id] = { movingPct: Math.round(100 * s.moving / s.n), metres: Math.round(s.path / (s.n / 1800)) };
+    }
+    return res;
+  });
+  /* The bound is deliberately nowhere near the measurement: what it must never
+     come back with is the old one-in-five. */
+  for (const who of ['owl', 'frog', 'bear']) {
+    check(`the wild ${who} spends its afternoon walking rather than standing still`,
+      !!roaming[who] && roaming[who].movingPct > 60, roaming);
+  }
+  check('and the lamp field keeps drifting round the lake',
+    !!roaming.jelly && roaming.jelly.movingPct > 50, roaming);
+
+  /* 11i. And an animal sent to a place gets there. A body that can only bend
+     its course at a fixed rate holds a turn arc as wide as its speed over that
+     rate: a lamp jellyfish drifting at 0.92 m/s with a course it can bend 0.8
+     rad/s a second is swinging an arc 1.15 m across, so a target nearer than
+     that is a place it circles for the rest of the afternoon. The animal slows
+     for the turn, and the speed to slow to is the one whose arc passes through
+     the place: the way to it is a chord of the circle the animal is describing,
+     so the radius is half the distance over the sine of the course error, and
+     the speed is the turn rate times that. Without the slowing an animal walks
+     circles round its own errands; with the naive bound, without the half, it
+     circles them at exactly its arc width and never closes. */
+  const arrive = await step('animalsArriveWhereTheyAreSent', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
+    const { lake, sky } = window.__mv;
+    const groundY = N.groundY;
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form };
+    // park the body high above everything: an animal that has taken a notion to
+    // run from it, or come at it, is not going where the test sent it
+    p.form = null; p.x = 80; p.z = 80; p.y = 78;
+    const wet = (x, z) => {
+      let top = -1;
+      for (let y = W.h - 1; y >= 0 && top < 0; y--) if (W.liquidAt(x, y, z)) top = y;
+      // the same test the spawn code makes: two blocks of water, so there is
+      // somewhere for an animal that cannot leave it to hover
+      return top >= 0 && top + 1 - groundY(W, x, z, top + 2) >= 2;
+    };
+    /* Where each animal starts and where it is sent: the open water and the open
+       air the movement steps found, five metres apart. The valley is full of
+       things in the way, and an animal pressed nose-first against one of them
+       says nothing about its own steering -- this is a claim about how an animal
+       comes to a place, so it is measured where nothing is in the way. The lake
+       spot is standing water six metres in every direction and the air spot is
+       empty for twelve metres in every direction, so the straight line between
+       the two points is a road each of these bodies can take, and the road is
+       checked before it is walked. */
+    const place = (c) => {
+      if (c.isFlyer()) {
+        if (!sky) return null;
+        return { from: { x: sky.x, y: sky.y, z: sky.z }, to: { x: sky.x + 5, y: sky.y, z: sky.z } };
+      }
+      if (!lake) return null;
+      const y = lake.top - 0.6;                      // floating just under the surface
+      return { from: { x: lake.x, y, z: lake.z }, to: { x: lake.x + 5, y, z: lake.z } };
+    };
+    const road = (c, at) => {
+      for (let k = 0; k <= 20; k++) {
+        const x = at.from.x + (at.to.x - at.from.x) * k / 20;
+        const z = at.from.z + (at.to.z - at.from.z) * k / 20;
+        if (c.isFlyer()) { if (W.solidAt(Math.floor(x), Math.floor(at.from.y), Math.floor(z))) return false; }
+        else if (!wet(x, z)) return false;
+      }
+      return true;
+    };
+    const sent = (c, secs) => {
+      const at = place(c);
+      if (!at) return { error: 'no open ground to send the ' + c.sp.id + ' across' };
+      if (!road(c, at)) return { error: 'the way is not clear for the ' + c.sp.id };
+      const keep = { x: c.x, y: c.y, z: c.z, yaw: c.yaw, state: c.state, pause: c.pause,
+        tx: c.tx, tz: c.tz, homeX: c.homeX, homeZ: c.homeZ, flyY: c.flyY, speed: c.speed };
+      const herdWas = g.herdCentres && g.herdCentres[c.sp.id];
+      if (g.herdCentres) g.herdCentres[c.sp.id] = { x: at.from.x, z: at.from.z, n: 1 };   // no herd to walk back to
+      c.x = at.from.x; c.y = at.from.y; c.z = at.from.z;
+      c.homeX = c.x; c.homeZ = c.z;                  // and no home to go back to either
+      if (c.isFlyer()) c.flyY = c.y;
+      c.state = 'wander'; c.sleeping = false; c.pause = 9999;
+      c.tx = at.to.x; c.tz = at.to.z;
+      const n = Math.round(secs / 0.05);
+      let min = 1e9, max = 0, path = 0, px = c.x, pz = c.z, states = {}, top = 0;
+      for (let i = 0; i < n; i++) {
+        c.tx = at.to.x; c.tz = at.to.z;              // the wander code may move it
+        c.update(0.05, p, g.world, g);
+        states[c.state] = (states[c.state] || 0) + 1;
+        path += Math.hypot(c.x - px, c.z - pz); px = c.x; pz = c.z;
+        top = Math.max(top, c.speed);
+        if (i > n / 2) { const d = Math.hypot(at.to.x - c.x, at.to.z - c.z); min = Math.min(min, d); max = Math.max(max, d); }
+      }
+      /* Phase two: the case the animal's own wander retarget produces every few
+         seconds -- a new place a step or two off, to one side of the way it is
+         facing. The arc an animal holds is its speed over its turn rate: 1.15 m
+         for a lamp jellyfish drifting at 0.92 m/s, 2.1 m for an owl at 2.94. A
+         place nearer than that, off to the side, is a place it circles for the
+         rest of the pause. Measured without the animal slowing for a turn it
+         cannot hold, over 25 seconds at a target this far to one side: the
+         jellyfish walks 23 m and ends 0.9-1.4 m from a place 0.9 m away, the
+         frog walks 48 m for a place 1.2 m away, the owl walks 73 m for one 1.8 m
+         away and never comes inside 1.79 m of it. */
+      const d = c.sp.id === 'owl' ? 1.8 : (c.isAquatic() ? 0.9 : 1.2);
+      c.yaw = 0; c.speed = 0;                        // facing off at right angles to it
+      const sx = c.x - d, sz = c.z;                  // and the place is back over open ground
+      let smin = 1e9, smax = 0, spath = 0, qpx = c.x, qpz = c.z;
+      for (let i = 0; i < 500; i++) {
+        c.tx = sx; c.tz = sz;
+        c.update(0.05, p, g.world, g);
+        spath += Math.hypot(c.x - qpx, c.z - qpz); qpx = c.x; qpz = c.z;
+        if (i > 300) { const q = Math.hypot(sx - c.x, sz - c.z); smin = Math.min(smin, q); smax = Math.max(smax, q); }
+      }
+      if (g.herdCentres) g.herdCentres[c.sp.id] = herdWas;
+      Object.assign(c, keep);
+      // the width of the widest turn this animal makes at the fastest it went:
+      // how far it was travelling, not how it ended up standing still
+      return { min: +min.toFixed(2), max: +max.toFixed(2), path: +path.toFixed(1),
+        arc: +(top / (c.sp.turn || 1)).toFixed(2), spd: +top.toFixed(2),
+        states: Object.keys(states).join('/'),
+        side: { min: +smin.toFixed(2), max: +smax.toFixed(2), path: +spath.toFixed(1), at: d } };
+    };
+    const out = {};
+    const t0 = g.time;
+    g.time = 420 * 9 / 24; g.updateEnv();
+    const frog = g.creatures.find(c => c.isAmphibian());
+    const jelly = g.creatures.find(c => c.isAquatic());
+    if (frog) out.frog = sent(frog, 24);
+    if (jelly) out.jelly = sent(jelly, 24);
+    g.time = 420 * 21 / 24; g.updateEnv();
+    const owl = g.creatures.find(c => c.sp.id === 'owl');
+    if (owl) out.owl = sent(owl, 24);
+    g.time = t0; g.updateEnv();
+    Object.assign(p, was);
+    return out;
+  });
+  /* An animal sent somewhere arrives there and stands still: the frog closes to
+     0.8 m and stops, the jellyfish to 0.8 m, the owl to 0.7 m, each along a path
+     of 4-5 m, and the state never leaves 'wander' -- no flight, no sleep, no
+     panic taking over the run. `arc` is the width of the widest turn the animal
+     makes at the fastest it travelled (1.0 m for the frog, 1.2 for the
+     jellyfish, 2.1 for the owl), so arriving inside a metre is not the animal
+     failing to move. */
+  for (const who of ['frog', 'jelly', 'owl']) {
+    check(`the wild ${who} gets to the place it was sent to and stops there`,
+      !!arrive[who] && !arrive[who].error && arrive[who].states === 'wander' &&
+      arrive[who].min < 0.9 && arrive[who].max < 1.2 && arrive[who].arc > 0.5, arrive);
+  }
+  /* And it gets there when the place is one it cannot walk into at the speed it
+     is travelling: a target a step to one side, inside the width of its own
+     turn. The frog stands 0.79 m from a place 1.2 m off having walked 1 m; the
+     jellyfish 0.8 m from one 0.9 m off having walked 0.4 m; the owl 0.8 m from
+     one 1.8 m off having walked 1.9 m. Before the animal was taught to slow for
+     a turn it cannot hold, the same three walked 48 m, 23 m and 73 m round those
+     three places and never stopped at any of them -- the owl never came inside
+     1.79 m of a place 1.8 m from where it started. */
+  for (const who of ['frog', 'jelly', 'owl']) {
+    check(`the wild ${who} does not circle a place that is too close for its turn to reach`,
+      !!arrive[who] && !arrive[who].error && !!arrive[who].side &&
+      arrive[who].side.min < 0.9 && arrive[who].side.max < 1.2 && arrive[who].side.path < 8, arrive);
+  }
 
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');

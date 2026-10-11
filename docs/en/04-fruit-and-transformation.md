@@ -55,13 +55,13 @@ A fruit starts counting down the moment it is picked.
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `owlberry` | Owlberry | owl | 240 s | Whisperwood · bell-tower hollow | fly 5.2, glide 0.35, night vision 0.75, stealth 0.45, fov 88, size 0.55×0.7 | Photophobic by day (night vision inverts into blinding); talons cannot work latches or fruit bags (**cannot open storage**) |
+| `owlberry` | Owlberry | owl | 240 s | Whisperwood · bell-tower hollow | fly 5.2, flySpeed 7.0, glide 0.35, night vision 0.75, stealth 0.45, fov 88, size 0.55×0.7 | Photophobic by day (night vision inverts into blinding); talons cannot work latches or fruit bags (**cannot open storage**) |
 
 ### Rare (4 slots)
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 1.3, hop, swim 2.4, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
+| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 1.3, hop, swim 1.1, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
 
 ### Legendary (12 slots)
 
@@ -83,10 +83,12 @@ sit here looking implemented while nothing reads it.
 |---|---|---|---|
 | `size[w,h]` | collision box in metres | how low a hole you can enter; decides whether a 1×1 passage fits | live |
 | `speed` | land movement multiplier | bear 1.1 / frog 0.9 | live |
+| `turn` | the most radians a second this body may add to its heading, at its own cruising speed | every body has one: human 1.6 / owl 1.4 / frog 1.9 / bear 1.6 — the same number the animal itself carries, because the animal and the body worn from it are one body | live |
 | `jump` | jump force multiplier | frog 1.3 / bear 0.9 | live |
 | `hop {up,kick,period}` | the body does not walk on land, it hops: the auto-hop's fraction of its own jump, the fraction of land speed the launch throws it at, and the seconds its feet stay down between hops | only the frog: a 1.4 m arc about every second, and the same ground speed a human gets | live |
-| `swim` | underwater movement multiplier | frog 2.4 | live |
+| `swim` | underwater movement multiplier; a body with no such field gets 0.62 | frog 1.1 — a frog body is barely quicker in the lake than on the shore, because it is a small body and the water is thick; a human body moves at 0.62 of its land speed there | live |
 | `fly` | flight thrust (0 = cannot fly) | only the owl, 5.2 | live |
+| `flySpeed` | the speed a body with wings holds in level flight, m/s — not derived from walking speed | only the owl, 7.0: an owl is a fast animal wearing a slow body, and this number is the owl's own | live |
 | `glide` | unpowered gliding: the fall speed cap, as a fraction of normal | owl 0.35 — let go of the key and the owl stops hanging in the air: it comes down at a third of the speed you do, keeping the ground speed it had | live |
 | `breatheAir:false` | breathe underwater | only the frog | live |
 | `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 | live |
@@ -111,7 +113,7 @@ frog's niche is swimming and breathing water, and a second way of reaching
 things would have made the size gate — a frog fits a 1×1 gap a bear will not —
 one door among several instead of the only one.
 
-All seventeen fields on the three forms are read by the code. `game/test/reach.js`
+All nineteen fields on the three forms are read by the code. `game/test/reach.js`
 re-asks that question on every run and fails if a field is added to the data and
 nothing in `game/src/` reads it, so this column cannot quietly rot back into
 advertising.

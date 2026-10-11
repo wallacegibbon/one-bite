@@ -65,14 +65,22 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 
 ## 3. Creature table
 
-| id | 中文 | English | Model | scale | Habitat | Activity | Speed | Alert | Pack | Fruit |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `owl` | 猫头鹰 | Screech Owl | owl | 0.15 | Whisperwood / Starfall Keep / Glowglade / Cloudspire | night | 3.2 (fly 7.0) | 12 | 1 | Owlberry |
-| `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6, hop) | 12 | 12 | Frog Pear |
-| `bear` | 棕熊 | Brown Bear | bear | 0.24 | Northern Ridge / Whisperwood | both | 5.0 | 22 | 1 | Bruin Fig |
-| `jelly` | 灯水母 | Lamp Jellyfish | jelly | 0.16 | Mirrorlake, on the outline of the sunken tower | both | 0.8 (swim 2.2) | 4 | 10 | **none** |
+| id | 中文 | English | Model | scale | Habitat | Activity | Speed | turn | Alert | Pack | Fruit |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `owl` | 猫头鹰 | Screech Owl | owl | 0.15 | Whisperwood / Starfall Keep / Glowglade / Cloudspire | night | 3.2 (fly 7.0) | 1.4 | 12 | 1 | Owlberry |
+| `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6, hop) | 1.9 | 12 | 12 | Frog Pear |
+| `bear` | 棕熊 | Brown Bear | bear | 0.24 | Northern Ridge / Whisperwood | both | 5.0 | 1.6 | 22 | 1 | Bruin Fig |
+| `jelly` | 灯水母 | Lamp Jellyfish | jelly | 0.16 | Mirrorlake, on the outline of the sunken tower | both | 0.8 (swim 2.2) | 0.8 | 4 | 10 | **none** |
 
 Distribution of the 30 individuals in the valley: owl 6, frog 12, bear 2, jelly 10.
+
+**`turn` is agility, and it is a rate, not a stat**: the most radians a second this body may add to its heading **at its own cruising speed** — going half as fast it bends its course half as fast, because a turn is an arc and the speed sets how wide that arc can be. Nothing in the valley turns on the spot: the course bends, the body keeps going forward, and it gets where it was sent by carving rather than by being pointed. The form record of the same species carries the same number, because the animal and the body worn from it are one body.
+
+Three things follow from that one field, and `play.js` measures each of them:
+
+- **A turn costs speed, and the price is geometry.** To reach a place that lies close across, the animal has to slow until its own arc is tight enough to land there: the way to the target is a *chord* of the circle the body can hold, so the speed is `turn × d / (2 sin θ)`. Without that rule an animal sent to a place too close for its arc orbits it for the rest of the afternoon — measured: an owl sent to a point 1.8 m away flew 73 m around it and never came nearer than 1.8 m; with the rule the same 1.8 m takes 1.9 m of path.
+- **One turn budget a frame, whoever spent it.** A body pressed against a cliff was being turned twice in the same frame — once by the steering, once by the slide along the wall — and came about at 3.2 rad/s on a record that says 1.6. The budget lands last, after everything else has had its say.
+- **A walker goes round a wall, not into one.** When the next step is solid, the animal takes the passable side that points furthest back along the way it came and follows the contour; only when none of them does does it give up the target and rest. A bear used to spend 80% of an afternoon standing against a cliff and now walks 94% of it. Bodies that live in water already slid along walls inside their own mode — this is the walking mode catching up.
 
 The lamps are the one species placed by a **landmark** instead of a zone: `at: 'tower'`, `spread: 4` in the record, resolved against the habitat zone (`mirrorlake.tower`, which is also where `worldgen` builds the tower). The field is the tower's outline, so the tower is what places the field — "anywhere in a lake of radius 34" would put the lamps anywhere except over the tower. A `spread` is a **radius**, not a half-width: the landmark branch samples a disc, like every other branch of `samplePos`, and so does the wander roll that picks a target around `home`. A lamp therefore stands at most 4 m from the tower's centre and wanders at most 4 m past that, which is what makes "twice the spread" the honest bound the test checks.
 
@@ -80,12 +88,14 @@ The lamps are the one species placed by a **landmark** instead of a zone: `at: '
 
 It has one effect on the player, and the effect is not a body: **it stings** —
 `sting: 0.25` on the animal record, vitality per second for every lamp you are
-standing inside. Contacts stack, because a field is a field: the middle costs
-more than the edge. The immunity sits on the **frog** body — the body this lake
-already gave you is the body its lamps are lit for — and the log line that
-reports a sting names the answer out loud. The lamps hang a metre or two under
-the surface, so the breath-hold dive to the tower sills stays out of reach of
-them.
+standing inside. Contacts stack, because a field is a field: stand where the
+lamps overlap and you pay for each of them. But the field is a **ring**, not a
+disc — the tower it is drawn around pokes up through the surface — so the exact
+middle of it is dry ground and costs nothing. The immunity sits on the **frog**
+body — the body this lake already gave you is the body its lamps are lit for —
+and the log line that reports a sting names the answer out loud. The lamps hang
+a metre or two under the surface, so the dive to the tower sills stays out of
+reach of them.
 
 They are also the first animal to actually use `locomotion: 'water'`, and that
 mode had to be made honest: an animal that cannot leave the water is placed and

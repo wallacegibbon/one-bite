@@ -235,9 +235,8 @@
          takes the frame update() handed it; that is the same lag the body's own
          head test had, since the environment is built before the player moves. */
       const lens = this._lens || { x: p.x, y: p.eyePos(), z: p.z };
-      if (W.liquidAt(Math.floor(lens.x), Math.floor(lens.y), Math.floor(lens.z))) {
-        fogCol = mix(fogCol, [0.06, 0.24, 0.32], 0.85); fogDen = 0.14;
-      }
+      const wf = W.liquidFogAt(Math.floor(lens.x), Math.floor(lens.y), Math.floor(lens.z));
+      if (wf) { fogCol = mix(fogCol, wf.c, wf.t); fogDen = wf.den; }
       /* Night vision belongs to the eye, not to the sky. `daylight` and `night`
          stay what the sky is -- animals and the HUD read those -- and only the
          rendered brightness changes, so an owl and a frog standing in the same
@@ -1010,6 +1009,10 @@
           const rz = N.M4.create(); N.M4.rotZ(rz, c.bank);
           N.M4.mul(base, base, rz);
         }
+        if (Math.abs(c.tilt || 0) > 0.002) {    // and the same nose along the path
+          const rx = N.M4.create(); N.M4.rotX(rx, c.tilt);
+          N.M4.mul(base, base, rx);
+        }
         // a body that just landed is briefly shorter and wider: the cheapest
         // thing in the world that makes a hop look like a hop
         const sq = c.squash || 0;
@@ -1020,8 +1023,13 @@
           move: Math.min(1, c.speed / (c.sp.speed || 3)) * (c.speed > 0.2 ? 1 : 0),
           fly: c.isFlyer() && c.state !== 'roost',
           air: c.airAmt || 0, crouch: c.crouch || 0, phase: c.phase,
-          // only a body the data gives a swim speed to: a bear wading still walks
-          swim: (c.inWater && c.sp.swimSpeed) ? 1 : 0
+          flap: c.flap === undefined ? 1 : c.flap,
+          // only a body the data gives a swim speed to: a bear wading still walks.
+          // The amplitude is how fast it is actually going through the water
+          // against the speed its own record swims at: a body that is coasting to
+          // a stop paddles gently, because a full stroke whether or not the body
+          // is moving is an animation that stopped being connected to anything.
+          swim: (c.inWater && c.sp.swimSpeed) ? Math.min(1, Math.max(0.18, c.speed / c.sp.swimSpeed)) : 0
         };
         for (const e of parts) {
           const m = N.partMatrix(N.M4.create(), base, e, st, parts);
@@ -1048,6 +1056,10 @@
           const rz = N.M4.create(); N.M4.rotZ(rz, p.bank);
           N.M4.mul(base, base, rz);
         }
+        if (Math.abs(p.tilt || 0) > 0.002) {     // and nose along the path it is taking
+          const rx = N.M4.create(); N.M4.rotX(rx, p.tilt);
+          N.M4.mul(base, base, rx);
+        }
         const sq = p.squash || 0;
         // rising fast stretches the body the way landing flattens it
         const stretch = p.grounded ? 0 : Math.min(0.1, Math.abs(p.vy) / 220);
@@ -1059,8 +1071,14 @@
           move: Math.min(1, Math.hypot(p.vx, p.vz) / 5),
           fly: !!p.formDef.fly && !p.grounded,
           air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0,
-          // the form decides, not the water: a human in the lake wades, a frog kicks
-          swim: (p.inWater && p.formDef.swim) ? 1 : 0
+          flap: p.flap === undefined ? 1 : p.flap,
+          /* the form decides, not the water: a human in the lake wades, a frog
+             kicks. The amplitude is the speed the body is actually making through
+             the water over the speed it is trying to make, so a frog that is
+             coasting to a stop paddles gently instead of windmilling a full
+             stroke at a body that is hardly moving. */
+          swim: (p.inWater && p.formDef.swim && p.cruise > 0.1)
+            ? Math.min(1, Math.max(0.18, Math.hypot(p.vx, p.vz) / p.cruise)) : 0
         };
         for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), {});
       }

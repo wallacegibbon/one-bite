@@ -6,6 +6,7 @@
 
   /* ------------------------- block table ------------------------- */
   // c=[r,g,b]  ct=top colour  solid=collides  opaque=culls faces  liquid  alpha  emis  micro=[[x,y,z,w,h,d]...]
+  // fogC/fogT/fogDen: the haze a lens takes on inside this block -- see liquidFogAt()
   const B = [];
   function def(id, o) {
     const b = B[id] = Object.assign({ id, solid: true, opaque: true, alpha: 1, emis: 0, c: [0.8, 0.8, 0.8] }, o);
@@ -24,7 +25,8 @@
   def(2, { cn: '泥土', c: [0.40, 0.31, 0.22] });
   def(3, { cn: '石头', c: [0.50, 0.50, 0.54] });
   def(4, { cn: '沙', c: [0.80, 0.74, 0.53] });
-  def(5, { cn: '水', solid: false, opaque: false, liquid: true, c: [0.13, 0.34, 0.52], alpha: 0.72 });
+  def(5, { cn: '水', solid: false, opaque: false, liquid: true, c: [0.13, 0.34, 0.52], alpha: 0.72,
+           fogC: [0.06, 0.24, 0.32], fogT: 0.85, fogDen: 0.14 });
   def(6, { cn: '树干', c: [0.38, 0.27, 0.17], ct: [0.46, 0.34, 0.21] });
   def(7, { cn: '树叶', c: [0.20, 0.40, 0.18], soft: 1 });
   def(8, { cn: '针叶', c: [0.14, 0.30, 0.20], soft: 1 });
@@ -158,6 +160,15 @@
     }
     solidAt(x, y, z) { const b = B[this.get(x | 0, y | 0, z | 0)]; return !!(b && b.solid); }
     liquidAt(x, y, z) { return this.get(x | 0, y | 0, z | 0) === WATER; }
+    /* The haze a lens takes on when it is sitting inside a liquid. It lives on
+       the block row because it is the same fact as that block's colour and
+       transparency: what the stuff is made of. It used to be written a second
+       time in the environment code, which is how a second liquid (a swamp, a
+       lava) would have needed the environment edited rather than a row here. */
+    liquidFogAt(x, y, z) {
+      const b = B[this.get(x | 0, y | 0, z | 0)];
+      return b && b.liquid && b.fogC ? { c: b.fogC, t: b.fogT, den: b.fogDen } : null;
+    }
     markDirty(x, z) {
       const c0x = Math.max(0, Math.floor((x - 1) / this.cs)), c1x = Math.min(this.cx - 1, Math.floor((x + 1) / this.cs));
       const c0z = Math.max(0, Math.floor((z - 1) / this.cs)), c1z = Math.min(this.cz - 1, Math.floor((z + 1) / this.cs));

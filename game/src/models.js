@@ -360,7 +360,10 @@
     const t = st.t, ph = st.phase || 0;
     const air = st.air || 0, cr = st.crouch || 0;
     let rx = 0, ry = 0, rz = 0, dy = 0, sc = 1;
-    const beat = Math.sin(t * (st.fly ? FLAP_RATE : 2.2) + ph);
+    /* The beat, scaled by how hard the body is actually beating: a body that is
+       riding its wings down holds them spread with a faint stroke, and the heave
+       the stroke gives the body goes with the stroke, not with the clock. */
+    const beat = Math.sin(t * (st.fly ? FLAP_RATE : 2.2) + ph) * (st.flap === undefined ? 1 : st.flap);
     if (anim === 'flap') {
       /* The wing is authored folded; the `air` pose holds it out (that part is
          the generic pose blend below, and it carries its own sign). The beat

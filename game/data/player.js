@@ -54,6 +54,6 @@
      metres. A model never carries its own scale: the record that asks for a body
      says how big that body is, so an animal is declared once whether it is
      walking around or being worn as a form. */
-  N.HUMAN_FORM = { cn: '人形', en: 'human', size: [0.62, 1.8], scale: 0.18, speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55 };
+  N.HUMAN_FORM = { cn: '人形', en: 'human', size: [0.62, 1.8], scale: 0.18, speed: 1, jump: 1, fov: 76, hand: 'hand', step: 0.55, turn: 1.6 };
 
 })(window.FRUTARIA = window.FRUTARIA || {});

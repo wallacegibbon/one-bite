@@ -13,6 +13,12 @@
      of this, so the number in the data file is a ratio and not a speed. */
   const MAX_FALL = 42;
   const GRAVITY = 23;
+  /* The pull a wing works against when it leans into a turn. The game's own
+     gravity is 23 m/s^2 because an arcade fall has to feel like one; the tilt a
+     body shows is not about whether it holds the arc (the code holds the arc),
+     it is about how much of the turn the body shows, and at these speeds a real
+     wing shows atan(sideways / 9.8). */
+  const LEAN_G = 9.8;
 
   /* ============================ player ============================ */
   class Player {
@@ -23,6 +29,14 @@
       this.yaw = 0; this.pitch = 0;
       // what the body actually looks like: facing and bank are eased, never snapped
       this.faceYaw = 0; this.bank = 0;
+      /* and the third angle: how much the body is pointing up or down along the
+         path it is taking. Nose down positive, because that is the angle rotX
+         takes. Only a body the air or the water is holding up has one -- feet
+         keep a body level. */
+      this.tilt = 0;
+      // and the wing beat, 0..1: a body riding its wings down beats far less
+      // than one climbing for height
+      this.flap = 1;
       this.grounded = false;
       this.form = null;            // fruitId
       this.formT = 0;              // time remaining
@@ -34,6 +48,9 @@
       this.dry = 0;                // seconds this amphibian body has been out of water
       this.wasCold = false;        // whether the ridge cold is already biting (drives one log line)
       this.moveAmt = 0;            // horizontal movement this frame (drives animation)
+      // the speed the body is trying to travel at this frame, m/s (the draw
+      // sizes a swim stroke against it)
+      this.cruise = 0;
       this.bob = 0;
       /* what the body's own motion tells the animation, in 0..1: how far off the
          ground it is, how loaded its legs are before a hop, and how much it
@@ -154,7 +171,6 @@
 
     update(dt, inp, game) {
       const f = this.formDef;
-      const face0 = this.faceYaw;
       const W = this.world;
       const cx = Math.floor(this.x), cz = Math.floor(this.z);
       const cyFeet = Math.floor(this.y + 0.1), cyMid = Math.floor(this.y + this.size()[1] * 0.5), cyHead = Math.floor(this.y + this.size()[1] - 0.12);
@@ -209,11 +225,19 @@
 
       // ---- intended velocity ----
       const sprint = inp.sprint && this.air > 0 && !this.inWater;
-      let speed = 4.7 * (f.speed || 1) * (sprint ? 1.45 : 1);
+      const fly = f.fly && !this.inWater;
+      /* What the body is trying to travel at. A body with wings travels at the
+         speed its species flies at, not at the speed it walks at: the wild owls
+         of the valley cross the valley at 7 m/s (data/creatures.js `flySpeed`)
+         while you are wearing one, and an owl that putters along at walking
+         pace is a body with a speed problem. On foot the body's own `speed`
+         multiplier still decides, because on foot every body is measured
+         against the human body's 4.7 m/s. */
+      let speed = (fly && f.flySpeed ? f.flySpeed : 4.7 * (f.speed || 1)) * (sprint ? 1.45 : 1);
       if (this.inWater) speed *= (f.swim || 0.62);
       // a body that hops is thrown forward by the hop; it does not bleed speed
       // in the air the way a body that merely fell off a ledge does
-      if (!this.grounded && !f.fly && !this.inWater) speed *= (f.hop ? 1 : 0.92);
+      if (!this.grounded && !fly && !this.inWater) speed *= (f.hop ? 1 : 0.92);
       let dx = 0, dz = 0;
       const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
       const rx = Math.cos(this.yaw), rz = Math.sin(this.yaw);
@@ -223,11 +247,54 @@
       if (inp.left) { dx -= rx; dz -= rz; }
       const len = Math.hypot(dx, dz);
       if (len > 0) { dx /= len; dz /= len; }
+      // what the body is trying to travel at this frame. The draw reads it: a
+      // stroke is sized against the speed it is swimming at, not against a
+      // guess about which animal the body is.
+      this.cruise = speed;
 
-      const fly = f.fly && !this.inWater;
-      const accel = fly ? 22 : (this.grounded ? 34 : (f.hop ? 18 : 12));
-      this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt / Math.max(speed, 1));
-      this.vz += (dz * speed - this.vz) * Math.min(1, accel * dt / Math.max(speed, 1));
+      /* ---- a body the fluid is holding up goes where it is going ----
+         Wings stay up by moving forward, and a body in water has nothing to
+         push against but the water. Neither can change course on the spot: the
+         course bends. `turn` is how fast the body can bend it -- the most
+         radians a second it adds to its heading at its own cruising speed --
+         and above that speed the arc it holds gets wider, not the turn faster,
+         because the same sideways push has more body to swing about.
+         What this replaces: the velocity was eased straight toward wherever the
+         mouse pointed, with 22 units of push in air and 12 in water. Measured,
+         a swimming body peaked at a course change of 94 rad/s, came about 45
+         degrees in 0.17 s and 90 degrees in 1.9 s, and its path was a polyline
+         whose corners the easing had merely softened.
+         A body on foot is deliberately not in this branch: feet grip the
+         ground, and the player's turning on foot is the game's answer to the
+         mouse, not an animal's answer to momentum. */
+      const arc = f.turn || 0;
+      const hd0 = Math.hypot(this.vx, this.vz) > 0.05 ? Math.atan2(this.vx, -this.vz) : this.faceYaw;
+      if (arc > 0 && (fly || this.inWater)) {
+        let spd = Math.hypot(this.vx, this.vz);
+        // at rest there is no course to bend: a body that starts from nothing
+        // starts in the direction it is pushing, the way an animal pushes off
+        const have = spd > 0.05 ? Math.atan2(this.vx, -this.vz) : (len > 0 ? Math.atan2(dx, -dz) : hd0);
+        const want = len > 0 ? Math.atan2(dx, -dz) : have;
+        const d = N.angleDelta(have, want);
+        /* The body does not push at full sideways effort over a few degrees of
+           error: the correction it aims for is proportional to how far off
+           course it is, and only a wide correction is a full-effort one.
+           Without that, a mouse jitter of a few degrees at 3 Hz had the body
+           carving at its limit on every frame and rolling with it. */
+        const rate = Math.min(arc * Math.min(1, speed / Math.max(spd, 0.01)), 2.2 * Math.abs(d));
+        const bend = Math.min(Math.abs(d), rate * dt);
+        const hd = have + (d < 0 ? -bend : bend);
+        // and the fluid takes the speed back when the body stops pushing: it
+        // coasts out over a second or two instead of stopping dead, because a
+        // body with no brakes does that
+        spd += ((len > 0 ? speed : 0) - spd) * N.ease(len > 0 ? 2.4 : 1.2, dt);
+        this.vx = Math.sin(hd) * spd;
+        this.vz = -Math.cos(hd) * spd;
+      } else {
+        const accel = fly ? 22 : (this.grounded ? 34 : (f.hop ? 18 : 12));
+        this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt / Math.max(speed, 1));
+        this.vz += (dz * speed - this.vz) * Math.min(1, accel * dt / Math.max(speed, 1));
+      }
 
       // ---- the body turns with mass ----
       // facing never snaps to the mouse: an animal pivots, and the bigger it is
@@ -241,9 +308,18 @@
       } else {
         this.faceYaw += N.angleDelta(this.faceYaw, this.yaw) * N.ease(3.2, dt);   // settle back to the aim
       }
-      // lean into the turn in air and water, level out on foot
+      /* ---- the lean is what the arc costs ----
+         A body carried along bends its path by pushing sideways against the
+         fluid, and the tilt is that push: sideways acceleration over the pull
+         of the earth. So the lean is no longer a constant times how fast the
+         facing happens to be swinging -- it is read off the arc the body is
+         actually holding, which means a body that is only correcting a few
+         degrees leans a few degrees, and a body at the tightest arc its data
+         allows leans the full 0.45. */
+      const hd1 = spd > 0.05 ? Math.atan2(this.vx, -this.vz) : hd0;
+      const bendRate = spd > 0.3 ? Math.abs(N.angleDelta(hd0, hd1)) / Math.max(dt, 0.001) : 0;
       const lean = (fly || this.inWater)
-        ? Math.max(-0.45, Math.min(0.45, (N.angleDelta(face0, this.faceYaw) / Math.max(dt, 0.001)) * 0.11))
+        ? Math.max(-0.45, Math.min(0.45, Math.atan(bendRate * spd / LEAN_G)))
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
@@ -267,15 +343,40 @@
           this.vy -= GRAVITY * dt;
           this.vy = Math.max(-MAX_FALL, this.vy);
         }
+        /* The beat belongs to what the body asks for. A body with wings that can
+           glide, and that is not asking for height, rides them: the stroke eases
+           out to a faint one and the wings stay spread. Wings that cannot glide
+           have to beat or they come down, so for them the beat never leaves.
+           Before this a flying body beat at the same 1.75 strokes a second
+           whether it was climbing or falling at 15 m/s with its wings spread. */
+        const flapWant = (up || down) ? 1 : (f.glide ? 0.15 : 1);
+        this.flap += (flapWant - this.flap) * N.ease(3.5, dt);
         this.grounded = false;
-      } else if (this.inWater) {
+      } else if (this.inWater && !this.grounded) {
+        /* Up and down in water is the same push that drives a body forward,
+           aimed differently, so how much authority a body has over its own
+           depth is a fraction of how fast it moves through the water: a frog
+           that swims at 4.7 m/s comes up at about a metre a second, and a human
+           who swims at 2.9 does not surface much faster than it sinks. The
+           water takes it back at the rate it takes the forward speed back. */
+        const push = speed * 1.5;
         const buoy = 5.2;
-        this.vy += (inp.jump ? 6.2 : 0) * dt;
+        this.vy += (inp.jump ? push : 0) * dt;
         this.vy -= buoy * dt * 0.55;
-        if (inp.sneak) this.vy -= 3.4 * dt;
+        if (inp.sneak) this.vy -= push * 0.6 * dt;
         this.vy -= this.vy * Math.min(0.9, 3.2 * dt);
         this.vy = Math.max(-4.5, Math.min(4.6, this.vy));
       } else {
+        /* Feet that are on the bottom are feet that can push off it, water
+           around them or not. That is the whole of getting out of a lake: the
+           shore of Mirrorlake is one block of water deep for 183 columns, so
+           the way out is to swim into the shallows, stand up, and go. The
+           branch used to be picked by `inWater` alone, which left a body
+           standing on the lakebed with the water at its chest no ground under
+           it and no way to launch: in a one-block shore shelf, holding the jump
+           key from the bottom gave a highest point of 14.93 m against a shore
+           whose top face is at 15.0, and the body bobbed there for as long as
+           the key was held. */
         this.vy -= GRAVITY * dt;
         // glide is a property of the body, not of flapping: an owl that walks
         // off a ledge spreads its wings too
@@ -309,6 +410,21 @@
         // the wind-up: the legs load while the feet are on the ground
         this.crouch = hop ? this.wind : 0;
       }
+
+      /* ---- the body points along the path it is taking ----
+         A body on foot stays level whatever it does, because its feet hold it
+         level. A body the air or the water is holding up climbs nose-up and
+         dives nose-down, and the angle is simply the one its own path makes.
+         Nothing did this before: an owl that let go of the climb key came down
+         at its glide speed with its body dead level, and a frog crossing to the
+         bottom swam along horizontally like a periscope -- the path curved and
+         the body did not know it. `tilt` is nose-down positive, because that is
+         the angle rotX takes, and it is eased like every other angle. */
+      const hs = Math.hypot(this.vx, this.vz);
+      const tiltWant = (fly || this.inWater) && (hs > 0.3 || Math.abs(this.vy) > 0.3)
+        ? Math.max(-0.6, Math.min(0.6, Math.atan2(-this.vy, Math.max(hs, 0.5))))
+        : 0;
+      this.tilt += (tiltWant - this.tilt) * N.ease(4.5, dt);
 
       // ---- displacement (sub-stepped + auto step-up) ----
       const step = f.step || 0;
@@ -453,6 +569,10 @@
       this.inWater = false;
       // and the fifth: a body in the air or in the water turns by tilting
       this.bank = 0;
+      // and the sixth: the same body points along the path it is taking
+      this.tilt = 0;
+      // and the seventh: the wing beat, 0..1
+      this.flap = 1;
     }
     attitudeTo(formId) {
       const a = this.sp.attitude || {};
@@ -544,10 +664,44 @@
                      : (sp.speed || 3);
         const base = this.state === 'flee' || this.state === 'chase' ? cruise * 1.7 : cruise * 0.42;
         spd = sleeping ? 0 : base;
+        /* The animal goes where it is going, and the course bends. `turn` is
+           the most radians a second the species adds to its heading at its own
+           cruising speed, and above that speed the arc it holds gets wider
+           rather than the turn getting faster -- the same push has more body to
+           swing about. This is the rule the player's own body obeys
+           (Player.update); an owl crossing the valley and a frog crossing the
+           lake are the same kind of body. What it replaces was an ease toward
+           the target bearing at 4 a second, measured: an owl started a turn at
+           6.3 rad/s -- a full revolution a second -- and came about 90 degrees
+           in 1.03 s, and a frog in the water did it in 0.57 s. */
         const tgtYaw = Math.atan2(dx, -dz);
-        let dy = tgtYaw - this.yaw;
-        while (dy > Math.PI) dy -= 6.283; while (dy < -Math.PI) dy += 6.283;
-        this.yaw += dy * Math.min(1, dt * 4);
+        const dy = N.angleDelta(this.yaw, tgtYaw);
+        const arc = sp.turn || 0;
+        // the same two limits as the player's body: the species' own rate, and
+        // a correction proportional to how far off course the animal is
+        const rate = arc > 0 ? Math.min(arc * Math.min(1, cruise / Math.max(spd, 0.01)), 2.2 * Math.abs(dy)) : Math.abs(dy);
+        const bend = Math.min(Math.abs(dy), rate * dt);
+        this.yaw += dy > 0 ? bend : -bend;
+        /* An animal that is close to where it is going, and off course, cannot
+           get there at the speed it is travelling. The arc of a turn is the
+           speed over the rate: at 0.92 m/s a lamp jellyfish that can bend its
+           course 0.8 rad/s a second holds an arc of 1.15 m, so a target nearer
+           than that, or off to one side, is a place it circles for the rest of
+           the afternoon and never arrives at (measured: 292 frames in 60
+           seconds where the distance to its own wander target grew). Slowing is
+           what an animal does about that, and the speed to slow to comes out of
+           the geometry: the circle an animal describes that passes through the
+           place has the way to it as a chord, and a chord that meets the heading
+           at the course error belongs to a circle of radius half the distance
+           over the sine of that error. The naive bound -- the distance over the
+           sine, without the half -- is exactly the speed at which the animal
+           circles the place for ever at its own arc width, which is the failure
+           the slowing exists to end (measured: an owl sent to a place 1.8 m to
+           one side walked 41 m around it in 25 seconds and never came inside
+           0.87 m). It costs nothing out in the open, where the target is far and
+           the sine is small; near the place it reads as an animal easing as it
+           comes about, which is what it is. */
+        if (arc > 0) spd = Math.min(spd, arc * d / (2 * Math.max(Math.abs(Math.sin(dy)), 0.05)));
         const nx = this.x + Math.sin(this.yaw) * spd * dt;
         const nz = this.z - Math.cos(this.yaw) * spd * dt;
         const mx = nx, mz = nz;
@@ -602,11 +756,50 @@
             if (!world.solidAt(Math.floor(hx), Math.floor(this.y), Math.floor(hz))) { this.x = hx; this.z = hz; }
           }
         } else {
-          const gy = groundY(world, Math.floor(mx), Math.floor(mz), Math.floor(this.y + 3));
-          if (gy - this.y < 1.6 || this.isFlyer()) { this.x = mx; this.z = mz; }
-          else { this.tx = this.x; this.tz = this.z; this.pause = 0.5; }
+          const stand = (x, z) => groundY(world, Math.floor(x), Math.floor(z), Math.floor(this.y + 3)) - this.y < 1.6;
+          if (stand(mx, mz) || this.isFlyer()) { this.x = mx; this.z = mz; }
+          else {
+            /* The way is a wall. An animal does not sit down in front of one and
+               wait to be somewhere else: it goes round. Of the four steps it can
+               take, the one that stands and points most the way it wants to go
+               is the one it takes -- the contour of the obstacle rather than a
+               fresh errand -- and the heading follows the step, so the next
+               frame tries the wall again from further along it and walks off
+               when the wall ends. Giving up was the whole of the old behaviour,
+               and it is the last resort here: measured on the two bears of the
+               northern ridge, the step in front of them was rejected 2024 times
+               in 2400 frames and they spent 81% of the afternoon standing still. */
+            const bx = tgtX - this.x, bz = tgtZ - this.z;
+            const bl = Math.hypot(bx, bz) || 1;
+            let best = null, bestDot = -2;
+            for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+              const nx = this.x + ox * spd * dt, nz = this.z + oz * spd * dt;
+              if (!stand(nx, nz)) continue;
+              const dot = (ox * bx + oz * bz) / bl;
+              if (dot > bestDot + 1e-6) { bestDot = dot; best = [nx, nz]; }
+            }
+            if (best && bestDot > -0.7) {
+              const sx = best[0] - this.x, sz = best[1] - this.z;
+              this.x = best[0]; this.z = best[1];
+              /* The heading follows the step, at the same rate the animal is
+                 allowed to turn anywhere else: it is going round the obstacle,
+                 not sliding sideways along it with its nose still at the errand. */
+              const e = N.angleDelta(this.yaw, Math.atan2(sx, -sz));
+              const back = Math.min(Math.abs(e), (sp.turn || 2) * dt);
+              this.yaw += e > 0 ? back : -back;
+            } else { this.tx = this.x; this.tz = this.z; this.pause = 0.5; }
+          }
           this.x = Math.max(7, Math.min(world.w - 7, this.x));
           this.z = Math.max(7, Math.min(world.d - 7, this.z));
+        }
+        /* One turn budget a frame, whoever spent it. Going round an obstacle
+           bends the heading as well as steering at the errand does, and the two
+           added: a bear pressed against a cliff came about at twice the rate
+           its own body allows (measured 3.2 rad/s against a limit of 1.6). */
+        if (arc > 0) {
+          const budget = arc * dt;
+          const off = N.angleDelta(yaw0, this.yaw);
+          if (Math.abs(off) > budget) this.yaw = yaw0 + (off > 0 ? budget : -budget);
         }
       }
       this.speed = spd;
@@ -614,16 +807,21 @@
 
       /* A body that is supported by air or by water turns by tilting; a body on
          foot does not, because nothing at these speeds leans into a turn. Same
-         rule and same numbers as the player's own lean (Player.update): an owl
+         rule and same numbers as the player's own lean (Player.update): the
+         tilt is the sideways push the arc needs over the pull of the earth, so
+         an animal that is only correcting a few degrees leans a few degrees and
+         one at the tightest arc its data allows leans the full 0.45. An owl
          crossing the valley with its yaw swinging through ninety degrees and the
          body dead level was the tell, and it is the one body the player spends
          the most time watching. */
+      const bendRate = spd > 0.3 ? Math.abs(N.angleDelta(yaw0, this.yaw)) / Math.max(dt, 0.001) : 0;
       const lean = (this.isFlyer() && this.state !== 'roost') || inWater
-        ? Math.max(-0.45, Math.min(0.45, (N.angleDelta(yaw0, this.yaw) / Math.max(dt, 0.001)) * 0.11))
+        ? Math.max(-0.45, Math.min(0.45, Math.atan(bendRate * spd / LEAN_G)))
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
       // altitude
+      const y0 = this.y;      // before the altitude is set, so the rate is measurable
       if (this.isFlyer()) {
         const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 6));
         const base = sleeping ? gy0 + 1.2 : this.flyY;
@@ -684,6 +882,28 @@
       } else {
         const gy = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
         this.y += (gy - this.y) * Math.min(1, dt * 9);
+      }
+
+      /* The same attitude rule the player's own body has: a body the air or the
+         water is holding up points along the path it is actually taking, and a
+         body on foot stays level. The vertical rate here is the height the body
+         just gained or lost, because for these animals the altitude is set
+         rather than integrated -- the owl that is climbing to its flight height
+         is climbing, whatever its velocity says. */
+      const vRate = (this.y - y0) / Math.max(dt, 0.001);
+      /* The lamp jellyfish is not in this: a bell that pulses has no nose to
+         point, and tilting one is a lampshade tipping over. */
+      const carried = (this.isFlyer() && !sleeping) || (inWater && this.isAmphibian());
+      const tiltWant = carried && this.speed > 0.3
+        ? Math.max(-0.6, Math.min(0.6, Math.atan2(-vRate, Math.max(this.speed, 0.5))))
+        : 0;
+      this.tilt += (tiltWant - this.tilt) * N.ease(4.5, dt);
+      /* The beat belongs to the climb. An owl that is coming down eases its
+         stroke out and rides its wings -- the same rule the player's own body
+         obeys when it lets go of the climb key (Player.update). */
+      if (this.isFlyer()) {
+        const flapWant = sleeping ? 0 : (vRate > -0.3 ? 1 : 0.15);
+        this.flap += (flapWant - this.flap) * N.ease(3.5, dt);
       }
 
       // contact effects
