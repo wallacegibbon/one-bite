@@ -1,6 +1,7 @@
 /* real key-press test: walk / jump / fly / form timer / interact key */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
+const { sim } = require('./simwait');
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -29,16 +30,20 @@ const path = require('path');
 
   const out = [];
   out.push('start ' + JSON.stringify(await P()));
+  /* Every wait below is measured in the game's own seconds (see simwait.js):
+     the loop clamps dt, so a wall-clock sleep measures the frame rate of the
+     machine rather than the walk, the jump or the turn it is supposed to be
+     watching. */
   await page.keyboard.down('w');
-  await new Promise(r => setTimeout(r, 1200));
+  await sim(page, 1.2);
   await page.keyboard.up('w');
   out.push('walkW ' + JSON.stringify(await P()));
 
   await page.keyboard.down(' ');
-  await new Promise(r => setTimeout(r, 350));
+  await sim(page, 0.35);
   await page.keyboard.up(' ');
   out.push('jump ' + JSON.stringify(await P()));
-  await new Promise(r => setTimeout(r, 900));
+  await sim(page, 0.9);
   out.push('land ' + JSON.stringify(await P()));
 
   // transform into an owl and fly
@@ -48,15 +53,15 @@ const path = require('path');
   });
   out.push('form ' + JSON.stringify(await P()));
   await page.keyboard.down(' ');
-  await new Promise(r => setTimeout(r, 1600));
+  await sim(page, 1.6);
   await page.keyboard.up(' ');
   out.push('flyUp ' + JSON.stringify(await P()));
-  await new Promise(r => setTimeout(r, 1200));
+  await sim(page, 1.2);
   out.push('flyHover ' + JSON.stringify(await P()));
 
   // the form timer drains
   const t1 = await page.evaluate(() => window.game.player.formT);
-  await new Promise(r => setTimeout(r, 1000));
+  await sim(page, 1.0);
   const t2 = await page.evaluate(() => window.game.player.formT);
   out.push('formT ' + t1.toFixed(1) + ' → ' + t2.toFixed(1));
 
@@ -67,7 +72,7 @@ const path = require('path');
   // the Grey Veil boundary
   await page.evaluate(() => { window.game.player.x = 3; window.game.player.y = 25; window.game.player.z = 80; });
   await page.keyboard.down('w');
-  await new Promise(r => setTimeout(r, 1500));
+  await sim(page, 1.5);
   await page.keyboard.up('w');
   out.push('veil ' + JSON.stringify(await P()));
 
@@ -75,35 +80,47 @@ const path = require('path');
   const bad = [];
   const check = (name, cond, detail) => { if (!cond) bad.push('CHECK FAILED: ' + name + ' ' + JSON.stringify(detail)); };
 
-  const cam = await page.evaluate(async () => {
+  await page.evaluate(() => { window.game.thirdPerson = false; });
+  await sim(page, 0.5);
+  const cam0 = await page.evaluate(() => {
     const g = window.game;
-    g.thirdPerson = false;
-    await new Promise(r => setTimeout(r, 500));
     const before = +g.cam.d.toFixed(3);
     g.thirdPerson = true;
     const snap = +g.cam.d.toFixed(3);                 // the frame right after the key
-    const samples = [];
-    for (let i = 0; i < 12; i++) { await new Promise(r => setTimeout(r, 100)); samples.push(+g.cam.d.toFixed(2)); }
-    return { before, snap, samples, target: +(1.5 + 2.25 * g.player.size()[1]).toFixed(2) };
+    return { before, snap, target: +(1.5 + 2.25 * g.player.size()[1]).toFixed(2) };
   });
+  const samples = [];
+  for (let i = 0; i < 12; i++) {
+    await sim(page, 0.1);                             // a tenth of a second of the game's clock
+    samples.push(+(await page.evaluate(() => window.game.cam.d)).toFixed(2));
+  }
+  const cam = Object.assign(cam0, { samples });
   out.push('camera ' + JSON.stringify(cam));
   check('pressing V does not cut the camera', cam.snap === cam.before, cam);
   check('the lens pushes out smoothly', cam.samples.every((v, i) => i === 0 || v >= cam.samples[i - 1] - 0.01), cam);
   check('the lens settles at the subject distance', Math.abs(cam.samples[11] - cam.target) < cam.target * 0.06, cam);
 
-  const face = await page.evaluate(async () => {
-    const g = window.game, p = g.player, A = window.FRUTARIA.angleDelta;
+  const face0 = await page.evaluate(() => {
+    const p = window.game.player;
     p.vx = 0; p.vz = 0;                               // judge the turn, not the drift
     p.yaw += 2.4;                                     // whip the aim by ~137 degrees
-    const f0 = p.faceYaw;
-    await new Promise(r => setTimeout(r, 60));
-    const f1 = p.faceYaw;
-    await new Promise(r => setTimeout(r, 1500));
-    const f2 = p.faceYaw;
-    return { whip: 2.4, in60ms: +Math.abs(A(f0, f1)).toFixed(2), rest: +Math.abs(A(f2, p.yaw)).toFixed(3) };
+    return { f0: p.faceYaw, yaw: p.yaw };
   });
+  /* One frame of the game's clock. The claim is that no single frame carries
+     the whole turn: a body that snaps to the aim is finished after one.
+     A wall-clock window used to measure this, which let the frame rate answer
+     it -- at ten frames a second a 60 ms window is two frames of easing, and
+     the check went red on a busy machine for reasons that had nothing to do
+     with the body. */
+  await sim(page, 0.001);
+  const f1 = await page.evaluate(() => window.game.player.faceYaw);
+  await sim(page, 1.5);
+  const face = await page.evaluate((f0, mid, aim) => {
+    const p = window.game.player, A = window.FRUTARIA.angleDelta;
+    return { whip: 2.4, inFrame: +Math.abs(A(f0, mid)).toFixed(2), rest: +Math.abs(A(p.faceYaw, aim)).toFixed(3) };
+  }, face0.f0, f1, face0.yaw);
   out.push('facing ' + JSON.stringify(face));
-  check('the body does not snap to the aim', face.in60ms < face.whip * 0.5, face);
+  check('the body does not snap to the aim', face.inFrame < face.whip * 0.5, face);
   check('the body finishes the turn', face.rest < 0.05, face);
 
   console.log(out.join('\n'));

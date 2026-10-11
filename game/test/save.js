@@ -1,6 +1,7 @@
 /* save round trip: write a save, reload the page, continue from the start screen */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
+const { sim } = require('./simwait');
 
 const URL_AUTO = 'file://' + path.join(__dirname, '..', 'index.html') + '?auto';
 const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
@@ -98,7 +99,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
   check('clearing the save is offered', menu.freshVisible, menu);
 
   await page.click('#btnStart');
-  await wait(900);
+  await sim(page, 0.9);
 
   const back = await step('afterContinue', () => {
     const g = window.game;
@@ -139,7 +140,12 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     q.t = 0.2;
     return { at: [q.x, q.y, q.z], fruit: q.fruit };
   });
-  await wait(900);
+  /* The queue is a timer, so it is waited on with the timer's own clock. A wall
+     sleep here asserts the frame rate of the machine, not the game: under the
+     load of the whole suite the page manages about ten frames a second, the
+     loop clamps dt at 0.05 s, and 900 ms of wall time buys 0.15 s of world
+     time -- not enough for a sapling whose timer was set to 0.2 s. */
+  log.push('saplingWait ' + JSON.stringify(await sim(page, 0.9)));
   const grew = await page.evaluate((at) => {
     const g = window.game;
     return { queue: g.growQueue.length, trunk: g.world.get(at[0], at[1] + 1, at[2]), leaf: g.world.get(at[0], at[1] + 5, at[2]) };
