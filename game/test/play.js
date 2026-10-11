@@ -2964,6 +2964,64 @@ const { sim } = require('./simwait');
      of them stopped being a body in a place. Every movement rule -- the arc
      steering, going round a wall, the water column, the hop -- writes x and z
      directly, and none of them had ever been watched for a minute at a time. */
+  /* Death scatters the pack, and the whole point of scattering it rather than
+     deleting it is that it is retrievable (docs/en/06 s6). The fruit used to
+     stay a metre above the height the body died at: measured, from a lake shore
+     all 8 landed under water and one of them 29 m down, and on a roof all 8 hung
+     in the air, up to 3 m above the ground beside them. */
+  const scatter = await step('deathScattersOnTheGround', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, vital: p.vital, air: p.air,
+      form: p.form, formT: p.formT, fright: p.fright, dead: p.dead, mode: g.mode,
+      inv: g.inv, drops: g.drops, deaths: g.stats.deaths, log: g.log.length };
+    // one column of each kind that used to lose the fruit
+    const kinds = { canopy: null, deep: null, slope: null };
+    for (let z = 10; z < W.d - 10 && Object.values(kinds).some(v => !v); z += 2) {
+      for (let x = 10; x < W.w - 10 && Object.values(kinds).some(v => !v); x += 2) {
+        const gy = N.groundY(W, x, z, W.h - 1), ty = N.terrainY(W, x, z, W.h - 1);
+        const wt = N.waterTop(W, x, z, W.h - 1);
+        if (!kinds.canopy && gy > ty + 3) kinds.canopy = [x, z];
+        if (!kinds.deep && wt > 0 && wt - ty >= 3) kinds.deep = [x, z];
+        if (!kinds.slope && Math.abs(N.terrainY(W, x + 2, z, W.h - 1) - ty) >= 4) kinds.slope = [x, z];
+      }
+    }
+    const rows = {};
+    for (const kind of Object.keys(kinds)) {
+      const c = kinds[kind];
+      if (!c) { rows[kind] = { missing: true }; continue; }
+      p.x = c[0] + 0.5; p.y = N.terrainY(W, c[0], c[1], W.h - 1); p.z = c[1] + 0.5;
+      p.vx = p.vy = p.vz = 0; p.dead = false; g.mode = 'play';
+      const spot = { x: p.x, z: p.z };
+      g.inv = [];
+      for (let i = 0; i < 8; i++) g.addItem('fruit', 'owlberry');
+      g.drops.length = 0;
+      g.die('probe');
+      const cls = g.drops.map(d => {
+        const bx = Math.floor(d.x), bz = Math.floor(d.z), by = Math.floor(d.y);
+        const gy = N.terrainY(W, bx, bz, W.h - 1), wt = N.waterTop(W, bx, bz, W.h - 1);
+        const surf = wt >= gy ? wt + 1 : gy;
+        return { inSolid: W.solidAt(bx, by, bz), off: Math.abs(d.y - surf),
+          sunk: W.liquidAt(bx, by, bz), far: Math.hypot(d.x - spot.x, d.z - spot.z) };
+      });
+      rows[kind] = { at: c, drops: g.drops.length,
+        inSolid: cls.filter(r => r.inSolid).length,
+        offSurface: cls.filter(r => r.off > 0.05).length,
+        worstOff: +Math.max(...cls.map(r => r.off)).toFixed(2),
+        sunk: cls.filter(r => r.sunk).length,
+        farthest: +Math.max(...cls.map(r => r.far)).toFixed(2) };
+      if (g.ui) g.ui.showDead(false);
+    }
+    // the body, the pack and the valley go back the way they were
+    Object.assign(p, { x: was.x, y: was.y, z: was.z, vx: was.vx, vy: was.vy, vz: was.vz,
+      vital: was.vital, air: was.air, form: was.form, formT: was.formT, fright: was.fright, dead: was.dead });
+    g.mode = was.mode; g.inv = was.inv; g.drops = was.drops; g.stats.deaths = was.deaths;
+    g.log.length = was.log;
+    return rows;
+  });
+  check('a death puts every fruit on a surface a body can walk back to',
+    Object.values(scatter).every(r => r.missing ||
+      (r.drops === 8 && !r.inSolid && !r.offSurface && !r.sunk && r.farthest <= 3.2)), scatter);
+
   /* A whole day of the world, run at the world's own pace rather than the
      browser's: every animal is a body somewhere in the valley, and the
      bookkeeping does not grow. A day rather than a minute because the animals

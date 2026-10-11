@@ -858,8 +858,14 @@
         const base = sleeping ? gy0 + 1.2 : Math.max(this.flyY, gy0 + 1.6, gyA + 1.6);
         const target = Math.min(world.h - 2, base + Math.sin(this.t * 1.1 + this.phase) * 0.9);
         this.y += (target - this.y) * Math.min(1, dt * 2.2);
+        /* Whether this body is standing on something or being held up by air is
+           read off the surface **under its own feet**, not off the column read
+           from above it: a crown growing one block over a bird's head is not
+           the branch it is standing on, and reading it as the ground folds the
+           wings of a bird that is flying. */
+        const gyU = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y));
         // a roosting owl is a bird on a branch: wings folded, no beat
-        this.airAmt = sleeping ? 0 : (this.y > gy0 + 0.4 ? 1 : 0);
+        this.airAmt = sleeping ? 0 : (this.y > gyU + 0.4 ? 1 : 0);
       } else if (this.isAquatic()) {
         const wt = waterColumn(world, this.x, this.z);          // -1: no water to hover in
         /* Search down from the animal's own feet, not from above its head: a
@@ -1029,5 +1035,6 @@
   N.Particles = Particles;
   N.groundY = groundY;
   N.terrainY = terrainY;
+  N.waterTop = waterTop;
 
 })(window.FRUTARIA = window.FRUTARIA || {});

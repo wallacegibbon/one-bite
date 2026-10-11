@@ -630,8 +630,34 @@
       p.dead = true;
       this.logMsg(N.t('log.died', { z: this.zoneName(), c: cause }), 'bad');
       // fruit scatters
+      const W = this.world;
       const sx = Math.floor(p.x), sy = Math.floor(p.y), sz = Math.floor(p.z);
-      for (const it of this.inv) this.drops.push({ x: sx + (Math.random() * 3 - 1.5), y: sy + 1, z: sz + (Math.random() * 3 - 1.5), item: it, t: 600 });
+      /* The fruit lies on the surface of the place it lands: the ground, or the
+         top of the water over it, because fruit that sinks to the floor of a
+         lake 18 m down is fruit nobody can dive for on one breath -- and
+         "retrievable" is the whole point of scattering it rather than deleting
+         it (docs/en/06 s6). A crown is not ground (see terrainY), and a column
+         whose surface is not level with the place the body fell is a column the
+         fruit cannot be picked back up from, so it lands at the body's feet.
+         Before this the fruit simply stayed a metre above the height the body
+         died at: measured, from a lake shore all 8 landed under water and one
+         of them 29 m down; on a roof all 8 hung in the air, up to 3 m above the
+         ground beside it; in a forest 1 of 8 inside a trunk. */
+      const restY = (x, z) => {
+        const bx = Math.floor(x), bz = Math.floor(z);
+        const gy = N.terrainY(W, bx, bz, W.h - 1);
+        const wt = N.waterTop(W, bx, bz, W.h - 1);
+        const y = wt >= gy ? wt + 1 : gy;
+        return W.solidAt(bx, y, bz) ? null : y;
+      };
+      const home = restY(p.x, p.z);
+      const feet = home === null ? sy : home;
+      for (const it of this.inv) {
+        const dx = sx + (Math.random() * 3 - 1.5), dz = sz + (Math.random() * 3 - 1.5);
+        const y = restY(dx, dz);
+        const ok = y !== null && Math.abs(y - feet) <= 2;
+        this.drops.push({ x: ok ? dx : p.x, y: ok ? y : feet, z: ok ? dz : p.z, item: it, t: 600 });
+      }
       this.inv = [];
       p.vital = 5; p.air = p.maxAir(); p.fright = 0; p.form = null; p.formT = 0;
       const s = this.cellar();

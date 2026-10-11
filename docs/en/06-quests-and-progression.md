@@ -77,7 +77,7 @@ Codex completion is the **only growth metric that is recorded**, and it grants n
 | the Grey Veil | no death, only an announcement + the minimap fails; the full design is "leaving costs 1 fruit permanently at random" |
 | time bar runs out | no penalty, you simply revert |
 
-**Drops being retrievable** is deliberate: it turns death into "my things are over there, I have to go back", not "reload". It also meshes death with fruit spoilage — if you get back too late, every dropped fruit has become a pit.
+**Drops being retrievable** is deliberate: it turns death into "my things are over there, I have to go back", not "reload". It also meshes death with fruit spoilage — if you get back too late, every dropped fruit has become a pit. And it only works if the fruit lands somewhere a body can walk back to, so a drop comes to rest on the **surface** of the column it lands in — the ground, or the top of the water above it, never the lake floor — and a column whose surface is not level with the place the body fell (a roof, a cliff, the far side of a bank) takes the fruit to the body's own feet instead. `play.js` dies at three kinds of column and asks where each of the eight fruits ended up: none inside solid, none off the surface it should lie on, none under water, none further than 2.5 m from the body. Before this, dying on a lake shore put all eight under water, one of them 29 m down, and dying on a roof left all eight hanging in the air.
 
 ## 7. Time
 
