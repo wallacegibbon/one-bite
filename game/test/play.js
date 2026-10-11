@@ -1797,6 +1797,108 @@ const path = require('path');
   check('and the renderer reads the lean: the same body level and tilted is not the same frame',
     lean.diff > 300, lean);
 
+  /* 10w. a body wading is standing in water, not hanging above the bottom.
+     The lake shore is one block of water deep for 183 columns around Mirrorlake:
+     the bed is solid, the water sits on it, and the surface is level with the
+     top of the bed. A body there has its feet on the bottom and its head in the
+     air, which is wading. What the physics used to report was airborne: the
+     contact flag is only set by a move that had to be stopped, a body rests
+     0.0005 m off the face it last hit, and in water the buoyancy and drag leave
+     a terminal sink of 0.0008 m a frame -- too little to reach the cell below
+     more than once every three frames. So the pose eased to the air pose
+     (airAmt 0.42 and steady) and the steering kept a third of its push, and
+     walking the shore of the lake looked like floating.
+     The claim is measured three ways: standing in such a column the body is on
+     the bottom every frame and the pose says ground; wading along the shore it
+     is on the bottom most of the way and covers the ground it should; and the
+     flag is not glue -- a body that walks off a step is off the ground at once. */
+  const wade = await step('wadingIsNotFloating', () => {
+    const g = window.game, W = g.world, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, grounded: p.grounded, airAmt: p.airAmt, vital: p.vital, dry: p.dry, fright: p.fright };
+    p.form = null; p.vital = 10; p.dry = 0; p.fright = 0;
+    // a shore shelf: one block of water, bed under it, air above it, and six
+    // columns of the same shelf in a row so a body walking it stays wading
+    let spot = null;
+    const shelf = (x, z) => {
+      let wt = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { wt = y; break; }
+      if (wt < 0 || W.liquidAt(x, wt - 1, z)) return -1;         // deeper than one block
+      if (!W.solidAt(x, wt - 1, z) || W.solidAt(x, wt, z) || W.solidAt(x, wt + 1, z)) return -1;
+      return wt;
+    };
+    for (let x = 40; x < 120 && !spot; x++) for (let z = 70; z < 145 && !spot; z++) {
+      const wt = shelf(x, z);
+      if (wt < 0) continue;
+      let k = 1;
+      while (k < 8 && shelf(x, z - k) === wt) k++;
+      if (k >= 6) spot = { x: x + 0.5, z: z + 0.5, wt };
+    }
+    if (!spot) { Object.assign(p, was); return { error: 'no one-block-deep shore shelf in Mirrorlake' }; }
+    const run = (secs, inp) => {
+      p.x = spot.x; p.z = spot.z; p.y = spot.wt + 0.0001; p.yaw = 0;
+      p.vx = p.vy = p.vz = 0; p.grounded = false; p.airAmt = 0; p.squash = 0; p.crouch = 0;
+      const n = Math.round(secs * 60);
+      let gr = 0, airMax = 0, y0 = p.y, yLo = p.y, yHi = p.y;
+      for (let i = 0; i < n; i++) {
+        p.update(1 / 60, inp, g);
+        if (p.grounded) gr++;
+        airMax = Math.max(airMax, p.airAmt);
+        yLo = Math.min(yLo, p.y); yHi = Math.max(yHi, p.y);
+      }
+      return { grPct: +(gr / n * 100).toFixed(0), airMax: +airMax.toFixed(2),
+        y: +p.y.toFixed(2), y0: +y0.toFixed(2), drift: +(yHi - yLo).toFixed(2),
+        spd: +Math.hypot(p.vx, p.vz).toFixed(2), inW: p.inWater };
+    };
+    const still = run(2, {});
+    const wading = run(2, { fwd: true });
+    const dist = +Math.hypot(p.x - spot.x, p.z - spot.z).toFixed(2);
+    /* and the flag is not glue: a body that walks off a step is in the air at
+       once, pose easing up, feet no longer within reach of the surface */
+    const TREE = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
+    const ground = (x, z) => {
+      for (let y = 46; y > 0; y--) {
+        const b = g.world.get(x, y, z);
+        if (b && b < 40 && !TREE[b] && g.world.solidAt(x, y, z)) return y;
+      }
+      return -1;
+    };
+    let edge = null;
+    for (let x = 24; x < 150 && !edge; x++) for (let z = 24; z < 150 && !edge; z++) {
+      const a = ground(x, z), b = ground(x, z - 1);
+      if (a < 0 || b < 0 || a - b !== 1) continue;                 // one step down ahead
+      if (g.world.solidAt(x, a + 1, z) || g.world.solidAt(x, a + 2, z)) continue;   // headroom
+      if (g.world.solidAt(x, b + 1, z - 1) || g.world.solidAt(x, b + 2, z - 1)) continue;
+      if (W.liquidAt(x, a, z) || W.liquidAt(x, b, z - 1)) continue; // dry ground
+      edge = { x: x + 0.5, z: z + 0.5, y: a + 1 };
+    }
+    let off = { error: 'no single step to walk off' };
+    if (edge) {
+      p.x = edge.x; p.z = edge.z; p.y = edge.y; p.yaw = 0;
+      p.vx = p.vy = p.vz = 0; p.grounded = false; p.airAmt = 0;
+      for (let i = 0; i < 30; i++) p.update(1 / 60, {}, g);         // settle
+      const y0 = p.y;
+      let airFrames = 0, airMax = 0, low = p.y;
+      for (let i = 0; i < 40; i++) {
+        p.update(1 / 60, { fwd: true }, g);
+        if (!p.grounded) airFrames++;
+        airMax = Math.max(airMax, p.airAmt);
+        low = Math.min(low, p.y);
+      }
+      off = { airFrames, airMax: +airMax.toFixed(2), drop: +(y0 - low).toFixed(2), y: +p.y.toFixed(2) };
+    }
+    Object.assign(p, was);
+    return { spot, still, wading, dist, off };
+  });
+  check('standing in a one-block-deep shore, the body is on the bottom the whole time',
+    wade.still && wade.still.grPct === 100 && wade.still.airMax < 0.05 && wade.still.drift < 0.02, wade);
+  check('and it is in the water, so that is wading and not standing on dry ground',
+    wade.still && wade.still.inW === true, wade);
+  check('wading the shelf keeps feet down and covers ground',
+    wade.wading && wade.wading.grPct > 90 && wade.dist > 4, wade);
+  check('the flag is not glue: walking off a step leaves the ground at once',
+    !wade.off.error && wade.off.airFrames >= 2 && wade.off.airMax > 0.2 && wade.off.drop > 0.3, wade);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

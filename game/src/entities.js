@@ -275,7 +275,6 @@
         if (inp.sneak) this.vy -= 3.4 * dt;
         this.vy -= this.vy * Math.min(0.9, 3.2 * dt);
         this.vy = Math.max(-4.5, Math.min(4.6, this.vy));
-        this.grounded = false;
       } else {
         this.vy -= GRAVITY * dt;
         // glide is a property of the body, not of flapping: an owl that walks
@@ -347,6 +346,26 @@
       }
       this.moveAmt = moved;
       this.bob += moved * 1.6;
+      /* Feet that are on a surface are standing on it.
+         `axis` reports contact only for a move it had to stop, and a body is
+         parked 0.0005 m off the face it last hit, and the cell below is only
+         sampled once the feet are 0.001 inside it -- so a frame has to sink
+         0.0015 m before the surface is seen again. Gravity covers that on land
+         (0.006 m in a frame), which is why the flag flickers for a frame at a
+         time on flat ground but never stays out. In water it cannot: buoyancy
+         cancels most of the weight and the drag leaves a terminal speed of about
+         0.05 m/s, 0.0008 m a frame, so the cell below is sampled once every
+         three frames. A body wading where the lake is one block deep -- and the
+         shore of Mirrorlake is 183 such columns -- is then reported airborne the
+         whole time it stands on the bottom: air pose, and a third of the push it
+         should have (accel 12 against 34). So after the displacement, feet
+         within 2 cm of a solid and the body not rising means it is standing.
+         2 cm is the distance the step-up above already uses to settle a body
+         back onto the ledge it just climbed, and it is far less than the fall a
+         body accumulates once it has actually left a surface -- 0.006 m in the
+         first frame of a drop, 0.10 m by the fifth -- so a body that walked off
+         a step is airborne again within a frame or two. */
+      if (!this.grounded && !fly && this.vy <= 0 && this.colAt(this.x, Math.floor(this.y - 0.02), this.z)) this.grounded = true;
       // what the animation is allowed to know
       // eased, not snapped: a body resting on the ground flickers out of
       // `grounded` for a frame at a time, and a pose that hiccups with it looks
