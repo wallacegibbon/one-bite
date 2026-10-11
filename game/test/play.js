@@ -2145,6 +2145,141 @@ const path = require('path');
     lensUnder.dp && lensUnder.dp.fogDen > 0.1 && lensUnder.dp.px.over200 === 0 &&
     lensUnder.dp.px.maxLum < 200, lensUnder);
 
+  /* A body standing in the lake with the lens out over the water and above the
+     surface: the half of it under the surface must read as water. The body used
+     to be drawn after the water pass, so it sat on top of the lake's own blend
+     and stayed dry from its feet to its head -- the lakebed behind it was tinted
+     while the body in front of it was not. */
+  const wetBody = await step('wetHalfTheBody', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, gl = R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, vital: p.vital, dry: p.dry, fright: p.fright, air: p.air, model: g.ensureModel,
+      third: g.thirdPerson, camD: g.cam.d, camFov: g.cam.fov, ready: g.camReady,
+      time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, input: g.input };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, vital: was.vital, dry: was.dry,
+        fright: was.fright, air: was.air });
+      g.thirdPerson = was.third; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.ready;
+      g.time = was.time; g.mode = was.mode; g._lens = was.lens; g._camFrame = was.frame;
+      g.input = was.input; g.ensureModel = was.model;
+      return r;
+    };
+    p.form = null; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 5;
+    g.mode = 'play'; g.time = N.DAY_LEN * (12 / 24);
+
+    /* a shore shelf with the lake running away for eight blocks in one of the
+       four directions, so the lens can sit out over the water */
+    const DIRS = [[1, 0, -Math.PI / 2], [-1, 0, Math.PI / 2], [0, 1, 0], [0, -1, Math.PI]];
+    let shelf = null;
+    for (let x = 40; x < 120 && !shelf; x++) for (let z = 70; z < 145 && !shelf; z++) {
+      let wt = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { wt = y; break; }
+      if (wt < 0 || W.liquidAt(x, wt - 1, z)) continue;          // one block of water only
+      if (!W.solidAt(x, wt - 1, z) || W.solidAt(x, wt, z) || W.solidAt(x, wt + 1, z)) continue;
+      for (const [dx, dz, yaw] of DIRS) {
+        let k = 1;
+        while (k < 9 && W.liquidAt(x + dx * k, wt, z + dz * k) && !W.liquidAt(x + dx * k, wt - 1, z + dz * k) &&
+               !W.solidAt(x + dx * k, wt + 1, z + dz * k)) k++;
+        if (k >= 9) { shelf = { x: x + 0.5, z: z + 0.5, wt, yaw, run: k }; break; }
+      }
+    }
+    if (!shelf) return back({ error: 'no shore shelf with a run of open water' });
+
+    const stand = (pitch) => {
+      g.thirdPerson = true; g.camReady = false; g.cam = { d: 0, fov: 76 }; g.input = {};
+      for (let i = 0; i < 60; i++) {
+        p.x = shelf.x; p.z = shelf.z; p.y = shelf.wt + 0.0001; p.vx = p.vy = p.vz = 0;
+        p.yaw = shelf.yaw; p.pitch = pitch; p.airAmt = 0; p.air = p.airMax;
+        g.update(1 / 60);
+      }
+    };
+    const grab = () => {
+      g.particles.n = 0; g.hover = null; g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { w, h, px };
+    };
+    const hideWater = () => {
+      const s = [];
+      for (let ci = 0; ci < W.chunks.length; ci++) { const m = W.chunks[ci]; if (m && m[2]) { s.push([ci, m[2]]); m[2] = null; } }
+      return s;
+    };
+    const showWater = (s) => { for (const [ci, m] of s) W.chunks[ci][2] = m; };
+
+    const shot = (pitch) => {
+      stand(pitch);
+      const cf = g._camFrame = g.shootCamera(p);
+      // the body is hidden by handing the renderer an empty part list for it
+      const orig = g.ensureModel.bind(g);
+      g.ensureModel = (id) => (id === p.modelId ? [] : orig(id));
+      const hid = hideWater();
+      const N0 = grab();                          // no body, no water
+      showWater(hid);
+      const N1 = grab();                          // no body, water
+      hideWater();
+      g.ensureModel = orig;
+      const B0 = grab();                          // body, no water
+      showWater(hid);
+      const B1 = grab();                          // body, water
+
+      const w = B0.w, h = B0.h, W4 = w * 4;
+      const diff = (A, C, i) => Math.abs(A.px[i] - C.px[i]) + Math.abs(A.px[i + 1] - C.px[i + 1]) + Math.abs(A.px[i + 2] - C.px[i + 2]);
+      // where the lake surface at the body's own column lands on the screen
+      const v = [shelf.x - cf.x, shelf.wt + 1 - cf.y, shelf.z - cf.z];
+      const zc = v[0] * R.fwd[0] + v[1] * R.fwd[1] + v[2] * R.fwd[2];
+      const yc = v[0] * R.up[0] + v[1] * R.up[1] + v[2] * R.up[2];
+      const surfRow = Math.round((1 - (yc / (zc * Math.tan(cf.fov * Math.PI / 360)) + 1) / 2) * h);
+
+      const band = { below: [0, 0, 0, 0, 0], dry: [0, 0, 0, 0, 0] };   // n, tinted, shift, blue, red
+      let mask = 0, maskThrough = 0;
+      for (let Y = 0; Y < h; Y++) {
+        for (let X = 0; X < w; X++) {
+          const i = Y * W4 + X * 4;
+          if (diff(B0, N0, i) <= 24) continue;              // not a pixel of the body
+          mask++;
+          if (diff(B1, N1, i) > 24) maskThrough++;         // the body still shows with water on
+          const j = ((h - 1 - Y) * w + X) * 4;
+          const t = Y > surfRow ? band.below : (Y <= surfRow - 25 ? band.dry : null);
+          if (!t) continue;
+          t[0]++;
+          const d = diff(B1, B0, j);
+          if (d > 12) t[1]++;
+          t[2] += d; t[3] += B1.px[j + 2]; t[4] += B1.px[j];
+        }
+      }
+      const fmt = (t) => ({ n: t[0], tinted: t[1], pct: +(t[1] / Math.max(1, t[0]) * 100).toFixed(1),
+        meanShift: +(t[2] / Math.max(1, t[0])).toFixed(1),
+        blueMinusRed: +(t[3] / Math.max(1, t[0]) - t[4] / Math.max(1, t[0])).toFixed(1) });
+      return { cam: { x: +cf.x.toFixed(2), y: +cf.y.toFixed(2), z: +cf.z.toFixed(2), d: +cf.d.toFixed(2) },
+        lensInWater: W.liquidAt(Math.floor(cf.x), Math.floor(cf.y), Math.floor(cf.z)),
+        lensAboveSurface: cf.y > shelf.wt + 1, headWater: p.headWater, inWater: p.inWater,
+        surfRow, mask, through: +(maskThrough / Math.max(1, mask) * 100).toFixed(1),
+        below: fmt(band.below), dry: fmt(band.dry) };
+    };
+
+    const tilt = shot(-0.35);
+    const level = shot(-0.05);
+    return back({ shelf, tilt, level });
+  });
+  check('the lens is out over open water and above the surface, the body in the lake',
+    !wetBody.error && wetBody.tilt.lensInWater === false && wetBody.tilt.lensAboveSurface === true &&
+    wetBody.tilt.inWater === true && wetBody.tilt.headWater === false, wetBody);
+  check('every pixel of the body below the surface line is changed by the water',
+    wetBody.tilt && wetBody.tilt.below.n > 200 && wetBody.tilt.below.pct >= 90 &&
+    wetBody.tilt.below.meanShift > 60, wetBody);
+  check('and it reads as water: blue over red, not skin over red',
+    wetBody.tilt && wetBody.tilt.below.blueMinusRed > 30, wetBody);
+  check('the half above the surface line keeps the colour it had out of the water',
+    wetBody.tilt && wetBody.tilt.dry.n > 200 && wetBody.tilt.dry.pct === 0 &&
+    wetBody.tilt.dry.meanShift === 0, wetBody);
+  check('the water tints the body, it never hides it: the body still shows through',
+    wetBody.tilt && wetBody.tilt.through >= 85, wetBody);
+  check('a level view out over the water wets the same half',
+    wetBody.level && wetBody.level.below.pct >= 90 && wetBody.level.below.meanShift > 60 &&
+    wetBody.level.dry.pct === 0, wetBody);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

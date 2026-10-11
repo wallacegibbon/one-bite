@@ -1028,6 +1028,42 @@
           R.drawMesh(e.mesh, m, {});
         }
       }
+      /* The body being filmed rides in the same place as every other body: with
+         the creatures, before the glass and the water. Drawn after the water it
+         sat on top of the lake's own blend, so a body standing in the lake with
+         the lens above the surface kept a dry colour from its feet to its head:
+         at (51.5,105.5) with the lens 5.6 m out over the water, the 371 pixels
+         of the body below the surface line changed by 0 between a frame with the
+         water meshes and a frame without them, while the lakebed behind them
+         moved by 148 on average. The water writes no depth, so it cannot hide
+         the body -- it only tints what is already behind it. */
+      if (this.thirdPerson && !cam.inBody) {
+        const parts = this.ensureModel(p.modelId);
+        const sc = p.bodyScale();
+        const base = N.M4.create();
+        N.M4.trans(base, p.x, p.y, p.z);
+        const ry = N.M4.create(); N.M4.faceY(ry, p.faceYaw);
+        N.M4.mul(base, base, ry);
+        if (Math.abs(p.bank) > 0.002) {          // lean into the turn, like a filmed one
+          const rz = N.M4.create(); N.M4.rotZ(rz, p.bank);
+          N.M4.mul(base, base, rz);
+        }
+        const sq = p.squash || 0;
+        // rising fast stretches the body the way landing flattens it
+        const stretch = p.grounded ? 0 : Math.min(0.1, Math.abs(p.vy) / 220);
+        const sm = N.M4.create();
+        N.M4.scale(sm, sc * (1 + sq * 0.5 - stretch * 0.3), sc * (1 - sq + stretch), sc * (1 + sq * 0.5 - stretch * 0.3));
+        N.M4.mul(base, base, sm);
+        const st = {
+          t: this.time,
+          move: Math.min(1, Math.hypot(p.vx, p.vz) / 5),
+          fly: !!p.formDef.fly && !p.grounded,
+          air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0,
+          // the form decides, not the water: a human in the lake wades, a frog kicks
+          swim: (p.inWater && p.formDef.swim) ? 1 : 0
+        };
+        for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), {});
+      }
       // glass, drawn over the world and the bodies it is in front of. It writes
       // no depth (blend does that), so what shows through it is decided by the
       // depth the opaque pass and the bodies already left behind
@@ -1069,34 +1105,6 @@
         R.gl.disable(R.gl.DEPTH_TEST);
         R.drawMesh(hand, m, { day: Math.max(0.55, this.daylight) });
         R.gl.enable(R.gl.DEPTH_TEST);
-      }
-      // third-person body (skipped when the lens has been pulled inside it)
-      if (this.thirdPerson && !cam.inBody) {
-        const parts = this.ensureModel(p.modelId);
-        const sc = p.bodyScale();
-        const base = N.M4.create();
-        N.M4.trans(base, p.x, p.y, p.z);
-        const ry = N.M4.create(); N.M4.faceY(ry, p.faceYaw);
-        N.M4.mul(base, base, ry);
-        if (Math.abs(p.bank) > 0.002) {          // lean into the turn, like a filmed one
-          const rz = N.M4.create(); N.M4.rotZ(rz, p.bank);
-          N.M4.mul(base, base, rz);
-        }
-        const sq = p.squash || 0;
-        // rising fast stretches the body the way landing flattens it
-        const stretch = p.grounded ? 0 : Math.min(0.1, Math.abs(p.vy) / 220);
-        const sm = N.M4.create();
-        N.M4.scale(sm, sc * (1 + sq * 0.5 - stretch * 0.3), sc * (1 - sq + stretch), sc * (1 + sq * 0.5 - stretch * 0.3));
-        N.M4.mul(base, base, sm);
-        const st = {
-          t: this.time,
-          move: Math.min(1, Math.hypot(p.vx, p.vz) / 5),
-          fly: !!p.formDef.fly && !p.grounded,
-          air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0,
-          // the form decides, not the water: a human in the lake wades, a frog kicks
-          swim: (p.inWater && p.formDef.swim) ? 1 : 0
-        };
-        for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), {});
       }
     }
 
