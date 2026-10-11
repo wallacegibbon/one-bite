@@ -100,6 +100,14 @@
      "can I put things in this?" instead of "is this 78?". */
   const BLOCK_ID = { trunk: 6, leaf: 7, darkLeaf: 27, cellarCore: 77, cellarCrate: 78, cellarTrunk: 79 };
 
+  /* The blocks a tree is made of: the trunk and the crown. They are solid -- a
+     body can climb a tree and stand on it -- but they are not the surface of
+     the valley, and anything that asks "where is the ground" has to say which
+     of the two it means. The generator kept this list to itself, to plant trees
+     with; it lives beside the block table now so the generator and the animals
+     read one list. */
+  const TREE_BLOCK = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
+
   /* ------------------------- face table (with AO axes) ------------------------- */
   const FACES = [
     { n: [0, 1, 0], c: [[0, 1, 0], [0, 1, 1], [1, 1, 1], [1, 1, 0]], u: [1, 0, 0], v: [0, 0, 1], s: 1.00 },
@@ -348,6 +356,7 @@
   N.BLOCKS = B;
   N.WATER = WATER;
   N.BLOCK_ID = BLOCK_ID;
+  N.TREE_BLOCK = TREE_BLOCK;
   N.FRUIT_BLOCK = FRUIT_BLOCK; N.FRUIT_BLOCK_REV = FRUIT_BLOCK_REV;
   N.PLANT_BLOCK = PLANT_BLOCK; N.PLANT_BLOCK_REV = PLANT_BLOCK_REV;
   N.World = World;

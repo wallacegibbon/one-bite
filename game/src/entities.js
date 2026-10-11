@@ -518,6 +518,22 @@
     for (let y = from; y > 0; y--) if (w.solidAt(x, y, z)) return y + 1;
     return 1;
   }
+  /* The same column read again, but this time for the ground rather than for
+     the highest thing in the way. A crown and the trunk that holds it up are
+     solid -- a body can climb a tree and stand on it, and the player does --
+     but they are not the surface of the valley, and an animal put down on one
+     is an animal in a tree. The spawn code scans from the top of the world, and
+     without this it found a canopy instead of the ground in 509 of 600 tries:
+     two bears standing on spruce crowns at y=45, frogs in the leaves, and a
+     flyer given a flight height of 53 in a world 48 tall. */
+  function terrainY(w, x, z, from) {
+    const bx = x | 0, bz = z | 0;
+    for (let y = from; y > 0; y--) {
+      if (!w.solidAt(bx, y, bz) || N.TREE_BLOCK[w.get(bx, y, bz)]) continue;
+      return y + 1;
+    }
+    return 1;
+  }
   /* Whether a water animal may be in this column at all -- the same test the
      spawn code makes: the column has to hold at least two blocks of water, so
      there is somewhere to hover. Testing one cell at the animal's feet instead
@@ -824,8 +840,23 @@
       const y0 = this.y;      // before the altitude is set, so the rate is measurable
       if (this.isFlyer()) {
         const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 6));
-        const base = sleeping ? gy0 + 1.2 : this.flyY;
-        const target = base + Math.sin(this.t * 1.1 + this.phase) * 0.9;
+        /* `flyY` is the height a flying animal likes, not where it has to be.
+           It is a body in a world: it does not go through the ground under it,
+           and it does not leave the world either. Over a ridge, or over a crown
+           that reaches above the height it likes, it climbs over; the ceiling is
+           the top of the world with room for the body left in it. Before this
+           the animal held its spawn height through everything: over two hours
+           of night 87 of 720 owl samples were inside solid ground, and an owl
+           put down on a canopy at y=44 was given a flight height of 51.5 in a
+           world 48 tall, so every one of its 120 samples was outside the map.
+           The ground is read a few metres ahead as well as under the body: a
+           body that only asks where it is now begins climbing a second after it
+           arrives, and at seven metres a second an owl spends that second
+           inside the hill. */
+        const gyA = groundY(world, Math.floor(this.x + Math.sin(this.yaw) * 4),
+          Math.floor(this.z - Math.cos(this.yaw) * 4), Math.floor(this.y + 6));
+        const base = sleeping ? gy0 + 1.2 : Math.max(this.flyY, gy0 + 1.6, gyA + 1.6);
+        const target = Math.min(world.h - 2, base + Math.sin(this.t * 1.1 + this.phase) * 0.9);
         this.y += (target - this.y) * Math.min(1, dt * 2.2);
         // a roosting owl is a bird on a branch: wings folded, no beat
         this.airAmt = sleeping ? 0 : (this.y > gy0 + 0.4 ? 1 : 0);
@@ -997,5 +1028,6 @@
   N.Creature = Creature;
   N.Particles = Particles;
   N.groundY = groundY;
+  N.terrainY = terrainY;
 
 })(window.FRUTARIA = window.FRUTARIA || {});

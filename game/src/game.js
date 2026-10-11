@@ -149,7 +149,10 @@
           const p = this.samplePos(sp.habitat[0], at, sp.spread || 4);
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);
-          if (c.isFlyer()) c.flyY = p.y + 5 + Math.random() * 8;
+          /* The height a flying animal means to keep, and it has to be a height
+             the world has. An owl sampled on top of a canopy was given five to
+             thirteen metres above that: 51.5 in a world 48 tall. */
+          if (c.isFlyer()) c.flyY = Math.min(p.y + 5 + Math.random() * 8, this.world.h - 3);
           this.creatures.push(c);
         }
       }
@@ -186,7 +189,11 @@
           else { x = W.w - 10; zz = 8 + Math.random() * (W.d - 16); }
         }
         x = Math.max(8, Math.min(W.w - 8, x)); zz = Math.max(8, Math.min(W.d - 8, zz));
-        const gy = N.groundY(W, Math.floor(x), Math.floor(zz), W.h - 1);
+        /* The ground, not the crown above it -- see terrainY. And the ground
+           cell itself has to be air: an animal put down inside a trunk is an
+           animal standing in a tree. */
+        const gy = N.terrainY(W, Math.floor(x), Math.floor(zz), W.h - 1);
+        if (W.solidAt(Math.floor(x), gy, Math.floor(zz))) continue;
         const water = W.liquidAt(Math.floor(x), gy, Math.floor(zz));
         if (z.id === 'mirrorlake') {
           let depth = 0; for (let y = gy; y < W.h && W.liquidAt(Math.floor(x), y, Math.floor(zz)); y++) depth++;

@@ -115,13 +115,12 @@
     }
   }
   /* ground height (skips trees, plants and fruit) */
-  const TREELIKE = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };
   function gy(x, z) {
     for (let y = W.h - 1; y > 0; y--) {
       const b = get(x, y, z);
       if (!b) continue;
       const d = D[b];
-      if (!d || d.micro || !d.solid || TREELIKE[b]) continue;
+      if (!d || d.micro || !d.solid || N.TREE_BLOCK[b]) continue;
       return y;
     }
     return 0;

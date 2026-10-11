@@ -2958,6 +2958,73 @@ const { sim } = require('./simwait');
       arrive[who].side.min < 0.9 && arrive[who].side.max < 1.2 && arrive[who].side.path < 8, arrive);
   }
 
+  /* ---- the valley stays inside itself ----
+     A hundred seconds of the world running with nobody driving it. The question
+     is not whether any animal did anything clever afterwards; it is whether any
+     of them stopped being a body in a place. Every movement rule -- the arc
+     steering, going round a wall, the water column, the hop -- writes x and z
+     directly, and none of them had ever been watched for a minute at a time. */
+  /* A whole day of the world, run at the world's own pace rather than the
+     browser's: every animal is a body somewhere in the valley, and the
+     bookkeeping does not grow. A day rather than a minute because the animals
+     that fly are asleep by daylight, and the failures this found are ones only
+     a flying animal makes. This is the one step that looks at all of them at
+     once instead of one animal sent to one place, and it is what found that a
+     flying animal held its spawn height through hills and out of the world (87
+     of 720 owl samples inside solid ground, and every sample of an owl that had
+     spawned on a canopy outside the map) and that the spawn code put an animal
+     on top of a tree rather than on the ground under it (509 of 600 tries).
+     A crown is not rock: a bear walks through a bush, and where a crown grows
+     to the top of the world there is no air left above it for a body to keep.
+     Those samples are counted and reported, not failed. */
+  const soak = await step('soakTheValley', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA;
+    const look = () => {
+      const bad = { notANumber: [], outside: [], inRock: [], inCrown: 0, underTheMap: [], aboveTheAir: [] };
+      for (const c of g.creatures) {
+        if (!isFinite(c.x) || !isFinite(c.y) || !isFinite(c.z) || !isFinite(c.speed) || !isFinite(c.yaw)) { bad.notANumber.push(c.sp.id); continue; }
+        if (c.x < 0 || c.z < 0 || c.x >= W.w || c.z >= W.d || c.y < 0 || c.y >= W.h) bad.outside.push([c.sp.id, +c.x.toFixed(1), +c.y.toFixed(1), +c.z.toFixed(1)]);
+        const bx = Math.floor(c.x), by = Math.floor(c.y + 0.2), bz = Math.floor(c.z);
+        if (W.solidAt(bx, by, bz)) {
+          if (N.TREE_BLOCK[W.get(bx, by, bz)]) bad.inCrown++;
+          else bad.inRock.push([c.sp.id, +c.x.toFixed(1), +c.y.toFixed(1), +c.z.toFixed(1)]);
+        }
+        if (c.y < 3) bad.underTheMap.push([c.sp.id, +c.y.toFixed(1)]);
+        // the ceiling a flying body is held to, and the floor of the valley
+        if (c.y > W.h - 2) bad.aboveTheAir.push([c.sp.id, +c.y.toFixed(1)]);
+      }
+      return bad;
+    };
+    const counts = () => ({ drops: g.drops.length, regrow: g.regrow.length, grow: g.growQueue.length, posts: g.posts.length, log: g.log.length, creatures: g.creatures.length });
+    /* And where the world puts an animal in the first place: on the ground, not
+       on the crown of a tree and not inside its trunk. The spawn code scans a
+       column from the top of the world, and a crown is solid, so it used to
+       answer "the top of a spruce" 509 times in 600 -- an animal in a tree, and
+       a flyer whose flight height was measured from the top of that tree. */
+    const saved = g.creatures;
+    g.creatures = [];
+    for (let k = 0; k < 10; k++) g.spawnCreatures();
+    const placed = { n: g.creatures.length, onCrown: [], inTrunk: [] };
+    for (const c of g.creatures) {
+      const bx = Math.floor(c.x), bz = Math.floor(c.z), by = Math.floor(c.y);
+      if (N.TREE_BLOCK[W.get(bx, by - 1, bz)]) placed.onCrown.push([c.sp.id, +c.y.toFixed(1)]);
+      if (W.solidAt(bx, by, bz)) placed.inTrunk.push([c.sp.id, +c.y.toFixed(1)]);
+    }
+    g.creatures = saved;
+    const before = look(), n0 = counts(), t0 = g.time;
+    // a whole day of the world's clock, so the animals are seen roosting and flying
+    for (let i = 0; i < Math.round(N.DAY_LEN * 60); i++) g.update(1 / 60);
+    return { seconds: +(g.time - t0).toFixed(1), placed, before, after: look(), countsBefore: n0, countsAfter: counts() };
+  });
+  check('an animal is put down on the ground, not on the tree that grows out of it',
+    soak.placed.n > 200 && !soak.placed.onCrown.length && !soak.placed.inTrunk.length, soak.placed);
+  check('a whole day of the world running leaves every animal a body in a place',
+    !soak.after.notANumber.length && !soak.after.outside.length && !soak.after.inRock.length &&
+    !soak.after.underTheMap.length && !soak.after.aboveTheAir.length, soak.after);
+  check('the log, the scattered fruit and the queues do not grow without bound',
+    soak.countsAfter.log <= 40 && soak.countsAfter.creatures === soak.countsBefore.creatures &&
+    soak.countsAfter.drops <= soak.countsBefore.drops && soak.countsAfter.grow <= soak.countsBefore.grow, soak);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;
