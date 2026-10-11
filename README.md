@@ -21,6 +21,8 @@ cd game && python3 -m http.server 8000   # then open http://localhost:8000/
 
 Requires a browser with WebGL 1.0. On first load, 100 chunks are generated across frames (about 1–3 s).
 
+The scripts are read **once**, when the page loads. After changing or pulling the code, **hard-reload** (Ctrl+Shift+R) or close the tab and reopen it: a tab left open keeps running whatever code it was opened with, and the browser may also hand back a cached `game.js`.
+
 ## Controls
 
 | Key | Action |
