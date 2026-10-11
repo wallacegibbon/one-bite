@@ -9,3 +9,6 @@ node_modules/
 
 # local working notes between agents, not part of the deliverable
 TODO.md
+# an editor's temp copy of it: `git add -A` once put 1240 lines of private
+# notes into the repo under this name
+TODO.md.*
