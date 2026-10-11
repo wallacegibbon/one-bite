@@ -2000,6 +2000,151 @@ const path = require('path');
   check('and neither is the roof of the town over the lantern road',
     under.r && under.r.px > 1500 && under.r.p05 >= 35 && under.r.p25 >= 45 && under.r.mean > 0.25 * under.r.skyMean, under);
 
+  /* 10y. a lens under the lake surface has to see the lake. In third person the
+     lens trails the body, and it trails it down: stand in the lake with your
+     head in the air and tilt the view up and the lens goes 0.8 m under the
+     surface -- and the frame showed the sun at full brightness through the
+     lake. Two causes, both about who the picture belongs to. The surface is one
+     quad per block face, so seen from underneath it is a back face and the
+     culler threw it away; and the water fog was read off the body's head, which
+     was dry. The claim is read off the frame: with the lens inside the water
+     volume every sampled ray hits water before anything else, so no pixel may
+     show raw sky. Measured before: 3.76% of the frame brighter than 200/255 and
+     the brightest pixel 255, with **0** rays reaching the sky. After: 0 and 148.
+     The body keeps its breath -- the head stays dry and the air bar keeps
+     filling, because a view is not a body. Two controls: a level view, where
+     the lens is above the surface and the sun is allowed to be bright; and
+     first person on the bed of deep water, which already had the fog, still has
+     it, and now also sees the surface from below (brightest pixel 255 -> 128). */
+  const lensUnder = await step('lensSeesTheWater', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, gl = R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, vital: p.vital, dry: p.dry, fright: p.fright, air: p.air,
+      third: g.thirdPerson, camD: g.cam.d, camFov: g.cam.fov, ready: g.camReady,
+      time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, input: g.input };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, vital: was.vital, dry: was.dry,
+        fright: was.fright, air: was.air });
+      g.thirdPerson = was.third; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.ready;
+      g.time = was.time; g.mode = was.mode; g._lens = was.lens; g._camFrame = was.frame; g.input = was.input;
+      return r;
+    };
+    p.form = null; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 5;
+    g.mode = 'play'; g.time = N.DAY_LEN * (12 / 24);
+
+    // a shore shelf: one block of water over a bed, the lake running away for eight
+    let shelf = null;
+    for (let x = 40; x < 120 && !shelf; x++) for (let z = 70; z < 145 && !shelf; z++) {
+      let wt = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { wt = y; break; }
+      if (wt < 0 || W.liquidAt(x, wt - 1, z)) continue;
+      if (!W.solidAt(x, wt - 1, z) || W.solidAt(x, wt, z) || W.solidAt(x, wt + 1, z)) continue;
+      let k = 1; while (k < 10 && W.liquidAt(x, wt, z - k) && !W.liquidAt(x, wt - 1, z - k)) k++;
+      if (k >= 8) shelf = { x: x + 0.5, z: z + 0.5, wt };
+    }
+    // and a deep column: three blocks of water over a bed
+    let deep = null;
+    for (let x = 44; x < 116 && !deep; x++) for (let z = 74; z < 142 && !deep; z++) {
+      let wt = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { wt = y; break; }
+      if (wt < 2) continue;
+      let bed = -1; for (let y = wt; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed < 0 || wt - bed < 3) continue;
+      deep = { x: x + 0.5, z: z + 0.5, bed: bed + 1, wt };
+    }
+    if (!shelf || !deep) return back({ error: 'no shore shelf / no deep column', shelf: !!shelf, deep: !!deep });
+
+    // eight frames of the real loop: the physics sets the body's own water state
+    // and the environment gets a lens to read
+    const stand = (x, y, z, pitch, third, pin) => {
+      p.x = x; p.z = z; p.y = y; p.vx = p.vy = p.vz = 0;
+      p.yaw = Math.PI; p.pitch = pitch; p.air = 5;
+      g.thirdPerson = third; g.camReady = false; g.cam = { d: 0, fov: 76 };
+      g.input = {};
+      for (let i = 0; i < 8; i++) {
+        if (pin !== undefined) { p.y = pin; p.vy = 0; }
+        g.update(1 / 60);
+      }
+      g.input = {};
+    };
+
+    const look = (cf) => {
+      g.particles.n = 0;                 // the ambient spawner is random; the frame is not
+      g.hover = null; g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const tanY = Math.tan(cf.fov * Math.PI / 360), tanX = tanY * R.aspect;
+      let n = 0, waterFirst = 0, skyFirst = 0, br = 0, lsum = 0, lmax = 0, hi = 0;
+      for (let Y = 0; Y < h; Y += 3) {
+        const ndcY = 1 - (Y + 0.5) / h * 2;
+        for (let X = 0; X < w; X += 3) {
+          const ndcX = (X + 0.5) / w * 2 - 1;
+          let dx = R.fwd[0] + R.right[0] * ndcX * tanX + R.up[0] * ndcY * tanY;
+          let dy = R.fwd[1] + R.right[1] * ndcX * tanX + R.up[1] * ndcY * tanY;
+          let dz = R.fwd[2] + R.right[2] * ndcX * tanX + R.up[2] * ndcY * tanY;
+          const L = Math.hypot(dx, dy, dz); dx /= L; dy /= L; dz /= L;
+          // what the block grid says is in front of this pixel: water, solid, or nothing
+          let tW = -1, tS = -1;
+          for (let t = 0.3; t < 60; t += 0.3) {
+            const b = W.get(Math.floor(cf.x + dx * t), Math.floor(cf.y + dy * t), Math.floor(cf.z + dz * t));
+            if (!b) continue;
+            const bd = N.BLOCKS[b];
+            if (bd.liquid) { if (tW < 0) tW = t; }
+            else if (bd.solid) { if (tS < 0) { tS = t; break; } }
+            if (tW >= 0 && tS >= 0) break;
+          }
+          const i = ((h - 1 - Y) * w + X) * 4;
+          const l = 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+          n++; br += px[i + 2] - px[i]; lsum += l;
+          if (l > lmax) lmax = l;
+          if (l > 200) hi++;
+          if (tW >= 0 && (tS < 0 || tW < tS)) waterFirst++;
+          else if (tW < 0 && tS < 0) skyFirst++;
+        }
+      }
+      return { n, waterFirst, skyFirst, blueMinusRed: +(br / n).toFixed(1),
+        meanLum: +(lsum / n).toFixed(1), maxLum: Math.round(lmax), over200: +(100 * hi / n).toFixed(2) };
+    };
+    const at = (cf) => ({ x: +cf.x.toFixed(2), y: +cf.y.toFixed(2), z: +cf.z.toFixed(2), d: +cf.d.toFixed(2),
+      lensInWater: W.liquidAt(Math.floor(cf.x), Math.floor(cf.y), Math.floor(cf.z)) });
+
+    // 1. the reported case: body standing in the lake, head dry, lens under the surface
+    stand(shelf.x, shelf.wt + 0.0001, shelf.z, 1.2, true);
+    let cf = g._camFrame;
+    const tilt = Object.assign({ cam: at(cf), headWater: p.headWater, inWater: p.inWater,
+      air: +p.air.toFixed(2), fogDen: +g.env.fogDen.toFixed(4) }, { px: look(cf) });
+
+    // 2. control: the same body, level view, lens above the surface
+    stand(shelf.x, shelf.wt + 0.0001, shelf.z, -0.15, true);
+    cf = g._camFrame;
+    const lvl = Object.assign({ cam: at(cf), headWater: p.headWater, fogDen: +g.env.fogDen.toFixed(4) }, { px: look(cf) });
+
+    // 3. first person on the bed of deep water: the case that already worked
+    stand(deep.x, deep.bed + 0.0001, deep.z, 0.9, false, deep.bed + 0.0001);
+    cf = g._camFrame;
+    const dp = Object.assign({ cam: at(cf), bed: deep.bed, surfaceY: deep.wt + 1, headWater: p.headWater,
+      fogDen: +g.env.fogDen.toFixed(4) }, { px: look(cf) });
+
+    return back({ shelf, deep, tilt, lvl, dp });
+  });
+  check('a lens under the lake surface is a lens in the water, and the body above it is dry',
+    !lensUnder.error && lensUnder.tilt.cam.lensInWater === true && lensUnder.tilt.headWater === false, lensUnder);
+  check('every ray from that lens hits water first, so no pixel may show raw sky',
+    lensUnder.tilt && lensUnder.tilt.px.waterFirst === lensUnder.tilt.px.n &&
+    lensUnder.tilt.px.over200 === 0 && lensUnder.tilt.px.maxLum < 200, lensUnder);
+  check('and the whole frame is tinted by the water it is looking through',
+    lensUnder.tilt && lensUnder.tilt.fogDen > 0.1 && lensUnder.tilt.px.blueMinusRed > 45, lensUnder);
+  check('the view is not the body: standing in the lake with a dry head, the air still fills',
+    lensUnder.tilt && lensUnder.tilt.air > 5, lensUnder);
+  check('a level view, lens above the surface, is not put underwater',
+    lensUnder.lvl && lensUnder.lvl.cam.lensInWater === false && lensUnder.lvl.fogDen < 0.02 &&
+    lensUnder.lvl.px.over200 > 0, lensUnder);
+  check('first person on the bed of deep water keeps its fog and now sees the surface from below',
+    lensUnder.dp && lensUnder.dp.fogDen > 0.1 && lensUnder.dp.px.over200 === 0 &&
+    lensUnder.dp.px.maxLum < 200, lensUnder);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

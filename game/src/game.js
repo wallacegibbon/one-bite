@@ -226,7 +226,18 @@
       const W = this.world, p = this.player;
       const edge = Math.min(p.x, p.z, W.w - p.x, W.d - p.z);
       if (edge < 22) { fogDen += (22 - edge) * 0.004; fogCol = mix(fogCol, [0.55, 0.57, 0.62], (22 - edge) / 22 * 0.8); }
-      if (p.headWater) { fogCol = mix(fogCol, [0.06, 0.24, 0.32], 0.85); fogDen = 0.14; }
+      /* The water the **lens** is sitting in, not the water the body is standing
+         in. In third person the lens trails the body, and it trails it down: a
+         body standing in the lake with its head in the air has its lens 0.2 m
+         under the surface as soon as the view tilts up, and it is the lens that
+         draws the frame. The body keeps breath, wetness and the bubbles -- those
+         are not a view. The lens read here is one frame old, because render()
+         takes the frame update() handed it; that is the same lag the body's own
+         head test had, since the environment is built before the player moves. */
+      const lens = this._lens || { x: p.x, y: p.eyePos(), z: p.z };
+      if (W.liquidAt(Math.floor(lens.x), Math.floor(lens.y), Math.floor(lens.z))) {
+        fogCol = mix(fogCol, [0.06, 0.24, 0.32], 0.85); fogDen = 0.14;
+      }
       /* Night vision belongs to the eye, not to the sky. `daylight` and `night`
          stay what the sky is -- animals and the HUD read those -- and only the
          rendered brightness changes, so an owl and a frog standing in the same
@@ -921,6 +932,9 @@
       const inBody = this.thirdPerson &&
         Math.abs(x - p.x) < w * 0.5 + 0.12 && Math.abs(z - p.z) < w * 0.5 + 0.12 &&
         y > p.y - 0.12 && y < p.y + h + 0.12;
+      /* the lens this frame drew, for the next frame's environment: what the
+         lens is looking through is a property of the lens (see updateEnv) */
+      this._lens = { x, y, z };
       return { x, y, z, yaw: p.yaw, pitch: p.pitch, fov: cam.fov, d, inBody };
     }
 
@@ -1020,14 +1034,22 @@
       for (const gm of glass) R.drawMesh(gm, IDENT, { blend: true });
       // water. Its colour and its alpha both come from the block table now --
       // the mesher uploads bd.c, which carries the alpha as its fourth byte --
-      // so there is no second copy of 0.62 to keep in step at this draw call
+      // so there is no second copy of 0.62 to keep in step at this draw call.
+      /* The surface is one quad per block face, so seen from underneath it is a
+         back face, and the culler threw it away: a lens under the water line
+         looked straight through the lake at the sky. Standing in the lake in
+         third person with the lens 0.2 m under the surface, every one of 64,000
+         sampled rays hit water first and 38,958 of them rendered as open sky.
+         A lake is a closed volume and the mesher only ever emits a face where
+         water meets air, so no pixel can ever see both sides of one quad --
+         un-culling it costs nothing in blending and adds no geometry. */
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const ci = cz * W.cx + cx;
         const m = W.chunks[ci];
         if (!m || !m[2]) continue;
         const mx = cx * W.cs + 8, mz = cz * W.cs + 8;
         if (!R.visible(mx, W.h / 2, mz, 15)) continue;
-        R.drawMesh(m[2], IDENT, { blend: true, wave: true });
+        R.drawMesh(m[2], IDENT, { blend: true, wave: true, noCull: true });
       }
       // particles
       this.particles.draw(R);
