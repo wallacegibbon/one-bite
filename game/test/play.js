@@ -1627,6 +1627,94 @@ const { sim } = require('./simwait');
   check('no stars are out while the sun is up', stars.day.spikes <= 2, stars);
   check('the stars are still there at midnight', stars.night.spikes > 50, stars);
 
+  /* 10s. the dark of a night is the sky's light, not a grey. The world shader lit
+     every surface by `uDay` -- 0.16 of its own colour at midnight -- and nothing
+     else, so a dark material (conifer 0.14/0.30/0.20, dark leaf, roof tile) came
+     out at luminance 7..10 while the night sky behind it was 17..21: a tree or a
+     roof was a hole cut in the sky, which is what the human reported as black
+     blocks in the night sky. Measured on
+     four night lenses before anything was touched: 4..42% of the frame below
+     luminance 12, darkest surface 6.8, sky 17.3..21.3; the same four lenses at
+     13:00 had none of it. The fix is the sky's own colour **added** to every
+     surface, gated on the sun being properly down -- the same gate the stars use,
+     which is also where the sun's own light ends (`day` reaches 0 at an elevation
+     of -0.1375). Added rather than multiplied because that is the shape the
+     problem has: it lifts a dark surface by most of its own value and a bright
+     one by hardly anything, and it is zero all day, so a daytime frame is bit for
+     bit the frame it was. */
+  const nightfall = await step('nightKeepsTheSkyItsLight', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame };
+    const views = [
+      { name: 'ridge', x: 142.5, z: 20.5, yaw: 3.0, pitch: 0.25 },
+      { name: 'canopy', x: 50.5, z: 8.5, yaw: 1.5708, pitch: 1.2 },
+      { name: 'town', x: 136.5, z: 128.5, yaw: 1.5708, pitch: 0.6 },
+      { name: 'lake', x: 78.5, z: 118.5, yaw: 0, pitch: 0.5 }
+    ];
+    const look = (v, hour) => {
+      p.form = null; p.vx = p.vy = p.vz = 0; p.x = v.x; p.z = v.z;
+      p.y = N.terrainY(W, Math.floor(v.x), Math.floor(v.z), 60) + 1.62;
+      p.yaw = v.yaw; p.pitch = v.pitch;
+      g.mode = 'play'; g.time = N.DAY_LEN * (hour / 24); g.updateEnv();
+      g._camFrame = g.shootCamera(p); g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const tanY = Math.tan(R.cam.fov * Math.PI / 360), tanX = tanY * R.aspect;
+      // what a ray from the lens hits first: a block, or the sky
+      const first = (dx, dy, dz) => {
+        for (let t = 0.3; t < 200; t += 0.25) {
+          const X = Math.floor(R.cam.x + dx * t), Y = Math.floor(R.cam.y + dy * t), Z = Math.floor(R.cam.z + dz * t);
+          if (Y >= W.h) break;
+          if (X < 0 || Z < 0 || X >= W.w || Z >= W.d) continue;
+          const b = W.get(X, Y, Z); if (b) return b;
+        } return 0;
+      };
+      const L = i => px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
+      let sn = 0, ss = 0, gmin = 1e9, black = 0, tot = 0;
+      for (let Y = 0; Y < h; Y += 2) {
+        const gy = h - 1 - Y, ndcY = 1 - (Y + 0.5) / h * 2;
+        for (let X = 0; X < w; X += 2) {
+          const ndcX = (X + 0.5) / w * 2 - 1;
+          let dx = R.fwd[0] + R.right[0] * ndcX * tanX + R.up[0] * ndcY * tanY;
+          let dy = R.fwd[1] + R.right[1] * ndcX * tanX + R.up[1] * ndcY * tanY;
+          let dz = R.fwd[2] + R.right[2] * ndcX * tanX + R.up[2] * ndcY * tanY;
+          const ln = Math.hypot(dx, dy, dz); dx /= ln; dy /= ln; dz /= ln;
+          const i = (gy * w + X) * 4, val = L(i);
+          tot++; if (val < 12) black++;
+          if (first(dx, dy, dz) === 0) { sn++; ss += val; } else gmin = Math.min(gmin, val);
+        }
+      }
+      g._camFrame = null;
+      return { skyMean: +(ss / Math.max(1, sn)).toFixed(1), geoMin: +gmin.toFixed(1),
+        blackPct: +(black / tot * 100).toFixed(1) };
+    };
+    const out = {};
+    for (const v of views) out[v.name] = { night: look(v, 0), day: look(v, 13) };
+    const amb = {};
+    for (const hr of [13, 18, 20, 0]) {
+      g.time = N.DAY_LEN * (hr / 24); g.updateEnv();
+      amb[hr] = g.env.ambient.map(x => +x.toFixed(4));
+    }
+    g._camFrame = null; g.render();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    return { views: out, amb, worstBlack: Math.max(...views.map(v => out[v.name].night.blackPct)),
+      worstRatio: Math.min(...views.map(v => out[v.name].night.geoMin / out[v.name].night.skyMean)) };
+  });
+  check('the light of the sky on the ground is zero while the sun is up',
+    nightfall.amb[13].every(x => x === 0) && nightfall.amb[18].every(x => x === 0), nightfall.amb);
+  check('and it is there once the sun is properly down, and it is the blue of the sky',
+    nightfall.amb[0][2] > 0.03 && nightfall.amb[0][2] > nightfall.amb[0][0], nightfall.amb);
+  check('a night frame holds no black mass: nothing in it is below luminance 12',
+    nightfall.worstBlack === 0, nightfall.views);
+  check('the darkest surface at night is not below the sky it sits against',
+    nightfall.worstRatio >= 0.6, nightfall.views);
+  check('and in daylight the same lenses still have nothing black in them',
+    Object.keys(nightfall.views).every(k => nightfall.views[k].day.blackPct === 0 && nightfall.views[k].day.geoMin > 30),
+    nightfall.views);
+
   /* 10t. the phase word has to follow which way the sun is moving. `night` is
      symmetric about noon, and the HUD picked dawn/dusk/night/day from that value
      alone, so the hour the game opens on -- 07:00, night 0.37 -- was labelled
@@ -2612,7 +2700,12 @@ const { sim } = require('./simwait');
     const level = grab(0), nosed = grab(0.42);
     let diff = 0;
     for (let i = 0; i < level.length; i += 4) {
-      if (Math.abs(level[i] - nosed[i]) + Math.abs(level[i + 1] - nosed[i + 1]) + Math.abs(level[i + 2] - nosed[i + 2]) > 24) diff++;
+      // "changed at all", not "changed by a lot": at night the whole frame lives
+      // between 0 and 60, so a 24-level test on a body against a night
+      // background measures the contrast between them, not whether the tilt
+      // reached the frame. Two grabs of the same pose differ by 0, so a low
+      // threshold costs nothing.
+      if (Math.abs(level[i] - nosed[i]) + Math.abs(level[i + 1] - nosed[i + 1]) + Math.abs(level[i + 2] - nosed[i + 2]) > 8) diff++;
     }
     g.time = t0; g.updateEnv();
     Object.assign(p, was);
@@ -2627,7 +2720,7 @@ const { sim } = require('./simwait');
   check('a body on foot stays level: feet hold a body level',
     !attitude.error && attitude.walk.g === 1 && Math.abs(attitude.walk.tilt) < 0.02, attitude);
   check('and the renderer reads the pitch: the same body level and nosed is not the same frame',
-    !attitude.error && attitude.diff > 300, attitude);
+    !attitude.error && attitude.diff > 400, attitude);
 
   /* 11e. Feet on the bottom are feet that can push off it, water around them or
      not. That is the whole of getting out of a lake: the shore of Mirrorlake is

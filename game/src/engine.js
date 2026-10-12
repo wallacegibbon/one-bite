@@ -145,6 +145,7 @@
   attribute vec3 aPos; attribute vec4 aCol; attribute vec2 aData;
   uniform mat4 uProj, uView, uModel;
   uniform float uFogDen, uDay, uTime, uWave, uEmisBoost;
+  uniform vec3 uAmb;
   varying vec4 vCol; varying float vFog;
   void main(){
     vec4 wp = uModel * vec4(aPos, 1.0);
@@ -159,7 +160,16 @@
     // aCol is uploaded with normalized=TRUE, so aCol.a is already 0..1: dividing
     // it by 255 again made every blended surface 0.4% opaque, and the lake had no
     // colour at all until your head went under and the fog did the colouring
-    vCol = vec4(aCol.rgb * aData.x * lit, aCol.a);
+    //
+    // uAmb is the sky's own light, added rather than multiplied. The dark of a
+    // night is not a grey: the only light a night has is the sky, and a surface
+    // lit by nothing else has to keep the sky's colour and stay near the sky's
+    // own brightness. Multiplied by the night's 16% a dark material -- conifer,
+    // dark leaf, roof tile -- lands at luminance 7..10 while the night sky
+    // behind it is 17..21, so a tree or a roof reads as a hole cut in the sky.
+    // An additive term fixes that where it matters: it lifts a dark surface by
+    // most of its own value and a bright one by hardly anything.
+    vCol = vec4(aCol.rgb * aData.x * lit + uAmb, aCol.a);
   }`;
   const FS_WORLD = `
   precision mediump float;
@@ -350,6 +360,7 @@
         u.uTint = gl.getUniformLocation(P.p, 'uTint');
         u.uTintA = gl.getUniformLocation(P.p, 'uTintA');
         u.uEmisBoost = gl.getUniformLocation(P.p, 'uEmisBoost');
+        u.uAmb = gl.getUniformLocation(P.p, 'uAmb');
         u._done = 1;
       }
       gl.uniformMatrix4fv(u.uProj, false, this.proj);
@@ -358,6 +369,9 @@
       // overrides this used to take (opts.fogDen / opts.fogCol) had no caller
       gl.uniform1f(u.uFogDen, e.fogDen);
       gl.uniform3fv(u.uFogCol, e.fogCol);
+      // the sky's own light falling on a surface: environment, not draw, like
+      // the fog. Zero all day, so a daytime frame is bit for bit what it was.
+      gl.uniform3fv(u.uAmb, e.ambient || [0, 0, 0]);
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);
       gl.uniform1f(u.uTime, e.time);
       gl.uniform1f(u.uWave, opts.wave ? 1 : 0);

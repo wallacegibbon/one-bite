@@ -229,6 +229,22 @@
       horizon = mix(horizon, duskHor, dusk * 0.75);
       let fogCol = mix(horizon, zenith, 0.35);
       let fogDen = 0.0075 + this.night * 0.006;
+      /* The dark of a night is not a grey. The only light a night has is the sky
+         itself, so a surface lit by nothing else has to keep the sky's colour and
+         stay near the sky's own brightness: multiplied by the night's 16%, a dark
+         material -- conifer 0.14/0.30/0.20, dark leaf, roof tile -- lands at
+         luminance 7..10 while the night sky behind it is 17..21, and a tree or a
+         roof reads as a hole cut in the sky. Measured on four night frames: 4..42%
+         of the frame below luminance 12, darkest surface 6.8, against a sky of
+         17.3..21.3; the same four frames at 13:00 have 0% below 12.
+         The term is **added**, not multiplied, because that is the shape the
+         problem has: it lifts a dark surface by most of its own value and a
+         bright one by hardly anything. The gate is the one the sky shader already
+         uses for the stars -- the sun has to be properly down, not merely low --
+         so dusk, which has light of its own, is left alone. */
+      const down = Math.max(0, Math.min(1, -el / 0.2));
+      const skyLight = mix(zenith, horizon, 0.5);
+      const ambK = down * down * (3 - 2 * down) * 0.42;
       // the Grey Veil
       const W = this.world, p = this.player;
       const edge = Math.min(p.x, p.z, W.w - p.x, W.d - p.z);
@@ -261,6 +277,7 @@
       this.env = {
         time: this.time, day: eyeDay, night: this.night,
         fogCol, fogDen, zenith, horizon, ground: mix(horizon, [0.25, 0.22, 0.2], 0.5),
+        ambient: [skyLight[0] * ambK, skyLight[1] * ambK, skyLight[2] * ambK],
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
         far: 260
       };
