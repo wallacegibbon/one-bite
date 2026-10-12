@@ -2920,19 +2920,29 @@ const { sim } = require('./simwait');
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
       pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
       dry: p.dry, fright: p.fright, grounded: p.grounded };
+    /* The clearing this runs in was scanned for clear air from y 36 to y 52 over
+       a 25 m box, so the ground anywhere inside it is at or below 36. A glide of
+       0.8 s falls 6.5 m and travels 5.6 m, so from y 44 the body is still in the
+       clear band at the end of it and never reaches a surface: the reading is
+       the beat easing out, not the body having landed. From 46 -- where the step
+       used to start it -- the owl touched down at frame 67 of the 72 it is
+       sampled at, and the height it was reported at was whatever phase of the
+       standing sawtooth it happened to be in. */
+    const AIR = 44, LEG = 0.8;
     const glide = (keys, secs) => {
       p.form = 'owlberry'; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
-      p.x = sky.x; p.z = sky.z; p.y = sky.y;
+      p.x = sky.x; p.z = sky.z; p.y = AIR;
       p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
       for (let i = 0; i < Math.round(secs * 60); i++) {
         p.yaw = 0;
         g.input = keys(); g.particles.n = 0; g.hover = null;
         p.update(1 / 60, g.input, g);
       }
-      return { flap: +(p.flap === undefined ? 1 : p.flap).toFixed(3), vy: +p.vy.toFixed(2) };
+      return { flap: +(p.flap === undefined ? 1 : p.flap).toFixed(3), vy: +p.vy.toFixed(2),
+        y: +p.y.toFixed(2), landed: p.grounded ? 1 : 0 };
     };
-    const down = glide(() => ({ fwd: true, jump: false, sneak: false, sprint: false }), 1.2);
-    const up = glide(() => ({ fwd: true, jump: true, sneak: false, sprint: false }), 2.0);
+    const down = glide(() => ({ fwd: true, jump: false, sneak: false, sprint: false }), LEG);
+    const up = glide(() => ({ fwd: true, jump: true, sneak: false, sprint: false }), LEG);
     Object.assign(p, was);
     // and the stroke the renderer is about to upload goes with it
     const entries = g.ensureModel('owl');
@@ -2951,7 +2961,7 @@ const { sim } = require('./simwait');
     return { down, up, full: stroke(1), riding: stroke(0.15) };
   });
   check('a flying body that is not asking for height rides its wings',
-    !beat.error && beat.down.flap < 0.3 && beat.down.vy < 0, beat);
+    !beat.error && beat.down.flap < 0.3 && beat.down.vy < 0 && !beat.down.landed, beat);
   check('and beats full stroke the moment it climbs for height',
     !beat.error && beat.up.flap > 0.9 && beat.up.vy > 0, beat);
   check('the stroke the renderer uploads goes with the beat, not with the clock',
@@ -3406,6 +3416,130 @@ const { sim } = require('./simwait');
     Object.values(scatter).every(r => r.missing ||
       (r.drops === 8 && !r.inSolid && !r.offSurface && !r.sunk && r.farthest <= 3.2)), scatter);
 
+  /* 11l. Feet rest on the surface they are on, and a body at rest is a frame at
+     rest. The contact plane used to be "the higher of the face and where the
+     feet already were", which for a body standing on anything is the feet
+     themselves: gravity pulled it down 6.4 mm a frame, the snap put it back half
+     a millimetre above where it had been, and that is a 6 mm sawtooth about five
+     times a second that never stops. The lens sits on the feet, so the whole
+     frame rides it -- and it rides it hardest close to the lens, which is what
+     the human reported: the blocks close to the lens shake. Measured at a wall
+     2.5 m off, with nobody
+     holding a key: 0.74% of the pixels within 2 m of the lens changed from one
+     frame to the next (mean change 106 of 765), 0.52% at 5-15 m, nothing past
+     15 m -- a shake that dies with distance is a moving lens, not a moving world. */
+  const rest = await step('feetRestOnTheSurface', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player, R = g.R, gl = R.gl;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, vital: p.vital, air: p.air, dry: p.dry, fright: p.fright, grounded: p.grounded,
+      input: g.input, time: g.time, mode: g.mode, frame: g._camFrame, lens: g._lens, env: g.env };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, vital: was.vital, air: was.air,
+        dry: was.dry, fright: was.fright, grounded: was.grounded });
+      g.input = was.input; g.time = was.time; g.mode = was.mode;
+      g._camFrame = was.frame; g._lens = was.lens; g.env = was.env;
+      return r;
+    };
+    p.form = null; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999; g.mode = 'play';
+
+    // dry flat ground with a one-block wall a step in front of it
+    let spot = null;
+    for (let x = 20; x < W.w - 20 && !spot; x++) for (let z = 20; z < W.d - 20 && !spot; z++) {
+      const gy = N.standY(W, x, z, W.h - 1);
+      if (W.solidAt(x, gy, z) || W.solidAt(x, gy + 1, z) || W.solidAt(x, gy + 2, z)) continue;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (!W.solidAt(x + dx, gy, z + dz) || W.solidAt(x + dx, gy + 1, z + dz)) continue;
+        spot = { x: x + 0.5, y: gy, z: z + 0.5, yaw: Math.atan2(dx, -dz) };
+        break;
+      }
+    }
+    if (!spot) return back({ error: 'no dry ground with a one-block wall beside it' });
+
+    const settle = (secs) => {
+      p.x = spot.x; p.z = spot.z; p.y = spot.y + 0.4; p.yaw = spot.yaw; p.pitch = 0;
+      p.vx = p.vy = p.vz = 0; p.grounded = false; p.faceYaw = spot.yaw;
+      const ys = [];
+      for (let i = 0; i < Math.round(secs * 60); i++) { g.input = {}; g.update(1 / 60); ys.push(p.y); }
+      const tail = ys.slice(-Math.round(secs * 60 * 0.8));      // the drop has long ended
+      let rev = 0, last = 0;
+      for (let i = 1; i < tail.length; i++) {
+        const d = tail[i] - tail[i - 1];
+        if (Math.abs(d) > 1e-9) { if (last && Math.sign(d) !== Math.sign(last)) rev++; last = Math.sign(d); }
+      }
+      return { span: +(Math.max(...tail) - Math.min(...tail)).toFixed(5), reversals: rev,
+        rest: +(p.y - spot.y).toFixed(5), grPct: p.grounded ? 100 : 0 };
+    };
+    const settled = settle(5);
+
+    // the same body, the same wall, two frames of the real loop apart
+    const cw = gl.drawingBufferWidth, ch = gl.drawingBufferHeight;
+    const U = gl.UNSIGNED_BYTE;
+    const grab = () => { const b = new Uint8Array(cw * ch * 4); gl.readPixels(0, 0, cw, ch, gl.RGBA, U, b); return b; };
+    const dist = (cf, X, Y) => {
+      const nx = X / cw * 2 - 1, ny = 1 - Y / ch * 2;
+      const vdx = nx / R.proj[0], vdy = ny / R.proj[5], vdz = -1, v = R.view;
+      let dx = v[0] * vdx + v[4] * vdy + v[8] * vdz;
+      let dy = v[1] * vdx + v[5] * vdy + v[9] * vdz;
+      let dz = v[2] * vdx + v[6] * vdy + v[10] * vdz;
+      const m = Math.hypot(dx, dy, dz);
+      const hit = W.raycast(cf.x, cf.y, cf.z, dx / m, dy / m, dz / m, 40, true);
+      return hit ? hit.t : 99;
+    };
+    settle(2);
+    const band = {};
+    let prev = null;
+    for (let f = 0; f < 4; f++) {
+      g.input = {}; g.update(1 / 60);
+      const cf = g.shootCamera(p); g._camFrame = cf; g.particles.n = 0; g.render();
+      const cur = grab();
+      if (prev) {
+        for (let y = 0; y < ch; y += 2) for (let x = 0; x < cw; x += 2) {
+          const i = (y * cw + x) * 4;
+          const d = Math.abs(prev[i] - cur[i]) + Math.abs(prev[i + 1] - cur[i + 1]) + Math.abs(prev[i + 2] - cur[i + 2]);
+          const t = dist(cf, x, y);
+          const k = t > 40 ? 'far' : t < 2 ? 'near' : 'mid';
+          const o = band[k] || (band[k] = { n: 0, moved: 0, sum: 0 });
+          o.n++; if (d > 6) { o.moved++; o.sum += d; }
+        }
+      }
+      prev = cur;
+    }
+    for (const k in band) band[k] = { n: band[k].n, pct: +(band[k].moved / band[k].n * 100).toFixed(2),
+      mean: band[k].moved ? Math.round(band[k].sum / band[k].moved) : 0 };
+
+    // a fall lands where it always landed
+    p.x = spot.x; p.z = spot.z; p.y = spot.y + 3; p.vx = p.vy = p.vz = 0; p.grounded = false;
+    let t = 0, vPeak = 0, landY = null;
+    for (let i = 0; i < 300; i++) {
+      g.input = {}; g.update(1 / 60); t += 1 / 60;
+      vPeak = Math.min(vPeak, p.vy);
+      if (landY === null && p.grounded && i > 8) landY = +p.y.toFixed(4);
+    }
+    const drop = { face: spot.y, landY, t: +t.toFixed(2), vPeak: +vPeak.toFixed(1) };
+
+    // and a body wading in a one-block shelf is standing on the bottom of it
+    const shelf = window.__mv && window.__mv.shelf;
+    let wade = { error: 'no one-block shore shelf' };
+    if (shelf) {
+      p.x = shelf.x; p.z = shelf.z; p.y = shelf.top + 0.0001; p.vx = p.vy = p.vz = 0; p.grounded = false;
+      const ys = []; let gr = 0;
+      for (let i = 0; i < 180; i++) { g.input = {}; g.update(1 / 60); ys.push(p.y); if (p.grounded) gr++; }
+      wade = { grPct: Math.round(gr / 180 * 100), span: +(Math.max(...ys) - Math.min(...ys)).toFixed(5),
+        rest: +(p.y - shelf.top).toFixed(5) };
+    }
+    return back({ spot, settled, band, drop, wade });
+  });
+  check('a body standing still on flat ground does not move at all',
+    !rest.error && rest.settled.span < 0.001 && rest.settled.reversals === 0, rest);
+  check('and it rests on the surface, not a hair above it',
+    !rest.error && Math.abs(rest.settled.rest) <= 0.001, rest);
+  check('the frame one frame later is the same frame: nothing within 2 m of the lens moves',
+    !rest.error && rest.band.near && rest.band.near.pct === 0 && rest.band.mid.pct === 0, rest);
+  check('a body that falls still arrives at the same speed and stops on the surface it falls onto',
+    !rest.error && rest.drop.vPeak < -10 && Math.abs(rest.drop.landY - rest.drop.face) <= 0.001, rest);
+  check('a body wading in a one-block shelf is on the bottom of it',
+    !rest.error && !rest.wade.error && rest.wade.grPct === 100 && rest.wade.span < 0.003, rest);
   /* A whole day of the world, run at the world's own pace rather than the
      browser's: every animal is a body somewhere in the valley, and the
      bookkeeping does not grow. A day rather than a minute because the animals
@@ -3420,7 +3554,7 @@ const { sim } = require('./simwait');
      to the top of the world there is no air left above it for a body to keep.
      Those samples are counted and reported, not failed. */
   const soak = await step('soakTheValley', () => {
-    const g = window.game, W = g.world, N = window.FRUTARIA;
+    const g = window.game, W = g.world, N = window.FRUTARIA, p = g.player;
     const look = () => {
       const bad = { notANumber: [], outside: [], inRock: [], inCrown: 0, onFoliage: [], underTheMap: [], aboveTheAir: [] };
       for (const c of g.creatures) {
@@ -3469,9 +3603,21 @@ const { sim } = require('./simwait');
        on the lakebed came up 0.47 m in its first frame (28 m/s). */
     const feet = g.creatures.filter(c => !c.isFlyer() && !c.isAquatic());
     const prevY = new Map(feet.map(c => [c, c.y]));
+    /* Nobody is holding a key, and the body is parked where the valley put it at
+       the boot. The step before this one leaves its own keys in g.input, and the
+       steps before that leave the body wherever their own rig wanted it -- a day
+       of that walks or leaves a player somewhere the ridge cold bites, they go
+       down, and their fruit scatters, which puts the drop count and the log up:
+       exactly the two things this step is watching for, caused by nothing in the
+       world at all. */
+    const inp0 = g.input, pw = { x: p.x, y: p.y, z: p.z, form: p.form, vital: p.vital, air: p.air };
+    const sp0 = N.spawn;
+    p.x = sp0.x; p.y = sp0.y; p.z = sp0.z; p.vx = p.vy = p.vz = 0; p.form = null;
+    p.vital = 10; p.air = 999; p.dry = 0; p.fright = 0;
     const jump = { worst: 0, who: null };
     // a whole day of the world's clock, so the animals are seen roosting and flying
     for (let i = 0; i < Math.round(N.DAY_LEN * 60); i++) {
+      g.input = {};
       g.update(1 / 60);
       for (const c of feet) {
         const d = Math.abs(c.y - prevY.get(c));
@@ -3479,8 +3625,15 @@ const { sim } = require('./simwait');
         prevY.set(c, c.y);
       }
     }
+    g.input = inp0;
+    Object.assign(p, pw);
     return { seconds: +(g.time - t0).toFixed(1), placed, before, after: look(), jump,
-      countsBefore: n0, countsAfter: counts() };
+      countsBefore: n0, countsAfter: counts(),
+      logTail: g.log.slice(-6).map(l => (l.txt || l.msg || JSON.stringify(l)).slice(0, 60)),
+      player: { x: +g.player.x.toFixed(1), y: +g.player.y.toFixed(2), z: +g.player.z.toFixed(1),
+        form: g.player.form, vital: +g.player.vital.toFixed(1), inv: g.inv.length,
+        inWater: !!g.player.inWater, headWater: !!g.player.headWater, air: +g.player.air.toFixed(1) },
+      dropKinds: g.drops.map(d => d.item && d.item.id) };
   });
   check('an animal is put down on the ground, not on the tree that grows out of it',
     soak.placed.n > 200 && !soak.placed.onCrown.length && !soak.placed.inTrunk.length, soak.placed);

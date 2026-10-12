@@ -110,12 +110,27 @@
       // snap to face: find the contact plane along the movement direction
       if (a === 'y') {
         if (amt < 0) {
-          let best = this.y;
-          const y0 = Math.floor(ny + 0.001), y1 = Math.floor(ny + s[1] - 0.001);
+          /* The floor is the top of the highest solid layer the feet came into
+             this frame -- and only layers the feet came into. The scan used to
+             start from `this.y`, so the answer was never below where the feet
+             already were, and a body resting on a surface was parked half a
+             millimetre above where it had been at the start of the frame
+             instead of on the surface: gravity pulled it down 6.4 mm, the snap
+             put it back up 0.5 mm, and that is a 6 mm sawtooth about five times
+             a second that never stops. The lens sits on the feet, so the whole
+             frame rides that sawtooth -- and it rides it hardest close to the
+             lens, which is why it reads as the nearby blocks shaking and not as
+             the world sinking. Layers above the feet are a ceiling, not a floor:
+             they used to be folded into the same maximum, which could lift a
+             body a body-height when its head was in a wall. */
+          const y0 = Math.floor(ny + 0.001), feet = Math.floor(this.y + 0.001);
+          const y1 = Math.min(Math.floor(ny + s[1] - 0.001), feet);
+          let best = null;
           for (let yy = y0; yy <= y1; yy++) {
-            if (this.colAt(this.x, yy, this.z)) best = Math.max(best, yy + 1);
+            if (this.colAt(this.x, yy, this.z)) best = yy + 1;
           }
-          this.y = best + 0.0005; this.vy = 0; this.grounded = true;
+          if (best !== null) { this.y = best + 0.0005; this.vy = 0; this.grounded = true; }
+          else this.vy = 0;      // blocked above the feet: stop the fall, do not climb
         } else {
           const yy = Math.floor(ny + s[1] - 0.001);
           this.y = yy - s[1] - 0.0005; this.vy = 0;
@@ -467,9 +482,9 @@
          parked 0.0005 m off the face it last hit, and the cell below is only
          sampled once the feet are 0.001 inside it -- so a frame has to sink
          0.0015 m before the surface is seen again. Gravity covers that on land
-         (0.006 m in a frame), which is why the flag flickers for a frame at a
-         time on flat ground but never stays out. In water it cannot: buoyancy
-         cancels most of the weight and the drag leaves a terminal speed of about
+         (0.006 m in a frame), so a body standing on the ground is reported
+         standing on every frame of it. In water it cannot: buoyancy cancels most
+         of the weight and the drag leaves a terminal speed of about
          0.05 m/s, 0.0008 m a frame, so the cell below is sampled once every
          three frames. A body wading where the lake is one block deep -- and the
          shore of Mirrorlake is 183 such columns -- is then reported airborne the
