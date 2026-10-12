@@ -1877,39 +1877,65 @@ const { sim } = require('./simwait');
      0.944 and 0.976 is set by eye, and a bound set by eye is a bound that will be
      loosened the first time it annoys someone. So the same claim is read again off
      the angles the renderer is about to upload: a walk alternates (left = -right),
-     a kick does not (left = right). */
+     a kick does not (left = right).
+     The two halves are read off two different bodies, because they are two
+     different animals' errands. A stride belongs to a body that walks, and a frog
+     is not one: on land it hops (docs/en/03 s3), and its hind leg is longer than
+     its hip is high, so any swing at the hip takes the foot through the ground on
+     the way back and well above it on the way up -- which is how the frog of B19
+     got its legs into the floor it was standing on. The kick belongs to the frog.
+     The knee is read on the walking body as well: the fold of B19 was mirrored
+     along with the timing, so one knee of every body bent backwards through the
+     floor, and a backwards knee is not a stride, it is a leg pointing the wrong
+     way. */
   const stride = await step('swimPoseIsSynchronous', () => {
     const N = window.FRUTARIA, g = window.game;
-    const parts = g.ensureModel('frog');
-    const angles = (sw, t) => {
+    const read = (model, sw, t) => {
       /* the renderer only hands a stroke to a body the water is holding up, so
          the swim sample carries that too -- it is the pair the draw really gets */
       const st = { t, phase: 0, move: 1, air: 0, crouch: 0, swim: sw, held: sw };
       const a = {};
-      for (const e of parts) a[e.part.name] = N.partAngles(e, st);
+      for (const e of g.ensureModel(model)) a[e.part.name] = N.partAngles(e, st);
       return a;
     };
-    const out = {};
-    for (const [name, sw] of [['walk', 0], ['swim', 1]]) {
-      // three samples a third of a cycle apart: caught mid-swing, not at a zero crossing
-      const s = [0, 1, 2].map(k => angles(sw, 0.31 + k * 0.37));
-      out[name] = {
-        thigh: s.map(a => +(a.thighL.rx - a.thighR.rx).toFixed(3)),
-        shin: s.map(a => +(a.shinL.rx - a.shinR.rx).toFixed(3)),
-        front: s.map(a => +(a.legFL.rx - a.legFR.rx).toFixed(3)),
-        swing: +Math.max(...s.map(a => Math.abs(a.thighL.rx))).toFixed(3),
-        hold: +Math.abs(s[0].legFL.rx).toFixed(3),
-      };
-    }
-    return out;
+    // three samples a third of a cycle apart: caught mid-swing, not at a zero crossing
+    const at = (model, sw) => [0, 1, 2].map(k => read(model, sw, 0.31 + k * 0.37));
+    const d = (s, a, b) => s.map(x => +(x[a].rx - x[b].rx).toFixed(3));
+    const walk = at('bear', 0), land = at('frog', 0), kick = at('frog', 1);
+    /* a pair of knees folds in turn, not both at once: sampled over a span
+       longer than any stride, so the extremes are the stride's own and this file
+       keeps no copy of the walk rate */
+    const span = [];
+    for (let k = 0; k < 24; k++) span.push(read('bear', 0, k * 0.0625));
+    const A = span.map(a => Math.abs(a.shinFL.rx)), B = span.map(a => Math.abs(a.shinFR.rx));
+    return {
+      walk: {
+        front: d(walk, 'legFL', 'legFR'), back: d(walk, 'legBL', 'legBR'),
+        kneeMax: +Math.max(Math.max(...A), Math.max(...B)).toFixed(3),
+        // how bent one knee is on the frame when the other is bent just as much
+        kneeBoth: +Math.max(...A.map((v, i) => Math.min(v, B[i]))).toFixed(3)
+      },
+      // a frog standing on land: its hind legs take no part in a stride at all
+      hop: land.map(a => +Math.abs(a.thighL.rx).toFixed(3)),
+      kick: {
+        thigh: d(kick, 'thighL', 'thighR'), shin: d(kick, 'shinL', 'shinR'),
+        front: d(kick, 'legFL', 'legFR'),
+        swing: +Math.max(...kick.map(a => Math.abs(a.thighL.rx))).toFixed(3),
+        hold: +Math.abs(kick[0].legFL.rx).toFixed(3)
+      }
+    };
   });
-  check('on land the hind legs alternate: left is the mirror of right',
-    stride.walk.thigh.every(d => Math.abs(d) > 0.3) && stride.walk.shin.every(d => Math.abs(d) > 0.3), stride);
+  check('a walking body alternates its legs: left is the mirror of right',
+    stride.walk.front.every(v => Math.abs(v) > 0.3) && stride.walk.back.every(v => Math.abs(v) > 0.3), stride);
+  check('and its knees fold in turn: one leg of a pair is always straight under it',
+    stride.walk.kneeMax > 0.3 && stride.walk.kneeBoth < 0.15, stride);
+  check('a frog on land holds its legs: it hops, it does not stride',
+    stride.hop.every(v => v === 0), stride);
   check('in the water they are in the same phase: a kick is both legs at once',
-    stride.swim.thigh.every(d => d === 0) && stride.swim.shin.every(d => d === 0), stride);
+    stride.kick.thigh.every(v => v === 0) && stride.kick.shin.every(v => v === 0), stride);
   check('in the water the front legs are held, not walked',
-    stride.swim.front.every(d => d === 0) && stride.swim.hold > 0.3, stride);
-  check('and the kick swings the hind legs as hard as a stride', stride.swim.swing > 0.3, stride);
+    stride.kick.front.every(v => v === 0) && stride.kick.hold > 0.3, stride);
+  check('and the kick swings the hind legs as hard as a stride', stride.kick.swing > 0.3, stride);
 
   /* 10x. the kick itself, read off the state the draw builds. The two steps
      above can say the pair is in the same phase and that the silhouette is
@@ -2107,17 +2133,39 @@ const { sim } = require('./simwait');
           if (q < wq) { wq = q; wade = { x: x + 0.5, z: z + 0.5, top: d.top, n: d.n }; }
         }
       out.wade = wade; out.wadeGap = +wq.toFixed(2);
+      /* the leg has to be a leg. The body used to be pointed 20 m across the
+         lake with the wander timer at zero, which let the creature pick itself a
+         fresh errand half way over: often enough it picked the shore, ran
+         aground, and the pose of a stopped body was then read as the pose of a
+         swim -- and the checks below ask for a stroke, which a stopped body does
+         not have. So the errand is fixed for the whole leg: a stretch of the
+         same deep water 12 to 16 m off, with deep water all the way out to it,
+         and the timer stopped so nothing re-picks it. */
+      const deepAt = (x, z) => { const d = depth(Math.floor(x), Math.floor(z)); return !!d && d.n >= 3; };
+      let goal = null;
+      for (const [ax, az] of [[1, 0], [0, 1], [-1, 0], [0, -1],
+                              [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]]) {
+        for (const r of [12, 14, 16, 8, 6]) {
+          let ok = true;
+          for (let s = 1; s <= r && ok; s += 0.5)
+            if (!deepAt(lake.x + ax * s, lake.z + az * s)) ok = false;
+          if (ok) { goal = { x: lake.x + ax * r, z: lake.z + az * r, r }; break; }
+        }
+        if (goal) break;
+      }
+      out.wildGoal = goal ? goal.r : 'no deep water within 16 m';
       const send = (secs) => {
         wf.x = lake.x; wf.z = lake.z; wf.y = lake.top - 1.2; wf.state = 'wander'; wf.sleeping = false;
-        wf.tx = lake.x + 20; wf.tz = lake.z + 20; wf.pause = 0; wf.alarm = 0;
+        wf.tx = goal.x; wf.tz = goal.z; wf.pause = 9999; wf.alarm = 0;
         const n = Math.round(secs * 60);
         for (let i = 0; i < n; i++) { wf.update(1 / 60, p, W, g); p.update(1 / 60, {}, g); }
         const s = stroke(capture(mark));
         s.body = { spd: +wf.speed.toFixed(2), y: +wf.y.toFixed(2), held: +(wf.held || 0).toFixed(2),
-          inWater: wf.inWater ? 1 : 0, state: wf.state };
+          inWater: wf.inWater ? 1 : 0, state: wf.state,
+          to: +Math.hypot(wf.x - lake.x, wf.z - lake.z).toFixed(1) };
         return s;
       };
-      out.wild = send(4);
+      out.wild = send(2);
       // and the same body sitting in the water with nowhere to go
       wf.pause = 9999; wf.alarm = 0;
       for (let i = 0; i < 240; i++) { wf.tx = wf.x; wf.tz = wf.z; wf.update(1 / 60, p, W, g); }
@@ -2154,6 +2202,8 @@ const { sim } = require('./simwait');
     !!kSw && !!kWl && kSw.footY[1] <= kick.BELLY && kWl.footY[1] <= kick.BELLY, kick);
   check('the knee never straightens backwards through the stroke',
     !!kFl && !!kSw && kFl.bendMin >= 0.05 && kSw.bendMin >= 0.05, kick);
+  check('the wild body was still crossing when its stroke was read',
+    !!kWl && kWl.body.inWater === 1 && kWl.body.spd > 1, kick);
   check('a wild frog crossing the lake kicks the same way, feet behind it',
     !!kWl && kWl.held === 1 && kWl.back <= kick.BACK - 0.08 && kWl.travel >= 0.15, kick);
   check('a body dug down on the bed has feet to stand on and stops kicking',
@@ -2165,6 +2215,186 @@ const { sim } = require('./simwait');
   check('a wild body standing in water too shallow to hold it up has feet, not a kick',
     !!kick.wildWade && kick.wildWade.body.inWater === 1 && kick.wildWade.held === 0 &&
     kick.wildWade.swim === 0 && kick.wildWade.back > kick.BACK, kick);
+
+  /* 10w. and the body that is drawn never reaches under the ground it is
+     standing on. Everything above asks what the legs are *doing*; this asks
+     where they end up, in the world, against the surface the body is standing
+     on -- which is the complaint B19 arrives with, in the reporter's own words:
+     the model pokes through the surface it stands on. It is read off the
+     matrices the renderer uploads, so
+     it cannot drift from the draw: the meshes of the body being worn are
+     matched by identity out of `R.drawMesh`, and the box corners of the model
+     data are carried through them.
+What was measured before any of this was fixed, over 180 frames of walking
+     and 120 of standing on a flat clearing with nothing to collide with: a
+     frog drove its shin 0.164 m under the floor it stood on in 169 frames of
+     360 and its body 0.148 m in 52 of 180 -- the leg was longer than the hip
+     was high, it was being swung through the whole cycle whether or not the
+     body was hopping, and the fold was timed for the stance instead of the
+     swing; a body landing from a hop swept its foot 0.154 m through the ground
+     on the way into the flight pose, because the pose is eased and the body's
+     own origin does not move with it; a bear walking had its hind foot 0.091 m
+     under the floor in 32 frames of 180 and its front foot in 32 more, because
+     a knee that folds while the foot is still on the ground has no ankle to
+     fold at, and the body breathing on top of it pushed the whole limb down
+     another 4 cm with every step; a person its boot 0.032 m in 32 of 180; and
+     an owl its toe 0.063 m under in 106 of 180 and 0.055 m in 17 of 120,
+     because it read one frame of gravity as a dive and then kept the pitch of
+     that dive for a quarter of a second after its feet had arrived.
+     What closes them is in models.js -- the limb lifts by as much as its own
+     swing drives it under, and refuses to be carried down when the body above
+     it breathes -- and in entities.js: the pitch belongs to a body above the
+     level it would be standing at, and the ground takes the pitch back in the
+     frame the feet arrive.
+     What is left, and stated rather than hidden: the frames that still reach
+     0.03 m are the last moment of a fall, the body a couple of centimetres
+     above the surface and coming in at 0.42 rad -- its toes are through the
+     surface for one frame before the body lands on it. The bound below is
+     where the bodies are today plus a hand of room; it is there to keep this
+     from getting worse, and all four were red before the fix. */
+  const planted = await step('feetStayOnTheirGround', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player, R = g.R;
+    const was = { form: p.form, formT: p.formT, formMax: p.formMax, x: p.x, y: p.y, z: p.z,
+      vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      bank: p.bank, tilt: p.tilt, squash: p.squash, grounded: p.grounded, airAmt: p.airAmt,
+      held: p.held, inWater: p.inWater, cruise: p.cruise, crouch: p.crouch, vital: p.vital,
+      dry: p.dry, fright: p.fright, air: p.air };
+    const wasG = { mode: g.mode, tp: g.thirdPerson, time: g.time, herd: g.herdCentres,
+      camD: g.cam.d, camFov: g.cam.fov, frame: g._camFrame };
+    const back = () => {
+      Object.assign(p, was);
+      g.mode = wasG.mode; g.thirdPerson = wasG.tp; g.time = wasG.time;
+      g.herdCentres = wasG.herd; g.cam.d = wasG.camD; g.cam.fov = wasG.camFov;
+      g._camFrame = wasG.frame;
+    };
+    p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+    g.mode = 'play'; g.thirdPerson = true; g.cam.d = 3;
+    g.herdCentres = {};
+    // a dry flat stretch to walk down: the longest run of one height, clear above
+    const dry = (x, z) => {
+      let gy = 0;
+      for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z)) { gy = y + 1; break; }
+      if (gy < 12) return -1;
+      for (let y = gy; y <= gy + 3; y++) if (W.liquidAt(x, y, z)) return -1;
+      return gy;
+    };
+    let field = null, cand = 0;
+    for (let x = 8; x < W.w - 8; x++) for (let z = W.d - 9; z > 40; z--) {
+      const gy = dry(x, z);
+      if (gy < 0) continue;
+      cand++;
+      let len = 1;
+      while (dry(x, z - len) === gy) len++;
+      // the walk goes -z at yaw 0: the stretch has to be ahead, not behind
+      if (!field || len > field.len) field = { x: x + 0.5, z: z + 0.5, gy, len };
+    }
+    const out = { field, cand };
+    if (!field || field.len < 22) { back(); return out; }
+    /* the matrices the draw really uploaded: the meshes of the body being worn,
+       matched by object identity, so this is the frame and not a copy of it */
+    const got = new Map(), watch = new Set(), corners = new Map();
+    let meshOf = {}, parentOf = {};
+    const realDraw = R.drawMesh;
+    R.drawMesh = function (mesh, m) { if (watch.has(mesh)) got.set(mesh, m.slice()); return realDraw.apply(this, arguments); };
+    const measure = () => {
+      const floor = N.standY(W, Math.floor(p.x), Math.floor(p.z), p.y);
+      let d = 0, who = null;
+      // the highest and the lowest edge each part reaches this frame, so a limb
+      // that has come adrift of the part it hangs from can be seen as a gap
+      const lo = new Map(), hi = new Map();
+      for (const [mesh, m] of got) {
+        let a = 1e9, z = -1e9;
+        for (const bx of corners.get(mesh))
+          for (const fx of [bx[0], bx[0] + bx[3]])
+            for (const fy of [bx[1], bx[1] + bx[4]])
+              for (const fz of [bx[2], bx[2] + bx[5]]) {
+                const y = m[1] * fx + m[5] * fy + m[9] * fz + m[13];
+                const dip = floor - y;
+                if (dip > d) { d = dip; who = bx._who; }
+                if (y < a) a = y; if (y > z) z = y;
+              }
+        lo.set(mesh, a); hi.set(mesh, z);
+      }
+      let gap = 0, gapWho = null;
+      for (const name in meshOf) {
+        const pn = parentOf[name], cm = meshOf[name], pm = meshOf[pn];
+        if (!pn || !pm || !lo.has(cm) || !lo.has(pm)) continue;
+        const g = lo.get(pm) - hi.get(cm);      // the part above, clear of the part below it
+        if (g > gap) { gap = g; gapWho = name + '/' + pn; }
+      }
+      return { d, who, gap, gapWho };
+    };
+    const run = (label, form, keys, frames) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.x = field.x; p.y = field.gy + 1; p.z = field.z;
+      p.vx = p.vy = p.vz = 0; p.yaw = 0; p.faceYaw = 0; p.pitch = 0;
+      p.bank = 0; p.tilt = 0; p.squash = 0; p.crouch = 0;
+      p.grounded = true; p.airAmt = 0; p.held = 0; p.inWater = false; p.cruise = 0;
+      const parts = g.ensureModel(p.modelId);
+      const byName = {};
+      for (const q of N.MODELS[p.modelId].parts) byName[q.name] = q;
+      watch.clear(); corners.clear(); meshOf = {}; parentOf = {};
+      for (const q of N.MODELS[p.modelId].parts) { meshOf[q.name] = null; parentOf[q.name] = q.parent; }
+      for (const e of parts) {
+        const q = byName[e.part.name];
+        if (!e.mesh || !q || !q.boxes) continue;
+        const bs = q.boxes.map(b => { const a = b.slice(); a._who = q.name; return a; });
+        watch.add(e.mesh); corners.set(e.mesh, bs); meshOf[q.name] = e.mesh;
+      }
+      let worst = 0, bad = 0, sum = 0, who = null, at = null, gap = 0, gapWho = null;
+      for (let i = 0; i < frames; i++) {
+        p.update(1 / 60, keys, g);
+        g.time += 1 / 60;
+        got.clear();
+        g.updateEnv(); g._camFrame = g.shootCamera(p); g.render(); g._camFrame = null;
+        const m = measure();
+        if (m.d > 0.02) { bad++; sum += m.d; }
+        if (m.gap > gap) { gap = m.gap; gapWho = m.gapWho; }
+        if (m.d > worst) {
+          worst = m.d; who = m.who;
+          at = { tilt: +(p.tilt || 0).toFixed(2), bank: +(p.bank || 0).toFixed(2),
+            air: +(p.airAmt || 0).toFixed(2), gr: p.grounded ? 1 : 0,
+            move: +Math.min(1, Math.hypot(p.vx, p.vz) / 5).toFixed(2),
+            sq: +(p.squash || 0).toFixed(2), spd: +Math.hypot(p.vx, p.vz).toFixed(2) };
+        }
+      }
+      out[label] = { frames, bad, worst: +worst.toFixed(3), mean: +(sum / Math.max(bad, 1)).toFixed(3),
+        gap: +gap.toFixed(3), gapWho, who, at };
+    };
+    const go = { fwd: true, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
+    const still = { fwd: false, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
+    for (const f of ['frogpear', null, 'bruinfig', 'owlberry']) {
+      const nm = f === null ? 'human' : f;
+      run('walk-' + nm, f, go, 180);
+      run('stand-' + nm, f, still, 120);
+    }
+    R.drawMesh = realDraw;
+    back();
+    return out;
+  });
+  /* 5 cm, the same for every body: the walk and the stand are at 0.007 or
+     better, and the one frame left is a landing seen a frame too early. The
+     fraction is the part with teeth -- before the fix a bear's foot was under
+     the floor in a fifth of the frames of its walk and an owl's in three of
+     every five. */
+  const PLANT = 0.05;
+  for (const f of ['frogpear', 'human', 'bruinfig', 'owlberry']) {
+    const pw = planted['walk-' + f], ps = planted['stand-' + f];
+    check(`the drawn ${f} never reaches under the ground it stands on`,
+      !!pw && !!ps && pw.worst < PLANT && ps.worst < PLANT &&
+      pw.bad < pw.frames * 0.05 && ps.bad < ps.frames * 0.05, planted);
+  }
+  /* The other way a limb can be wrong: the lift that keeps a foot out of the
+     ground, and the refusal to be carried down when the body above it breathes,
+     both move a limb relative to the part it hangs from. Carved too short, and
+     the leg leaves the body altogether -- an owl whose leg reached 1.2 cm clear
+     of the body it hangs off, a slit of sky where the hip should be. 5 mm is the
+     margin: every body sits at 0, because a limb is carved well inside the part
+     above it. */
+  check('no part of a walking body is drawn adrift from the part it hangs from',
+    ['walk-frogpear', 'stand-frogpear', 'walk-human', 'stand-human', 'walk-bruinfig',
+      'stand-bruinfig', 'walk-owlberry', 'stand-owlberry']
+      .every(k => planted[k] && planted[k].gap < 0.005), planted);
 
   /* A body in the air turns by tilting. The player's own body has leaned into a
      turn for a long time; nothing else in the world did, so an owl crossing the
@@ -3122,6 +3352,16 @@ const { sim } = require('./simwait');
     }
     const walk = field ? run(null, field, () => ({ fwd: true, jump: false, sneak: false, sprint: false }), 2.0)
                        : { error: 'no dry flat stretch' };
+    /* the same stretch wearing a body built for the air: an owl standing on the
+       ground, and an owl walking over it. The attitude used to be worked out
+       after the frame had already taken its gravity step, so a standing owl read
+       one frame of falling that the ground then undid as a dive: it held 0.6 rad
+       of nose-down for as long as it stood, and its legs reached 8 cm through
+       the floor it was standing on -- in 344 of the 360 frames it walked. */
+    const noKeys = () => ({ fwd: false, jump: false, sneak: false, sprint: false });
+    const perch = field ? run('owlberry', field, noKeys, 2.0) : { error: 'no dry flat stretch' };
+    const onfoot = field ? run('owlberry', field, () => ({ fwd: true, jump: false, sneak: false, sprint: false }), 0.6)
+                         : { error: 'no dry flat stretch' };
     Object.assign(p, was);
 
     // and the draw reads it: one body, level and tilted, two frames
@@ -3156,7 +3396,7 @@ const { sim } = require('./simwait');
     }
     g.time = t0; g.updateEnv();
     Object.assign(p, was);
-    return { sink, rise, climb, walk, diff };
+    return { sink, rise, climb, walk, perch, onfoot, diff };
   });
   check('a body sinking through water noses down the way it is going',
     !attitude.error && !!attitude.sink.down && attitude.sink.down.tilt > 0.2 && attitude.sink.down.vy < -1, attitude);
@@ -3174,6 +3414,9 @@ const { sim } = require('./simwait');
     !attitude.error && attitude.climb.tilt < -0.1 && attitude.climb.vy > 0, attitude);
   check('a body on foot stays level: feet hold a body level',
     !attitude.error && attitude.walk.g === 1 && Math.abs(attitude.walk.tilt) < 0.02, attitude);
+  check('a body built for the air is on foot the moment its feet are on the ground',
+    !attitude.error && attitude.perch.grPct > 90 && attitude.onfoot.grPct > 90 &&
+    Math.abs(attitude.perch.tilt) < 0.05 && Math.abs(attitude.onfoot.tilt) < 0.05, attitude);
   check('and the renderer reads the pitch: the same body level and nosed is not the same frame',
     !attitude.error && attitude.diff > 400, attitude);
 
@@ -3959,7 +4202,7 @@ const { sim } = require('./simwait');
   check('and it rests on the surface, not a hair above it',
     !rest.error && Math.abs(rest.settled.rest) <= 0.001, rest);
   check('the frame one frame later is the same frame: nothing within 2 m of the lens moves',
-    !rest.error && rest.band.near && rest.band.near.pct === 0 && rest.band.mid.pct === 0, rest);
+    !rest.error && rest.band.near && rest.band.near.pct === 0 && rest.band.mid && rest.band.mid.pct === 0, rest);
   check('a body that falls still arrives at the same speed and stops on the surface it falls onto',
     !rest.error && rest.drop.vPeak < -10 && Math.abs(rest.drop.landY - rest.drop.face) <= 0.001, rest);
   check('a body wading in a one-block shelf is on the bottom of it',

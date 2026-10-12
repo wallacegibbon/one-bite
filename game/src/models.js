@@ -61,28 +61,28 @@
         ] },
         { name: 'armL', parent: 'torso', pivot: [-1.35, 6.8, 0], anim: 'walk', sign: -1,
           air: [0.5, 0, -0.35], boxes: [[-1.7, 5.7, -0.5, 0.6, 1.1, 1.0, '#4a5a78']] },
-        { name: 'foreL', parent: 'armL', pivot: [-1.4, 5.7, 0], anim: 'elbow', sign: -1,
+        { name: 'foreL', parent: 'armL', pivot: [-1.4, 5.7, 0], anim: 'elbow', sign: -1, bend: -1,
           air: [-0.7, 0, 0], boxes: [
             [-1.65, 4.7, -0.45, 0.5, 1.0, 0.9, '#d8a884'],        // forearm
             [-1.62, 4.2, -0.48, 0.44, 0.5, 0.96, '#e2b28e']       // hand, at the hip
           ] },
         { name: 'armR', parent: 'torso', pivot: [1.35, 6.8, 0], anim: 'walk', sign: 1,
           air: [0.5, 0, 0.35], boxes: [[1.1, 5.7, -0.5, 0.6, 1.1, 1.0, '#4a5a78']] },
-        { name: 'foreR', parent: 'armR', pivot: [1.4, 5.7, 0], anim: 'elbow', sign: 1,
+        { name: 'foreR', parent: 'armR', pivot: [1.4, 5.7, 0], anim: 'elbow', sign: 1, bend: -1,
           air: [-0.7, 0, 0], boxes: [
             [1.15, 4.7, -0.45, 0.5, 1.0, 0.9, '#d8a884'],
             [1.18, 4.2, -0.48, 0.44, 0.5, 0.96, '#e2b28e']
           ] },
-        { name: 'thighL', parent: 'hips', pivot: [-0.62, 3.9, 0], anim: 'walk', sign: 1,
+        { name: 'thighL', parent: 'hips', pivot: [-0.62, 3.9, 0], anim: 'walk', sign: 1, stands: 1,
           air: [-0.55, 0, 0], boxes: [[-1.0, 2.4, -0.6, 0.8, 1.5, 1.2, '#39414d']] },
-        { name: 'shinL', parent: 'thighL', pivot: [-0.62, 2.45, 0], anim: 'knee', sign: 1,
+        { name: 'shinL', parent: 'thighL', pivot: [-0.62, 2.45, 0], anim: 'knee', sign: 1, stands: 1,
           air: [0.95, 0, 0], boxes: [
             [-0.95, 0.85, -0.55, 0.65, 1.6, 1.1, '#414a57'],      // trouser
             [-1.0, 0, -0.65, 0.75, 0.85, 1.65, '#2b2522']         // boot, toe in front
           ] },
-        { name: 'thighR', parent: 'hips', pivot: [0.62, 3.9, 0], anim: 'walk', sign: -1,
+        { name: 'thighR', parent: 'hips', pivot: [0.62, 3.9, 0], anim: 'walk', sign: -1, stands: 1,
           air: [-0.55, 0, 0], boxes: [[0.2, 2.4, -0.6, 0.8, 1.5, 1.2, '#39414d']] },
-        { name: 'shinR', parent: 'thighR', pivot: [0.62, 2.45, 0], anim: 'knee', sign: -1,
+        { name: 'shinR', parent: 'thighR', pivot: [0.62, 2.45, 0], anim: 'knee', sign: -1, stands: 1,
           air: [0.95, 0, 0], boxes: [
             [0.3, 0.85, -0.55, 0.65, 1.6, 1.1, '#414a57'],
             [0.25, 0, -0.65, 0.75, 0.85, 1.65, '#2b2522']
@@ -143,14 +143,14 @@
         { name: 'tail', parent: 'body', pivot: [0, 1.35, -1.0], anim: 'wag', boxes: [
           [-0.62, 0.45, -1.7, 1.24, 0.95, 0.8, '#6a543c']
         ] },
-        { name: 'legL', parent: 'body', pivot: [-0.5, 0.95, 0.1], anim: 'walk', sign: -1,
+        { name: 'legL', parent: 'body', pivot: [-0.5, 0.95, 0.1], anim: 'walk', sign: -1, stands: 1,
           air: [0.9, 0, 0], boxes: [
-            [-0.72, 0.16, -0.12, 0.44, 0.8, 0.5, '#c8a050'],
+            [-0.72, 0.16, -0.12, 0.44, 1.24, 0.5, '#c8a050'],    // up into the body: the limb is
             [-0.78, 0, 0.3, 0.56, 0.18, 0.55, '#b8903f']          // foot
           ] },
-        { name: 'legR', parent: 'body', pivot: [0.5, 0.95, 0.1], anim: 'walk', sign: 1,
+        { name: 'legR', parent: 'body', pivot: [0.5, 0.95, 0.1], anim: 'walk', sign: 1, stands: 1,
           air: [0.9, 0, 0], boxes: [
-            [0.28, 0.16, -0.12, 0.44, 0.8, 0.5, '#c8a050'],
+            [0.28, 0.16, -0.12, 0.44, 1.24, 0.5, '#c8a050'],
             [0.22, 0, 0.3, 0.56, 0.18, 0.55, '#b8903f']
           ] }
       ]
@@ -188,30 +188,30 @@
         { name: 'throat', parent: 'head', pivot: [0, 1.4, 1.4], anim: 'pulse', boxes: [
           [-0.78, 1.0, 1.35, 1.56, 0.42, 0.85, '#d5e0b0']
         ] },
-        { name: 'legFL', parent: 'body', pivot: [-1.15, 1.2, 0.85], anim: 'walk', sign: 1,
+        { name: 'legFL', parent: 'body', pivot: [-1.15, 1.2, 0.85], anim: 'walk', sign: 1, stride: 0, stands: 1,
           air: [-0.38, 0, 0.2], swimPose: [-0.55, 0, 0.22], boxes: [
             [-1.5, 0.15, 0.6, 0.65, 1.1, 0.7, '#4e7a3c'],
             [-1.58, 0, 1.2, 0.82, 0.22, 0.8, '#6a9a52']           // toes
           ] },
-        { name: 'legFR', parent: 'body', pivot: [1.15, 1.2, 0.85], anim: 'walk', sign: -1,
+        { name: 'legFR', parent: 'body', pivot: [1.15, 1.2, 0.85], anim: 'walk', sign: -1, stride: 0, stands: 1,
           air: [-0.38, 0, -0.2], swimPose: [-0.55, 0, -0.22], boxes: [
             [0.85, 0.15, 0.6, 0.65, 1.1, 0.7, '#4e7a3c'],
             [0.76, 0, 1.2, 0.82, 0.22, 0.8, '#6a9a52']
           ] },
-        { name: 'thighL', parent: 'body', pivot: [-1.35, 1.75, -0.75], anim: 'walk', sign: -1,
+        { name: 'thighL', parent: 'body', pivot: [-1.35, 1.75, -0.75], anim: 'walk', sign: -1, stride: 0, stands: 1,
           air: [0.55, 0, 0.12], crouch: [-0.5, 0, 0.12], swimKick: 1, heldPose: [0, 0, 0.16], boxes: [
             [-1.95, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']         // the muscle
           ] },
-        { name: 'shinL', parent: 'thighL', pivot: [-1.42, 1.0, -1.35], anim: 'knee', sign: -1,
+        { name: 'shinL', parent: 'thighL', pivot: [-1.42, 1.0, -1.35], anim: 'knee', sign: -1, stride: 0, stands: 1, bend: -1,
           air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0], boxes: [
             [-1.8, 0.1, -1.3, 0.8, 1.0, 1.0, '#4e7a3c'],
             [-1.9, 0, -0.6, 1.02, 0.24, 1.4, '#6a9a52']           // long foot
           ] },
-        { name: 'thighR', parent: 'body', pivot: [1.35, 1.75, -0.75], anim: 'walk', sign: 1,
+        { name: 'thighR', parent: 'body', pivot: [1.35, 1.75, -0.75], anim: 'walk', sign: 1, stride: 0, stands: 1,
           air: [0.55, 0, -0.12], crouch: [-0.5, 0, -0.12], swimKick: 1, heldPose: [0, 0, -0.16], boxes: [
             [0.9, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']
           ] },
-        { name: 'shinR', parent: 'thighR', pivot: [1.42, 1.0, -1.35], anim: 'knee', sign: 1,
+        { name: 'shinR', parent: 'thighR', pivot: [1.42, 1.0, -1.35], anim: 'knee', sign: 1, stride: 0, stands: 1, bend: -1,
           air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0], boxes: [
             [1.0, 0.1, -1.3, 0.8, 1.0, 1.0, '#4e7a3c'],
             [0.88, 0, -0.6, 1.02, 0.24, 1.4, '#6a9a52']
@@ -244,19 +244,19 @@
         ] },
         { name: 'legFL', parent: 'body', pivot: [-1.45, 3.0, 1.6], anim: 'walk', sign: 1,
           boxes: [[-2.0, 1.0, 0.9, 1.1, 2.0, 1.4, '#5a5248']] },
-        { name: 'shinFL', parent: 'legFL', pivot: [-1.45, 1.0, 1.6], anim: 'knee', sign: 1,
+        { name: 'shinFL', parent: 'legFL', pivot: [-1.45, 1.0, 1.6], anim: 'knee', sign: 1, bend: -1,
           boxes: [[-2.0, 0, 0.85, 1.1, 1.0, 1.55, '#4c453d']] },
         { name: 'legFR', parent: 'body', pivot: [1.45, 3.0, 1.6], anim: 'walk', sign: -1,
           boxes: [[0.9, 1.0, 0.9, 1.1, 2.0, 1.4, '#5a5248']] },
-        { name: 'shinFR', parent: 'legFR', pivot: [1.45, 1.0, 1.6], anim: 'knee', sign: -1,
+        { name: 'shinFR', parent: 'legFR', pivot: [1.45, 1.0, 1.6], anim: 'knee', sign: -1, bend: -1,
           boxes: [[0.9, 0, 0.85, 1.1, 1.0, 1.55, '#4c453d']] },
         { name: 'legBL', parent: 'body', pivot: [-1.45, 3.0, -1.6], anim: 'walk', sign: -1,
           boxes: [[-2.0, 1.0, -2.3, 1.1, 2.0, 1.4, '#5a5248']] },
-        { name: 'shinBL', parent: 'legBL', pivot: [-1.45, 1.0, -1.6], anim: 'knee', sign: -1,
+        { name: 'shinBL', parent: 'legBL', pivot: [-1.45, 1.0, -1.6], anim: 'knee', sign: -1, bend: 1,
           boxes: [[-2.0, 0, -2.4, 1.1, 1.0, 1.55, '#4c453d']] },
         { name: 'legBR', parent: 'body', pivot: [1.45, 3.0, -1.6], anim: 'walk', sign: 1,
           boxes: [[0.9, 1.0, -2.3, 1.1, 2.0, 1.4, '#5a5248']] },
-        { name: 'shinBR', parent: 'legBR', pivot: [1.45, 1.0, -1.6], anim: 'knee', sign: 1,
+        { name: 'shinBR', parent: 'legBR', pivot: [1.45, 1.0, -1.6], anim: 'knee', sign: 1, bend: 1,
           boxes: [[0.9, 0, -2.4, 1.1, 1.0, 1.55, '#4c453d']] }
       ]
     },
@@ -298,6 +298,82 @@
       ]
     },
   };
+
+  /* How tall each model is, in its own units: the top of the highest box it is
+     carved from. Whatever asks "how far off the ground is this body" wants a
+     body-relative answer -- a body a third of its own height in the air is a
+     body that has left the ground, whether it is a frog or a bear -- and this
+     is the body's own measure of itself. */
+  const MODEL_H = {};
+  for (const k in MODELS) {
+    let top = 0;
+    for (const p of MODELS[k].parts)
+      for (const b of (p.boxes || [])) top = Math.max(top, b[1] + b[4]);
+    MODEL_H[k] = top;
+  }
+
+  /* A limb with no ankle cannot swing and keep its foot on the ground.
+     A foot is carved flat on the model's ground line and it sticks out in front
+     of the hinge it turns on, so rotating the limb -- at the hip, or at the
+     knee -- carries the corner of the foot that points the way of the swing
+     down through that line. Nothing about the gait is wrong when that happens;
+     the model is simply missing a joint, and the limb has to make up for it by
+     lifting. Read off the draw: a bear walking on flat ground had its hind foot
+     0.09 m inside the ground in a third of the frames, an owl its toe 0.06 m
+     inside in three frames of five, a person its boot 0.03 m in a sixth.
+     So every part that turns in the land gait, and whose limb reaches the
+     ground line, carries the corners of the boxes it turns -- its own and every
+     part hanging under it, because a thigh that swings carries the foot at the
+     end of it -- measured from its hinge, and partAngles lifts the part by as
+     much as its own turn drives those corners below where they rest. The lift
+     is given to the top of the limb, so the whole limb moves together and the
+     joint between them does not open. A planted foot therefore still rests
+     exactly on the ground, and a foot in mid-swing reads as a foot lifting off
+     it, which is what a stepping foot does: heel first, then the toe.
+     The other half of the same rule is the heave. The body breathes and bobs as
+     it walks, and the limbs hang off it, so a body that dips takes its feet with
+     it: 0.17 of the bear's own units, 4 cm into the floor, twice a second, on
+     every step. A limb that is standing on the ground does not go down when the
+     body comes up, so the limb cancels the heave of the body above it -- and
+     only the top of the limb does that, or the cancel would be counted twice.
+     Only parts whose limb reaches the ground line are given the table. A
+     forearm swings too, and drops, and nothing about it should move: it is
+     nowhere near the ground. */
+  const FOOT = 0.06;            // how close to the ground line counts as touching it
+  for (const k in MODELS) {
+    const ps = MODELS[k].parts;
+    const under = p => { const out = [p]; for (const q of ps) if (q.parent === p.name) out.push(...under(q)); return out; };
+    for (const p of ps) {
+      if (p.anim !== 'walk' && p.anim !== 'knee' && p.anim !== 'elbow') continue;
+      const limb = under(p);
+      let low = Infinity;
+      for (const q of limb) for (const b of (q.boxes || [])) low = Math.min(low, b[1]);
+      if (low > FOOT) continue;
+      const pv = p.pivot || [0, 0, 0];
+      const corners = [];
+      for (const q of limb) {
+        for (const b of (q.boxes || [])) {
+          for (const y of [b[1], b[1] + b[4]]) {
+            for (const z of [b[2], b[2] + b[5]]) corners.push(y - pv[1], z - pv[2]);
+          }
+        }
+      }
+      p.corners = corners;        // flat [y,z,y,z,...], relative to the hinge
+      p.footLow = low - pv[1];    // where the foot rests: the lowest of them, at rest
+    }
+    /* the limb's top: the one part in the chain that answers for the heave */
+    for (const p of ps) {
+      if (!p.corners) continue;
+      let root = 1, q = p.parent;
+      while (q) {
+        const par = ps.find(x => x.name === q);
+        if (!par) break;
+        if (par.corners) { root = 0; break; }
+        q = par.parent;
+      }
+      p.footRoot = root;
+    }
+  }
 
   /* ---------------- first-person hands (anchored bottom-right) ---------------- */
   const HANDS = {
@@ -346,23 +422,36 @@
   /* ---------------- part animation ---------------- */
   const _m = { a: N.M4.create(), b: N.M4.create(), c: N.M4.create(), d: N.M4.create(), e: N.M4.create(), f: N.M4.create() };
   const WALK_RATE = 7;    // leg cycle per second at full speed; every legged body shares it
+  const WALK_STRIDE = 0.75; // how far a walking leg swings at the hip, at a full stride
   const FLAP_RATE = 11;   // wing beat per second in the air
   const SWIM_RATE = 4.2;  // hind-leg kicks per second. Slower than a walk, and both legs at once
   const KICK_HIP = 0.5;   // how far a hind leg sweeps back per stroke, at a full stroke
   const KICK_KNEE = 0.9;  // and how far the knee swings in the same time
   const KICK_LAG = 1.4;   // the knee is a quarter stroke ahead of the hip
-  const KNEE_LAG = 2.4;   // how far ahead of "leg forward" the knee is at its most bent
+  const KNEE_LAG = -Math.PI / 2; // the fold peaks at the middle of the forward swing
+  const KNEE_FLEX = 0.62;       // how far a knee folds at that peak, at a full stride
 
   /* The angles one part takes this frame, in model space.
-     st: { t, phase, move, air, crouch, beat, swim } -- `air` is how far the body
-     is off the ground, `crouch` how loaded its legs are, `beat` the shared wing
-     phase, `swim` that the body is moving through water with the bodies built
-     for it. All four are read off the body's own motion by the caller. */
-  function partAngles(entry, st) {
+     st: { t, phase, move, air, off, crouch, beat, swim } -- `air` is whether the
+     body is off the ground, `off` how far above it in body heights, `crouch` how
+     loaded its legs are, `beat` the shared wing phase, `swim` that the body is
+     moving through water with the bodies built for it. All of them are read off
+     the body's own motion by the caller.
+     `heave` is how far the parts above this one in the model have already moved
+     up or down this frame -- the body breathing as it walks -- and only a limb
+     standing on the ground is passed one. See the FOOT block above the models. */
+  function partAngles(entry, st, heave) {
     const p = entry.part, anim = p.anim, sg = p.sign || 1;
     const t = st.t, ph = st.phase || 0;
     const air = st.air || 0, cr = st.crouch || 0;
+    /* how far this part takes part in the walk cycle. Absent is the whole
+       swing; 0 is a leg that does not walk at all -- a frog's, which hops. */
+    const stride = p.stride === undefined ? 1 : p.stride;
     let rx = 0, ry = 0, rz = 0, dy = 0, sc = 1;
+    /* the share of this part's turn that comes from the land gait, kept apart
+       from the pose blends below: the lift that goes with a swing belongs to the
+       swing alone (see the FOOT block above the models) */
+    let gait = 0;
     /* The beat, scaled by how hard the body is actually beating: a body that is
        riding its wings down holds them spread with a faint stroke, and the heave
        the stroke gives the body goes with the stroke, not with the clock. */
@@ -384,17 +473,48 @@
       const s = st.beat !== undefined ? st.beat : beat;
       rz = sg * (s < 0 ? -s * 0.5 : 0) * air;
     } else if (anim === 'walk') {
-      rx = sg * Math.sin(t * WALK_RATE + ph) * st.move * 0.75;
+      /* the swing of a leg (or arm) that walks: one cycle per stride, mirrored
+         left to right by `sign`, and sized by how fast the body is actually
+         travelling. `stride` is the part's own share of it -- a frog's legs
+         take none, because a frog does not walk on land, it hops. */
+      rx = sg * Math.sin(t * WALK_RATE + ph) * st.move * WALK_STRIDE * stride;
+      gait = rx;
     } else if (anim === 'knee') {
-      /* a knee only bends one way, and it bends most as the leg comes forward.
-         The lag is the same on both sides on purpose: the `sign` mirror already
-         turns the bend the right way round for a left and a right knee, so a
-         per-side phase offset here would desync the pair and give one leg a
-         longer stride than the other. */
+      /* A knee folds one way, and it folds while the foot is off the ground:
+         the leg swings forward, the shin comes up under it at the middle of
+         that swing, and the leg is straight again where the foot takes the
+         weight back. Which way the fold goes is a fact about the model, not
+         about left and right -- the frog's hind knee folds the other way from a
+         human's, and the part says so with `bend` (absent means the human's
+         way). The `sign` mirror is deliberately NOT applied to the fold: that
+         is what drove one knee of every body backwards through the floor it
+         stands on. It is applied to the swing, so the pair still alternates
+         with the thighs, and the lag is the same on both sides for the same
+         reason -- a per-side phase offset would desync the pair and give one
+         leg a longer stride than the other.
+         The thigh cycle is sin(u): a leg is swinging forward through one half
+         of it and bearing weight through the other, so lagging the fold by a
+         quarter cycle puts its peak at the middle of the forward swing, which
+         is exactly where a foot has to be off the ground. Lagged the other way
+         the knee folds hardest at the middle of the stride, where the foot is
+         planted, and a model with no ankle has nowhere for that to go but
+         down: read off the draw, a frog walking on flat ground had its shin
+         0.17 m inside the ground in 229 frames of 240. And the whole cycle
+         rides on `move`: a body standing still has no swing to fold, and its
+         knees hold the angle the model was carved at. And it rides on the
+         leg's own `stride`, because the fold is there to let the foot clear the
+         ground during a swing: no swing, no fold. */
       const s = Math.sin(t * WALK_RATE + ph + KNEE_LAG);
-      rx = sg * (0.25 + 0.85 * Math.max(0, s)) * (0.35 + 0.65 * st.move);
+      rx = (p.bend === undefined ? 1 : p.bend) * KNEE_FLEX * stride * Math.max(0, sg * s) * st.move;
+      gait = rx;
     } else if (anim === 'elbow') {
-      rx = sg * (0.12 + 0.3 * Math.max(0, Math.sin(t * WALK_RATE + ph + 1.2)) * st.move);
+      /* the same fold on an arm, smaller, and with a little of it always held:
+         an arm hanging dead straight is a stick. An arm swings opposite the
+         leg on the same side, which the `sign` on the two parts already says,
+         so it folds at the middle of its own forward swing on the same lag. */
+      rx = (p.bend === undefined ? 1 : p.bend) *
+           (0.12 + 0.3 * Math.max(0, sg * Math.sin(t * WALK_RATE + ph + KNEE_LAG)) * st.move);
+      gait = rx;
     } else if (anim === 'twist') {
       ry = Math.sin(t * WALK_RATE + ph + Math.PI) * st.move * 0.16;
     } else if (anim === 'nod') {
@@ -444,23 +564,62 @@
            forwards through the leg. */
         if (anim === 'knee') rx = Math.max(0, rx);
         ry = hp[1] * held; rz = hp[2] * held;
+        /* and the stroke has taken the part's turn away from the land gait, so
+           the gait's lift goes with it: there is no ground down there to keep
+           the foot out of. */
+        gait = 0;
       } else if (p.swimPose) {
         const f = Math.max(swim, held);
         rx = p.swimPose[0] * f; ry = p.swimPose[1] * f; rz = p.swimPose[2] * f;
+        gait = 0;
       } else if (anim === 'bob') {
         dy = 0.03 * k * swim;          // the body rides the kick, not the walk heave
       }
     }
-    /* the pose this part takes off the ground / loading a jump */
-    if (air > 0.01 && p.air) { rx += p.air[0] * air; ry += p.air[1] * air; rz += p.air[2] * air; }
+    /* The pose this part takes off the ground / loading a jump.
+       A limb the body stands on says so with `stands`, and its off-ground pose
+       comes only as far as the body is actually off the ground: `off`, the same
+       0..1 clearance the caller measures in body heights. Not for tidiness -- a
+       hind leg built longer than the body is tall sweeps its foot clean
+       through the plane it stands on on the way into the pose and on the way
+       out of it, because the pose is eased and the body's own origin does not
+       move. Read off the draw: a frog landing from a hop drove its shin 0.154 m
+       into the ground it had just touched, in 169 frames of 360, and the pose
+       was nowhere near the ground at the time -- the body was in the air for
+       most of it. So the pose has to arrive as the ground goes away and leave
+       before the ground comes back, which is also what an animal does: it puts
+       its feet where it means to land. */
+    const lift = p.stands ? Math.min(air, st.off === undefined ? 1 : st.off) : air;
+    if (lift > 0.01 && p.air) { rx += p.air[0] * lift; ry += p.air[1] * lift; rz += p.air[2] * lift; }
     if (cr > 0.01 && p.crouch) { rx += p.crouch[0] * cr; ry += p.crouch[1] * cr; rz += p.crouch[2] * cr; }
+    /* The lift that goes with a swing, and the answer to the heave. See the
+       FOOT block above the models: this is the joint the model does not have,
+       and this is the limb refusing to be carried down when the body above it
+       dips. Only the land gait's own turn counts here -- the air pose, the
+       crouch and the water stroke move this part too, and none of them wants a
+       lift: the first two are poses a body takes when the ground has gone away,
+       and the third is a stroke under water. */
+    if (p.corners) {
+      let drop = 0;
+      if (gait) {
+        const gc = Math.cos(gait), gs = Math.sin(gait);
+        let low = p.footLow;
+        for (let i = 0; i < p.corners.length; i += 2) {
+          const v = p.corners[i] * gc - p.corners[i + 1] * gs;
+          if (v < low) low = v;
+        }
+        if (low < p.footLow) drop = p.footLow - low;
+      }
+      dy += drop - (p.footRoot && heave ? heave : 0);
+    }
     return { rx, ry, rz, dy, sc };
   }
 
-  function buildLocal(entry, st) {
-    const a = partAngles(entry, st), p = entry.pivot;
+  function buildLocal(entry, st, heave, moved) {
+    const a = partAngles(entry, st, heave), p = entry.pivot;
     const out = N.M4.create();
     N.M4.ident(out);
+    if (moved) moved.dy = a.dy;
     if (a.dy) { const m = _m.e; N.M4.trans(m, 0, a.dy, 0); N.M4.mul(out, out, m); }
     if (p[0] || p[1] || p[2]) { const m = _m.a; N.M4.trans(m, p[0], p[1], p[2]); N.M4.mul(out, out, m); }
     if (a.rz) { const m = _m.b; N.M4.rotZ(m, a.rz); N.M4.mul(out, out, m); }
@@ -471,28 +630,42 @@
     return out;
   }
 
-  /* a part's matrix in model space: its own rotation, inside its parent's */
-  function localOf(entry, st, parts) {
+  /* a part's matrix in model space: its own rotation, inside its parent's.
+     The parent is resolved first, because a limb standing on the ground has to
+     know how far the body hanging over it has already moved this frame -- the
+     `heave` a limb answers for (see the FOOT block above the models) is the sum
+     of the moves, not the turns, of the parts above it. The product is the same
+     either way round. What is cached per part is the matrix and that move. */
+  function localOf(entry, st, parts, heave) {
     const name = entry.part.name;
     if (!st._loc) st._loc = {};
     const seen = st._loc[name];
     if (seen) return seen;
-    let m = buildLocal(entry, st);
+    let pm = null, h = heave || 0;
     const pname = entry.part.parent;
     if (pname) {
       for (const pe of parts) {
-        if (pe.part.name === pname) { m = N.M4.mul(N.M4.create(), localOf(pe, st, parts), m); break; }
+        if (pe.part.name === pname) {
+          const par = localOf(pe, st, parts, h);
+          pm = par.m; h += par.dy;
+          break;
+        }
       }
     }
-    st._loc[name] = m;
-    return m;
+    const moved = { dy: 0 };
+    const m0 = buildLocal(entry, st, h, moved);
+    const m = pm ? N.M4.mul(N.M4.create(), pm, m0) : m0;
+    const held = { m, dy: moved.dy };
+    st._loc[name] = held;
+    return held;
   }
 
   function partMatrix(out, base, entry, st, parts) {
-    return N.M4.mul(out, base, localOf(entry, st, parts || [entry]));
+    return N.M4.mul(out, base, localOf(entry, st, parts || [entry]).m);
   }
 
   N.MODELS = MODELS;
+  N.MODEL_H = MODEL_H;
   N.buildModelMeshes = buildModelMeshes;
   N.buildHandMesh = buildHandMesh;
   N.partMatrix = partMatrix;

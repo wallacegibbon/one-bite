@@ -253,6 +253,25 @@
       // ---- intended velocity ----
       const sprint = inp.sprint && this.air > 0 && !this.inWater;
       const fly = f.fly && !this.inWater;
+      /* Whether the feet were on the ground when the frame started. Two things
+         make this harder than reading `grounded`.
+         The vertical branch below answers "is this body in the air or in the
+         water" for the whole frame, and for a body with wings it answers "in the
+         air" whatever the collision said a moment ago -- so anything that wants
+         to know whether the body is standing has to ask before that branch runs,
+         not after.
+         And for a body with wings `grounded` is the wrong question anyway: the
+         wing branch clears the flag every frame, so an owl running along a field
+         is never once reported standing on it. A rule that asks the flag gives
+         that owl the attitude of a body in a dive -- and the arithmetic makes it
+         worse the slower it goes, because the one frame of falling the ground
+         then undoes (-0.38 m/s) is divided by a horizontal speed that is going to
+         nothing. Read off the draw: an owl standing still held 0.43 rad of
+         nose-down, and its toes reached 5 cm under the floor it was standing on.
+         So the question is put to the ground instead: how far above the level it
+         would be standing at in this column is this body. The 2 cm of slack is
+         the same one the step-up and the water's hold use. */
+      const onFoot = this.grounded || this.y - standY(W, cx, cz, this.y) < 0.02;
       /* What the body is trying to travel at. A body with wings travels at the
          speed its species flies at, not at the speed it walks at: the wild owls
          of the valley cross the valley at 7 m/s (data/creatures.js `flySpeed`)
@@ -484,7 +503,13 @@
          the body did not know it. `tilt` is nose-down positive, because that is
          the angle rotX takes, and it is eased like every other angle. */
       const hs = Math.hypot(this.vx, this.vz);
-      const tiltWant = (fly || this.inWater) && (hs > 0.3 || Math.abs(this.vy) > 0.3)
+      /* `!onFoot` is the whole of the rule above, and it was missing: a standing
+         owl read the one frame of falling the ground then undid as a descent,
+         held 0.6 rad of nose-down for as long as it stood there, and its legs
+         reached 8 cm through the floor. What "on foot" means, and why it is not
+         the flag the collision leaves behind, is argued where it is measured --
+         in the intended velocity block above. */
+      const tiltWant = !onFoot && (fly || this.inWater) && (hs > 0.3 || Math.abs(this.vy) > 0.3)
         ? Math.max(-0.6, Math.min(0.6, Math.atan2(-this.vy, Math.max(hs, 0.5))))
         : 0;
       this.tilt += (tiltWant - this.tilt) * N.ease(4.5, dt);
@@ -559,7 +584,16 @@
       const heldWant = (this.inWater && heldUp && !this.grounded) ? 1 : 0;
       this.held += (heldWant - this.held) * Math.min(1, dt * 6);
       if (!this.grounded) this.crouch = 0;
-      if (this.grounded && !wasGrounded) this.squash = Math.min(0.3, Math.max(0, -vyBefore) / 55);
+      if (this.grounded && !wasGrounded) {
+        this.squash = Math.min(0.3, Math.max(0, -vyBefore) / 55);
+        /* and the ground arrests the body's turn the way it arrests its fall.
+           The pitch is the angle of the path the body was taking through the air
+           or the water, and that path ends at the moment the feet arrive: an owl
+           that came down off a 1 m drop at 0.43 rad carried its nose for a
+           quarter of a second afterwards with its feet flat on the floor, and
+           the nose carried its toes 5 cm under it. */
+        this.tilt = 0;
+      }
       this.squash = Math.max(0, this.squash - dt * 3.2);
 
       // ---- boundary: the Grey Veil ----

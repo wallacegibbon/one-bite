@@ -1086,6 +1086,12 @@
           move: Math.min(1, c.speed / (c.sp.speed || 3)) * (c.speed > 0.2 ? 1 : 0),
           fly: c.isFlyer() && c.state !== 'roost',
           air: c.airAmt || 0, crouch: c.crouch || 0, phase: c.phase,
+          /* how far above the ground it would stand on this body is, in its own
+             body heights. A limb the body stands on has to be where its feet
+             will land, so its flight pose waits for the ground to get out of
+             the way -- see partAngles in models.js, and the `stands` flag. */
+          off: Math.max(0, Math.min(1,
+            (c.y - N.groundY(W, Math.floor(c.x), Math.floor(c.z), Math.floor(c.y))) / (N.MODEL_H[c.sp.model] * sc))),
           flap: c.flap === undefined ? 1 : c.flap,
           // only a body the data gives a swim speed to: a bear wading still walks.
           // The amplitude is how fast it is actually going through the water
@@ -1139,6 +1145,9 @@
           move: Math.min(1, Math.hypot(p.vx, p.vz) / 5),
           fly: !!p.formDef.fly && !p.grounded,
           air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0,
+          // the same clearance the creatures' bodies get: see above
+          off: Math.max(0, Math.min(1,
+            (p.y - N.groundY(W, Math.floor(p.x), Math.floor(p.z), Math.floor(p.y))) / (N.MODEL_H[p.modelId] * sc))),
           flap: p.flap === undefined ? 1 : p.flap,
           /* the form decides, not the water: a human in the lake wades, a frog
              kicks. The amplitude is the speed the body is actually making through
