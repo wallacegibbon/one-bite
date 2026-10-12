@@ -2790,12 +2790,25 @@ const { sim } = require('./simwait');
       p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
       p.x = at.x; p.z = at.z; p.y = at.y;
       p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
-      for (let i = 0; i < Math.round(secs * 60); i++) {
+      /* the attitude of a body that is *actually* going that way, not of the
+         frame the leg happens to end on: the fastest descent and the fastest
+         climb the leg reaches, with the body's nose as it showed at that moment */
+      let down = null, up = null, gr = 0;
+      const n = Math.round(secs * 60);
+      for (let i = 0; i < n; i++) {
         p.yaw = 0;
         g.input = keys(); g.particles.n = 0; g.hover = null;
         p.update(1 / 60, g.input, g);
+        if (p.grounded) gr++;
+        if (p.vy < -0.3 && (!down || p.vy < down.vy)) {
+          down = { vy: +p.vy.toFixed(2), tilt: +(p.tilt || 0).toFixed(3), y: +p.y.toFixed(2) };
+        }
+        if (p.vy > 0.3 && (!up || p.vy > up.vy)) {
+          up = { vy: +p.vy.toFixed(2), tilt: +(p.tilt || 0).toFixed(3), y: +p.y.toFixed(2) };
+        }
       }
-      return { tilt: +(p.tilt || 0).toFixed(3), vy: +p.vy.toFixed(2), y: +p.y.toFixed(2), g: p.grounded ? 1 : 0 };
+      return { tilt: +(p.tilt || 0).toFixed(3), vy: +p.vy.toFixed(2), y: +p.y.toFixed(2),
+        g: p.grounded ? 1 : 0, grPct: Math.round(gr / n * 100), down, up };
     };
     const sink = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.5 },
       () => ({ fwd: true, jump: false, sneak: true, sprint: false }), 2.5);
@@ -2858,9 +2871,17 @@ const { sim } = require('./simwait');
     return { sink, rise, climb, walk, diff };
   });
   check('a body sinking through water noses down the way it is going',
-    !attitude.error && attitude.sink.tilt > 0.2 && attitude.sink.vy < 0, attitude);
+    !attitude.error && !!attitude.sink.down && attitude.sink.down.tilt > 0.2 && attitude.sink.down.vy < -1, attitude);
+  /* The dive still reaches the bottom: the water holding a body up is not a lid
+     on going down. It used to reach it by falling out of the water branch onto
+     the bottom and hopping along it, so the frame the leg ended on was mid-hop
+     with the body already coming down -- the nose it showed was the hop's, not
+     the dive's. Now the body stays in the water the whole way, stands on the
+     bottom while the key is held, and the nose is read off the sinking itself. */
+  check('and a body asked to go down still gets to the lakebed and stands on it while asked',
+    !attitude.error && attitude.sink.g === 1 && attitude.sink.grPct > 40, attitude);
   check('a body climbing through water noses up',
-    !attitude.error && attitude.rise.tilt < -0.1 && attitude.rise.vy > 0, attitude);
+    !attitude.error && !!attitude.rise.up && attitude.rise.up.tilt < -0.1 && attitude.rise.up.vy > 1, attitude);
   check('a body climbing through the air noses up too',
     !attitude.error && attitude.climb.tilt < -0.1 && attitude.climb.vy > 0, attitude);
   check('a body on foot stays level: feet hold a body level',
@@ -3215,6 +3236,121 @@ const { sim } = require('./simwait');
       !!arrive[who] && !arrive[who].error && !!arrive[who].side &&
       arrive[who].side.min < 0.9 && arrive[who].side.max < 1.2 && arrive[who].side.path < 8, arrive);
   }
+
+  /* 11j. A body the water holds up floats; it does not settle on the bottom.
+     Every body in the water branch carried the same fixed downward pull,
+     whatever it was made of: a frog let go of in mid-water sank at a terminal
+     0.89 m/s, landed on the lakebed 3 m below, was reported standing on the
+     bottom and stopped there -- a water animal that stopped moving sank. The
+     wild frogs of the valley have always done the opposite: the creature step
+     holds them just under the surface and never through the bottom. One rule now,
+     off one number: the water holds a body that breathes water at
+     `waterTop - FLOAT_UNDER`, clamped by the bottom, whether or not its feet
+     happen to be on something -- which is what brings a frog that has dived to
+     the lakebed back up when the dive key comes off, and what keeps the dive a
+     dive while the key is held. Whether the water can hold a body at all is a
+     property of the place (the surface above the level the body would stand on),
+     not of the body's distance to the surface: 183 columns of Mirrorlake are a
+     one-block shelf, and a shelf is a bottom to stand on and push off from.
+     Reading it off the body's own depth instead would switch the force law back
+     and forth as the body crossed its own equilibrium and build a sawtooth out of
+     nothing -- the bug this file was last fixing -- so the shelf case is measured
+     for shivering as well as for standing. */
+  const buoy = await step('waterHoldsWhatBreathesIt', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
+    const { lake, shelf } = window.__mv;
+    if (!lake || !shelf) return { error: 'no open water or shore shelf to measure in' };
+    const cx = Math.floor(lake.x), cz = Math.floor(lake.z);
+    const wt = N.waterTop(W, cx, cz, W.h - 1);
+    const bed = N.standY(W, cx, cz, wt);
+    if (wt - bed < 4) return { error: 'the open water is not deep enough to measure in' };
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
+      pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
+      dry: p.dry, fright: p.fright, grounded: p.grounded };
+    const place = (form, y, at) => {
+      p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+      p.x = at.x; p.z = at.z; p.y = y;
+      p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
+    };
+    const glide = (secs, inp) => {
+      const n = Math.round(secs * 60), ys = [];
+      let gr = 0;
+      for (let i = 0; i < n; i++) {
+        g.input = inp; g.particles.n = 0; g.hover = null;
+        p.update(1 / 60, g.input, g);
+        if (p.grounded) gr++;
+        ys.push(p.y);
+      }
+      // the last second on its own: is the body at rest, and how often did it change its mind
+      const tail = ys.slice(-60);
+      let rev = 0;
+      for (let i = 1; i < tail.length - 1; i++) {
+        const a = tail[i] - tail[i - 1], b = tail[i + 1] - tail[i];
+        if (a > 1e-4 && b < -1e-4 || a < -1e-4 && b > 1e-4) rev++;
+      }
+      return { y: +p.y.toFixed(3), g: p.grounded ? 1 : 0, grPct: Math.round(gr / n * 100),
+        headW: p.headWater ? 1 : 0, spd: +Math.hypot(p.vx, p.vz).toFixed(3),
+        span: +(Math.max(...tail) - Math.min(...tail)).toFixed(4), rev };
+    };
+    const out = { wt, bed };
+    place('frogpear', bed + 3, lake); out.mid = glide(10, {});          // let go of mid-water
+    place('frogpear', wt + 0.6, lake); out.surf = glide(10, {});        // let go of at the surface
+    place('frogpear', bed + 0.0001, lake); out.fromBed = glide(12, {}); // put on the bottom, left
+    place('frogpear', bed + 3, lake);
+    out.dive = glide(4, { sneak: true });                               // dived to the bottom...
+    out.diveLet = glide(8, {});                                         // ...and the key came off
+    place('frogpear', bed + 3, lake); out.up = glide(4, { jump: true });
+    place(null, bed + 3, lake); out.human = glide(10, {});
+    place(null, wt + 0.6, lake); out.humanSurf = glide(10, {});
+    place('frogpear', shelf.top + 0.0001, shelf); out.frogShelf = glide(3, {});
+    place(null, shelf.top + 0.0001, shelf); out.humanShelf = glide(3, {});
+    /* the valley's own frog, in the same column, as the other half of the claim:
+       the level the water holds the body you wear at is the level it holds a
+       wild one at, not a level this file invented for the player */
+    const wild = g.creatures.filter(c => c.sp.id === 'frog')[0];
+    if (!wild) return Object.assign(out, { error: 'no frog in the roster' });
+    // and nobody for it to run from: a frightened frog leaves the water
+    p.form = null; p.x = 4; p.z = 4; p.y = W.h - 2; p.vital = 10;
+    const keep = { x: wild.x, y: wild.y, z: wild.z, yaw: wild.yaw, vy: wild.vy, state: wild.state,
+      pause: wild.pause, tx: wild.tx, tz: wild.tz, homeX: wild.homeX, homeZ: wild.homeZ,
+      sleeping: wild.sleeping, fright: wild.fright };
+    const herdWas = g.herdCentres && g.herdCentres.frog;
+    if (g.herdCentres) g.herdCentres.frog = { x: lake.x, z: lake.z, n: 1 };
+    wild.x = lake.x; wild.z = lake.z; wild.y = bed + 0.05; wild.vy = 0;
+    wild.homeX = wild.x; wild.homeZ = wild.z; wild.state = 'wander'; wild.sleeping = false;
+    wild.fright = 0; wild.pause = 9999;
+    for (let i = 0; i < 600; i++) {
+      wild.tx = wild.x; wild.tz = wild.z;        // and no notion of walking off the column
+      wild.update(1 / 60, p, W, g);
+    }
+    out.wild = { y: +wild.y.toFixed(3), x: +wild.x.toFixed(2), z: +wild.z.toFixed(2) };
+    if (g.herdCentres) g.herdCentres.frog = herdWas;
+    Object.assign(wild, keep);
+    Object.assign(p, was);
+    return out;
+  });
+  check('a body that breathes water and stops moving floats, it does not settle on the bottom',
+    !buoy.error && buoy.mid.g === 0 && buoy.mid.y > buoy.bed + 1 && buoy.mid.headW === 1, buoy);
+  check('and it comes to rest there: the height does not swing and it never changes its mind',
+    !buoy.error && buoy.mid.span < 0.01 && buoy.mid.rev === 0 && buoy.mid.spd < 0.01, buoy);
+  check('the water holds the body you wear at the level it holds a wild frog at',
+    !buoy.error && Math.abs(buoy.mid.y - buoy.wild.y) < 0.15, buoy);
+  check('a body let go of at the surface stays at the surface instead of sinking through the lake',
+    !buoy.error && buoy.surf.g === 0 && Math.abs(buoy.surf.y - buoy.wild.y) < 0.15, buoy);
+  check('a body put on the lakebed and left alone gets off it',
+    !buoy.error && buoy.fromBed.g === 0 && Math.abs(buoy.fromBed.y - buoy.wild.y) < 0.15, buoy);
+  check('a body that asks to go down still reaches the lakebed, and the water takes it back when it stops asking',
+    !buoy.error && buoy.dive.g === 1 && Math.abs(buoy.dive.y - buoy.bed) <= 0.01
+    && buoy.diveLet.g === 0 && Math.abs(buoy.diveLet.y - buoy.wild.y) < 0.2, buoy);
+  check('and the climb key still breaks the surface, which is how a body gets out of deep water',
+    !buoy.error && buoy.up.headW === 0 && buoy.up.y > buoy.wt, buoy);
+  check('a body that breathes air is not held up: left alone it comes to rest on the bottom',
+    !buoy.error && buoy.human.g === 1 && Math.abs(buoy.human.y - buoy.bed) <= 0.01
+    && buoy.humanSurf.g === 1, buoy);
+  check('a one-block shore shelf is still a bottom to stand on, for both bodies, and neither shivers on it',
+    !buoy.error && buoy.frogShelf.grPct === 100 && buoy.humanShelf.grPct === 100
+    && buoy.frogShelf.span < 0.002 && buoy.humanShelf.span < 0.002
+    && buoy.frogShelf.rev === 0 && buoy.humanShelf.rev === 0, buoy);
 
   /* 11k. A body on foot and the ground under it. Two things the animals did that
      the player's own body never does.

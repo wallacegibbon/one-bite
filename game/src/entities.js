@@ -20,6 +20,13 @@
      wing shows atan(sideways / 9.8). */
   const LEAN_G = 9.8;
 
+  /* How far under the surface the water holds a body it is holding up. One
+     number for every such body: the twelve wild frogs of the valley and the
+     body you wear while you are one float at the same depth, and the creature
+     step and the player step both read this. It is measured to the feet, so a
+     0.5 m body at this level is entirely under the surface plane. */
+  const FLOAT_UNDER = 0.3;
+
   /* ============================ player ============================ */
   class Player {
     constructor(world) {
@@ -338,6 +345,22 @@
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
+      /* ---- is the water deep enough to hold this body up at all? ----
+         The same test the creature step already makes for its own water
+         animals: compare the surface of the column with the level the body
+         would be standing at in it. A lake is a body of water the animal floats
+         in; a one-block shore shelf is a bottom it stands on and pushes off
+         from, and 183 columns of Mirrorlake are that shelf. Read once a frame
+         for a body that is in water, and deliberately not as a distance from
+         the body to the surface: a rule that turns on and off as the body
+         crosses its own equilibrium switches the force law back and forth and
+         builds a sawtooth out of nothing, which is the bug this file was last
+         fixing. Depth of the column is a property of the place, not of the
+         body's height, so it cannot chatter. */
+      const wt = this.inWater ? waterTop(W, cx, cz, W.h - 1) : -1;
+      const bedTop = this.inWater ? standY(W, cx, cz, this.y) : -1;
+      const heldUp = canBreathe && wt > bedTop;
+
       // ---- vertical ----
       if (fly) {
         const up = inp.jump ? f.fly : 0, down = inp.sneak ? f.fly * 0.75 : 0;
@@ -367,17 +390,37 @@
         const flapWant = (up || down) ? 1 : (f.glide ? 0.15 : 1);
         this.flap += (flapWant - this.flap) * N.ease(3.5, dt);
         this.grounded = false;
-      } else if (this.inWater && !this.grounded) {
+      } else if (this.inWater && (heldUp || !this.grounded)) {
         /* Up and down in water is the same push that drives a body forward,
            aimed differently, so how much authority a body has over its own
            depth is a fraction of how fast it moves through the water: a frog
            that swims at 4.7 m/s comes up at about a metre a second, and a human
            who swims at 2.9 does not surface much faster than it sinks. The
-           water takes it back at the rate it takes the forward speed back. */
+           water takes it back at the rate it takes the forward speed back.
+           What was missing is the water's own answer. Every body in this branch
+           carried the same fixed downward pull whatever it was made of, so a
+           frog let go of in mid-water sank at a terminal 0.89 m/s, landed on the
+           lakebed 3 m below, was reported standing on the bottom, and stopped
+           there -- a water animal that stops moving sank. A body built for water
+           is a body the water holds up: the wild frogs of the valley float just
+           under the surface and never touch the bottom of the deep part, and the
+           body you wear was the only water-breathing body in the valley that
+           went down. So the pull is the water's now: a body the water is holding
+           is pushed back toward the level it holds it at, harder the further
+           below that level it is, and the same drag that takes its forward speed
+           takes the arrival -- it comes up and stops, instead of coming up only
+           to be pulled down again. The hold is a level, not a leash. A body that
+           is *asking* to go down is a body swimming down: it keeps the dive it
+           always had, the lakebed stays reachable, and the water takes it back
+           up the moment the key comes off -- including off the bottom, which is
+           why the branch is picked by `heldUp` and not by `!grounded`. A body
+           that breathes air is not held up at all: it has to kick to stay off
+           the bottom, and that is what it costs to wear a body that was not
+           built for the lake. */
         const push = speed * 1.5;
-        const buoy = 5.2;
+        if (heldUp && !inp.sneak) this.vy += ((wt - FLOAT_UNDER) - this.y) * 2.2 * dt;
+        else this.vy -= 5.2 * dt * 0.55;
         this.vy += (inp.jump ? push : 0) * dt;
-        this.vy -= buoy * dt * 0.55;
         if (inp.sneak) this.vy -= push * 0.6 * dt;
         this.vy -= this.vy * Math.min(0.9, 3.2 * dt);
         this.vy = Math.max(-4.5, Math.min(4.6, this.vy));
@@ -948,7 +991,7 @@
              started, and a frog put down on the lakebed 4.7 m under the surface
              came up 0.47 m in its very first frame -- 28 m/s, faster than a
              falling bear -- every frame after it slower than the one before. */
-          const target = Math.max(gy, wt - 0.3);
+          const target = Math.max(gy, wt - FLOAT_UNDER);
           const rate = sp.swimSpeed || sp.speed || 1.5;
           const want = target - this.y;
           const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;
