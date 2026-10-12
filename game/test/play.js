@@ -967,10 +967,19 @@ const { sim } = require('./simwait');
     // a bird on a branch is not in flight: the wings fold because it is standing
     const bird = g.creatures.find(c => c.sp.id === 'owl');
     const wasB = { x: bird.x, y: bird.y, z: bird.z, flyY: bird.flyY, state: bird.state, airAmt: bird.airAmt };
-    g.night = 0; bird.update(1 / 60, away, g.world, g);
+    g.night = 0;
+    for (let i = 0; i < 60; i++) bird.update(1 / 60, away, g.world, g);
     const roost = bird.airAmt;
-    g.night = 1; bird.update(1 / 60, away, g.world, g);
-    const npcOwl = { roost, abroad: bird.airAmt, state: bird.state };
+    /* One frame of night is not enough to judge the wings. The owl wakes, stands
+       on the branch and only then decides to leave it, and how many frames that
+       takes depends on where it happened to land and on the dice the wander roll
+       throws: measured, the single frame left the bird still on the branch in 1
+       run of 3, which is a test asking whether the owl had made up its mind yet
+       rather than whether a bird in the air holds its wings open. */
+    g.night = 1;
+    let abroad = 0;
+    for (let i = 0; i < 180; i++) { bird.update(1 / 60, away, g.world, g); abroad = Math.max(abroad, bird.airAmt); }
+    const npcOwl = { roost, abroad, state: bird.state };
     Object.assign(bird, wasB);
     Object.assign(p, was);
     return { spot, human, frog, jumpHuman, jumpFrog, npcFrog, npcOwl, hop: N.FRUIT_BY_ID.frogpear.form.hop };
@@ -2958,6 +2967,142 @@ const { sim } = require('./simwait');
       arrive[who].side.min < 0.9 && arrive[who].side.max < 1.2 && arrive[who].side.path < 8, arrive);
   }
 
+  /* 11k. A body on foot and the ground under it. Two things the animals did that
+     the player's own body never does.
+     (a) Nothing holds a body up but the ground, so when the ground leaves, the
+     body falls. The animals' height used to be lerped onto whatever the column
+     said, which is an elevator that runs fastest the moment it starts: walked a
+     bear off a cliff where the ground falls 17 m within one metre, it came down
+     6.8 m in the first 0.1 s -- 81 m/s, easing the rest of the way to a stop --
+     and finished the drop standing on a tree 5 m above the valley floor, where
+     it stopped moving and spent the rest of the run.
+     (b) `groundY` answers "the highest solid thing in this column", and a crown
+     is solid, so foliage at feet level read as a step: the bear took the step,
+     found the next block of the same crown at its new feet, took that one too,
+     and climbed the tree. Over a day, 22061 of one bear's 25200 frames were
+     spent standing on leaves, 12 m above the ground, going up 105 m and back
+     down 114 m riding the crowns along the ridge.
+     A body on foot stands on the ground with the crown over it ignored, read at
+     the height of its feet rather than from the top of the column, and falls
+     under gravity when that is not there -- the same gravity, the same terminal
+     speed and the same landing squash the player's body and a hopping frog use.
+     The same ledge after: 16 m in 1.17 s, the speed rising from nothing to
+     26.8 m/s, arriving with a squash of 0.3 and walking on. */
+  const footing = await step('aBodyOnFootFalls', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA, p = g.player;
+    const bear = g.creatures.find(c => c.sp.id === 'bear');
+    if (!bear) return { error: 'no bear in the roster' };
+    const was = { x: bear.x, y: bear.y, z: bear.z, yaw: bear.yaw, vy: bear.vy, squash: bear.squash,
+      state: bear.state, pause: bear.pause, tx: bear.tx, tz: bear.tz, homeX: bear.homeX, homeZ: bear.homeZ };
+    // a cliff the ground falls off within one metre of where the body is standing
+    let edge = null;
+    for (let z = 12; z < W.d - 12 && !edge; z++) {
+      for (let x = 12; x < W.w - 12 && !edge; x++) {
+        const a = N.terrainY(W, x, z, W.h - 1), b = N.terrainY(W, x + 1, z, W.h - 1);
+        if (a - b >= 6 && !W.solidAt(x, a, z) && !W.solidAt(x + 1, b, z)) edge = { x, z, top: a, low: b };
+      }
+    }
+    if (!edge) { Object.assign(bear, was); return { error: 'no cliff in the valley' }; }
+    const px = edge.x + 0.5, pz = edge.z + 0.5;
+    bear.x = px; bear.y = edge.top; bear.z = pz; bear.yaw = Math.PI / 2;
+    bear.vy = 0; bear.squash = 0; bear.state = 'wander'; bear.pause = 999;
+    bear.tx = px + 12; bear.tz = pz; bear.homeX = px; bear.homeZ = pz;
+    const t0 = g.time; g.time = 420 * 21 / 24; g.updateEnv();
+    const dt = 1 / 60;
+    let airT = 0, vPeak = 0, first = 0, last = 0, landed = null, sq = 0;
+    for (let i = 0; i < 400; i++) {
+      const y0 = bear.y;
+      bear.update(dt, p, W, g);
+      const gy = N.terrainY(W, Math.floor(bear.x), Math.floor(bear.z), W.h - 1);
+      const v = (y0 - bear.y) / dt;
+      if (bear.y > gy + 0.05) {
+        if (!airT) first = v;
+        airT += dt; last = v; vPeak = Math.max(vPeak, v);
+      } else if (airT > 0 && !landed) {
+        landed = { drop: +(edge.top - gy).toFixed(1), airT: +airT.toFixed(2), vPeak: +vPeak.toFixed(1),
+          vAvg: +((edge.top - gy) / airT).toFixed(1), first: +first.toFixed(1), last: +last.toFixed(1) };
+        sq = +bear.squash.toFixed(2);
+      }
+      if (landed && bear.x - px > 6) break;
+    }
+    g.time = t0; g.updateEnv();
+    const out = { at: [edge.x, edge.z], top: edge.top, low: edge.low, landed, squash: sq,
+      end: { y: +bear.y.toFixed(2), ground: N.terrainY(W, Math.floor(bear.x), Math.floor(bear.z), W.h - 1) } };
+    Object.assign(bear, was);
+    return out;
+  });
+  check('a body on foot falls when the ground under it goes',
+    !!footing.landed && footing.landed.drop >= 5 && footing.landed.airT >= 0.45, footing);
+  check('it speeds up as it falls, rather than starting at the speed and easing away',
+    !!footing.landed && footing.landed.last > footing.landed.first &&
+    footing.landed.vPeak <= 2.4 * footing.landed.vAvg, footing);
+  check('it arrives on the ground at the bottom, not half way down',
+    !!footing.landed && Math.abs(footing.end.y - footing.end.ground) < 0.1, footing);
+  check('and it arrives with the squash every other landing body makes',
+    !!footing.landed && footing.squash > 0.1, footing);
+
+  /* A body that swims into the shallower part of the lakebed. The step test lets
+     a body into a column whose surface is above its feet -- a frog standing on
+     the floor of a lake two blocks deeper than the shelf next door has its feet
+     1.6 m under that shelf -- and the altitude then has to get it out again. The
+     frog's branch used to answer that with a snap onto the surface: a body left
+     1.5 m inside the shelf was moved to the top of it in a single frame, 90 m/s,
+     and a day of the valley running caught a frog doing exactly that 1.6 m at a
+     time. A step is a rate, and it is the same rate the body on foot uses --
+     which is why the two animals now share one routine for feet, water and the
+     ground. */
+  const bank = await step('aBodyClimbsItsBank', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA;
+    let spot = null;
+    for (let z = 8; z < W.d - 8 && !spot; z++) for (let x = 8; x < W.w - 8 && !spot; x++) {
+      const wt = N.waterTop(W, x, z, W.h - 1);
+      if (wt < 0) continue;
+      const bed = N.groundY(W, x, z, wt);
+      if (wt + 1 - bed < 3) continue;                    // deep enough to swim, not to wade
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const bed2 = N.groundY(W, x + dx, z + dz, W.h - 1);
+        const wt2 = N.waterTop(W, x + dx, z + dz, W.h - 1);
+        if (bed2 - bed === 2 && wt2 >= 0 && wt2 + 1 - bed2 >= 1)
+          spot = { x: x + 0.5, z: z + 0.5, bed, wt, dx, dz, bed2, wt2 };
+      }
+    }
+    if (!spot) return { error: 'no lakebed step' };
+    const frog = g.creatures.find(c => c.sp.id === 'frog');
+    const away = { x: -999, y: 0, z: -999, form: null, formDef: {} };
+    const was = { x: frog.x, y: frog.y, z: frog.z, vy: frog.vy, state: frog.state, pause: frog.pause,
+      tx: frog.tx, tz: frog.tz, yaw: frog.yaw, alarm: frog.alarm, airAmt: frog.airAmt,
+      squash: frog.squash, speed: frog.speed, wind: frog.wind, hopT: frog.hopT };
+    const run = (y0, x0, z0) => {
+      Object.assign(frog, { x: x0, z: z0, y: y0, vy: 0, speed: 0, state: 'wander', pause: 0, alarm: 0,
+        airAmt: 0, squash: 0, wind: 0, hopT: 0, yaw: Math.atan2(spot.dx, -spot.dz),
+        tx: spot.x + spot.dx * 6, tz: spot.z + spot.dz * 6 });
+      const r = { worst: 0, at: null, onShelf: 0 };
+      for (let i = 0; i < 600; i++) {
+        const y = frog.y;
+        frog.update(1 / 60, away, W, g);
+        const d = Math.abs(frog.y - y);
+        if (d > r.worst) { r.worst = +d.toFixed(3); r.at = { f: i, y0: +y.toFixed(2), y1: +frog.y.toFixed(2) }; }
+        if (frog.y >= spot.bed2 - 0.02) r.onShelf++;
+      }
+      r.end = { y: +frog.y.toFixed(2), x: +frog.x.toFixed(2), z: +frog.z.toFixed(2),
+        gy: N.standY(W, Math.floor(frog.x), Math.floor(frog.z), frog.y),
+        inSolid: W.solidAt(Math.floor(frog.x), Math.floor(frog.y + 0.2), Math.floor(frog.z)),
+        inWater: W.liquidAt(Math.floor(frog.x), Math.floor(frog.y + 0.2), Math.floor(frog.z)) };
+      return r;
+    };
+    const swim = run(spot.bed + 0.4, spot.x, spot.z);
+    const stuck = run(spot.bed2 - 1.5, spot.x + spot.dx, spot.z + spot.dz);
+    Object.assign(frog, was);
+    return { spot, swim, stuck };
+  });
+  check('a lakebed that steps up two blocks under the water was found', !!bank.spot, bank);
+  check('a frog swims up on to the shelf the lakebed steps on to', bank.swim.onShelf > 0, bank.swim);
+  check('a body left inside the bank is not thrown out of it in one frame',
+    bank.stuck.worst <= 0.4, bank.stuck);
+  check('and it does get out, and is not left in the solid',
+    !bank.stuck.end.inSolid, bank.stuck);
+  check('no frame of the swim throws the body either', bank.swim.worst <= 0.4, bank.swim);
+
   /* ---- the valley stays inside itself ----
      A hundred seconds of the world running with nobody driving it. The question
      is not whether any animal did anything clever afterwards; it is whether any
@@ -3038,7 +3183,7 @@ const { sim } = require('./simwait');
   const soak = await step('soakTheValley', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA;
     const look = () => {
-      const bad = { notANumber: [], outside: [], inRock: [], inCrown: 0, underTheMap: [], aboveTheAir: [] };
+      const bad = { notANumber: [], outside: [], inRock: [], inCrown: 0, onFoliage: [], underTheMap: [], aboveTheAir: [] };
       for (const c of g.creatures) {
         if (!isFinite(c.x) || !isFinite(c.y) || !isFinite(c.z) || !isFinite(c.speed) || !isFinite(c.yaw)) { bad.notANumber.push(c.sp.id); continue; }
         if (c.x < 0 || c.z < 0 || c.x >= W.w || c.z >= W.d || c.y < 0 || c.y >= W.h) bad.outside.push([c.sp.id, +c.x.toFixed(1), +c.y.toFixed(1), +c.z.toFixed(1)]);
@@ -3047,6 +3192,14 @@ const { sim } = require('./simwait');
           if (N.TREE_BLOCK[W.get(bx, by, bz)]) bad.inCrown++;
           else bad.inRock.push([c.sp.id, +c.x.toFixed(1), +c.y.toFixed(1), +c.z.toFixed(1)]);
         }
+        /* A body on foot stands on the ground. A crown under its feet, with the
+           valley floor two metres below that, is a tree it climbed and rode:
+           foliage at feet level reads as a step, and the next block of the same
+           crown is at the new feet, so the body walks up its own tree. A flying
+           body roosting on a branch is not this, and neither is one that cannot
+           leave the water. */
+        if (!c.isFlyer() && !c.isAquatic() && N.TREE_BLOCK[W.get(bx, Math.floor(c.y - 0.2), bz)] &&
+            c.y - N.terrainY(W, bx, bz, W.h - 1) >= 2) bad.onFoliage.push([c.sp.id, +c.y.toFixed(1)]);
         if (c.y < 3) bad.underTheMap.push([c.sp.id, +c.y.toFixed(1)]);
         // the ceiling a flying body is held to, and the floor of the valley
         if (c.y > W.h - 2) bad.aboveTheAir.push([c.sp.id, +c.y.toFixed(1)]);
@@ -3070,15 +3223,35 @@ const { sim } = require('./simwait');
     }
     g.creatures = saved;
     const before = look(), n0 = counts(), t0 = g.time;
+    /* And how far a body travels in one frame. Every one of its rules is a rate
+       -- a step, a fall, a climb, a swim -- and none of them is allowed to be a
+       lift: measured before, one bear changed height by 1.35 m in a single frame
+       (81 m/s) and by exactly 0.75 m in 261 frames of a day, and a frog dropped
+       on the lakebed came up 0.47 m in its first frame (28 m/s). */
+    const feet = g.creatures.filter(c => !c.isFlyer() && !c.isAquatic());
+    const prevY = new Map(feet.map(c => [c, c.y]));
+    const jump = { worst: 0, who: null };
     // a whole day of the world's clock, so the animals are seen roosting and flying
-    for (let i = 0; i < Math.round(N.DAY_LEN * 60); i++) g.update(1 / 60);
-    return { seconds: +(g.time - t0).toFixed(1), placed, before, after: look(), countsBefore: n0, countsAfter: counts() };
+    for (let i = 0; i < Math.round(N.DAY_LEN * 60); i++) {
+      g.update(1 / 60);
+      for (const c of feet) {
+        const d = Math.abs(c.y - prevY.get(c));
+        if (d > jump.worst) { jump.worst = +d.toFixed(2); jump.who = c.sp.id; }
+        prevY.set(c, c.y);
+      }
+    }
+    return { seconds: +(g.time - t0).toFixed(1), placed, before, after: look(), jump,
+      countsBefore: n0, countsAfter: counts() };
   });
   check('an animal is put down on the ground, not on the tree that grows out of it',
     soak.placed.n > 200 && !soak.placed.onCrown.length && !soak.placed.inTrunk.length, soak.placed);
   check('a whole day of the world running leaves every animal a body in a place',
     !soak.after.notANumber.length && !soak.after.outside.length && !soak.after.inRock.length &&
     !soak.after.underTheMap.length && !soak.after.aboveTheAir.length, soak.after);
+  check('a body on foot spends the day on the ground, not on the crowns over it',
+    !soak.after.onFoliage.length, soak.after);
+  check('and no frame of that day moves a body further than its own body can',
+    soak.jump.worst <= 0.4, soak.jump);
   check('the log, the scattered fruit and the queues do not grow without bound',
     soak.countsAfter.log <= 40 && soak.countsAfter.creatures === soak.countsBefore.creatures &&
     soak.countsAfter.drops <= soak.countsBefore.drops && soak.countsAfter.grow <= soak.countsBefore.grow, soak);

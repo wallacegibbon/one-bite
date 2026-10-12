@@ -534,6 +534,26 @@
     }
     return 1;
   }
+  /* The surface a body on foot actually stands on. Two things the plain column
+     read gets wrong, and a bear walking the ridge met both. `groundY` answers
+     "the highest solid thing in this column", and a crown is solid, so foliage
+     at feet level reads as a step: the bear took the step, found the next block
+     of the same crown at its new feet, took that step too, and climbed the tree
+     -- measured over a day, one bear spent 22061 of 25200 frames standing on
+     leaves 12 m above the ground, and went up 105 m and back down 114 m riding
+     the crowns along the ridge. And the altitude used to look up 4 m while the
+     step test looked up 3, so a needles block five blocks over its head answered
+     to the altitude and not to the step, and lifted it there.
+     So: the ground, with the crown over it ignored, read at the height of the
+     feet rather than from the top of the column. A body stands on the top of
+     the highest block level with its feet or a step above them, and walks
+     through the bush with its shoulders in it. The bound is exact: a surface at
+     most 1.6 m above the feet is the top of a block at most floor(y + 0.6),
+     which is what the step test implies -- when that test lets a step through,
+     the two answers are the same block. */
+  function standY(w, x, z, y) {
+    return terrainY(w, x, z, Math.floor(y + 0.6));
+  }
   /* Whether a water animal may be in this column at all -- the same test the
      spawn code makes: the column has to hold at least two blocks of water, so
      there is somewhere to hover. Testing one cell at the animal's feet instead
@@ -578,7 +598,10 @@
       this.alarm = 0;
       this.homeX = x; this.homeZ = z;
       this.flyY = y;
-      // the same three signals the player carries, for the same reason
+      // the vertical velocity, and the same three signals the player carries, for
+      // the same reason. It has to be a number: a body that is born on land and
+      // hops integrates a fall out of this field on its very first frame.
+      this.vy = 0;
       this.airAmt = 0; this.crouch = 0; this.squash = 0; this.hopT = Math.random() * 1.2; this.wind = 0;
       // and the fourth: the draw needs to know whether this body is moving
       // through water, because a body built for water kicks instead of walking
@@ -772,7 +795,20 @@
             if (!world.solidAt(Math.floor(hx), Math.floor(this.y), Math.floor(hz))) { this.x = hx; this.z = hz; }
           }
         } else {
-          const stand = (x, z) => groundY(world, Math.floor(x), Math.floor(z), Math.floor(this.y + 3)) - this.y < 1.6;
+          /* Can this body put its feet down in that column? The surface it would
+             stand on, and the cell just above it: a step of a metre is a step, a
+             surface with rock over it is a wall, and foliage over its head is
+             neither -- a bear walks through a bush with its shoulders in it. The
+             test used to ask for the highest solid thing in the column up to 3 m
+             above the feet, which made every bush a cliff and every crown a
+             staircase: the bear of the northern ridge walked the crowns along the
+             ridge instead of the ground under them, and went up 105 m and back
+             down 114 m in a day doing it. */
+          const stand = (x, z) => {
+            const bx = Math.floor(x), bz = Math.floor(z);
+            const gy = standY(world, bx, bz, this.y);
+            return gy - this.y < 1.6 && !world.solidAt(bx, Math.floor(gy + 0.2), bz);
+          };
           if (stand(mx, mz) || this.isFlyer()) { this.x = mx; this.z = mz; }
           else {
             /* The way is a wall. An animal does not sit down in front of one and
@@ -880,45 +916,89 @@
         const depth = 1.2 + Math.sin(this.t + this.phase) * 0.8;
         const target = Math.max(gy0 + 0.35, wt - depth);
         this.y += (target - this.y) * Math.min(1, dt * 1.6);
-      } else if (this.isAmphibian()) {
-        // the frog sits on the bank, and floats just under the surface when it is in water
-        const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
-        const wt = waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1);
-        const hop = sp.hop;
-        if (inWater && wt > gy0) {
-          this.y += (Math.max(gy0, wt - 0.3) - this.y) * Math.min(1, dt * 6);
+      } else {
+        /* Feet, water and the ground -- one routine for every body that is not
+           being held up by air. A frog and a bear are told apart by whether the
+           data gives them a `hop`, not by whether they obey gravity: the two
+           branches used to be separate code, and the frog's had no bound on what
+           it would do to a body's height. */
+        const gy = standY(world, Math.floor(this.x), Math.floor(this.z), this.y);
+        const hop = this.isAmphibian() ? sp.hop : null;
+        const wt = this.isAmphibian() ? waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1) : -1;
+        if (inWater && wt > gy) {
+          /* The water holds the body just under the surface, and never through
+             the bottom of the lake. The depth is closed at the speed the
+             animal's own record swims at, not at a fraction of the distance
+             left: the lerp was an elevator that ran fastest the instant it
+             started, and a frog put down on the lakebed 4.7 m under the surface
+             came up 0.47 m in its very first frame -- 28 m/s, faster than a
+             falling bear -- every frame after it slower than the one before. */
+          const target = Math.max(gy, wt - 0.3);
+          const rate = sp.swimSpeed || sp.speed || 1.5;
+          const want = target - this.y;
+          const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;
+          this.y += Math.abs(step) >= Math.abs(want) ? want : step;
           this.vy = 0; this.airAmt = 0; this.crouch = 0;
-        } else if (hop) {
+        } else {
           /* On land a frog does not slide: it hops. Before this the height of an
              amphibian was lerped onto the ground every frame, which meant the
              twelve frogs in the valley never once left it -- the legs animated a
-             walk no body was doing. Now the launch is an impulse and the arc is
-             gravity's, and the landing is where the squash comes from. */
-          if (this.speed > 0.2) {
+             walk no body was doing. The launch is an impulse, the arc is
+             gravity's, and the landing is where the squash comes from. The
+             countdown only runs with feet on the ground, so a frog that lands
+             stands, loads and pushes off again. */
+          if (hop && this.speed > 0.2) {
             this.hopT -= dt;
             this.wind = Math.min(1, this.wind + dt / 0.18);
-            if (this.hopT <= 0 && this.y <= gy0 + 0.02) {
+            if (this.hopT <= 0 && this.y <= gy + 0.02) {
               this.vy = hop.up;
               this.hopT = hop.period * (0.75 + Math.random() * 0.55);
               this.wind = 0;
             }
-          } else { this.hopT = 0; this.wind = 0; }
-          this.vy -= GRAVITY * dt;
-          this.y += this.vy * dt;
-          if (this.y <= gy0) {
-            if (this.vy < -1) this.squash = Math.min(0.3, -this.vy / 60);
-            this.y = gy0; this.vy = 0;
+          } else if (hop) { this.hopT = 0; this.wind = 0; }
+          /* A body on foot is held up by the ground under it, and when the
+             ground is a long way below its feet the ground has gone: the body
+             falls, under the same gravity, the same terminal speed and the same
+             landing squash the player's own body uses. What this replaces is a
+             lerp onto the ground every frame, which is an elevator that runs
+             fastest at the moment it starts: walked a bear off a cliff where the
+             ground falls 17 m within one metre, it came down 6.8 m in the first
+             0.1 s -- 81 m/s -- eased the rest of the way to a stop, and finished
+             the drop standing on a tree 5 m above the valley floor, where it
+             stopped moving for the rest of the run. The same cliff now: 16 m in
+             1.17 s, the speed rising from nothing to 26.8 m/s, arriving with a
+             squash of 0.3 and walking on. A bear steps off a ridge; it does not
+             fall faster than a thrown stone.
+             Down a slope is not a fall: the surface is a hand's width under the
+             feet, the feet follow it, nothing is integrated. Going up is a step,
+             not a lift: a body climbing onto higher ground raises its feet onto
+             it at a rate, which is what the frog's branch used to do with a
+             snap -- a frog that swam into the lake's bank was put 1.5 m up in a
+             single frame (90 m/s) because the surface there was above its feet
+             and the code moved it there in one step. */
+          if (gy > this.y + 0.02) {
+            this.y += (gy - this.y) * Math.min(1, dt * 9);
+            this.vy = 0;
+          } else if (this.vy !== 0 || this.y - gy > 0.35) {
+            /* Not standing: either the body has a vertical rate of its own --
+               including the one a hop launch just gave it, which is why this
+               asks for any rate rather than only a falling one -- or the ground
+               has stepped out from under it. */
+            this.vy = Math.max(-MAX_FALL, this.vy - GRAVITY * dt);
+            this.y += this.vy * dt;
+            if (this.y <= gy) {
+              if (this.vy < -1) this.squash = Math.min(0.3, -this.vy / 60);
+              this.y = gy; this.vy = 0;
+            }
+          } else {
+            this.y = gy; this.vy = 0;
           }
-          const airWant = this.y > gy0 + 0.02 ? 1 : 0;
-          this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
-          this.crouch = this.y <= gy0 + 0.02 ? this.wind : 0;
-        } else {
-          this.y += (gy0 - this.y) * Math.min(1, dt * 6);
-          this.airAmt = 0; this.crouch = 0;
+          if (this.isAmphibian()) {
+            const airWant = hop && this.y > gy + 0.02 ? 1 : 0;
+            this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
+            this.crouch = this.y <= gy + 0.02 ? this.wind : 0;
+          }
         }
-      } else {
-        const gy = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y + 4));
-        this.y += (gy - this.y) * Math.min(1, dt * 9);
       }
 
       /* The same attitude rule the player's own body has: a body the air or the
@@ -1035,6 +1115,7 @@
   N.Particles = Particles;
   N.groundY = groundY;
   N.terrainY = terrainY;
+  N.standY = standY;
   N.waterTop = waterTop;
 
 })(window.FRUTARIA = window.FRUTARIA || {});
