@@ -144,8 +144,9 @@
   precision highp float;
   attribute vec3 aPos; attribute vec4 aCol; attribute vec2 aData;
   uniform mat4 uProj, uView, uModel;
-  uniform float uFogDen, uDay, uTime, uWave, uEmisBoost;
-  uniform vec3 uAmb;
+  uniform float uFogDen, uDay, uTime, uWave, uEmisBoost, uEmisKeep;
+  uniform float uWaterY;
+  uniform vec3 uAmb, uWaterK;
   varying vec4 vCol; varying float vFog;
   void main(){
     vec4 wp = uModel * vec4(aPos, 1.0);
@@ -155,7 +156,7 @@
     float d = length(vp.xyz);
     float emis = aData.y;
     float fog = 1.0 - exp(-uFogDen*uFogDen*d*d);
-    vFog = fog * (1.0 - emis*0.75);
+    vFog = fog * (1.0 - emis*uEmisKeep);
     float lit = mix(max(uDay, 0.10), 1.25 + uEmisBoost, emis);
     // aCol is uploaded with normalized=TRUE, so aCol.a is already 0..1: dividing
     // it by 255 again made every blended surface 0.4% opaque, and the lake had no
@@ -169,7 +170,50 @@
     // behind it is 17..21, so a tree or a roof reads as a hole cut in the sky.
     // An additive term fixes that where it matters: it lifts a dark surface by
     // most of its own value and a bright one by hardly anything.
-    vCol = vec4(aCol.rgb * aData.x * lit + uAmb, aCol.a);
+    //
+    // uEmisKeep is how much of a light's own glow the haze lets through. Air
+    // says 0.75 -- a lantern across the valley is still a lantern -- and that
+    // is far too much for five metres of lake: measured from 9 m away inside
+    // Mirrorlake, a lamp jellyfish came back at luminance 197, the same bright
+    // dot it is at 100 m through air. The stuff a light is seen through is a
+    // fact about that stuff, so the number lives on the block row.
+    //
+    // uWaterY is the height of the surface of the water a fragment sits under.
+    // A surface under water is lit by light that has travelled through the
+    // water above it -- the red goes first, and what is left is the colour of
+    // the stuff it travelled through -- so a fragment's own depth under that
+    // surface decides how much light reaches it. That is why the underside of
+    // the surface, at depth zero, stays bright while the lakebed six metres
+    // down does not. Without it the near lakebed keeps its dry sand colour:
+    // measured looking down from just under the surface, the frame was warmer
+    // than red (blue-minus-red -16.7) and brighter (mean 137) than looking
+    // *up* at the sunlit surface (mean 90) -- the bottom of a lake brighter
+    // than its own sunlit skin, which is the whole of "the water looks wrong
+    // down there".
+    //
+    // uWaterK is that absorption per metre, colour by colour, and it is the
+    // whole of the term: the light that survives "under" metres of this liquid
+    // is exp(-K * under), colour by colour. Red is eaten about nine times
+    // faster than blue, which is why a lake floor two metres down is teal and
+    // not pale sand. Air says 0,0,0, and exp(0) is 1, so a frame drawn in air
+    // is bit for bit what it was.
+    //
+    // The exponent is linear in the depth, and that is deliberately not the
+    // same law as the haze above. The haze is scattering over the viewing
+    // path, and its squared-exponential curve is the aerial-perspective one:
+    // nothing at all in the first metre, everything at a hundred. Absorption
+    // of the sunlight coming down is the other law -- Beer-Lambert -- and it
+    // starts eating the red from the very first metre, which is exactly where
+    // a body wading over a four metre shelf is looking.
+    //
+    // The depth is read off the world height rather than from a search of the
+    // column, so a fragment below the lake's surface that is not actually
+    // standing in the lake is tinted as if it were. The lake's own haze takes
+    // everything past some fifteen metres, so what that can reach is the near
+    // shore under the waterline, which is in the water anyway.
+    float under = max(0.0, uWaterY - wp.y) * (1.0 - emis);
+    vec3 dayLight = exp(-uWaterK * under);
+    vCol = vec4(aCol.rgb * aData.x * lit * dayLight + uAmb, aCol.a);
   }`;
   const FS_WORLD = `
   precision mediump float;
@@ -361,6 +405,9 @@
         u.uTintA = gl.getUniformLocation(P.p, 'uTintA');
         u.uEmisBoost = gl.getUniformLocation(P.p, 'uEmisBoost');
         u.uAmb = gl.getUniformLocation(P.p, 'uAmb');
+        u.uEmisKeep = gl.getUniformLocation(P.p, 'uEmisKeep');
+        u.uWaterK = gl.getUniformLocation(P.p, 'uWaterK');
+        u.uWaterY = gl.getUniformLocation(P.p, 'uWaterY');
         u._done = 1;
       }
       gl.uniformMatrix4fv(u.uProj, false, this.proj);
@@ -372,6 +419,11 @@
       // the sky's own light falling on a surface: environment, not draw, like
       // the fog. Zero all day, so a daytime frame is bit for bit what it was.
       gl.uniform3fv(u.uAmb, e.ambient || [0, 0, 0]);
+      // what the stuff the lens is sitting in does to light: 0.75 / white / no
+      // surface overhead is the air's answer, and leaves a dry frame untouched
+      gl.uniform1f(u.uEmisKeep, e.emisKeep === undefined ? 0.75 : e.emisKeep);
+      gl.uniform3fv(u.uWaterK, e.waterK || [0, 0, 0]);
+      gl.uniform1f(u.uWaterY, e.waterY || 0);
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);
       gl.uniform1f(u.uTime, e.time);
       gl.uniform1f(u.uWave, opts.wave ? 1 : 0);

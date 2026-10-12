@@ -259,7 +259,19 @@
          head test had, since the environment is built before the player moves. */
       const lens = this._lens || { x: p.x, y: p.eyePos(), z: p.z };
       const wf = W.liquidFogAt(Math.floor(lens.x), Math.floor(lens.y), Math.floor(lens.z));
-      if (wf) { fogCol = mix(fogCol, wf.c, wf.t); fogDen = wf.den; }
+      /* What the stuff the lens is sitting in does to **light**, as opposed to
+         what it does to the view: the haze above is the view, these two are the
+         light, and all of them come off the block row that says what the stuff
+         is made of. Air is the default -- 0.75 of a lamp's glow survives the
+         haze, daylight stays white, and there is no surface overhead -- so a
+         frame drawn in air is bit for bit what it was. */
+      let emisKeep = 0.75, waterK = [0, 0, 0], waterY = 0;
+      if (wf) {
+        fogCol = mix(fogCol, wf.c, wf.t); fogDen = wf.den;
+        if (wf.emis !== undefined) emisKeep = wf.emis;
+        if (wf.k) waterK = wf.k;
+        waterY = W.liquidTopAt(Math.floor(lens.x), Math.floor(lens.y), Math.floor(lens.z));
+      }
       /* Night vision belongs to the eye, not to the sky. `daylight` and `night`
          stay what the sky is -- animals and the HUD read those -- and only the
          rendered brightness changes, so an owl and a frog standing in the same
@@ -278,6 +290,7 @@
         time: this.time, day: eyeDay, night: this.night,
         fogCol, fogDen, zenith, horizon, ground: mix(horizon, [0.25, 0.22, 0.2], 0.5),
         ambient: [skyLight[0] * ambK, skyLight[1] * ambK, skyLight[2] * ambK],
+        emisKeep, waterK, waterY,
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
         far: 260
       };

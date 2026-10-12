@@ -1672,7 +1672,10 @@ const { sim } = require('./simwait');
         } return 0;
       };
       const L = i => px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
-      let sn = 0, ss = 0, gmin = 1e9, black = 0, tot = 0;
+      let sn = 0, ss = 0, black = 0, tot = 0, geoN = 0;
+      // a histogram, not a sorted array: the darkest slice of the geometry is
+      // what is wanted, and 256 bins is the whole range of a byte
+      const hist = new Int32Array(256);
       for (let Y = 0; Y < h; Y += 2) {
         const gy = h - 1 - Y, ndcY = 1 - (Y + 0.5) / h * 2;
         for (let X = 0; X < w; X += 2) {
@@ -1683,11 +1686,22 @@ const { sim } = require('./simwait');
           const ln = Math.hypot(dx, dy, dz); dx /= ln; dy /= ln; dz /= ln;
           const i = (gy * w + X) * 4, val = L(i);
           tot++; if (val < 12) black++;
-          if (first(dx, dy, dz) === 0) { sn++; ss += val; } else gmin = Math.min(gmin, val);
+          if (first(dx, dy, dz) === 0) { sn++; ss += val; }
+          else { hist[Math.min(255, val | 0)]++; geoN++; }
         }
       }
+      /* The darkest *slice* of the geometry, not its single darkest pixel. The
+         ray classifier above reads the block grid, so a body standing between
+         the lens and that block is counted as the block: a creature that
+         wandered into one of these four frames, or the player's own dark robe,
+         used to set geoMin on its own, and the value then moved by thirty
+         luminance between two runs of the same code. A hole cut in the sky --
+         the thing this is looking for -- is an area, and the darkest 1% of a
+         frame with one in it is still down there with it. */
+      let gmin = 0, want = Math.max(1, Math.floor(geoN * 0.01)), seen = 0;
+      for (let v = 0; v < 256; v++) { seen += hist[v]; if (seen >= want) { gmin = v; break; } }
       g._camFrame = null;
-      return { skyMean: +(ss / Math.max(1, sn)).toFixed(1), geoMin: +gmin.toFixed(1),
+      return { skyMean: +(ss / Math.max(1, sn)).toFixed(1), geoMin: gmin,
         blackPct: +(black / tot * 100).toFixed(1) };
     };
     const out = {};
@@ -2407,6 +2421,138 @@ const { sim } = require('./simwait');
   check('a level view out over the water wets the same half',
     wetBody.level && wetBody.level.below.pct >= 90 && wetBody.level.below.meanShift > 60 &&
     wetBody.level.dry.pct === 0, wetBody);
+
+  /* The bottom of a lake is under water. Two things were wrong with the view
+     from a body swimming in Mirrorlake, and they arrived as one complaint:
+     looking up at the surface looked right, looking down at the bottom did not.
+
+     The first is the colour. The haze the water puts between the lens and a
+     surface was all the water used to do, and a haze works over distance: at
+     the lake's density a fragment 3 m away took 18% of it and one 10 m away
+     took 86%. So the lakebed a body was swimming over kept the dry sand colour
+     it has on the shore. What was missing is that the light reaching that
+     surface has itself come down through the water above it -- the red goes
+     first, and what is left is the colour of the stuff it came through.
+     Measured looking straight down from just under the surface: the frame was
+     warmer than red (blue-minus-red -16.7) and brighter (mean 137) than the
+     same lens looking *up* at the sunlit surface (mean 90). The bottom of a
+     lake was brighter than its own sunlit skin.
+
+     The second is the lamps. The renderer discounts the haze for a fragment
+     that lights itself, so that a lantern across the valley is still a lantern
+     -- and the discount was a constant 0.75 written in the shader, which the
+     lake had no say in. The lamp jellyfish sit on the outline of the sunken
+     tower, so a body that swims in among them is looking at a ring of them:
+     3.6 m off that ring the frame came back with pixels at luminance 246 and
+     its 99th percentile at 179. That is the "sun" on the lakebed.
+
+     Both facts belong to the liquid rather than to the renderer, so both live
+     on the water's row in the block table and reach the shader as the
+     environment's. In air the environment says 0.75, white and no surface
+     overhead, and a frame drawn in air is bit for bit what it was. */
+  const lakebedView = await step('theLakebedIsUnderWater', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const jellies = g.creatures.filter(c => c.sp.model === 'jelly');
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, third: g.thirdPerson, camD: g.cam.d, camFov: g.cam.fov, ready: g.camReady,
+      time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env,
+      jelly: jellies.map(c => ({ c, x: c.x, y: c.y, z: c.z, t: c.t, ph: c.phase, st: c.state })) };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form });
+      g.thirdPerson = was.third; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.ready;
+      g.time = was.time; g.mode = was.mode; g._lens = was.lens; g._camFrame = was.frame; g.env = was.env;
+      for (const j of was.jelly) { j.c.x = j.x; j.c.y = j.y; j.c.z = j.z; j.c.t = j.t; j.c.phase = j.ph; j.c.state = j.st; }
+      return r;
+    };
+    p.form = null; g.mode = 'play'; g.thirdPerson = false;
+    g.time = N.DAY_LEN * (13 / 24);
+
+    const lake = N.ZONES.find(z => z.id === 'mirrorlake');
+    if (!lake || !lake.tower) return back({ error: 'no sunken tower in the mirrorlake zone data' });
+    const [tx, tz] = lake.tower;
+    if (!jellies.length) return back({ error: 'no lamp jellyfish in the valley' });
+
+    // a shallow shelf of lake and a deep stretch of it, both searched for
+    let shallow = null, deep = null;
+    for (let z = 74; z < 140 && !(shallow && deep); z++) for (let x = 46; x < 112; x++) {
+      let top = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { top = y; break; }
+      if (top < 0) continue;
+      let bed = -1;
+      for (let y = top; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed < 0) continue;
+      const depth = top + 1 - bed;
+      if (!shallow && depth >= 6 && depth <= 8) shallow = { x: x + 0.5, z: z + 0.5, top, bed, depth };
+      if (!deep && depth >= 9) deep = { x: x + 0.5, z: z + 0.5, top, bed, depth };
+      if (shallow && deep) break;
+    }
+    if (!shallow || !deep) return back({ error: 'no shallow shelf and no deep stretch in the lake' });
+
+    const shot = (lx, lensY, lz, yaw, pitch) => {
+      const eyeOff = p.eyePos() - p.y;
+      p.x = lx; p.y = lensY - eyeOff; p.z = lz; p.vx = p.vy = p.vz = 0;
+      p.yaw = yaw; p.pitch = pitch;
+      g._camFrame = g.shootCamera(p); g.updateEnv(); g.render();
+      const env = { fogDen: +g.env.fogDen.toFixed(4), emisKeep: g.env.emisKeep,
+        waterK: g.env.waterK.map(v => +v.toFixed(3)), waterY: g.env.waterY,
+        lensInWater: !!W.liquidFogAt(Math.floor(lx), Math.floor(lensY), Math.floor(lz)) };
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      let n = 0, sum = 0, br = 0, hi = 0, lmax = -1;
+      const lums = [];
+      for (let i = 0; i < px.length; i += 4) {
+        const l = 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2];
+        n++; sum += l; br += px[i + 2] - px[i]; lums.push(l);
+        if (l > lmax) lmax = l;
+        if (l > 200) hi++;
+      }
+      lums.sort((a, b) => a - b);
+      g._camFrame = null;
+      return { env, meanLum: +(sum / n).toFixed(1), blueMinusRed: +(br / n).toFixed(1),
+        maxLum: Math.round(lmax), p99: Math.round(lums[Math.floor(n * 0.99)]),
+        over200: +(100 * hi / n).toFixed(2) };
+    };
+
+    // 1. just under the surface, straight down at the bed it is swimming over
+    const down = shot(shallow.x, shallow.top - 0.6, shallow.z, 0, -1.2);
+    // 2. the same lens, up at the sunlit underside of the surface
+    const up = shot(shallow.x, shallow.top - 0.6, shallow.z, 0, 1.2);
+    // 3. the bed at the bottom of the deep stretch, 9 m of water above it
+    const floor = shot(deep.x, deep.top - 0.6, deep.z, 0, -1.2);
+    // 4. the lamps, pinned on their ring so this measures the water and not
+    //    the animals: 3.6 m of lake between the lens and the nearest bell
+    jellies.forEach((c, i) => {
+      const a = i / jellies.length * 6.283;
+      c.x = tx + 0.5 + Math.cos(a) * 4.5; c.y = 11 + (i % 3) * 0.5;
+      c.z = tz + 0.5 + Math.sin(a) * 4.5;
+      c.t = 0; c.phase = 0; c.speed = 0; c.state = 'wander';
+    });
+    const lamps = shot(tx + 0.5, 12.0, tz + 8.5, 0, Math.atan2(11.5 - 12.0, 8));
+    // 5. the same lens lifted out of the water: the air's answer
+    const air = shot(shallow.x, shallow.top + 2.0, shallow.z, 0, -1.2);
+    return back({ shallow, deep, jelly: jellies.length, down, up, floor, lamps, air });
+  });
+  check('a body looking down at the lakebed sees water: the frame is blue over red',
+    !lakebedView.error && lakebedView.down.blueMinusRed > 10, lakebedView);
+  check('and the near lakebed has stopped being the brightest thing in the lake',
+    lakebedView.down && lakebedView.down.meanLum < 125 && lakebedView.down.meanLum > 45, lakebedView);
+  check('looking up through the surface still reads as the water it is',
+    lakebedView.up && lakebedView.up.blueMinusRed > 60 && lakebedView.up.meanLum > 45, lakebedView);
+  check('the deep bed, 9 m down, is tinted by the water twice over: coming and going',
+    lakebedView.floor && lakebedView.floor.blueMinusRed > 45 && lakebedView.floor.meanLum < 95, lakebedView);
+  check('a lamp 3.6 m off in the lake is a lamp, not a sun sitting on the lakebed',
+    lakebedView.lamps && lakebedView.lamps.p99 < 160 && lakebedView.lamps.over200 < 0.4 &&
+    lakebedView.lamps.meanLum < 75, lakebedView);
+  check('the water says what it does to light, and the environment carries it',
+    lakebedView.down && lakebedView.down.env.lensInWater === true && lakebedView.down.env.emisKeep < 0.5 &&
+    lakebedView.down.env.waterK[0] > lakebedView.down.env.waterK[2] * 4 &&
+    lakebedView.down.env.waterY === lakebedView.shallow.top + 1, lakebedView);
+  check('in air those three answers are the air\'s, so a dry frame is bit for bit what it was',
+    lakebedView.air && lakebedView.air.env.lensInWater === false && lakebedView.air.env.emisKeep === 0.75 &&
+    lakebedView.air.env.waterK[0] === 0 && lakebedView.air.env.waterK[1] === 0 &&
+    lakebedView.air.env.waterK[2] === 0 && lakebedView.air.env.waterY === 0, lakebedView);
 
   /* 11. A body in the air or in the water is a body that has to travel.
      Three things were wrong with how such a body moved, and they showed up

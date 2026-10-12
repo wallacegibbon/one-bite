@@ -6,7 +6,7 @@
 
   /* ------------------------- block table ------------------------- */
   // c=[r,g,b]  ct=top colour  solid=collides  opaque=culls faces  liquid  alpha  emis  micro=[[x,y,z,w,h,d]...]
-  // fogC/fogT/fogDen: the haze a lens takes on inside this block -- see liquidFogAt()
+  // fogC/fogT/fogDen/fogEmis: what a lens sitting inside this block sees -- see liquidFogAt()
   const B = [];
   function def(id, o) {
     const b = B[id] = Object.assign({ id, solid: true, opaque: true, alpha: 1, emis: 0, c: [0.8, 0.8, 0.8] }, o);
@@ -26,7 +26,18 @@
   def(3, { cn: '石头', c: [0.50, 0.50, 0.54] });
   def(4, { cn: '沙', c: [0.80, 0.74, 0.53] });
   def(5, { cn: '水', solid: false, opaque: false, liquid: true, c: [0.13, 0.34, 0.52], alpha: 0.72,
-           fogC: [0.06, 0.24, 0.32], fogT: 0.85, fogDen: 0.14 });
+           fogC: [0.06, 0.24, 0.32], fogDen: 0.14, fogT: 0.85,
+           /* How much of a light's own glow this stuff lets through at full
+              haze. Air lets through 0.75, which is what makes a lantern across
+              the valley still read as a lantern; the same 0.75 inside the lake
+              put a lamp jellyfish 3.6 m away back at luminance 246 -- a sun
+              sitting on the lakebed. A lamp under water is a lamp seen through
+              water, so the water gets to say how much of it survives. */
+           fogEmis: 0.15,
+           /* How fast this stuff eats daylight, per metre, colour by colour.
+              Red goes about nine times faster than blue, which is the whole
+              reason a lake floor two metres down is teal and not pale sand. */
+           fogK: [0.55, 0.16, 0.06] });
   def(6, { cn: '树干', c: [0.38, 0.27, 0.17], ct: [0.46, 0.34, 0.21] });
   def(7, { cn: '树叶', c: [0.20, 0.40, 0.18], soft: 1 });
   def(8, { cn: '针叶', c: [0.14, 0.30, 0.20], soft: 1 });
@@ -175,7 +186,21 @@
        lava) would have needed the environment edited rather than a row here. */
     liquidFogAt(x, y, z) {
       const b = B[this.get(x | 0, y | 0, z | 0)];
-      return b && b.liquid && b.fogC ? { c: b.fogC, t: b.fogT, den: b.fogDen } : null;
+      return b && b.liquid && b.fogC ? { c: b.fogC, t: b.fogT, den: b.fogDen, emis: b.fogEmis, k: b.fogK } : null;
+    }
+    /* The height of the surface of the liquid a lens is sitting in: the top of
+       the liquid column it is inside. The renderer needs it because the light
+       reaching a surface under water has come down through that much water,
+       and how much that is a property of the surface being lit -- the lakebed
+       six metres down, not the lens -- rather than of the lens. */
+    liquidTopAt(x, y, z) {
+      let top = y | 0;
+      for (let k = 0; k < this.h; k++) {
+        const b = B[this.get(x, top + 1, z)];
+        if (!b || !b.liquid) break;
+        top++;
+      }
+      return top + 1;
     }
     markDirty(x, z) {
       const c0x = Math.max(0, Math.floor((x - 1) / this.cs)), c1x = Math.min(this.cx - 1, Math.floor((x + 1) / this.cs));
