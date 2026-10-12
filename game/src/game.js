@@ -146,18 +146,45 @@
         const zone = N.ZONE_BY_ID[sp.habitat[0]];
         const at = sp.at && zone ? zone[sp.at] : null;
         for (let i = 0; i < n; i++) {
-          const p = this.samplePos(sp.habitat[0], at, sp.spread || 4);
+          const p = this.samplePos(sp.habitat[0], at, sp.spread || 4, sp.locomotion === 'fly');
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);
           /* The height a flying animal means to keep, and it has to be a height
              the world has. An owl sampled on top of a canopy was given five to
-             thirteen metres above that: 51.5 in a world 48 tall. */
-          if (c.isFlyer()) c.flyY = Math.min(p.y + 5 + Math.random() * 8, this.world.h - 3);
+             thirteen metres above that: 51.5 in a world 48 tall. It also has to
+             be a height that is not inside a tree: the ceiling used to be set
+             five to thirteen metres above the ground under the bird, and where a
+             spruce stood there that put it in the middle of the crown. The bird
+             was then pushed up toward the top of the crown by the rule that keeps
+             a flying body out of the ground, held back by the top of the world,
+             and shut in on every side by the rule that will not let a flying body
+             step into ground it is not above: one owl, five minutes, 18000 frames
+             hovering at 46.99 inside the needles, never once moving. So the
+             ceiling goes above the tallest thing in the column, and a column with
+             no sky left over its crown is not a place to put a bird at all. */
+          if (c.isFlyer()) {
+            const bx = Math.floor(p.x), bz = Math.floor(p.z);
+            /* The highest thing in the column: a crown, a tower, the lake's own
+               surface. A flying body has to be **born in the air**. It used to be
+               born on the ground of the column it was sampled in, and five of the
+               six owls of a valley were born under a crown: the height they were
+               asked to keep was inside the crown, the rule that will not put a
+               flying body inside anything refused every rise, and the bird lived
+               its whole life in the two metres between the leaf litter and the
+               needles -- measured, five of six birds spent the whole of a minute
+               with a solid block one layer over their heads. So the body starts
+               above whatever is in the column, and the ceiling it will not ask to
+               be above starts above that. */
+            const top = Math.max(N.groundY(this.world, bx, bz, this.world.h - 1),
+              N.waterTop(this.world, bx, bz, this.world.h - 1));
+            c.y = Math.min(top + 1.5 + Math.random() * 4, this.world.h - 3);
+            c.flyY = Math.min(Math.max(c.y + 5 + Math.random() * 8, top + 2), this.world.h - 3);
+          }
           this.creatures.push(c);
         }
       }
     }
-    samplePos(zoneId, at, spread) {
+    samplePos(zoneId, at, spread, needsSky) {
       const z = N.ZONE_BY_ID[zoneId] || N.ZONE_BY_ID.whisperwood;
       const W = this.world;
       for (let t = 0; t < 300; t++) {
@@ -194,6 +221,10 @@
            animal standing in a tree. */
         const gy = N.terrainY(W, Math.floor(x), Math.floor(zz), W.h - 1);
         if (W.solidAt(Math.floor(x), gy, Math.floor(zz))) continue;
+        /* A body that flies needs sky over its head, not just ground under its
+           feet: the tallest spruce in this valley reaches 47 of the world's 48
+           rows, and a bird put under a crown like that has nowhere to go. */
+        if (needsSky && N.groundY(W, Math.floor(x), Math.floor(zz), W.h - 1) + 3 >= W.h) continue;
         const water = W.liquidAt(Math.floor(x), gy, Math.floor(zz));
         if (z.id === 'mirrorlake') {
           let depth = 0; for (let y = gy; y < W.h && W.liquidAt(Math.floor(x), y, Math.floor(zz)); y++) depth++;
