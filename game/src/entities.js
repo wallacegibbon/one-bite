@@ -65,6 +65,11 @@
          off the physics, so a body that does not hop never animates as if it did. */
       this.airAmt = 0; this.crouch = 0; this.squash = 0;
       this.hopT = 0; this.wind = 0;
+      /* how far the water is holding this body up, eased 0..1. The vertical
+         branch decides it every frame; the draw is the only thing that reads it
+         back, and it is what tells a body built for water whether its legs are
+         trailing behind it or standing under it. */
+      this.held = 0;
       /* Set by Game.die() and cleared at the top of the next frame. It is not a
          "is the player alive" flag -- dying always revives them at the town
          cellar -- it is a stop sign for the rest of the tick that killed them. */
@@ -544,8 +549,15 @@
       // eased, not snapped: a body resting on the ground flickers out of
       // `grounded` for a frame at a time, and a pose that hiccups with it looks
       // like a seizure rather than a breath
-      const airWant = this.grounded ? 0 : 1;
+      const airWant = (this.grounded || this.inWater) ? 0 : 1;
       this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
+      /* and the water's answer, kept for the draw. Eased for the same reason: a
+         body crosses the water's hold at the surface and at the lakebed, and a
+         pose that snaps there shows the seam. `heldUp` is a property of the
+         column, so it cannot chatter; `grounded` is the part that can, which is
+         why the pose ramps instead of switching. */
+      const heldWant = (this.inWater && heldUp && !this.grounded) ? 1 : 0;
+      this.held += (heldWant - this.held) * Math.min(1, dt * 6);
       if (!this.grounded) this.crouch = 0;
       if (this.grounded && !wasGrounded) this.squash = Math.min(0.3, Math.max(0, -vyBefore) / 55);
       this.squash = Math.max(0, this.squash - dt * 3.2);
@@ -666,9 +678,11 @@
       this.inWater = false;
       // and the fifth: a body in the air or in the water turns by tilting
       this.bank = 0;
-      // and the sixth: the same body points along the path it is taking
+      // and the sixth: the water is holding this body up, not the ground under it
+      this.held = 0;
+      // and the seventh: the same body points along the path it is taking
       this.tilt = 0;
-      // and the seventh: the wing beat, 0..1
+      // and the eighth: the wing beat, 0..1
       this.flap = 1;
     }
     attitudeTo(formId) {
@@ -748,6 +762,8 @@
       // movement
       const inWater = world.liquidAt(Math.floor(this.x), Math.floor(this.y + 0.2), Math.floor(this.z));
       this.inWater = inWater;      // the draw reads it: a body built for water kicks, it does not run
+      // cleared for the frame, and set by the branch that is actually in the water's hold
+      this.held = 0;
       const yaw0 = this.yaw;       // before steering, so the turn rate is measurable
       const dx = tgtX - this.x, dz = tgtZ - this.z;
       const d = Math.hypot(dx, dz);
@@ -983,6 +999,10 @@
         const gy = standY(world, Math.floor(this.x), Math.floor(this.z), this.y);
         const hop = this.isAmphibian() ? sp.hop : null;
         const wt = this.isAmphibian() ? waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1) : -1;
+        // the water holds this body up only where there is water deep enough to
+        // hold it up: at the edge of the lake the bottom is, and the legs go back
+        // to being feet
+        this.held = (inWater && wt > gy) ? 1 : 0;
         if (inWater && wt > gy) {
           /* The water holds the body just under the surface, and never through
              the bottom of the lake. The depth is closed at the speed the

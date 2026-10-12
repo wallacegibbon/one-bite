@@ -199,20 +199,20 @@
             [0.76, 0, 1.2, 0.82, 0.22, 0.8, '#6a9a52']
           ] },
         { name: 'thighL', parent: 'body', pivot: [-1.35, 1.75, -0.75], anim: 'walk', sign: -1,
-          air: [0.55, 0, 0.12], crouch: [-0.5, 0, 0.12], swimKick: 1, boxes: [
+          air: [0.55, 0, 0.12], crouch: [-0.5, 0, 0.12], swimKick: 1, heldPose: [0, 0, 0.16], boxes: [
             [-1.95, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']         // the muscle
           ] },
         { name: 'shinL', parent: 'thighL', pivot: [-1.42, 1.0, -1.35], anim: 'knee', sign: -1,
-          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, boxes: [
+          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0], boxes: [
             [-1.8, 0.1, -1.3, 0.8, 1.0, 1.0, '#4e7a3c'],
             [-1.9, 0, -0.6, 1.02, 0.24, 1.4, '#6a9a52']           // long foot
           ] },
         { name: 'thighR', parent: 'body', pivot: [1.35, 1.75, -0.75], anim: 'walk', sign: 1,
-          air: [0.55, 0, -0.12], crouch: [-0.5, 0, -0.12], swimKick: 1, boxes: [
+          air: [0.55, 0, -0.12], crouch: [-0.5, 0, -0.12], swimKick: 1, heldPose: [0, 0, -0.16], boxes: [
             [0.9, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']
           ] },
         { name: 'shinR', parent: 'thighR', pivot: [1.42, 1.0, -1.35], anim: 'knee', sign: 1,
-          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, boxes: [
+          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0], boxes: [
             [1.0, 0.1, -1.3, 0.8, 1.0, 1.0, '#4e7a3c'],
             [0.88, 0, -0.6, 1.02, 0.24, 1.4, '#6a9a52']
           ] }
@@ -348,6 +348,9 @@
   const WALK_RATE = 7;    // leg cycle per second at full speed; every legged body shares it
   const FLAP_RATE = 11;   // wing beat per second in the air
   const SWIM_RATE = 4.2;  // hind-leg kicks per second. Slower than a walk, and both legs at once
+  const KICK_HIP = 0.5;   // how far a hind leg sweeps back per stroke, at a full stroke
+  const KICK_KNEE = 0.9;  // and how far the knee swings in the same time
+  const KICK_LAG = 1.4;   // the knee is a quarter stroke ahead of the hip
   const KNEE_LAG = 2.4;   // how far ahead of "leg forward" the knee is at its most bent
 
   /* The angles one part takes this frame, in model space.
@@ -411,17 +414,39 @@
        frog does not run on the surface: both hind legs kick together and the
        front legs fold along the body. The `sign` mirror is dropped here on
        purpose -- a synchronous pair is not mirrored in time, and the model data
-       already mirrors the geometry -- and the fold lags the sweep: the knees draw
-       in over the front half of the stroke, the feet extend back over the back
-       half, and the back half is what pushes the water. */
-    const swim = st.swim || 0;
-    if (swim > 0.01) {
-      const k = Math.sin(t * SWIM_RATE + ph);
+       already mirrors the geometry. The stroke is not a sine either: the leg
+       sweeps back with the whole webbed foot against the water over one half of
+       the cycle and is brought forward again through a smaller arc over the
+       other, so the drive and the recovery are plainly different acts.
+       The knee runs a quarter of a stroke ahead of the hip, and that is the
+       difference between a kick and a windmill. This leg carries its foot in
+       front of the knee, so a knee that swings with the hip lifts the foot on
+       the way: read off the draw at the stroke a swimming body makes, in phase
+       the foot travels 0.49 m along the body and 0.22 m up and down, and comes
+       up level with the body's own belly; a quarter of a stroke ahead it
+       travels 0.42 m, rises 0.16 m, and runs out under the body instead.
+       `held` is the water holding the body up -- in water, breathing it, and not
+       standing on the bottom. That is what folds the knee and puts the feet
+       **behind** the body instead of under it, and the stroke swings around that
+       hold; a body the water is not holding (wading, or dug down on the lakebed)
+       keeps the land pose, because under the body is where its feet belong when
+       something is holding them up instead. */
+    const swim = st.swim || 0, held = st.held || 0;
+    if (swim > 0.01 || held > 0.01) {
+      const u = t * SWIM_RATE + ph;
+      const s = Math.sin(u);
+      const k = s > 0 ? s : s * 0.6;
       if (p.swimKick) {
-        rx = anim === 'knee' ? -(0.12 + 0.85 * Math.max(0, k)) * swim
-                             : 0.45 * k * swim;
+        const hp = p.heldPose || [0, 0, 0];
+        rx = hp[0] * held + (anim === 'knee' ? KICK_KNEE * Math.sin(u + KICK_LAG) : KICK_HIP * k) * swim;
+        /* a knee bends one way. With the hold gone there is nothing for the
+           stroke's own swing to pull against, and it would push the shin
+           forwards through the leg. */
+        if (anim === 'knee') rx = Math.max(0, rx);
+        ry = hp[1] * held; rz = hp[2] * held;
       } else if (p.swimPose) {
-        rx = p.swimPose[0] * swim; ry = p.swimPose[1] * swim; rz = p.swimPose[2] * swim;
+        const f = Math.max(swim, held);
+        rx = p.swimPose[0] * f; ry = p.swimPose[1] * f; rz = p.swimPose[2] * f;
       } else if (anim === 'bob') {
         dy = 0.03 * k * swim;          // the body rides the kick, not the walk heave
       }

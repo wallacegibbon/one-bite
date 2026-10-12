@@ -1092,7 +1092,12 @@
           // against the speed its own record swims at: a body that is coasting to
           // a stop paddles gently, because a full stroke whether or not the body
           // is moving is an animation that stopped being connected to anything.
-          swim: (c.inWater && c.sp.swimSpeed) ? Math.min(1, Math.max(0.18, c.speed / c.sp.swimSpeed)) : 0
+          // And only while the water is holding the body up: a frog standing on
+          // the bottom of the lake has work for its legs that has nothing to do
+          // with swimming, and paddling there is a body animating a thing it is
+          // not doing.
+          swim: (c.inWater && c.sp.swimSpeed && c.held) ? Math.min(1, Math.max(0.18, c.speed / c.sp.swimSpeed)) : 0,
+          held: c.held || 0
         };
         for (const e of parts) {
           const m = N.partMatrix(N.M4.create(), base, e, st, parts);
@@ -1139,9 +1144,15 @@
              kicks. The amplitude is the speed the body is actually making through
              the water over the speed it is trying to make, so a frog that is
              coasting to a stop paddles gently instead of windmilling a full
-             stroke at a body that is hardly moving. */
+             stroke at a body that is hardly moving. And it rides on `held`: a
+             frog standing on the lakebed, or wading where the lake is one block
+             deep, has feet to stand on, and a stroke there is a body kicking at
+             nothing. The ramp is the same easing the hold itself uses, so the
+             stroke comes in over a few frames instead of all at once, and it
+             takes the stroke to nothing when there is no hold at all. */
           swim: (p.inWater && p.formDef.swim && p.cruise > 0.1)
-            ? Math.min(1, Math.max(0.18, Math.hypot(p.vx, p.vz) / p.cruise)) : 0
+            ? Math.min(1, Math.max(0.18, Math.hypot(p.vx, p.vz) / p.cruise)) * Math.min(1, p.held * 3) : 0,
+          held: p.held || 0
         };
         for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), {});
       }

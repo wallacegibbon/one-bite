@@ -1768,12 +1768,14 @@ const { sim } = require('./simwait');
     const g = window.game, R = g.R, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, vx: p.vx, vz: p.vz,
       faceYaw: p.faceYaw, form: p.form, time: g.time, mode: g.mode, tp: g.thirdPerson,
+      held: p.held, inWater: p.inWater, airAmt: p.airAmt,
       cam: { d: g.cam.d, fov: g.cam.fov }, frame: g._camFrame };
     p.form = 'frogpear';
     p.x = 92.5; p.y = 13.4; p.z = 118.5;            // Mirrorlake, at the surface
     p.vx = 1.2; p.vy = 0; p.vz = 0;
     p.yaw = Math.PI / 2; p.faceYaw = Math.PI / 2; p.pitch = -0.06;
     p.inWater = true; p.airAmt = 0; p.crouch = 0; p.squash = 0; p.bank = 0;
+    p.held = 1;                                    // the water is holding this body up
     g.mode = 'play'; g.thirdPerson = true; g.camReady = true; g.cam.d = 1.8; g.cam.fov = 50;
     const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
     const grab = () => { const b = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
@@ -1825,19 +1827,48 @@ const { sim } = require('./simwait');
       return o;
     };
     const iou = (a, b) => { let inter = 0, uni = 0; for (let i = 0; i < a.length; i++) { if (a[i] || b[i]) { uni++; if (a[i] && b[i]) inter++; } } return uni ? inter / uni : 0; };
-    const symTuck = iou(A.m, mirror(A.m)), symKick = iou(B.m, mirror(B.m)), moved = iou(A.m, B.m);
+    /* The mask is the difference of two draws, so its edge is wherever the body's
+       colour came within the threshold of the water behind it -- not the
+       silhouette. That edge shivers by a pixel between one frame and the next,
+       and a plain overlap score is then measuring the shiver: the same pose with
+       the same code gave 0.967 and 0.957 fifty milliseconds apart, and the pixels
+       that disagreed sat in symmetric pairs on both sides of the mid-plane, which
+       is what noise looks like and not at all what a leg bent the wrong way looks
+       like. So the score asks the question the claim actually makes: is every
+       pixel of this silhouette matched by one on the mirrored side, allowing a
+       pixel for the edge? A leg that is not the mirror of its pair misses by
+       tens of pixels, and nothing about the claim gets looser. */
+    const dilate = (m) => {
+      const o = new Uint8Array(W * H);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (m[y * W + x])
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const ny = y + dy, nx = x + dx;
+          if (ny >= 0 && ny < H && nx >= 0 && nx < W) o[ny * W + nx] = 1;
+        }
+      return o;
+    };
+    const symScore = (m) => {
+      const dm = dilate(mirror(m));
+      let un = 0;
+      for (let i = 0; i < m.length; i++) if (m[i] && !dm[i]) un++;
+      return +Math.max(0, 1 - un / Math.max(1, count(m))).toFixed(4);
+    };
+    const count = (m) => { let n = 0; for (let i = 0; i < m.length; i++) if (m[i]) n++; return n; };
+    const symTuck = symScore(A.m), symKick = symScore(B.m), moved = iou(A.m, B.m);
+    const rawTuck = iou(A.m, mirror(A.m)), rawKick = iou(B.m, mirror(B.m));
     g._camFrame = null; g.render();
     Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch, vy: was.vy,
-      vx: was.vx, vz: was.vz, faceYaw: was.faceYaw, form: was.form });
+      vx: was.vx, vz: was.vz, faceYaw: was.faceYaw, form: was.form,
+      held: was.held, inWater: was.inWater, airAmt: was.airAmt });
     g.time = was.time; g.mode = was.mode; g.thirdPerson = was.tp;
     g.creatures = wasCreatures;
     g.cam.d = was.cam.d; g.cam.fov = was.cam.fov; g._camFrame = was.frame;
     return { maskPx: A.n, cx, hourAt: +(at(Math.PI / 2) / 420 * 24).toFixed(2),
-      symTuck: +symTuck.toFixed(3), symKick: +symKick.toFixed(3), moved: +moved.toFixed(3) };
+      symTuck, symKick, rawTuck: +rawTuck.toFixed(3), rawKick: +rawKick.toFixed(3), moved: +moved.toFixed(3) };
   });
   check('the frog body is big enough in the frame to judge', swim.maskPx > 3000, swim);
   check('a swimming frog is mirror-symmetric about its own mid-plane',
-    swim.symTuck > 0.96 && swim.symKick > 0.96, swim);
+    swim.symTuck > 0.985 && swim.symKick > 0.985, swim);
   check('and the kick moves the legs between its extremes', swim.moved < 0.97, swim);
 
   /* 10v. the gait itself, read where the claim is actually made. The frame check
@@ -1851,7 +1882,9 @@ const { sim } = require('./simwait');
     const N = window.FRUTARIA, g = window.game;
     const parts = g.ensureModel('frog');
     const angles = (sw, t) => {
-      const st = { t, phase: 0, move: 1, air: 0, crouch: 0, swim: sw };
+      /* the renderer only hands a stroke to a body the water is holding up, so
+         the swim sample carries that too -- it is the pair the draw really gets */
+      const st = { t, phase: 0, move: 1, air: 0, crouch: 0, swim: sw, held: sw };
       const a = {};
       for (const e of parts) a[e.part.name] = N.partAngles(e, st);
       return a;
@@ -1865,7 +1898,7 @@ const { sim } = require('./simwait');
         shin: s.map(a => +(a.shinL.rx - a.shinR.rx).toFixed(3)),
         front: s.map(a => +(a.legFL.rx - a.legFR.rx).toFixed(3)),
         swing: +Math.max(...s.map(a => Math.abs(a.thighL.rx))).toFixed(3),
-        held: +Math.abs(s[0].legFL.rx).toFixed(3),
+        hold: +Math.abs(s[0].legFL.rx).toFixed(3),
       };
     }
     return out;
@@ -1875,8 +1908,263 @@ const { sim } = require('./simwait');
   check('in the water they are in the same phase: a kick is both legs at once',
     stride.swim.thigh.every(d => d === 0) && stride.swim.shin.every(d => d === 0), stride);
   check('in the water the front legs are held, not walked',
-    stride.swim.front.every(d => d === 0) && stride.swim.held > 0.3, stride);
+    stride.swim.front.every(d => d === 0) && stride.swim.hold > 0.3, stride);
   check('and the kick swings the hind legs as hard as a stride', stride.swim.swing > 0.3, stride);
+
+  /* 10x. the kick itself, read off the state the draw builds. The two steps
+     above can say the pair is in the same phase and that the silhouette is
+     symmetric; neither can say what the legs are doing, and what they were
+     doing was the complaint: a frog crossing the lake paddled with its feet
+     tucked under its chest, moving them a few centimetres, while a body dug
+     down on the lakebed kicked away at nothing.
+     So the claim is measured where it is made. The `st` handed to the meshes is
+     captured off the renderer rather than re-derived here, so this cannot drift
+     from the code it measures; the foot box is carried through the two joint
+     matrices the draw is about to upload; the cycle is sampled over three
+     seconds, longer than any stroke, so the extremes are the stroke's own and
+     this file keeps no copy of the kick rate; and the stroke is read on the
+     frame the body was travelling fastest on, because a body that has swum into
+     the wall of the lake has stopped, and the stroke of a stopped body is not a
+     swim.
+     What has to hold: a body the water holds up keeps its feet at the back of
+     its body and sweeps them along the body's own level, under its belly (a foot
+     that comes up as far as it goes back is a leg walking on air); the knee
+     never straightens backwards, which is the one thing a hinge cannot do; a
+     body standing in the water -- the player dug down on the bed, a wild body
+     in water a block deep -- has feet to stand on and stops kicking, and keeps
+     the pose it has on dry ground; and the land and air poses are untouched. */
+  const kick = await step('kickReadOffTheDraw', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      vx: p.vx, vy: p.vy, vz: p.vz, time: g.time, mode: g.mode, tp: g.thirdPerson, vital: p.vital,
+      grounded: p.grounded, airAmt: p.airAmt, held: p.held, inWater: p.inWater, cruise: p.cruise,
+      crouch: p.crouch, squash: p.squash, dry: p.dry, fright: p.fright, air: p.air,
+      cam: { d: g.cam.d, fov: g.cam.fov }, frame: g._camFrame, herd: g.herdCentres };
+    p.form = 'frogpear'; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+    g.mode = 'play';
+    // the herd's own errand outranks any target set here: it is why a frog
+    // parked in the middle of the lake keeps swimming, and it would move the
+    // one body this step is watching out of the frame
+    const wasHerd = g.herdCentres; g.herdCentres = {};
+    // the state handed to the meshes is captured off the renderer, not
+    // re-derived here: this is the state the draw is about to upload
+    const pm = N.partMatrix, seen = [];
+    N.partMatrix = function (out, base, e, st, ps) { if (!st._loc) seen.push(st); return pm.apply(this, arguments); };
+    const restore = () => {
+      N.partMatrix = pm;
+      Object.assign(p, was);
+      g.time = was.time; g.mode = was.mode; g.thirdPerson = was.tp; g.herdCentres = was.herd;
+      g.cam.d = was.cam.d; g.cam.fov = was.cam.fov; g._camFrame = was.frame;
+    };
+    /* a column deep enough to float in and to stand in: four blocks of water
+       over a bed that is solid. And the shallows of the same lake: one block of
+       water over a bed, which is water enough to wet a body and not water
+       enough to hold one up. */
+    let lake = null;
+    const depth = (x, z) => {
+      let top = -1, n = 0;
+      for (let y = W.h - 1; y >= 0; y--) {
+        if (W.liquidAt(x, y, z)) { if (top < 0) top = y; n++; }
+        else if (top >= 0) return W.solidAt(x, y, z) ? { top, n } : null;
+      }
+      return null;
+    };
+    for (let x = 56; x < 112 && !lake; x++) for (let z = 88; z < 136 && !lake; z++) {
+      const d = depth(x, z);
+      if (d && d.n >= 4) lake = { x: x + 0.5, z: z + 0.5, top: d.top, n: d.n };
+    }
+    if (!lake) { restore(); return { error: 'no lake column four blocks deep' }; }
+    let dry = null;
+    for (let x = 56; x < 112 && !dry; x++) for (let z = 60; z < 140 && !dry; z++) {
+      let gy = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z)) { gy = y; break; }
+      if (gy < 14 || W.liquidAt(x, gy + 1, z) || W.solidAt(x, gy + 1, z) || W.solidAt(x, gy + 2, z)) continue;
+      let flat = true;
+      for (let k = 1; k <= 4 && flat; k++) {
+        let g2 = -1;
+        for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z - k)) { g2 = y; break; }
+        if (g2 !== gy) flat = false;
+      }
+      if (flat) dry = { x: x + 0.5, z: z + 0.5, y: gy + 1 };
+    }
+    if (!dry) { restore(); return { error: 'no dry flat ground to compare against' }; }
+
+    const raw = N.MODELS.frog.parts;
+    const parts = raw.map(q => ({ part: q, pivot: q.pivot || [0, 0, 0] }));
+    const shin = parts.find(e => e.part.name === 'shinL');
+    const thigh = parts.find(e => e.part.name === 'thighL');
+    const footBox = shin.part.boxes[shin.part.boxes.length - 1];
+    const bodyBox = raw[0].boxes[0];
+    const SC = p.bodyScale();
+    const BACK = bodyBox[2] * SC;              // the body's own rear edge, in metres
+    const BELLY = bodyBox[1] * SC;            // and the lowest edge of it
+    const capture = (pred) => {
+      seen.length = 0;
+      const tp = g.thirdPerson; g.thirdPerson = true;
+      g.cam.d = 1.5 + 2.25 * p.size()[1];
+      g.updateEnv();
+      g._camFrame = g.shootCamera(p); g.render(); g._camFrame = null;
+      g.thirdPerson = tp;
+      const hit = seen.find(pred);
+      return hit ? Object.assign({}, hit) : null;
+    };
+    const worn = () => capture(s => s.t === g.time && s.phase === 0);
+    const footAt = (st) => {
+      const m = pm.call(N, N.M4.create(), N.M4.create(), shin, st, parts);
+      let zlo = 1e9, zhi = -1e9, ylo = 1e9, yhi = -1e9;
+      for (const fx of [footBox[0], footBox[0] + footBox[3]])
+        for (const fy of [footBox[1], footBox[1] + footBox[4]])
+          for (const fz of [footBox[2], footBox[2] + footBox[5]]) {
+            const pz = (m[2] * fx + m[6] * fy + m[10] * fz + m[14]) * SC;
+            const py = (m[1] * fx + m[5] * fy + m[9] * fz + m[13]) * SC;
+            if (pz < zlo) zlo = pz; if (pz > zhi) zhi = pz;
+            if (py < ylo) ylo = py; if (py > yhi) yhi = py;
+          }
+      return { cz: (zlo + zhi) / 2, cy: (ylo + yhi) / 2, ylo, yhi };
+    };
+    const stroke = (st0) => {
+      if (!st0) return null;
+      const cz = [], cy = [], bend = [];
+      for (let i = 0; i <= 180; i++) {
+        const st = Object.assign({}, st0, { t: st0.t + i / 60, _loc: 1 });
+        const f = footAt(st);
+        cz.push(f.cz); cy.push(f.cy);
+        bend.push(N.partAngles(shin, st).rx - N.partAngles(thigh, st).rx);
+      }
+      const mx = a => Math.max(...a), mn = a => Math.min(...a);
+      const r3 = v => +v.toFixed(3);
+      return { swim: r3(st0.swim || 0), held: r3(st0.held || 0), air: r3(st0.air || 0),
+        move: r3(st0.move || 0),
+        back: r3(mn(cz)), fwd: r3(mx(cz)), travel: r3(mx(cz) - mn(cz)), rise: r3(mx(cy) - mn(cy)),
+        footY: [r3(mn(cy)), r3(mx(cy))], bendMin: r3(mn(bend)), bendMax: r3(mx(bend)) };
+    };
+    const place = (at, y) => {
+      p.x = at.x; p.z = at.z; p.y = y; p.vx = p.vy = p.vz = 0; p.yaw = 0; p.faceYaw = 0; p.pitch = 0;
+      p.grounded = false; p.airAmt = 0; p.crouch = 0; p.squash = 0; p.bank = 0; p.tilt = 0;
+    };
+    const snap = () => {
+      const st = worn();
+      if (!st) return null;
+      return { st, body: { y: +p.y.toFixed(2), spd: +Math.hypot(p.vx, p.vz).toFixed(2),
+        grounded: p.grounded ? 1 : 0, inWater: p.inWater ? 1 : 0, held: +(p.held || 0).toFixed(2) } };
+    };
+    const run = (at, y, phases, atFastest) => {
+      /* the frame to read the stroke off. A body that swims into the wall of the
+         lake comes dead to a stop, and the stroke of a stopped body is not the
+         stroke of a swim: where asked, the run is driven twice and the lens
+         opens on the frame the body was travelling fastest on. */
+      let bi = -1, hit = null;
+      const drive = (pick) => {
+        place(at, y);
+        let i = 0, best = -1, bspd = -1;
+        for (const [secs, inp] of phases) {
+          const n = Math.round(secs * 60);
+          for (let k = 0; k < n; k++, i++) {
+            p.update(1 / 60, inp, g);
+            const s = Math.hypot(p.vx, p.vz);
+            if (s > bspd) { bspd = s; best = i; }
+            if (pick && i === bi) hit = snap();
+          }
+        }
+        if (pick) { if (!hit) hit = snap(); } else bi = best;
+      };
+      if (atFastest) drive(false);
+      drive(true);
+      const out = stroke(hit.st);
+      out.body = hit.body;
+      return out;
+    };
+    const out = { lake, dry, BACK: +BACK.toFixed(3), BELLY: +BELLY.toFixed(3) };
+    out.float = run(lake, lake.top - 1.2, [[4, {}]]);
+    out.swim = run(lake, lake.top - 1.2, [[2, { fwd: true }]], true);
+    out.dug = run(lake, lake.top - 1.2, [[6, { sneak: true }]]);
+    out.land = run(dry, dry.y + 0.01, [[3, {}]]);
+    out.hop = run(dry, dry.y + 0.01, [[0.5, { jump: true }], [0.35, {}]]);
+    /* and a wild body crossing the lake: the one a person watches. Its phase is
+       set to a mark so its state can be picked out of the frame, and the lens
+       stands on the shore a few metres off so the draw takes it at all. */
+    const wf = g.creatures.find(c => c.sp.id === 'frog');
+    if (wf) {
+      const wasWF = { x: wf.x, y: wf.y, z: wf.z, yaw: wf.yaw, speed: wf.speed, phase: wf.phase,
+        tx: wf.tx, tz: wf.tz, pause: wf.pause, state: wf.state, alarm: wf.alarm, sleeping: wf.sleeping };
+      wf.phase = 7.77;
+      const mark = s => s.phase === 7.77;
+      const shore = { x: lake.x - 6, z: lake.z };
+      let gy = dry.y;
+      for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(Math.round(shore.x), y, Math.round(shore.z))) { gy = y; break; }
+      p.form = null; p.x = shore.x; p.z = shore.z; p.y = gy + 1.01; p.vx = p.vy = p.vz = 0;
+      p.inWater = false; p.held = 0; p.airAmt = 0; p.grounded = true; p.yaw = Math.PI / 2; p.faceYaw = p.yaw;
+      // the shallows that lens is looking down: one block of water over a bed,
+      // in front of it and inside its view
+      let wade = null, wq = 1e9;
+      for (let x = Math.round(shore.x) + 2; x <= lake.x + 12; x++)
+        for (let z = Math.round(shore.z) - 8; z <= Math.round(shore.z) + 8; z++) {
+          const dx = x + 0.5 - shore.x, dz = z + 0.5 - shore.z;
+          if (Math.abs(dz) > dx * 0.6) continue;
+          const d = depth(x, z);
+          if (!d || d.n !== 1) continue;
+          const q = Math.hypot(dx, dz);
+          if (q < wq) { wq = q; wade = { x: x + 0.5, z: z + 0.5, top: d.top, n: d.n }; }
+        }
+      out.wade = wade; out.wadeGap = +wq.toFixed(2);
+      const send = (secs) => {
+        wf.x = lake.x; wf.z = lake.z; wf.y = lake.top - 1.2; wf.state = 'wander'; wf.sleeping = false;
+        wf.tx = lake.x + 20; wf.tz = lake.z + 20; wf.pause = 0; wf.alarm = 0;
+        const n = Math.round(secs * 60);
+        for (let i = 0; i < n; i++) { wf.update(1 / 60, p, W, g); p.update(1 / 60, {}, g); }
+        const s = stroke(capture(mark));
+        s.body = { spd: +wf.speed.toFixed(2), y: +wf.y.toFixed(2), held: +(wf.held || 0).toFixed(2),
+          inWater: wf.inWater ? 1 : 0, state: wf.state };
+        return s;
+      };
+      out.wild = send(4);
+      // and the same body sitting in the water with nowhere to go
+      wf.pause = 9999; wf.alarm = 0;
+      for (let i = 0; i < 240; i++) { wf.tx = wf.x; wf.tz = wf.z; wf.update(1 / 60, p, W, g); }
+      out.wildStill = stroke(capture(mark));
+      out.wildStill.body = { spd: +wf.speed.toFixed(2), held: +(wf.held || 0).toFixed(2), state: wf.state };
+      /* and the same body in the shallows: water enough to wet it, not water
+         enough to hold it up. This is where a wild body's feet go back to being
+         feet, and the one place the creature's own hold -- not the player's --
+         decides the pose. */
+      if (wade) {
+        wf.x = wade.x; wf.z = wade.z; wf.y = wade.top; wf.state = 'wander'; wf.sleeping = false;
+        wf.tx = wade.x; wf.tz = wade.z; wf.pause = 9999; wf.alarm = 0; wf.vx = wf.vy = wf.vz = 0;
+        for (let i = 0; i < 120; i++) wf.update(1 / 60, p, W, g);
+        const s = stroke(capture(mark));
+        if (s) s.body = { spd: +wf.speed.toFixed(2), y: +wf.y.toFixed(2), held: +(wf.held || 0).toFixed(2),
+          inWater: wf.inWater ? 1 : 0, state: wf.state };
+        out.wildWade = s;
+      }
+      Object.assign(wf, wasWF);
+    }
+    restore();
+    return out;
+  });
+  const kSw = kick.swim, kFl = kick.float, kDg = kick.dug, kLd = kick.land, kWl = kick.wild;
+  check('the lake this runs on is four blocks deep and the body floats in it',
+    !!kFl && kFl.held > 0.9 && kFl.body.inWater === 1 && kFl.body.grounded === 0, kick);
+  check('a floating frog keeps its feet at the back of its body, not under its chest',
+    !!kFl && kFl.fwd <= kick.BACK + 0.05 && kFl.back <= kick.BACK - 0.03, kick);
+  check('a swimming frog sweeps its feet well behind the body and a long way',
+    !!kSw && kSw.back <= kick.BACK - 0.08 && kSw.travel >= 0.15, kick);
+  check('the sweep is a sweep: further along the body than up and down',
+    !!kSw && !!kWl && kSw.rise <= kSw.travel * 0.6 && kWl.rise <= kWl.travel * 0.6, kick);
+  check('and it stays under the body: the foot never comes up level with its belly',
+    !!kSw && !!kWl && kSw.footY[1] <= kick.BELLY && kWl.footY[1] <= kick.BELLY, kick);
+  check('the knee never straightens backwards through the stroke',
+    !!kFl && !!kSw && kFl.bendMin >= 0.05 && kSw.bendMin >= 0.05, kick);
+  check('a wild frog crossing the lake kicks the same way, feet behind it',
+    !!kWl && kWl.held === 1 && kWl.back <= kick.BACK - 0.08 && kWl.travel >= 0.15, kick);
+  check('a body dug down on the bed has feet to stand on and stops kicking',
+    !!kDg && kDg.body.grounded === 1 && kDg.swim === 0 && kDg.held === 0, kick);
+  check('and it keeps the pose it has on dry ground',
+    !!kDg && !!kLd && Math.abs(kDg.back - kLd.back) < 0.002 && kLd.fwd > kick.BACK + 0.1, kick);
+  check('the land and air poses are untouched: standing keeps its feet under it, a hop takes them behind',
+    !!kLd && !!kick.hop && kLd.back > kick.BACK && kick.hop.air > 0.5 && kick.hop.back < kick.BACK, kick);
+  check('a wild body standing in water too shallow to hold it up has feet, not a kick',
+    !!kick.wildWade && kick.wildWade.body.inWater === 1 && kick.wildWade.held === 0 &&
+    kick.wildWade.swim === 0 && kick.wildWade.back > kick.BACK, kick);
 
   /* A body in the air turns by tilting. The player's own body has leaned into a
      turn for a long time; nothing else in the world did, so an owl crossing the
