@@ -146,7 +146,26 @@
         const zone = N.ZONE_BY_ID[sp.habitat[0]];
         const at = sp.at && zone ? zone[sp.at] : null;
         for (let i = 0; i < n; i++) {
-          const p = this.samplePos(sp.habitat[0], at, sp.spread || 4, sp.locomotion === 'fly');
+          /* A body is born where a body of its own kind is not already standing.
+             The field of the sunken tower is ten lamps sampled into a disc of
+             radius four round the tower, and only 8% of that disc is water: two
+             of them were born 9 cm apart, and the pair spent the afternoon
+             inside one another, because they started that way and the lake never
+             gave them a reason to part. A body is born with the room its own
+             trunk takes up. */
+          const mw = N.MODEL_W[sp.model] || [0.5, 0.5, 0, 0];
+          const room = (Math.max(mw[0], mw[1]) * (sp.scale || 0.2)) * 2 + 0.4;
+          let p = null;
+          for (let t = 0; t < 10; t++) {
+            p = this.samplePos(sp.habitat[0], at, sp.spread || 4, sp.locomotion === 'fly');
+            if (!p) break;
+            let clash = false;
+            for (const q of this.creatures) {
+              if (q.sp.id !== sp.id) continue;
+              if (Math.hypot(q.x - p.x, q.z - p.z) < room) { clash = true; break; }
+            }
+            if (!clash) break;
+          }
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);
           /* The height a flying animal means to keep, and it has to be a height

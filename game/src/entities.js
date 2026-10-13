@@ -724,6 +724,81 @@
       default:      return true;                 // 'both', and anything unknown
     }
   }
+  /* Two bodies in the same place. Each one's footprint is the rectangle its own
+     trunk is carved from (MODEL_W), turned by its heading: the pair is in one
+     place when no direction separates the two rectangles, and the direction they
+     overlap least along is the way out -- the shortest way, and the one that
+     fights the way either of them is going least. A body is not a circle: two
+     bears end on are 1.1 m from nose to tail, and a circle wide enough to keep
+     them apart would keep a bear and a frog three metres apart.
+     TOUCH is how far into a neighbour a body may get at all: two lamps drifting
+     against one another touch, and a body that has been pushed into one is let
+     back out the way it came rather than refused every place it could go. */
+  const TOUCH = 0.02;
+  function bodyClash(a, ax, az, b) {
+    /* Two bodies share a space only where they also stand at one height. The
+       height they have in common has to be more than a graze before it counts:
+       a lamp riding on the crown of another's bell is on top of it, not inside
+       it, and pushing the pair apart sideways for a 5 mm graze moves a body half
+       a metre for nothing. Measured against the shorter of the two bodies, so
+       the rule is the same for a frog and for a bear. */
+    const vOver = Math.min(a.y + a.tall, b.y + b.tall) - Math.max(a.y, b.y);
+    if (vOver <= 0.15 * Math.min(a.tall, b.tall)) return null;
+    const s = Math.sin(a.yaw), k = -Math.cos(a.yaw);       // a's forward; its right is (-k, s)
+    const s2 = Math.sin(b.yaw), k2 = -Math.cos(b.yaw);
+    const axc = ax + s * a.oz - k * a.ox, azc = az + k * a.oz + s * a.ox;
+    const bxc = b.x + s2 * b.oz - k2 * b.ox, bzc = b.z + k2 * b.oz + s2 * b.ox;
+    const dx = axc - bxc, dz = azc - bzc;
+    let pen = 1e9, ux = 0, uz = 0;
+    for (const c of [[s, k], [-k, s], [s2, k2], [-k2, s2]]) {
+      const ra = a.hw * Math.abs(-k * c[0] + s * c[1]) + a.hl * Math.abs(s * c[0] + k * c[1]);
+      const rb = b.hw * Math.abs(-k2 * c[0] + s2 * c[1]) + b.hl * Math.abs(s2 * c[0] + k2 * c[1]);
+      const d = dx * c[0] + dz * c[1];
+      const p = ra + rb - Math.abs(d);
+      if (p <= 0) return null;                    // a direction separates them
+      if (p < pen) { pen = p; ux = c[0]; uz = c[1]; }
+    }
+    if (Math.abs(dx) < 1e-4 && Math.abs(dz) < 1e-4) {
+      /* Dead on top of one another: every way out is the same distance, and two
+         bodies that both pick the same one never part. Each picks its own. */
+      const t = ux; ux = -uz; uz = t;
+    } else if (dx * ux + dz * uz < 0) { ux = -ux; uz = -uz; }
+    return { pen, ux, uz };
+  }
+  /* Can this body be put at (x, z) at the height it is at? The same question the
+     body's own movement asks of a step, asked of a place it has already been
+     pushed into by another body: a body in the air needs the room its whole body
+     takes up, feet to head; a body that cannot leave the water needs a column
+     with somewhere to hover; a body on foot needs a surface under its feet that
+     is not a wall it cannot climb. The world keeps the last word: a body is
+     never shoved into a bank or out of the lake it cannot leave, because another
+     body was standing where it wanted to be. */
+  function bodyRoom(w, c, x, z) {
+    const bx = Math.floor(x), bz = Math.floor(z);
+    if (bx < 7 || bz < 7 || bx > w.w - 7 || bz > w.d - 7) return false;
+    if (c.isFlyer()) {
+      for (let y = Math.floor(c.y); y <= Math.floor(c.y + c.tall); y++)
+        if (!airCell(w, bx, y, bz)) return false;
+      return true;
+    }
+    /* A body that cannot leave the water is asked the water's own question --
+       the same one its movement asks, and the same one its spawn makes: is this
+       a column with somewhere to hover. Asking it instead about the single cell
+       at the body's feet refuses a body that bobs at the surface, which is every
+       one of them: the shove out of a neighbour was refused in every direction
+       for a lamp riding high in its column, and it stayed 0.49 m inside the
+       other lamp for as long as they both rode there. */
+    if (c.isAquatic()) return waterColumn(w, x, z) >= 0;
+    /* A body on foot is asked the same question its own movement asks of a step:
+       the surface it would stand on may not be a wall it cannot climb. The drop
+       is not part of the question -- a body walks off a ledge the same way it is
+       pushed off one, and the ground takes the answer from there. Bounding the
+       drop as well (the first version did) refused every shove for a frog
+       floating a metre and a half over the bed of the lake, which is where every
+       frog in Mirrorlake spends the afternoon. */
+    const gy = standY(w, bx, bz, c.y);
+    return gy - c.y < 1.6 && !w.solidAt(bx, Math.floor(gy + 0.2), bz);
+  }
 
   class Creature {
     constructor(spec, x, y, z) {
@@ -734,6 +809,16 @@
          asks about the cell a body's feet are in lets an owl walk into a room
          with a low roof and stand there with its head in the beam. */
       this.tall = (N.MODEL_H[spec.model] || 4) * (spec.scale || 0.2);
+      /* And how wide the same body is: the rectangle its own trunk takes up, at
+         the scale the data gives it, with the offset that rectangle sits at from
+         the origin the body is drawn about. A body is not only tall, and a rule
+         that only asks about the cell its feet are in lets two of them stand in
+         one place -- which is what "one walked through the other" is. */
+      const mw = N.MODEL_W[spec.model] || [0.5, 0.5, 0, 0];
+      this.hw = mw[0] * (spec.scale || 0.2);        // across it
+      this.hl = mw[1] * (spec.scale || 0.2);        // along it
+      this.ox = mw[2] * (spec.scale || 0.2);
+      this.oz = mw[3] * (spec.scale || 0.2);
       this.yaw = Math.random() * 6.28;
       this.t = Math.random() * 10;
       this.phase = Math.random() * 6.28;
@@ -844,14 +929,38 @@
              place where it would have to. Pick again until the ground is wet;
              after a few tries take it anyway, so a lake that has somehow
              drained does not leave a water animal standing still. */
-          let tx = this.homeX, tz = this.homeZ;
+          let tx = this.homeX, tz = this.homeZ, bestRoom = -1, lastX = tx, lastZ = tz;
           for (let tries = 0; tries < 8; tries++) {
             // a spread is a radius, not a half-width: the same shape the spawn sampled
             const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * r;
-            tx = ox + Math.cos(a) * rr;
-            tz = oz + Math.sin(a) * rr;
-            if (!this.isAquatic() || waterColumn(world, tx, tz) >= 0) break;
+            const cx = ox + Math.cos(a) * rr, cz = oz + Math.sin(a) * rr;
+            lastX = cx; lastZ = cz;
+            if (this.isAquatic() && waterColumn(world, cx, cz) < 0) continue;
+            /* And of the places it might go, the one with most room in it. An
+               errand into the middle of a clump of its own kind is an errand to
+               stand inside a neighbour: the ten lamps pick from a disc round the
+               tower the size of two of them, so an errand picked at random is an
+               errand into a neighbour, and the pair that meets there stays there
+               -- they were measured 0.54 m inside one another, one bell drawn on
+               top of another. */
+            let room = 9;
+            if (game && game.creatures) {
+              for (const q of game.creatures) {
+                if (q === this || q.sp.id !== sp.id) continue;
+                /* where it stands, and where it is going: a place another body
+                   is swimming to is claimed, whether that body is in it yet or
+                   not. Two lamps whose errands were picked 4 m apart walked into
+                   one another because each was measured against where the other
+                   stood at the moment the pick was made. */
+                const d = Math.min(Math.hypot(q.x - cx, q.z - cz),
+                                   Math.hypot(q.tx - cx, q.tz - cz));
+                if (d < room) room = d;
+              }
+            }
+            if (room > bestRoom) { bestRoom = room; tx = cx; tz = cz; }
+            if (bestRoom >= r * 0.4) break;      // roomy enough: stop looking
           }
+          if (bestRoom < 0) { tx = lastX; tz = lastZ; }
           this.tx = tx; this.tz = tz;
         }
         tgtX = this.tx; tgtZ = this.tz;
@@ -871,6 +980,56 @@
       // cleared for the frame, and set by the branch that is actually in the water's hold
       this.held = 0;
       const yaw0 = this.yaw;       // before steering, so the turn rate is measurable
+      /* Which other bodies this one is already inside, and how deep. A step into
+         a place another body's trunk holds is refused the way a wall is refused,
+         and the same contour that takes a body round a cliff takes it round its
+         own kind. A body already standing inside another is not refused every
+         place it could go -- that is a body frozen inside another one -- but it
+         is refused every place that is deeper than the one it is standing in
+         now. The old version let it go as deep as it liked, a centimetre at a
+         time: two lamps drifting together at 4 mm a frame were never refused
+         once, and ended up half a metre inside one another -- a body drawn
+         almost exactly on top of another body.
+         It is read after the body has turned and not before it: a body that
+         turns swings its own trunk into whatever stands beside it, and a gate
+         measured on the heading it had before the turn never sees the overlap
+         the turn itself made. Two bears one above the other on the northern
+         slope came about into one another that way, 0.4 m of one inside the
+         other, and neither of them had stepped anywhere. */
+      const deep = new Map();
+      const readDeep = () => {
+        deep.clear();
+        if (!game || !game.creatures) return;
+        for (const o of game.creatures) {
+          if (o === this) continue;
+          if (this.y >= o.y + o.tall || o.y >= this.y + this.tall) continue;
+          const c = bodyClash(this, this.x, this.z, o);
+          if (c) deep.set(o, c.pen);
+        }
+      };
+      const crowded = (x, z) => {
+        if (!game || !game.creatures) return false;
+        const tooDeep = (px, pz) => {
+          for (const o of game.creatures) {
+            if (o === this) continue;
+            if (this.y >= o.y + o.tall || o.y >= this.y + this.tall) continue;
+            const c = bodyClash(this, px, pz, o);
+            if (!c) continue;
+            // a body that is not in the neighbour's way yet may touch it, no more
+            const was = deep.get(o);
+            if (c.pen > (was === undefined ? TOUCH : was) + 1e-3) return true;
+          }
+          return false;
+        };
+        if (tooDeep(x, z)) return true;
+        /* A body that covers ground in one frame -- an owl at a full sprint
+           covers 20 cm of it -- must not go through a neighbour on the way: the
+           place it lands in can be clear while the place it went through was
+           not, and the gate would never see the crossing. A step shorter than
+           half a trunk cannot skip a body, and is not tested twice. */
+        return Math.hypot(x - this.x, z - this.z) > 0.12 &&
+               tooDeep((x + this.x) / 2, (z + this.z) / 2);
+      };
       const dx = tgtX - this.x, dz = tgtZ - this.z;
       const d = Math.hypot(dx, dz);
       let spd = 0;
@@ -941,6 +1100,7 @@
            another: an owl walking the west wall was tested against the air at
            x=6.99 and left standing in the leaves at x=7. */
         const edge = (v, hi) => Math.max(7, Math.min(hi - 7, v));
+        readDeep();                 // the heading is settled; now what is in the way
         const nx = edge(this.x + Math.sin(this.yaw) * spd * dt, world.w);
         const nz = edge(this.z - Math.cos(this.yaw) * spd * dt, world.d);
         const mx = nx, mz = nz;
@@ -951,8 +1111,38 @@
              and then rejects the way home as well, which is how one of them
              ended up parked against the sunken tower for the rest of the day. */
           const wet = (x, z) => waterColumn(world, x, z) >= 0;
-          if (wet(mx, mz)) { this.x = mx; this.z = mz; }
-          else if (inWater) {
+          const free = (x, z) => wet(x, z) && !crowded(x, z);
+          if (free(mx, mz)) { this.x = mx; this.z = mz; }
+          else if (inWater && wet(mx, mz)) {
+            /* The water is there and another body's trunk is in it. The way round
+               it is the same way round the tower: of the four directions that are
+               wet and free, the one that closes on the errand most, and the
+               heading follows the step that was actually taken. Turning for home
+               instead -- the branch below, which is the right answer to a bank --
+               is what made a lamp pressed against a neighbour swim into the
+               middle of the field, where the rest of the field already was. */
+            const ex = this.tx - this.x, ez = this.tz - this.z, el = Math.hypot(ex, ez) || 1;
+            let bx = null, bz = null, best = -2;
+            /* Eight ways, not four. The four that follow the grid are enough
+               round a wall, because a wall is made of the same grid; a body is
+               turned any way at all, and the shortest way out of one is very
+               often a corner of the grid that leads straight back in. */
+            for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1],
+                                    [0.7071, 0.7071], [0.7071, -0.7071],
+                                    [-0.7071, 0.7071], [-0.7071, -0.7071]]) {
+              const px = this.x + ox * spd * dt, pz = this.z + oz * spd * dt;
+              if (!free(px, pz)) continue;
+              const dot = (ox * ex + oz * ez) / el;
+              if (dot > best + 1e-6) { best = dot; bx = px; bz = pz; }
+            }
+            if (bx !== null) {
+              const sx = bx - this.x, sz = bz - this.z;
+              this.x = bx; this.z = bz;
+              const e = N.angleDelta(this.yaw, Math.atan2(sx, -sz));
+              const back = Math.min(Math.abs(e), (sp.turn || 2) * dt);
+              this.yaw += e > 0 ? back : -back;
+            }
+          } else if (inWater) {
             /* In the water, and something dry is in the way: turn back for home,
                and test that way the same way. The sunken tower stands in the
                middle of the lamp field, and an unchecked homeward step used to
@@ -973,8 +1163,8 @@
                that branch anyway (the cell beside it is wet, so the test passes)
                is how it used to sit on the tower's north face for the rest of
                the run. */
-            const canX = Math.abs(hx - this.x) > 1e-4 && wet(hx, this.z);
-            const canZ = Math.abs(hz - this.z) > 1e-4 && wet(this.x, hz);
+            const canX = Math.abs(hx - this.x) > 1e-4 && free(hx, this.z);
+            const canZ = Math.abs(hz - this.z) > 1e-4 && free(this.x, hz);
             if (canX && (Math.abs(ax) >= Math.abs(az) || !canZ)) this.x = hx;
             else if (canZ) this.z = hz;
             else {
@@ -986,7 +1176,7 @@
               let bx = null, bz = null, best = Math.hypot(ax, az);
               for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
                 const nx = this.x + ox * spd * dt, nz = this.z + oz * spd * dt;
-                if (!wet(nx, nz)) continue;
+                if (!free(nx, nz)) continue;
                 const d = Math.hypot(this.homeX - nx, this.homeZ - nz);
                 if (d < best - 1e-6) { best = d; bx = nx; bz = nz; }
               }
@@ -1077,6 +1267,9 @@
              rock over it is a wall and not a step. */
           const can = (x, z) => {
             if (!placeable(x, z)) return null;
+            /* A neighbour's own trunk is as much an obstacle as a bank is, and
+               the contour below takes the body round it the same way. */
+            if (crowded(x, z)) return null;
             if (flyer) return 0;
             const r = riser(x, z);
             if (!r) return 0;
@@ -1490,6 +1683,60 @@
           const out = groundY(world, gx, gz, gy2);
           if (out > this.y) this.y = Math.min(out, this.y + Math.max(0.1, 6 * dt));
           this.vy = 0;
+        }
+      }
+      /* And a body never ends the frame inside another body. The step gate
+         refuses a place a neighbour's trunk holds, but it reads the other bodies
+         where they stood when the frame began, and two bodies walking at one
+         another both see an empty place to walk into: measured over the morning
+         the game opens on, in a valley born the way the game bears it, that is
+         how the twelve frogs of Mirrorlake spent 46% of it with another frog
+         inside them, the worst pair 0.43 m deep -- one body drawn exactly on top
+         of another -- and the ten lamps of the tower field 1.9 overlapping pairs
+         at any one moment, 0.54 m deep. The overlap is undone
+         along the shortest way out, half to each body, at the rate the world's
+         own corrections work at; where the shortest way is a bank, the body
+         slides along it instead. A body that cannot be put anywhere the world
+         allows stays, and the other one takes the whole way round on its turn.
+         And the way out of one body is not a way into another: the ten lamps of
+         the tower field stand in a disc the size of two of them, so the shortest
+         way out of one lamp is very often the middle of the next, and a body
+         shoved into that one takes the whole field with it. Of the ways the world
+         allows, the one taken is the one that leaves the body least deep in
+         anybody else. */
+      if (game && game.creatures) {
+        // how deep this body is in anybody at all, before anything is shoved
+        let nowIn = 0;
+        for (const q of game.creatures) {
+          if (q === this) continue;
+          const k = bodyClash(this, this.x, this.z, q);
+          if (k && k.pen > nowIn) nowIn = k.pen;
+        }
+        for (const o of game.creatures) {
+          if (o === this) continue;
+          if (this.y >= o.y + o.tall || o.y >= this.y + o.tall) continue;
+          const c = bodyClash(this, this.x, this.z, o);
+          if (!c) continue;
+          const push = Math.min(c.pen * 0.5 + 0.004, Math.max(0.02, 6 * dt));
+          let best = null, bestKey = 1e9;
+          for (const [vx, vz] of [[c.ux, c.uz], [-c.uz, c.ux], [c.uz, -c.ux]]) {
+            const nx = this.x + vx * push, nz = this.z + vz * push;
+            if (!bodyRoom(world, this, nx, nz)) continue;
+            let inMost = 0, pair = 0;
+            for (const q of game.creatures) {
+              if (q === this) continue;
+              if (Math.abs(q.x - nx) > 2 || Math.abs(q.z - nz) > 2) continue;
+              const k = bodyClash(this, nx, nz, q);
+              if (!k) continue;
+              if (k.pen > inMost) inMost = k.pen;
+              if (q === o) pair = k.pen;
+            }
+            /* A shove that leaves the body deeper in somebody than it is now is
+               not a way out, it is the same crowd through another door. */
+            const key = inMost <= nowIn + 1e-3 ? pair : 1e3 + inMost;
+            if (key < bestKey - 1e-6) { bestKey = key; best = [nx, nz]; }
+          }
+          if (best) { this.x = best[0]; this.z = best[1]; }
         }
       }
 

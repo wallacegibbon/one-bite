@@ -783,6 +783,14 @@ const { sim } = require('./simwait');
        through was that nothing about a flying body asked whether the place it was
        going was empty. */
     const owl = g.creatures.find(c => c.sp.id === 'owl');
+    /* A body's own kind is an obstacle it goes round now, so how the valley
+       happens to be crowded at this moment is part of how far a body gets in a
+       second. These runs measure a body and the numbers its species names, and
+       the step says they are over open water and through open air: so the
+       valley's inhabitants are set aside for the length of them and put back
+       after, or the crowd decides the measurement. */
+    const crowd = g.creatures;
+    g.creatures = [];
     const wasOwl = { x: owl.x, y: owl.y, z: owl.z, flyY: owl.flyY };
     owl.x = 62; owl.y = 20; owl.z = 88; owl.flyY = 22;
     const out = { owlNight: run(owl, 1), owlNoon: run(owl, 0) };
@@ -807,6 +815,7 @@ const { sim } = require('./simwait');
     // and the proof that none of this is keyed to a species name
     const ghost = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.owl, { locomotion: 'walk' }), 80, 30, 80);
     const wings = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.frog, { locomotion: 'fly' }), 80, 30, 80);
+    g.creatures = crowd;
     out.flyFromData = wings.isFlyer() === true && ghost.isFlyer() === false;
     g.night = was.night; Object.assign(p, was);
     return out;
@@ -4862,6 +4871,153 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the log, the scattered fruit and the queues do not grow without bound',
     soak.countsAfter.log <= 40 && soak.countsAfter.creatures === soak.countsBefore.creatures &&
     soak.countsAfter.drops <= soak.countsBefore.drops && soak.countsAfter.grow <= soak.countsBefore.grow, soak);
+
+  /* 11m. A body keeps the space its own trunk takes up, and it keeps it from its
+     own kind as well as from the world. Every step of an animal was tested
+     against the ground, the water and the leaves, and against nothing else: two
+     bodies could walk through one another as if they were not there. Measured
+     over the morning the game opens on, in a valley born the way the game bears
+     it, with the bodies' own footprints -- the rectangle each model's trunk is
+     carved from, turned by its heading, and only counted where the two bodies
+     also stand at one height -- the ten lamps of the tower field stood in one
+     another's way 17197 times, 12995 of those frames more than 12 cm deep, the
+     worst pair 0.54 m in: one bell drawn almost exactly on top of another. The
+     twelve frogs of Mirrorlake spent 46% of the morning with another frog
+     inside them, 0.43 m deep at the worst, and a frog inside a frog averaged
+     0.28 m. Now the worst pair is 0.23 m, the frames more than 12 cm deep are a
+     fifth of what they were, and the mean depth is 0.084 instead of 0.242. The
+     frogs are in one another's way more often than before -- 6496 frames
+     against 4099 -- because they go round one another now instead of through
+     one another: they touch more in order to stand less inside. A neighbour is
+     an obstacle the same contour takes a body round, a body may not step deeper
+     into one than it already stands, and whatever overlap is left at the end of
+     the frame is undone along the shortest way out that the world allows. A
+     body is not a circle either: two bears end on are 1.1 m from nose to tail,
+     and a rule wide enough to keep them apart would keep a bear and a frog
+     three metres apart. */
+  const space = await step('bodiesKeepTheirOwnSpace', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    /* The valley this is measured over is a fresh one, and the same fresh one
+       every time. The steps before this leave the animals wherever a day of
+       testing has pushed them -- one run had a bear standing in a hollow with
+       its errand 13.9 m away, not moving once in 150 seconds, with no other
+       body within 2 m of it the whole while -- and an animal's choices come from
+       Math.random, so the same code measured twice gave answers three times
+       apart. The animals are born again through the code the game uses at the
+       start, the draw an animal makes when it picks is seeded, and the animals
+       that were here are put back after. */
+    const rnd = Math.random;
+    let sd = 20240921;
+    Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+    const crowdWas = g.creatures;
+    g.creatures = [];
+    g.spawnCreatures();
+    const cs = g.creatures.slice();
+    /* And the same hours of the same day: the window is the morning the game
+       opens on, 07:00 to 12:15, so the night animals are out at the start of it
+       and in bed by the end of it, and the animals that never sleep are abroad
+       all through. */
+    const timeWas = g.time;
+    g.time = N.DAY_LEN * (7 / 24);
+    const box = (c) => {
+      const w = N.MODEL_W[c.sp.model] || [0.5, 0.5, 0, 0], s = c.sp.scale || 0.2;
+      return { x: c.x + Math.sin(c.yaw) * w[3] * s, z: c.z - Math.cos(c.yaw) * w[3] * s,
+        yaw: c.yaw, hw: w[0] * s, hl: w[1] * s, y: c.y, tall: c.tall };
+    };
+    /* How deep one body sits inside another, in three dimensions: the least way
+       either of them could be pulled out of the other. Two bodies a metre apart
+       in height are not in one place, and the height they have in common has to
+       be more than a graze of the shorter one before it counts at all -- a lamp
+       riding on the crown of another's bell is on top of it, not inside it. */
+    const deepIn = (a, b) => {
+      const v = Math.min(a.y + a.tall, b.y + b.tall) - Math.max(a.y, b.y);
+      if (v <= 0.15 * Math.min(a.tall, b.tall)) return 0;
+      const dx = b.x - a.x, dz = b.z - a.z;
+      let pen = 1e9;
+      for (const u of [[Math.sin(a.yaw), -Math.cos(a.yaw)], [Math.cos(a.yaw), Math.sin(a.yaw)],
+                       [Math.sin(b.yaw), -Math.cos(b.yaw)], [Math.cos(b.yaw), Math.sin(b.yaw)]]) {
+        const ra = Math.abs(a.hw * u[0]) + Math.abs(a.hl * u[1]);
+        const rb = Math.abs(b.hw * u[0]) + Math.abs(b.hl * u[1]);
+        pen = Math.min(pen, ra + rb - Math.abs(dx * u[0] + dz * u[1]));
+      }
+      return pen > 0 ? Math.min(pen, v) : 0;
+    };
+    const inp0 = g.input, pw = { x: p.x, y: p.y, z: p.z, form: p.form, vital: p.vital, air: p.air };
+    p.x = N.spawn.x; p.y = N.spawn.y; p.z = N.spawn.z; p.vx = p.vy = p.vz = 0; p.form = null;
+    p.vital = 10; p.air = 999; p.dry = 0; p.fright = 0;
+    const kind = {}, seen = { worst: 0, deep: 0, touch: 0, sum: 0 };
+    const start = new Map(cs.map(c => [c, [c.x, c.z]]));
+    const path = new Map(cs.map(c => [c, 0]));
+    const prev = new Map(cs.map(c => [c, [c.x, c.z]]));
+    const awake = new Map(cs.map(c => [c, 0]));
+    const near = new Map(cs.map(c => [c, 0]));
+    const SECS = 150;
+    for (let i = 0; i < Math.round(SECS * 60); i++) {
+      g.input = {};
+      g.update(1 / 60);
+      for (let u = 0; u < cs.length; u++) for (let v = u + 1; v < cs.length; v++) {
+        const A = cs[u], B = cs[v];
+        if (Math.abs(A.x - B.x) > 2 || Math.abs(A.z - B.z) > 2) continue;
+        const d = deepIn(box(A), box(B));
+        if (d <= 0.02) continue;
+        const k = A.sp.id + '/' + B.sp.id;
+        const s = kind[k] || (kind[k] = { frames: 0, deep: 0, worst: 0, sum: 0 });
+        s.frames++; s.sum += d;
+        if (d > s.worst) s.worst = d;
+        seen.touch++; seen.sum += d;
+        if (d > 0.12) { seen.deep++; s.deep++; }
+        if (d > seen.worst) seen.worst = d;
+      }
+      for (const c of cs) {
+        const q = prev.get(c);
+        path.set(c, path.get(c) + Math.hypot(c.x - q[0], c.z - q[1]));
+        prev.set(c, [c.x, c.z]);
+        // a body asleep on its perch is not a body held up by its neighbours
+        if (c.state !== 'roost') awake.set(c, awake.get(c) + 1);
+        for (const o of cs) {
+          if (o === c) continue;
+          if (Math.abs(o.x - c.x) > 2 || Math.abs(o.z - c.z) > 2) continue;
+          if (c.y >= o.y + o.tall || o.y >= c.y + c.tall) continue;
+          near.set(c, near.get(c) + 1); break;
+        }
+      }
+    }
+    g.input = inp0;
+    Object.assign(p, pw);
+    g.creatures = crowdWas;
+    g.time = timeWas;
+    Math.random = rnd;
+    /* The rule is a way of going round, not a way of standing still: a body that
+       spends the window where it was put has been stopped by its neighbours, not
+       guided round them. Two things are not counted: a body asleep on its perch
+       spends the window where it was put because that is what sleeping is, and a
+       body that spent the window on its own has the ground to thank or not thank,
+       not its neighbours -- only a body that stood among its own kind and did not
+       move once is named. */
+    const detail = (c) => c.sp.id + ':path' + +path.get(c).toFixed(2) +
+      ':st' + c.state + ':toErrand' + +Math.hypot(c.tx - c.x, c.tz - c.z).toFixed(1) +
+      ':awake' + Math.round(awake.get(c) / 60) + 's:near' + Math.round(near.get(c) / 60) + 's';
+    const quiet = cs.filter(c => awake.get(c) > 60 * 60 && path.get(c) < 1);
+    const still = quiet.filter(c => near.get(c) > 60 * 60).map(detail);
+    const tower = (N.ZONE_BY_ID.mirrorlake || {}).tower || [0, 0];
+    const lampFar = cs.filter(c => c.sp.id === 'jelly')
+      .map(c => +Math.hypot(c.x - tower[0], c.z - tower[1]).toFixed(1)).sort((a, b) => b - a);
+    const per = {};
+    for (const k in kind) per[k] = { frames: kind[k].frames, deep: kind[k].deep,
+      worst: +kind[k].worst.toFixed(3), mean: +(kind[k].sum / kind[k].frames).toFixed(3) };
+    return { seconds: SECS, bodies: cs.length, worst: +seen.worst.toFixed(3),
+      deep: seen.deep, touch: seen.touch, mean: +(seen.sum / Math.max(seen.touch, 1)).toFixed(3),
+      per, still, quiet: quiet.map(detail), lampFar: lampFar.slice(0, 3),
+      walked: +Math.max.apply(null, cs.map(c => path.get(c))).toFixed(1) };
+  });
+  check('no body spends the window inside another body',
+    space.worst <= 0.3, space);
+  check('and the pairs that touch do not press into one another',
+    space.deep <= 5000 && space.mean <= 0.12, space);
+  check('a body guided round its neighbours still goes somewhere',
+    !space.still.length && space.walked > 20, space);
+  check('the lamps still trace the tower they were born on',
+    space.lampFar[0] <= 6, space);
 
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');

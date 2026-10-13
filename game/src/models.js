@@ -312,6 +312,23 @@
     MODEL_H[k] = top;
   }
 
+  /* How wide each model's own body is, in its own units: the footprint of the part
+     every limb hangs from, not of the limbs themselves. A body is not only tall.
+     Two bodies standing in one place are one body drawn twice, and the space each
+     of them claims is this rectangle turned by its heading -- a bear end on is
+     1.1 m long and 0.77 m across, a frog is 0.41 by 0.34, and a circle wide enough
+     for the bear leaves the two of them standing nose to nose inside each other. */
+  const MODEL_W = {};
+  for (const k in MODELS) {
+    const p = MODELS[k].parts[0];
+    let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    for (const b of (p && p.boxes) || []) {
+      x0 = Math.min(x0, b[0]); x1 = Math.max(x1, b[0] + b[3]);
+      z0 = Math.min(z0, b[2]); z1 = Math.max(z1, b[2] + b[5]);
+    }
+    MODEL_W[k] = x1 > x0 ? [(x1 - x0) / 2, (z1 - z0) / 2, (x0 + x1) / 2, (z0 + z1) / 2] : [0.5, 0.5, 0, 0];
+  }
+
   /* A limb with no ankle cannot swing and keep its foot on the ground.
      A foot is carved flat on the model's ground line and it sticks out in front
      of the hinge it turns on, so rotating the limb -- at the hip, or at the
@@ -666,6 +683,7 @@
 
   N.MODELS = MODELS;
   N.MODEL_H = MODEL_H;
+  N.MODEL_W = MODEL_W;
   N.buildModelMeshes = buildModelMeshes;
   N.buildHandMesh = buildHandMesh;
   N.partMatrix = partMatrix;
