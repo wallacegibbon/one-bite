@@ -189,30 +189,30 @@
           [-0.78, 1.0, 1.35, 1.56, 0.42, 0.85, '#d5e0b0']
         ] },
         { name: 'legFL', parent: 'body', pivot: [-1.15, 1.2, 0.85], anim: 'walk', sign: 1, stride: 0, stands: 1,
-          air: [-0.38, 0, 0.2], swimPose: [-0.55, 0, 0.22], boxes: [
+          air: [-0.38, 0, 0.2], swimPose: [-0.55, 0, 0.3], boxes: [
             [-1.5, 0.15, 0.6, 0.65, 1.1, 0.7, '#4e7a3c'],
             [-1.58, 0, 1.2, 0.82, 0.22, 0.8, '#6a9a52']           // toes
           ] },
         { name: 'legFR', parent: 'body', pivot: [1.15, 1.2, 0.85], anim: 'walk', sign: -1, stride: 0, stands: 1,
-          air: [-0.38, 0, -0.2], swimPose: [-0.55, 0, -0.22], boxes: [
+          air: [-0.38, 0, -0.2], swimPose: [-0.55, 0, -0.3], boxes: [
             [0.85, 0.15, 0.6, 0.65, 1.1, 0.7, '#4e7a3c'],
             [0.76, 0, 1.2, 0.82, 0.22, 0.8, '#6a9a52']
           ] },
         { name: 'thighL', parent: 'body', pivot: [-1.35, 1.75, -0.75], anim: 'walk', sign: -1, stride: 0, stands: 1,
-          air: [0.55, 0, 0.12], crouch: [-0.5, 0, 0.12], swimKick: 1, heldPose: [0, 0, 0.16], boxes: [
+          air: [0.55, 0, 0.12], crouch: [-0.5, 0, 0.12], swimKick: 1, heldPose: [0, 0, 0.3], boxes: [
             [-1.95, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']         // the muscle
           ] },
         { name: 'shinL', parent: 'thighL', pivot: [-1.42, 1.0, -1.35], anim: 'knee', sign: -1, stride: 0, stands: 1, bend: -1,
-          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0], boxes: [
+          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0.5], boxes: [
             [-1.8, 0.1, -1.3, 0.8, 1.0, 1.0, '#4e7a3c'],
             [-1.9, 0, -0.6, 1.02, 0.24, 1.4, '#6a9a52']           // long foot
           ] },
         { name: 'thighR', parent: 'body', pivot: [1.35, 1.75, -0.75], anim: 'walk', sign: 1, stride: 0, stands: 1,
-          air: [0.55, 0, -0.12], crouch: [-0.5, 0, -0.12], swimKick: 1, heldPose: [0, 0, -0.16], boxes: [
+          air: [0.55, 0, -0.12], crouch: [-0.5, 0, -0.12], swimKick: 1, heldPose: [0, 0, -0.3], boxes: [
             [0.9, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']
           ] },
         { name: 'shinR', parent: 'thighR', pivot: [1.42, 1.0, -1.35], anim: 'knee', sign: 1, stride: 0, stands: 1, bend: -1,
-          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0], boxes: [
+          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, -0.5], boxes: [
             [1.0, 0.1, -1.3, 0.8, 1.0, 1.0, '#4e7a3c'],
             [0.88, 0, -0.6, 1.02, 0.24, 1.4, '#6a9a52']
           ] }

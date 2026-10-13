@@ -1894,8 +1894,9 @@ const { sim } = require('./simwait');
 
   /* 10v. the gait itself, read where the claim is actually made. The frame check
      above can only see the silhouette a body leaves from directly behind, and from
-     there a leg forward and a leg back move 6% of the outline -- the bound between
-     0.944 and 0.976 is set by eye, and a bound set by eye is a bound that will be
+     there a leg forward and a leg back move 6% of the outline, and the two
+     extremes of one kick score 0.973 and 0.965 against their own mirror -- numbers
+     that close, judged by eye, and a bound set by eye is a bound that will be
      loosened the first time it annoys someone. So the same claim is read again off
      the angles the renderer is about to upload: a walk alternates (left = -right),
      a kick does not (left = right).
@@ -2039,12 +2040,14 @@ const { sim } = require('./simwait');
     const raw = N.MODELS.frog.parts;
     const parts = raw.map(q => ({ part: q, pivot: q.pivot || [0, 0, 0] }));
     const shin = parts.find(e => e.part.name === 'shinL');
+    const shinR = parts.find(e => e.part.name === 'shinR');
     const thigh = parts.find(e => e.part.name === 'thighL');
     const footBox = shin.part.boxes[shin.part.boxes.length - 1];
     const bodyBox = raw[0].boxes[0];
     const SC = p.bodyScale();
     const BACK = bodyBox[2] * SC;              // the body's own rear edge, in metres
     const BELLY = bodyBox[1] * SC;            // and the lowest edge of it
+    const FLANK = Math.abs(bodyBox[0]) * SC;  // and the flank of it, both sides
     const capture = (pred) => {
       seen.length = 0;
       const tp = g.thirdPerson; g.thirdPerson = true;
@@ -2069,21 +2072,53 @@ const { sim } = require('./simwait');
           }
       return { cz: (zlo + zhi) / 2, cy: (ylo + yhi) / 2, ylo, yhi };
     };
+    /* how far the legs lie out to the sides, in the body's own frame. The flank
+       of the body is at FLANK: a shin whose box reaches past it is a leg splayed
+       out at the side of the body rather than folded in under it, and the centre
+       of the foot says the same thing more plainly. Both sides are read, because
+       the model data is hand-mirrored and a pose that is right on one side can be
+       wrong on the other. */
+    const splayAt = (st) => {
+      let leg = 0, foot = 0;
+      for (const e of [shin, shinR]) {
+        const m = pm.call(N, N.M4.create(), N.M4.create(), e, st, parts);
+        let lo = 1e9, hi = -1e9;
+        for (const b of e.part.boxes)
+          for (const fx of [b[0], b[0] + b[3]])
+            for (const fy of [b[1], b[1] + b[4]])
+              for (const fz of [b[2], b[2] + b[5]]) {
+                const px = (m[0] * fx + m[4] * fy + m[8] * fz + m[12]) * SC;
+                if (px < lo) lo = px;
+                if (px > hi) hi = px;
+              }
+        leg = Math.max(leg, -lo, hi);
+        const fb = e.part.boxes[e.part.boxes.length - 1];
+        const cx = fb[0] + fb[3] / 2, cy = fb[1] + fb[4] / 2, cz2 = fb[2] + fb[5] / 2;
+        foot = Math.max(foot, Math.abs((m[0] * cx + m[4] * cy + m[8] * cz2 + m[12]) * SC));
+      }
+      return { leg: leg - FLANK, foot };
+    };
     const stroke = (st0) => {
       if (!st0) return null;
       const cz = [], cy = [], bend = [];
+      let leg = 0, foot = 0, legsum = 0, footsum = 0;
       for (let i = 0; i <= 180; i++) {
         const st = Object.assign({}, st0, { t: st0.t + i / 60, _loc: 1 });
         const f = footAt(st);
         cz.push(f.cz); cy.push(f.cy);
         bend.push(N.partAngles(shin, st).rx - N.partAngles(thigh, st).rx);
+        const sp = splayAt(st);
+        if (sp.leg > leg) leg = sp.leg;
+        if (sp.foot > foot) foot = sp.foot;
+        legsum += sp.leg; footsum += sp.foot;
       }
       const mx = a => Math.max(...a), mn = a => Math.min(...a);
       const r3 = v => +v.toFixed(3);
       return { swim: r3(st0.swim || 0), held: r3(st0.held || 0), air: r3(st0.air || 0),
         move: r3(st0.move || 0),
         back: r3(mn(cz)), fwd: r3(mx(cz)), travel: r3(mx(cz) - mn(cz)), rise: r3(mx(cy) - mn(cy)),
-        footY: [r3(mn(cy)), r3(mx(cy))], bendMin: r3(mn(bend)), bendMax: r3(mx(bend)) };
+        footY: [r3(mn(cy)), r3(mx(cy))], bendMin: r3(mn(bend)), bendMax: r3(mx(bend)),
+        legOut: r3(leg), footX: r3(foot), legAvg: r3(legsum / 181), footAvg: r3(footsum / 181) };
     };
     const place = (at, y) => {
       p.x = at.x; p.z = at.z; p.y = y; p.vx = p.vy = p.vz = 0; p.yaw = 0; p.faceYaw = 0; p.pitch = 0;
@@ -2121,7 +2156,7 @@ const { sim } = require('./simwait');
       out.body = hit.body;
       return out;
     };
-    const out = { lake, dry, BACK: +BACK.toFixed(3), BELLY: +BELLY.toFixed(3) };
+    const out = { lake, dry, BACK: +BACK.toFixed(3), BELLY: +BELLY.toFixed(3), FLANK: +FLANK.toFixed(3) };
     out.float = run(lake, lake.top - 1.2, [[4, {}]]);
     out.swim = run(lake, lake.top - 1.2, [[2, { fwd: true }]], true);
     out.dug = run(lake, lake.top - 1.2, [[6, { sneak: true }]]);
@@ -2236,6 +2271,21 @@ const { sim } = require('./simwait');
   check('a wild body standing in water too shallow to hold it up has feet, not a kick',
     !!kick.wildWade && kick.wildWade.body.inWater === 1 && kick.wildWade.held === 0 &&
     kick.wildWade.swim === 0 && kick.wildWade.back > kick.BACK, kick);
+  /* and the legs are in under the body, not out at its sides. The fold of the
+     knee alone leaves a leg bolted to the flank: what was read off the matrices
+     before the hold was given its roll was a shin standing 0.063 m past the
+     flank of a body 0.169 m half-wide, with the centre of the foot 0.152 m off
+     the centre line -- a frog seen from behind looked like a pair of trousers
+     dropped over the water. Now 0.052 m and 0.061 m swimming, 0.024 m and 0.007
+     m floating, and the feet crossed one over the other behind it. On land the
+     legs stay out at the sides, as the haunch of a frog does: 0.078 m and
+     0.181 m, which is the pose the water pose is measured against. */
+  check('a body the water holds up keeps its legs in under it, not out at its sides',
+    !!kFl && !!kWl && kFl.legOut <= 0.035 && kWl.legOut <= 0.035 && kFl.legAvg <= 0.03, kick);
+  check('and its feet come back under the body: the foot centre is well inside the flank',
+    !!kSw && !!kFl && !!kWl && kSw.footX <= 0.09 && kFl.footX <= 0.09 && kWl.footX <= 0.09, kick);
+  check('the water pose is narrower than the land pose, which keeps its legs out as a haunch does',
+    !!kLd && !!kSw && kLd.legOut >= 0.07 && kLd.footX >= 0.15 && kSw.footX < kLd.footX - 0.05, kick);
 
   /* 10w. and the body that is drawn never reaches under the ground it is
      standing on. Everything above asks what the legs are *doing*; this asks
