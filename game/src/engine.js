@@ -86,12 +86,23 @@
 
   /* ------------------------------ mesh building ------------------------------ */
   class MeshBuilder {
-    constructor() { this.pos = []; this.col = []; this.dat = []; this.n = 0; }
-    /* one vertex: position, colour [r,g,b], shade (0..1 brightness*AO), emis (0/1) */
+    /* `under`, when given, answers how many metres a point of the world sits
+       under the surface of the water above it, and 0 where there is none. The
+       light reaching a surface under water has come down through that much of
+       it, which is a fact about the surface being lit and not about the lens
+       looking at it, so the static world has its depth baked into its vertices
+       at mesh time instead of being handed one plane for the whole frame. */
+    constructor(under) { this.pos = []; this.col = []; this.dat = []; this.n = 0; this.under = under || null; }
+    /* one vertex: position, colour [r,g,b], shade (0..1 brightness*AO), emis (0/1),
+       and the depth under water in 1/8 m steps (capped at 32 m, which is far
+       past where the lake's own haze has taken everything). The depth is
+       interpolated between vertices and turned into absorption per fragment,
+       so the step is never a band: the gradient across a block face is smooth. */
     v(x, y, z, c, shade, emis) {
       this.pos.push(x, y, z);
       this.col.push((c[0] * 255) | 0, (c[1] * 255) | 0, (c[2] * 255) | 0, c.length > 3 ? (c[3] * 255) | 0 : 255);
-      this.dat.push((Math.min(1, shade) * 255) | 0, emis ? 255 : 0);
+      this.dat.push((Math.min(1, shade) * 255) | 0, emis ? 255 : 0,
+        this.under ? Math.min(255, (this.under(x, y, z) * 8) | 0) : 0);
       this.n++;
     }
     /* quad: 4 points */
@@ -142,11 +153,11 @@
   /* ------------------------------ shaders ------------------------------ */
   const VS_WORLD = `
   precision highp float;
-  attribute vec3 aPos; attribute vec4 aCol; attribute vec2 aData;
+  attribute vec3 aPos; attribute vec4 aCol; attribute vec2 aData; attribute float aUnder;
   uniform mat4 uProj, uView, uModel;
   uniform float uFogDen, uDay, uTime, uWave, uEmisBoost, uEmisKeep;
   uniform float uWaterY;
-  uniform vec3 uAmb, uWaterK;
+  uniform vec3 uAmb, uWaterK, uLiqK;
   varying vec4 vCol; varying float vFog;
   void main(){
     vec4 wp = uModel * vec4(aPos, 1.0);
@@ -178,10 +189,9 @@
     // dot it is at 100 m through air. The stuff a light is seen through is a
     // fact about that stuff, so the number lives on the block row.
     //
-    // uWaterY is the height of the surface of the water a fragment sits under.
     // A surface under water is lit by light that has travelled through the
     // water above it -- the red goes first, and what is left is the colour of
-    // the stuff it travelled through -- so a fragment's own depth under that
+    // the stuff it travelled through -- so a surface's own depth under that
     // surface decides how much light reaches it. That is why the underside of
     // the surface, at depth zero, stays bright while the lakebed six metres
     // down does not. Without it the near lakebed keeps its dry sand colour:
@@ -191,12 +201,25 @@
     // than its own sunlit skin, which is the whole of "the water looks wrong
     // down there".
     //
-    // uWaterK is that absorption per metre, colour by colour, and it is the
-    // whole of the term: the light that survives "under" metres of this liquid
-    // is exp(-K * under), colour by colour. Red is eaten about nine times
-    // faster than blue, which is why a lake floor two metres down is teal and
-    // not pale sand. Air says 0,0,0, and exp(0) is 1, so a frame drawn in air
-    // is bit for bit what it was.
+    // There are two depths, because there are two kinds of thing in the frame.
+    // aUnder is the baked one: how far under the surface of its own water each
+    // vertex of the static world sits, measured column by column when the mesh
+    // was built, in 1/8 m steps; uLiqK is the liquid's own absorption per
+    // metre, colour by colour, off the block row. The depth used to come only
+    // from uWaterY -- the surface of the water **the lens** is sitting in --
+    // and that switched the whole term off the moment the lens came up for
+    // air: a lens 25 cm above Mirrorlake looking down at a bed 6 m below it
+    // was handed waterY 0 and K 0,0,0, and the frame came back warmer than red
+    // (-16.7) and brighter (mean 149.5) than the same lens a metre under the
+    // surface (mean 76, bluer than red by 75.6). Under the surface everything
+    // is the colour of water; above it the lake was a pane over dry sand.
+    //
+    // uWaterY and uWaterK are the other kind of thing: a body, whose vertices
+    // are built every frame and cannot be baked. The caller hands over the
+    // surface of the water that body stands in, which is a fact about the body
+    // rather than about the lens too, and the world's own meshes are drawn
+    // with none of it. Air says 0,0,0 and a dry vertex says 0, and exp(0) is
+    // 1, so a frame drawn in air is bit for bit what it was.
     //
     // The exponent is linear in the depth, and that is deliberately not the
     // same law as the haze above. The haze is scattering over the viewing
@@ -206,13 +229,12 @@
     // starts eating the red from the very first metre, which is exactly where
     // a body wading over a four metre shelf is looking.
     //
-    // The depth is read off the world height rather than from a search of the
-    // column, so a fragment below the lake's surface that is not actually
-    // standing in the lake is tinted as if it were. The lake's own haze takes
-    // everything past some fifteen metres, so what that can reach is the near
-    // shore under the waterline, which is in the water anyway.
-    float under = max(0.0, uWaterY - wp.y) * (1.0 - emis);
-    vec3 dayLight = exp(-uWaterK * under);
+    // A fragment that lights itself is exempt from both terms: the law is
+    // about sunlight coming down through the lake, and a lamp sitting in the
+    // middle of it is not lit by that.
+    float keep = 1.0 - emis;
+    float under = max(0.0, uWaterY - wp.y) * keep;
+    vec3 dayLight = exp(-uLiqK * (aUnder * 0.125 * keep) - uWaterK * under);
     vCol = vec4(aCol.rgb * aData.x * lit * dayLight + uAmb, aCol.a);
   }`;
   const FS_WORLD = `
@@ -290,7 +312,7 @@
       const gl = this.gl = canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
       if (!gl) throw new Error(N.t('err.webgl'));
       this.canvas = canvas;
-      this.pWorld = prog(gl, VS_WORLD, FS_WORLD, ['aPos', 'aCol', 'aData']);
+      this.pWorld = prog(gl, VS_WORLD, FS_WORLD, ['aPos', 'aCol', 'aData', 'aUnder']);
       this.pSky = prog(gl, VS_SKY, FS_SKY, ['aCorner']);
       this.pPart = prog(gl, VS_PART, FS_PART, ['aPos', 'aCol', 'aSize']);
 
@@ -408,6 +430,7 @@
         u.uEmisKeep = gl.getUniformLocation(P.p, 'uEmisKeep');
         u.uWaterK = gl.getUniformLocation(P.p, 'uWaterK');
         u.uWaterY = gl.getUniformLocation(P.p, 'uWaterY');
+        u.uLiqK = gl.getUniformLocation(P.p, 'uLiqK');
         u._done = 1;
       }
       gl.uniformMatrix4fv(u.uProj, false, this.proj);
@@ -419,11 +442,18 @@
       // the sky's own light falling on a surface: environment, not draw, like
       // the fog. Zero all day, so a daytime frame is bit for bit what it was.
       gl.uniform3fv(u.uAmb, e.ambient || [0, 0, 0]);
-      // what the stuff the lens is sitting in does to light: 0.75 / white / no
-      // surface overhead is the air's answer, and leaves a dry frame untouched
+      // what the stuff the lens is sitting in does to a light's own glow: 0.75
+      // is the air's answer, and leaves a dry frame untouched
       gl.uniform1f(u.uEmisKeep, e.emisKeep === undefined ? 0.75 : e.emisKeep);
-      gl.uniform3fv(u.uWaterK, e.waterK || [0, 0, 0]);
-      gl.uniform1f(u.uWaterY, e.waterY || 0);
+      // the liquid's own absorption, against the depth baked into every vertex
+      // of the static world: a dry frame has 0 everywhere, and exp(0) is 1
+      gl.uniform3fv(u.uLiqK, e.liqK || [0, 0, 0]);
+      // the other half of the same law, for the things that are not baked: a
+      // body's vertices are built every frame, so the caller hands over the
+      // surface of the water that body stands in. The world's own meshes take
+      // none of it -- their depth came in with them.
+      gl.uniform3fv(u.uWaterK, opts.waterK || [0, 0, 0]);
+      gl.uniform1f(u.uWaterY, opts.waterY || 0);
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);
       gl.uniform1f(u.uTime, e.time);
       gl.uniform1f(u.uWave, opts.wave ? 1 : 0);
@@ -443,12 +473,18 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.col);
       gl.vertexAttribPointer(P.a.aCol, 4, gl.UNSIGNED_BYTE, true, 0, 0);
       gl.enableVertexAttribArray(P.a.aCol);
+      // three bytes a vertex now: shade, emissive, and the depth under water.
+      // The stride is spelled out because the three share one buffer.
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.dat);
-      gl.vertexAttribPointer(P.a.aData, 2, gl.UNSIGNED_BYTE, true, 0, 0);
+      gl.vertexAttribPointer(P.a.aData, 2, gl.UNSIGNED_BYTE, true, 3, 0);
       gl.enableVertexAttribArray(P.a.aData);
+      // not normalized: the byte is the depth in 1/8 m steps, and the shader
+      // wants the step, not a fraction of a full scale
+      gl.vertexAttribPointer(P.a.aUnder, 1, gl.UNSIGNED_BYTE, false, 3, 2);
+      gl.enableVertexAttribArray(P.a.aUnder);
     }
 
-    resetAttribs() { const gl = this.gl; for (let i = 0; i < 4; i++) gl.disableVertexAttribArray(i); }
+    resetAttribs() { const gl = this.gl; for (let i = 0; i < 8; i++) gl.disableVertexAttribArray(i); }
 
     drawMesh(mesh, model, opts) {
       if (!mesh || !mesh.count) return;

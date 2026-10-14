@@ -34,6 +34,17 @@
   function strokeOf(held, spd, swimSpeed) {
     return (held && swimSpeed) ? Math.min(1, spd / swimSpeed) : 0;
   }
+  /* The water a drawn body stands in, for the shader. The static world carries
+     its depth under the surface in with it -- the mesher measures it once when
+     the mesh is built -- but a body's vertices are rebuilt every frame, so the
+     draw has to be handed the surface of the column the body is in instead. It
+     comes from the body, not from the lens: a frog hovering three metres down
+     is three metres down whether or not the one looking at it has its head in
+     the water. A body with no water in its column hands over nothing, and the
+     shader's answer for "nothing" is the same one air gives. */
+  function bodyWater(c, liqK) {
+    return c.wSurf >= 0 ? { waterY: c.wSurf, waterK: liqK } : {};
+  }
 
   class Game {
     constructor(canvas) {
@@ -356,6 +367,7 @@
         fogCol, fogDen, zenith, horizon, ground: mix(horizon, [0.25, 0.22, 0.2], 0.5),
         ambient: [skyLight[0] * ambK, skyLight[1] * ambK, skyLight[2] * ambK],
         emisKeep, waterK, waterY,
+        liqK: W.liquidAbsorb(),
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
         far: 260
       };
@@ -1114,7 +1126,8 @@
           const col = N.RARITY[(FRU[d.item.id] || PLANT[d.item.id] || { rarity: 'common' }).rarity].color;
           const m = N.M4.create();
           N.M4.trans(m, d.x, d.y + 0.35 + Math.sin(this.time * 2 + d.x) * 0.08, d.z);
-          R.drawMesh(this._dropMesh, m, { tint: col, tintA: 1, emisBoost: 0.5, day: Math.max(0.6, this.daylight) });
+          R.drawMesh(this._dropMesh, m, { tint: col, tintA: 1, emisBoost: 0.5, day: Math.max(0.6, this.daylight),
+            waterY: W.liquidSurfaceAt(Math.floor(d.x), Math.floor(d.z)), waterK: this.env.liqK });
         }
       }
       // creatures
@@ -1157,9 +1170,10 @@
           swim: strokeOf(c.held, c.speed, c.sp.swimSpeed),
           held: c.held || 0
         };
+        const wopt = bodyWater(c, this.env.liqK);
         for (const e of parts) {
           const m = N.partMatrix(N.M4.create(), base, e, st, parts);
-          R.drawMesh(e.mesh, m, {});
+          R.drawMesh(e.mesh, m, wopt);
         }
       }
       /* The body being filmed rides in the same place as every other body: with
@@ -1209,7 +1223,8 @@
           swim: p.formDef.swim ? strokeOf(p.held, Math.hypot(p.vx, p.vz), p.cruise) : 0,
           held: p.held || 0
         };
-        for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), {});
+        const wopt = bodyWater(p, this.env.liqK);
+        for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), wopt);
       }
       // glass, drawn over the world and the bodies it is in front of. It writes
       // no depth (blend does that), so what shows through it is decided by the

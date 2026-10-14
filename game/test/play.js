@@ -3152,7 +3152,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const jellies = g.creatures.filter(c => c.sp.model === 'jelly');
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
       form: p.form, third: g.thirdPerson, camD: g.cam.d, camFov: g.cam.fov, ready: g.camReady,
-      time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env,
+      time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
       jelly: jellies.map(c => ({ c, x: c.x, y: c.y, z: c.z, t: c.t, ph: c.phase, st: c.state,
         yaw: c.yaw, bank: c.bank, tilt: c.tilt, squash: c.squash, speed: c.speed,
         inWater: c.inWater, held: c.held, airAmt: c.airAmt, crouch: c.crouch, flap: c.flap })) };
@@ -3161,6 +3161,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         vx: was.vx, vy: was.vy, vz: was.vz, form: was.form });
       g.thirdPerson = was.third; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.ready;
       g.time = was.time; g.mode = was.mode; g._lens = was.lens; g._camFrame = was.frame; g.env = was.env;
+      g.hover = was.hover;
       for (const j of was.jelly) {
         Object.assign(j.c, { x: j.x, y: j.y, z: j.z, t: j.t, phase: j.ph, state: j.st,
           yaw: j.yaw, bank: j.bank, tilt: j.tilt, squash: j.squash, speed: j.speed,
@@ -3207,6 +3208,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.creatures = herd; g.drops = dropsWas;
       const env = { fogDen: +g.env.fogDen.toFixed(4), emisKeep: g.env.emisKeep,
         waterK: g.env.waterK.map(v => +v.toFixed(3)), waterY: g.env.waterY,
+        liqK: (g.env.liqK || [0, 0, 0]).map(v => +v.toFixed(3)),
         lensInWater: !!W.liquidFogAt(Math.floor(lx), Math.floor(lensY), Math.floor(lz)) };
       const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
       const px = new Uint8Array(w * h * 4);
@@ -3251,7 +3253,46 @@ What was measured before any of this was fixed, over 180 frames of walking
     const lamps = shot(tx + 0.5, 12.0, tz + 8.5, 0, Math.atan2(11.5 - 12.0, 8));
     // 5. the same lens lifted out of the water: the air's answer
     const air = shot(shallow.x, shallow.top + 2.0, shallow.z, 0, -1.2);
-    return back({ shallow, deep, jelly: jellies.length, down, up, floor, lamps, air });
+    /* 6. and what the draw of a body standing in that lake is handed. A body's
+       vertices are built fresh every frame, so unlike the world's its depth
+       under the surface cannot be baked into the mesh when it is built: the
+       draw has to be handed the surface of the column the body stands in. Read
+       off the draw call itself, because the question is what the renderer is
+       told -- and the body has to be asked the way the game asks it, by running
+       its own update, since the surface it stands in is a fact the body
+       collects for itself rather than one the test can hand it. The lens is the
+       one out of the water here, on purpose: which water a body is in cannot
+       depend on where the thing looking at it happens to be. */
+    const body = (() => {
+      const herdWas = g.creatures, dropsWas = g.drops, thirdWas = g.thirdPerson, dWas = g.cam.d;
+      g.creatures = []; g.drops = []; g.hover = null;   // the outline box is drawn with an identity matrix too
+      p.x = shallow.x; p.y = shallow.bed + 1; p.z = shallow.z;
+      p.vx = p.vy = p.vz = 0;
+      for (let i = 0; i < 3; i++) p.update(1 / 60, {}, g);
+      g.thirdPerson = true; g.cam.d = 1.5 + 2.25 * p.bodyScale()[1];
+      const lens = { x: shallow.x, y: shallow.top + 2.0, z: shallow.z, yaw: 0, pitch: -1.2,
+        fov: g.cam.fov, d: g.cam.d, inBody: false };
+      const seen = [];
+      const drawWas = g.R.drawMesh;
+      g.R.drawMesh = function (mesh, model, opts) {
+        // the world's own meshes are drawn with an identity model matrix; a
+        // body's parts are the only other thing in this frame with one
+        const ident = !model || (model[0] === 1 && model[5] === 1 && model[10] === 1 &&
+          model[12] === 0 && model[13] === 0 && model[14] === 0);
+        seen.push({ ident, waterY: (opts && opts.waterY) || 0 });
+        return drawWas.apply(this, arguments);
+      };
+      g._lens = lens; g._camFrame = lens;
+      g.updateEnv(); g.render();
+      g.R.drawMesh = drawWas;
+      g.creatures = herdWas; g.drops = dropsWas; g.thirdPerson = thirdWas; g.cam.d = dWas;
+      return { bodyY: +p.y.toFixed(3), wSurf: p.wSurf, envWaterY: g.env.waterY,
+        surface: shallow.top + 1,
+        bodyDraws: seen.filter(s => !s.ident).length,
+        bodyWithWater: seen.filter(s => !s.ident && s.waterY === shallow.top + 1).length,
+        worldWithWater: seen.filter(s => s.ident && s.waterY > 0).length };
+    })();
+    return back({ shallow, deep, jelly: jellies.length, down, up, floor, lamps, air, body });
   });
   check('a body looking down at the lakebed sees water: the frame is blue over red',
     !lakebedView.error && lakebedView.down.blueMinusRed > 10, lakebedView);
@@ -3272,6 +3313,23 @@ What was measured before any of this was fixed, over 180 frames of walking
     lakebedView.air && lakebedView.air.env.lensInWater === false && lakebedView.air.env.emisKeep === 0.75 &&
     lakebedView.air.env.waterK[0] === 0 && lakebedView.air.env.waterK[1] === 0 &&
     lakebedView.air.env.waterK[2] === 0 && lakebedView.air.env.waterY === 0, lakebedView);
+  /* The frame the same lens draws from a metre out of the water. It used to be
+     the air's answer -- and so it was, right down to being warmer than red and
+     brighter than the frame from under the surface was. */
+  check('and the frame that lens draws from out of the water is still the colour of water: the lake does not turn back into dry sand at its own surface',
+    lakebedView.air && lakebedView.air.blueMinusRed > 65 && lakebedView.air.meanLum < 92, lakebedView);
+  check('the bed keeps its colour as the lens crosses the surface: the depth that eats the light is the bed\'s, not the lens\'s',
+    lakebedView.air && lakebedView.down &&
+    Math.abs(lakebedView.air.meanLum - lakebedView.down.meanLum) < 15, lakebedView);
+  check('what the water eats per metre is the world\'s answer, carried to every frame whether or not the lens is standing in it',
+    lakebedView.air && lakebedView.down && lakebedView.air.env.liqK[0] > 0.4 &&
+    lakebedView.air.env.liqK[0] === lakebedView.down.env.liqK[0] &&
+    lakebedView.air.env.liqK[0] > lakebedView.air.env.liqK[2] * 4, lakebedView);
+  check('a body standing in the lake is drawn with the surface of the lake it stands in, not with the water the lens happens to be in',
+    lakebedView.body && lakebedView.body.envWaterY === 0 && lakebedView.body.bodyDraws > 0 &&
+    lakebedView.body.bodyWithWater === lakebedView.body.bodyDraws, lakebedView);
+  check('and the world\'s own meshes are handed none of it: their depth came in with them',
+    lakebedView.body && lakebedView.body.worldWithWater === 0, lakebedView);
 
   /* 11. A body in the air or in the water is a body that has to travel.
      Three things were wrong with how such a body moved, and they showed up
@@ -4167,9 +4225,9 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   /* Forty seconds of the twelve frogs of Mirrorlake: at no instant are they all
      within 20 cm of one depth (once they were, 96-97% of the time), they are
-     spread over 2.3-3.0 m of it from the shallowest to the deepest at any one
+     spread over 2.3-3.1 m of it from the shallowest to the deepest at any one
      instant (2.9-3.4 m at the widest instant of the window), and they sit in
-     four to five half-metre layers of the lake instead of the one layer they
+     four to six half-metre layers of the lake instead of the one layer they
      used to hold. The depth is counted down from the top face
      of the water, which is where the surface of the lake is: counted from the
      index of the cell that holds the top of the water, the frogs floating at the

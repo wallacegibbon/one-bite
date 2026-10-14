@@ -226,6 +226,12 @@
          column and not the body, and the reason that one stopped chattering. */
       const wSurf = waterSurface(W, cx, cz);
       this.inWater = wSurf >= 0 && this.y < wSurf;
+      /* The surface this body stands in, handed to the draw. How far under
+         water a body's skin is -- and therefore how much of its colour the
+         water above it has eaten -- is a fact about the water the body is in,
+         not about the lens looking at it, so the draw takes it from the body
+         rather than from the view. See uWaterY in engine.js. */
+      this.wSurf = wSurf;
       const canBreathe = f.breatheAir === false;
 
       // ---- breathing ----
@@ -1052,6 +1058,8 @@
       const wSurf = waterSurface(world, Math.floor(this.x), Math.floor(this.z));
       const inWater = wSurf >= 0 && this.y < wSurf;
       this.inWater = inWater;      // the draw reads it: a body built for water kicks, it does not run
+      // and the draw reads the surface itself: see Player#update, and uWaterY in engine.js
+      this.wSurf = wSurf;
       // cleared for the frame, and set by the branch that is actually in the water's hold
       this.held = 0;
       const yaw0 = this.yaw;       // before steering, so the turn rate is measurable

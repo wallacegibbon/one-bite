@@ -188,6 +188,13 @@
       const b = B[this.get(x | 0, y | 0, z | 0)];
       return b && b.liquid && b.fogC ? { c: b.fogC, t: b.fogT, den: b.fogDen, emis: b.fogEmis, k: b.fogK } : null;
     }
+    /* How much of each colour of daylight a metre of the valley's liquid eats.
+       The depth each surface sits under is baked into its vertices when the
+       mesh is built, so the renderer needs the coefficient once for the frame
+       rather than per lens, and it is the same fact as the block's own colour:
+       what the stuff is made of. There is one liquid in the valley; a second
+       one would need its coefficient baked alongside the depth, not read here. */
+    liquidAbsorb() { const b = B[WATER]; return (b && b.fogK) || [0, 0, 0]; }
     /* The height of the surface of the liquid a lens is sitting in: the top of
        the liquid column it is inside. The renderer needs it because the light
        reaching a surface under water has come down through that much water,
@@ -201,6 +208,19 @@
         top++;
       }
       return top + 1;
+    }
+    /* The height of the surface of the liquid in a column, whether or not the
+       thing asking is standing in it: the top face of the topmost liquid block,
+       and 0 where the column holds none. The static world carries its own depth
+       in with it (see liquidAbsorb), but anything built fresh each frame -- a
+       body, a fruit dropped on the lakebed -- has to be told how far under the
+       water it stands, and that is a fact about the place it is in rather than
+       about the lens looking at it. `liquidTopAt` answers the other question:
+       the surface of the column a lens is *inside*, which is what the haze and
+       the absorption of the frame itself are keyed to. */
+    liquidSurfaceAt(x, z) {
+      for (let y = this.h - 1; y >= 0; y--) if (this.liquidAt(x, y, z)) return y + 1;
+      return 0;
     }
     markDirty(x, z) {
       const c0x = Math.max(0, Math.floor((x - 1) / this.cs)), c1x = Math.min(this.cx - 1, Math.floor((x + 1) / this.cs));
@@ -237,9 +257,50 @@
     buildChunk(gl, ci) {
       const cx = ci % this.cx, cz = (ci / this.cx) | 0;
       const x0 = cx * this.cs, z0 = cz * this.cs, y0 = 0, y1 = this.h;
-      const op = new MB(), em = new MB(), wa = new MB(), mi = new MB(), miE = new MB(), tr = new MB();
       const blocks = this.blocks, W = this.w, D = this.d;
       const at = (x, y, z) => (x >= 0 && z >= 0 && y >= 0 && x < W && z < D && y < this.h) ? blocks[(y * D + z) * W + x] : 0;
+      /* How deep the water above a point is, baked into the vertices of the
+         static world. The light reaching a surface under water has come down
+         through that much of it, which is a fact about the surface being lit
+         and not about the lens looking at it: handed to the shader as one
+         plane for the whole frame, the whole term switched off the moment the
+         lens came up for air, and a lens 25 cm above Mirrorlake looking down
+         at a bed 6 m below it saw dry sand (mean luminance 149.5, warmer than
+         red by 16.7) where the same lens a metre under the surface saw water
+         (76, bluer than red by 75.6).
+         One run of liquid per column -- the height of its surface and its
+         lowest cell -- and a vertex takes the deepest water of the five
+         columns it stands on (its own and the four it shares a face with),
+         which is what lets the submerged face of a rock in the lake read as
+         submerged while the ceiling of a cave under the lakebed does not. */
+      const runs = new Map();
+      const run = (x, z) => {
+        // the offset keeps a column one step outside the map from sharing a key
+        // with one on the other side of it; both answer null anyway
+        const k = (x + 1) * (D + 2) + (z + 1);
+        let r = runs.get(k);
+        if (r === undefined) {
+          let top = -1, bot = -1;
+          for (let y = this.h - 1; y >= 0; y--) {
+            const bd = B[at(x, y, z)];
+            if (bd && bd.liquid) { if (top < 0) top = y; }
+            else if (top >= 0) { bot = y + 1; break; }
+          }
+          r = top < 0 ? null : { top: top + 1, bot };
+          runs.set(k, r);
+        }
+        return r;
+      };
+      const under = (x, y, z) => {
+        let best = 0;
+        for (let i = 0; i < 5; i++) {
+          const r = run(x + (i === 1 ? 1 : i === 2 ? -1 : 0), z + (i === 3 ? 1 : i === 4 ? -1 : 0));
+          if (r && y >= r.bot && y < r.top) { const d = r.top - y; if (d > best) best = d; }
+        }
+        return best;
+      };
+      const op = new MB(under), em = new MB(under), wa = new MB(under), mi = new MB(under),
+        miE = new MB(under), tr = new MB(under);
 
       for (let y = y0; y < y1; y++) {
         for (let z = z0; z < z0 + this.cs; z++) {
