@@ -18,6 +18,22 @@
   /* A store has no name either -- the interface calls it by kind, so switching
      language cannot freeze a translated string inside a save file. */
   function storeName(s) { return N.t('store.' + (s.kind === 'tree' ? 'tree' : 'cellar')); }
+  /* How much of a stroke a body built for water is doing this frame: the speed
+     it is actually making through the water over the speed its own record swims
+     at, and nothing at all when the water is not holding it up. A stroke is the
+     thing that pushes water behind a body, so it is sized by the water the body
+     is actually pushing: a body that is going nowhere does not kick at the lake,
+     and a body standing on the lakebed has work for its legs that has nothing to
+     do with swimming. `held` is what the water is doing to the body -- it is 0
+     wherever the body is out of the water or standing on the bottom -- so it is
+     the whole of the gate, and for the body you wear it is eased, which is what
+     keeps a stroke coming and going over frames rather than in one. Both drawn
+     bodies ask the same question; it used to be answered twice and differently,
+     with a floor under the creature's answer that kept a hovering frog stroking
+     at a lake it was not moving through. */
+  function strokeOf(held, spd, swimSpeed) {
+    return (held && swimSpeed) ? Math.min(1, spd / swimSpeed) : 0;
+  }
 
   class Game {
     constructor(canvas) {
@@ -1137,16 +1153,8 @@
           off: Math.max(0, Math.min(1,
             (c.y - N.groundY(W, Math.floor(c.x), Math.floor(c.z), Math.floor(c.y))) / (N.MODEL_H[c.sp.model] * sc))),
           flap: c.flap === undefined ? 1 : c.flap,
-          // only a body the data gives a swim speed to: a bear wading still walks.
-          // The amplitude is how fast it is actually going through the water
-          // against the speed its own record swims at: a body that is coasting to
-          // a stop paddles gently, because a full stroke whether or not the body
-          // is moving is an animation that stopped being connected to anything.
-          // And only while the water is holding the body up: a frog standing on
-          // the bottom of the lake has work for its legs that has nothing to do
-          // with swimming, and paddling there is a body animating a thing it is
-          // not doing.
-          swim: (c.inWater && c.sp.swimSpeed && c.held) ? Math.min(1, Math.max(0.18, c.speed / c.sp.swimSpeed)) : 0,
+          // only a body the data gives a swim speed to: a bear wading still walks
+          swim: strokeOf(c.held, c.speed, c.sp.swimSpeed),
           held: c.held || 0
         };
         for (const e of parts) {
@@ -1194,17 +1202,11 @@
             (p.y - N.groundY(W, Math.floor(p.x), Math.floor(p.z), Math.floor(p.y))) / (N.MODEL_H[p.modelId] * sc))),
           flap: p.flap === undefined ? 1 : p.flap,
           /* the form decides, not the water: a human in the lake wades, a frog
-             kicks. The amplitude is the speed the body is actually making through
-             the water over the speed it is trying to make, so a frog that is
-             coasting to a stop paddles gently instead of windmilling a full
-             stroke at a body that is hardly moving. And it rides on `held`: a
-             frog standing on the lakebed, or wading where the lake is one block
-             deep, has feet to stand on, and a stroke there is a body kicking at
-             nothing. The ramp is the same easing the hold itself uses, so the
-             stroke comes in over a few frames instead of all at once, and it
-             takes the stroke to nothing when there is no hold at all. */
-          swim: (p.inWater && p.formDef.swim && p.cruise > 0.1)
-            ? Math.min(1, Math.max(0.18, Math.hypot(p.vx, p.vz) / p.cruise)) * Math.min(1, p.held * 3) : 0,
+             kicks. The stroke is sized by the water the body is actually pushing
+             -- see `strokeOf` above the draw -- and this is the one body in the
+             valley whose hold is eased, so a stroke comes in over a few frames
+             and goes out the same way instead of in one. */
+          swim: p.formDef.swim ? strokeOf(p.held, Math.hypot(p.vx, p.vz), p.cruise) : 0,
           held: p.held || 0
         };
         for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), {});

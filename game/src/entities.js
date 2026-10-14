@@ -208,9 +208,24 @@
       const f = this.formDef;
       const W = this.world;
       const cx = Math.floor(this.x), cz = Math.floor(this.z);
-      const cyFeet = Math.floor(this.y + 0.1), cyMid = Math.floor(this.y + this.size()[1] * 0.5), cyHead = Math.floor(this.y + this.size()[1] - 0.12);
+      const cyHead = Math.floor(this.y + this.size()[1] - 0.12);
       this.headWater = W.liquidAt(cx, cyHead, cz);
-      this.inWater = W.liquidAt(cx, cyMid, cz) || W.liquidAt(cx, cyFeet, cz);
+      /* Whether this body is in the water at all: the surface of the column it
+         is in is above its feet. The question used to be put to the cells -- is
+         the cell at the body's feet, or the one at its middle, liquid -- and
+         that flips for a body straddling the surface. Measured at (56.5,14.9,
+         94.5) with a frog pushed up to the surface by its own push key: the cell
+         under its feet is water while its origin is under 14.903 and air above
+         it, the body bobs across that line, and `inWater` went on and off 42
+         times in 240 frames -- and with it the whole water branch of its
+         movement: the water's hold and gravity in alternation, a cruising speed
+         of 4.65 and one of 4.23, and the stroke of its legs, which snapped 0.19 m
+         out and back again every few frames. The surface of the column is a
+         property of the place rather than of where the body happens to sit
+         inside it, which is the same reason `heldUp` a few lines below reads the
+         column and not the body, and the reason that one stopped chattering. */
+      const wSurf = waterSurface(W, cx, cz);
+      this.inWater = wSurf >= 0 && this.y < wSurf;
       const canBreathe = f.breatheAir === false;
 
       // ---- breathing ----
@@ -389,7 +404,11 @@
          builds a sawtooth out of nothing, which is the bug this file was last
          fixing. Depth of the column is a property of the place, not of the
          body's height, so it cannot chatter. */
-      const wt = this.inWater ? waterTop(W, cx, cz, W.h - 1) : -1;
+      /* the cell convention again, one below the surface height: this asks
+         whether the column holds water deep enough past the level the body would
+         stand at for the water to be holding the body rather than the body
+         standing on the bottom -- see `waterSurface` by the helpers. */
+      const wt = this.inWater ? wSurf - 1 : -1;
       const bedTop = this.inWater ? standY(W, cx, cz, this.y) : -1;
       const heldUp = canBreathe && wt > bedTop;
 
@@ -450,12 +469,27 @@
            the bottom, and that is what it costs to wear a body that was not
            built for the lake. */
         const push = speed * 1.5;
-        if (heldUp && !inp.sneak) this.vy += ((wt - FLOAT_UNDER) - this.y) * 2.2 * dt;
+        // the level the water holds a body at is a height, not a cell: 30 cm
+        // under the surface of the column, which is where a floating back is
+        if (heldUp && !inp.sneak) this.vy += ((wSurf - FLOAT_UNDER) - this.y) * 2.2 * dt;
         else this.vy -= 5.2 * dt * 0.55;
         this.vy += (inp.jump ? push : 0) * dt;
         if (inp.sneak) this.vy -= push * 0.6 * dt;
         this.vy -= this.vy * Math.min(0.9, 3.2 * dt);
         this.vy = Math.max(-4.5, Math.min(4.6, this.vy));
+        /* The surface is the ceiling of the water's hold: a body the water is
+           holding up cannot kick itself above the level the water holds it at,
+           and so cannot kick itself out of the water. It leaves the way a body
+           leaves water -- into the shallows where the bottom is, and up off its
+           own feet from there -- which is the route the branch below already
+           documents, and which is why the ceiling belongs to `heldUp` and not to
+           the water: a body standing on a bottom it can reach keeps the push-off
+           it has always had. Without it a body pushed at the surface by its own
+           push key crosses the surface, loses the water, falls back and crosses
+           it again: at (56.5,14.9,94.5) a frog with the key held went over that
+           line 45 times in 240 frames, and every crossing took the stroke off
+           its legs and put it back on again. */
+        if (heldUp && this.y >= wSurf - FLOAT_UNDER && this.vy > 0) this.vy = 0;
       } else {
         /* Feet that are on the bottom are feet that can push off it, water
            around them or not. That is the whole of getting out of a lake: the
@@ -731,6 +765,20 @@
     for (let y = from; y >= 0; y--) if (w.liquidAt(x, y, z)) return y;
     return -1;
   }
+  /* The same column read as a height rather than as a cell: the top face of the
+     topmost water block, which is where the surface of the water is. `waterTop`
+     answers which cell, and most of this file wants the cell -- how deep the
+     column is, whether the bottom is within reach, whether the body can stand on
+     it -- but a body the water is holding up is held at a *height*, and the two
+     conventions are one apart. The float level used to be taken off the cell
+     index, which set every body the water holds a full block under the surface:
+     the wild frogs of Mirrorlake hover 30 cm down and 3 m down (see the dive
+     cycle below) and at (56.5,94.5) they were 1.3 m down and 4 m down, and the
+     body you wear with them. */
+  function waterSurface(w, x, z) {
+    const t = waterTop(w, x, z, w.h - 1);
+    return t >= 0 ? t + 1 : -1;
+  }
   /* The part of the day a species is out (docs/en/03 s3: day / night / both /
      dusk). `night` is the curve the sky already runs on: 1 at midnight, 0 at
      noon. A dusk animal is out at both ends of the day and asleep at noon and
@@ -995,7 +1043,14 @@
       this.alarm = Math.max(0, this.alarm - dt * 0.3);
 
       // movement
-      const inWater = world.liquidAt(Math.floor(this.x), Math.floor(this.y + 0.2), Math.floor(this.z));
+      /* Whether the water has this body in it: the surface of the column it
+         stands in is above its feet. The cell test this used to be asks which
+         cell the body's own height happens to land in, and a body floating at
+         the surface bobs across that boundary; the surface of the column is a
+         property of the place. It is the same question the body you wear asks,
+         in Player#update. */
+      const wSurf = waterSurface(world, Math.floor(this.x), Math.floor(this.z));
+      const inWater = wSurf >= 0 && this.y < wSurf;
       this.inWater = inWater;      // the draw reads it: a body built for water kicks, it does not run
       // cleared for the frame, and set by the branch that is actually in the water's hold
       this.held = 0;
@@ -1553,7 +1608,10 @@
            the bank. */
         const gyH = this.climbTo !== null && this.climbTo > gy ? this.climbTo : gy;
         const hop = this.isAmphibian() ? sp.hop : null;
-        const wt = this.isAmphibian() ? waterTop(world, Math.floor(this.x), Math.floor(this.z), world.h - 1) : -1;
+        // the cell convention, one below the surface: `room` below counts the
+        // blocks of water between the bottom and the surface, and wants at least
+        // two of them (see `waterSurface` by the helpers)
+        const wt = this.isAmphibian() ? wSurf - 1 : -1;
         // the water holds this body up only where there is water deep enough to
         // hold it up: at the edge of the lake the bottom is, and the legs go back
         // to being feet. And it holds it up only while the body is off the
@@ -1577,7 +1635,9 @@
              came up 0.47 m in its very first frame -- 28 m/s, faster than a
              falling bear -- every frame after it slower than the one before. */
           const cyc = 0.5 + 0.5 * Math.sin(this.t * this.diveRate + this.phase);
-          const target = Math.max(gyH + 0.05, wt - (FLOAT_UNDER + this.diveTo * cyc * cyc));
+          // `wt + 1` is the surface: the shallowest a frog holds is 30 cm under
+          // the water, not 30 cm under the top block of it
+          const target = Math.max(gyH + 0.05, wt + 1 - (FLOAT_UNDER + this.diveTo * cyc * cyc));
           const rate = sp.swimSpeed || sp.speed || 1.5;
           const want = target - this.y;
           const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;

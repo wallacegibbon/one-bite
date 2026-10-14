@@ -407,12 +407,62 @@
   const WALK_RATE = 7;    // leg cycle per second at full speed; every legged body shares it
   const WALK_STRIDE = 0.75; // how far a walking leg swings at the hip, at a full stride
   const FLAP_RATE = 11;   // wing beat per second in the air
-  const SWIM_RATE = 4.2;  // hind-leg kicks per second. Slower than a walk, and both legs at once
-  const KICK_HIP = 0.5;   // how far a hind leg sweeps back per stroke, at a full stroke
-  const KICK_KNEE = 0.9;  // and how far the knee swings in the same time
-  const KICK_LAG = 1.4;   // the knee is a quarter stroke ahead of the hip
+  const SWIM_RATE = 4.2;  // the stroke's own clock, in rad/s: one stroke every 1.5 s
+
+  /* A frog's stroke is not a sine. It is a breaststroke, and a breaststroke has
+     three acts that a sine cannot hold apart: the legs are **recovered** -- the
+     knees come apart and the shins fold up against the thighs, so each webbed
+     foot is drawn up beside the hip and out past the flank, under the rear of
+     the body and never under its middle; they are then **driven** back and in
+     together, the whole foot against the water the whole way, and shut on the
+     centre line behind the body; and the body rides the glide that is left.
+     Read off the matrices the draw uploads, the new cycle runs each foot 0.33 m
+     fore and aft but only 0.19 m up and down, opens the pair from 0.17 m apart
+     at the end of a drive to 0.54 m across at the gather, folds the knee to 52
+     deg and straightens it to 175, and never once puts a foot inside the body
+     the foot hangs from. The old sine ran each foot 0.42 m fore and aft while
+     the two stayed 0.43 m apart from each other through the whole cycle: a body
+     cycling two legs up and down under itself, pushing no water anywhere, and
+     from behind it never changed shape.
+     The table is that cycle: [phase, hip, knee, hipOut, kneeOut, heave]. The
+     angles are offsets from the pose the water already holds the leg in
+     (`heldPose`), so a stroke starts and ends where a floating leg sits. The two
+     `out` columns are how far a joint turns away from the centre line of the
+     body -- negative is inwards, and that is what shuts the pair at the end of
+     the drive -- and the code mirrors them with each part's own `sign`, so the
+     cycle is one table read twice and the two sides cannot drift out of step
+     with each other the way hand-mirrored data does. The gather row was not
+     guessed at: hip, knee and splay were solved against the place a frog's foot
+     ends a recovery in -- 0.25 m off the centre line, 0.15 m below the hip it
+     hangs from, level with that hip fore and aft, clear of the body box. The
+     last row repeats the first: from the end of the drive to the start of the
+     next recovery the legs do nothing at all, which is the point of the stroke.
+     `heave` is the body riding it -- it settles as the legs recover and surges
+     as they drive. */
+  const STROKE = [
+    [0.00, 0.85, 0.75, -0.38, -0.16, 0.00],   // gliding: legs shut, running straight back
+    [0.42, 1.09, -1.58, 0.45, 0.15, -0.10],   // gathered: knees apart, shins folded, feet at the hips
+    [0.56, 0.85, 0.75, -0.38, -0.16, 0.12],   // driven: the knees extend and the feet shoot back
+    [1.00, 0.85, 0.75, -0.38, -0.16, 0.00]    // and gliding on to the next stroke
+  ];
   const KNEE_LAG = -Math.PI / 2; // the fold peaks at the middle of the forward swing
   const KNEE_FLEX = 0.62;       // how far a knee folds at that peak, at a full stride
+
+  /* where the stroke is at a point in the cycle, eased between the keys: the
+     legs reach a key and stop there for a moment rather than swinging through
+     it, which is what makes the three acts read as three acts. */
+  function strokeAt(u) {
+    const k = STROKE;
+    u -= Math.floor(u);
+    let i = 0;
+    while (i < k.length - 2 && u > k[i + 1][0]) i++;
+    const a = k[i], b = k[i + 1];
+    const w = (u - a[0]) / (b[0] - a[0]);
+    const s = w * w * (3 - 2 * w);
+    return [a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s,
+            a[3] + (b[3] - a[3]) * s, a[4] + (b[4] - a[4]) * s,
+            a[5] + (b[5] - a[5]) * s];
+  }
 
   /* The angles one part takes this frame, in model space.
      st: { t, phase, move, air, off, crouch, beat, swim } -- `air` is whether the
@@ -514,20 +564,12 @@
       sc = 1 + (0.10 + 0.16 * st.move) * (0.5 + 0.5 * Math.sin(t * 2.6 + ph));
     }
     /* Swimming replaces the leg cycle for the parts that were built for it. A
-       frog does not run on the surface: both hind legs kick together and the
-       front legs fold along the body. The `sign` mirror is dropped here on
-       purpose -- a synchronous pair is not mirrored in time, and the model data
-       already mirrors the geometry. The stroke is not a sine either: the leg
-       sweeps back with the whole webbed foot against the water over one half of
-       the cycle and is brought forward again through a smaller arc over the
-       other, so the drive and the recovery are plainly different acts.
-       The knee runs a quarter of a stroke ahead of the hip, and that is the
-       difference between a kick and a windmill. This leg carries its foot in
-       front of the knee, so a knee that swings with the hip lifts the foot on
-       the way: read off the draw at the stroke a swimming body makes, in phase
-       the foot travels 0.49 m along the body and 0.22 m up and down, and comes
-       up level with the body's own belly; a quarter of a stroke ahead it
-       travels 0.42 m, rises 0.16 m, and runs out under the body instead.
+       frog does not run on the surface: both hind legs stroke together, in the
+       same act at the same moment. That is why the `sign` mirror is dropped for
+       the timing here and kept for the side -- a synchronous pair is not
+       mirrored in time, and the two halves of a body are mirrored in space. The
+       stroke itself is the STROKE cycle above: knees out and heels drawn back
+       beside the hips, then driven back and inwards together, then a glide.
        `held` is the water holding the body up -- in water, breathing it, and not
        standing on the bottom. That is what folds the knee, puts the feet
        **behind** the body instead of under it, and rolls the whole leg out
@@ -541,27 +583,55 @@
        leg came only 0.024 m and 0.052 m past the body's own flank, and seen from
        behind the animal was a pair of legs crossed under itself with both feet
        pointing in. Turned out by 0.1 rad at the hip and 0.1 at the knee the
-       centre of a foot sits 0.235 m and 0.236 m out on its own side, neither
-       foot ever reaches the centre line, and the two read as paddles. The turn
+       centre of a foot sits 0.234 m out on its own side floating and 0.272 m
+       swimming, neither foot ever reaches the centre line, and the two read as
+       paddles. The turn
        is split over both
        joints rather than hung on the knee, because this leg carries its foot
        2.15 of its own units in front of the knee it turns on: the 0.5 rad the
        fold used to be given at the knee alone throws the leg 0.22 m past the
        flank of a body whose flank stands 0.17 m off the centre line, and a frog
-       floating against the wall of the lake has its feet in the rock. */
+       floating against the wall of the lake has its feet in the rock. The
+       stroke's own turn is measured against that held roll, and it is read the
+       same way: the table turns the pair out by 0.45 rad at the hip and 0.15 at
+       the knee where the legs are gathered, and back in by -0.38 and -0.16 where
+       they shut behind the body, and the widest the leg reaches past the flank
+       of the body through the whole cycle is 0.18 m -- 0.19 m for a wild frog
+       crossing the lake at its own speed. */
     const swim = st.swim || 0, held = st.held || 0;
     if (swim > 0.01 || held > 0.01) {
-      const u = t * SWIM_RATE + ph;
-      const s = Math.sin(u);
-      const k = s > 0 ? s : s * 0.6;
+      const a = strokeAt((t * SWIM_RATE + ph) / (Math.PI * 2));
+      /* how much of the stroke the body is doing: all of it at the speed its own
+         record swims at, none of it at a standstill. A stroke is the thing that
+         pushes water behind a body, so it is sized by the water the body is
+         actually pushing: a body coasting to a stop strokes less and less as it
+         coasts, and a body that is simply sitting in the water -- the player
+         holding no key, a frog hovering -- holds its legs in the pose the water
+         holds them in and moves them not at all. The old floor of 0.55 of the
+         stroke under everything made a body kick at a lake it was going nowhere
+         through: read off the matrices the draw uploads, a frog floating with its
+         speed at nothing still walked its feet 1.55 m through 4 s of water. The
+         hold ramps the whole thing in, so a body sinking towards the lakebed
+         stops stroking over a few frames instead of at one instant. */
+      const amp = Math.min(1, swim) * Math.min(1, held * 3);
       if (p.swimKick) {
-        const hp = p.heldPose || [0, 0, 0];
-        rx = hp[0] * held + (anim === 'knee' ? KICK_KNEE * Math.sin(u + KICK_LAG) : KICK_HIP * k) * swim;
-        /* a knee bends one way. With the hold gone there is nothing for the
-           stroke's own swing to pull against, and it would push the shin
-           forwards through the leg. */
-        if (anim === 'knee') rx = Math.max(0, rx);
-        ry = hp[1] * held; rz = hp[2] * held;
+        const hp = p.heldPose || [0, 0, 0], knee = anim === 'knee';
+        rx = hp[0] * held + a[knee ? 1 : 0] * amp;
+        /* the sideways turn of the stroke. A leg hanging down is swung out by a
+           roll about the body's own fore-and-aft axis, and a leg laid back along
+           the body is swung out by a yaw about the vertical -- the hip does not
+           change its axis, the leg does, and a roll on a leg that is already
+           pointing backwards only turns it over. So the one turn is split
+           between the two axes by how far the part has already pitched: read
+           straight off the angles, a leg laid back and given only the roll moves
+           its foot 0.01 m sideways in the whole stroke, which is why the legs
+           never came together behind the body however the numbers were turned.
+           The side is the part's own `sign`, which is not the timing mirror the
+           paragraph above drops: both legs swing out away from the centre line
+           together and shut towards it together. */
+        const cp = Math.cos(rx), sp = Math.sin(rx), out = a[knee ? 3 : 2] * amp;
+        ry = hp[1] * held - sg * out * sp;
+        rz = hp[2] * held + sg * out * cp;
         /* and the stroke has taken the part's turn away from the land gait, so
            the gait's lift goes with it: there is no ground down there to keep
            the foot out of. */
@@ -571,7 +641,7 @@
         rx = p.swimPose[0] * f; ry = p.swimPose[1] * f; rz = p.swimPose[2] * f;
         gait = 0;
       } else if (anim === 'bob') {
-        dy = 0.03 * k * swim;          // the body rides the kick, not the walk heave
+        dy = a[4] * amp;                // the body rides the drive, not the clock
       }
     }
     /* The pose this part takes off the ground / loading a jump.

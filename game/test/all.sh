@@ -15,7 +15,10 @@ run probe 60
 run reach 60
 run docs-sync 60
 run docs-drift 180
-run play 300
+# the day-long steps in play.js take minutes on a loaded machine (8 min at a
+# load average of 38, 1.5 min idle), and killing the run mid-step loses every
+# number it had collected: the timeout has to be wider than the slowest machine
+run play 900
 run save 300
 run upgrade 220
 run input 300

@@ -6,6 +6,11 @@ const { sim } = require('./simwait');
 (async () => {
   const browser = await puppeteer.launch({
     executablePath: '/usr/bin/google-chrome', headless: 'new',
+    /* the steps that walk a whole day of the valley run for minutes of page time
+       on a loaded machine, and the default 3 minutes is not minutes enough: a
+       step that overruns it takes the whole run, and every number the run had
+       collected with it. */
+    protocolTimeout: 600000,
     args: ['--no-sandbox', '--disable-gpu', '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader']
   });
   const page = await browser.newPage();
@@ -2057,6 +2062,9 @@ const { sim } = require('./simwait');
     const BACK = bodyBox[2] * SC;              // the body's own rear edge, in metres
     const BELLY = bodyBox[1] * SC;            // and the lowest edge of it
     const FLANK = Math.abs(bodyBox[0]) * SC;  // and the flank of it, both sides
+    const TOP = (bodyBox[1] + bodyBox[4]) * SC;   // and the back of it, above the belly
+    const HIP = thigh.pivot[1] * SC;          // and the hip the hind leg hangs from
+    const MID = (bodyBox[2] + bodyBox[5] / 2) * SC;  // and the middle of it, fore and aft
     const capture = (pred) => {
       seen.length = 0;
       const tp = g.thirdPerson; g.thirdPerson = true;
@@ -2088,7 +2096,8 @@ const { sim } = require('./simwait');
        the model data is hand-mirrored and a pose that is right on one side can be
        wrong on the other. */
     const splayAt = (st) => {
-      let leg = 0, foot = 0, cross = 0;
+      let leg = 0, foot = 0, cross = 0, knee = [1e9, -1e9];
+      const centres = [];
       for (const e of [shin, shinR]) {
         const m = pm.call(N, N.M4.create(), N.M4.create(), e, st, parts);
         let lo = 1e9, hi = -1e9;
@@ -2107,23 +2116,52 @@ const { sim } = require('./simwait');
         cross = Math.max(cross, side < 0 ? Math.max(0, hi) : Math.max(0, -lo));
         const fb = e.part.boxes[e.part.boxes.length - 1];
         const cx = fb[0] + fb[3] / 2, cy = fb[1] + fb[4] / 2, cz2 = fb[2] + fb[5] / 2;
-        foot = Math.max(foot, Math.abs((m[0] * cx + m[4] * cy + m[8] * cz2 + m[12]) * SC));
+        const fc = [m[0] * cx + m[4] * cy + m[8] * cz2 + m[12], m[1] * cx + m[5] * cy + m[9] * cz2 + m[13],
+          m[2] * cx + m[6] * cy + m[10] * cz2 + m[14]];
+        centres.push(fc);
+        foot = Math.max(foot, Math.abs(fc[0] * SC));
+        /* the fold at the knee, in degrees: the angle at the shin's own pivot
+           between the thigh that carries it and the foot the shin carries. 180
+           is a leg run out straight behind the body, 0 a leg folded flat up
+           against the thigh. Both pivots are read through the thigh's matrix,
+           because in this rig the shin's parent is the thigh: the knee rides the
+           thigh and the foot rides both. How far apart the two feet are comes
+           off the same two centres, and it is the one number that says whether a
+           pair of legs gathers and shuts or merely goes up and down. */
+        const th = parts.find(q => q.part.name === e.part.parent);
+        const mt = pm.call(N, N.M4.create(), N.M4.create(), th, st, parts);
+        const pv = (mm, q) => [mm[0] * q[0] + mm[4] * q[1] + mm[8] * q[2] + mm[12],
+          mm[1] * q[0] + mm[5] * q[1] + mm[9] * q[2] + mm[13],
+          mm[2] * q[0] + mm[6] * q[1] + mm[10] * q[2] + mm[14]];
+        const Hp = pv(mt, th.part.pivot), Kp = pv(mt, e.part.pivot);
+        const a = [Hp[0] - Kp[0], Hp[1] - Kp[1], Hp[2] - Kp[2]];
+        const b2 = [fc[0] - Kp[0], fc[1] - Kp[1], fc[2] - Kp[2]];
+        const incl = Math.acos(Math.max(-1, Math.min(1, (a[0] * b2[0] + a[1] * b2[1] + a[2] * b2[2]) /
+          (Math.hypot(a[0], a[1], a[2]) * Math.hypot(b2[0], b2[1], b2[2]))))) * 180 / Math.PI;
+        if (incl < knee[0]) knee[0] = incl;
+        if (incl > knee[1]) knee[1] = incl;
       }
-      return { leg: leg - FLANK, foot, cross };
+      return { leg: leg - FLANK, foot, cross,
+        gap: centres.length === 2 ? Math.abs(centres[0][0] - centres[1][0]) * SC : 0,
+        kneeMin: knee[0], kneeMax: knee[1] };
     };
     const stroke = (st0) => {
       if (!st0) return null;
-      const cz = [], cy = [], bend = [];
+      const cz = [], cy = [];
       let leg = 0, foot = 0, cross = 0, legsum = 0, footsum = 0;
+      let gap = [1e9, -1e9], knee = [1e9, -1e9];
       for (let i = 0; i <= 180; i++) {
         const st = Object.assign({}, st0, { t: st0.t + i / 60, _loc: 1 });
         const f = footAt(st);
         cz.push(f.cz); cy.push(f.cy);
-        bend.push(N.partAngles(shin, st).rx - N.partAngles(thigh, st).rx);
         const sp = splayAt(st);
         if (sp.leg > leg) leg = sp.leg;
         if (sp.foot > foot) foot = sp.foot;
         if (sp.cross > cross) cross = sp.cross;
+        if (sp.gap < gap[0]) gap[0] = sp.gap;
+        if (sp.gap > gap[1]) gap[1] = sp.gap;
+        if (sp.kneeMin < knee[0]) knee[0] = sp.kneeMin;
+        if (sp.kneeMax > knee[1]) knee[1] = sp.kneeMax;
         legsum += sp.leg; footsum += sp.foot;
       }
       const mx = a => Math.max(...a), mn = a => Math.min(...a);
@@ -2131,7 +2169,9 @@ const { sim } = require('./simwait');
       return { swim: r3(st0.swim || 0), held: r3(st0.held || 0), air: r3(st0.air || 0),
         move: r3(st0.move || 0),
         back: r3(mn(cz)), fwd: r3(mx(cz)), travel: r3(mx(cz) - mn(cz)), rise: r3(mx(cy) - mn(cy)),
-        footY: [r3(mn(cy)), r3(mx(cy))], bendMin: r3(mn(bend)), bendMax: r3(mx(bend)),
+        footY: [r3(mn(cy)), r3(mx(cy))],
+        gapMin: r3(gap[0]), gapMax: r3(gap[1]),
+        kneeMin: Math.round(knee[0]), kneeMax: Math.round(knee[1]),
         legOut: r3(leg), footX: r3(foot), footCross: r3(cross),
         legAvg: r3(legsum / 181), footAvg: r3(footsum / 181) };
     };
@@ -2171,7 +2211,8 @@ const { sim } = require('./simwait');
       out.body = hit.body;
       return out;
     };
-    const out = { lake, dry, BACK: +BACK.toFixed(3), BELLY: +BELLY.toFixed(3), FLANK: +FLANK.toFixed(3) };
+    const out = { lake, dry, BACK: +BACK.toFixed(3), BELLY: +BELLY.toFixed(3), FLANK: +FLANK.toFixed(3),
+      TOP: +TOP.toFixed(3), HIP: +HIP.toFixed(3), MID: +MID.toFixed(3) };
     out.float = run(lake, lake.top - 1.2, [[4, {}]]);
     out.swim = run(lake, lake.top - 1.2, [[2, { fwd: true }]], true);
     out.dug = run(lake, lake.top - 1.2, [[6, { sneak: true }]]);
@@ -2263,16 +2304,52 @@ const { sim } = require('./simwait');
   const kSw = kick.swim, kFl = kick.float, kDg = kick.dug, kLd = kick.land, kWl = kick.wild;
   check('the lake this runs on is four blocks deep and the body floats in it',
     !!kFl && kFl.held > 0.9 && kFl.body.inWater === 1 && kFl.body.grounded === 0, kick);
-  check('a floating frog keeps its feet at the back of its body, not under its chest',
-    !!kFl && kFl.fwd <= kick.BACK + 0.05 && kFl.back <= kick.BACK - 0.03, kick);
+  /* A body the water is holding up, going nowhere, holds its legs in the pose
+     the water holds them in. The stroke used to have a floor under it: the draw
+     was handed at least 0.18 of a stroke whenever a body was in water with the
+     hold on it, so a frog sitting in the middle of the lake with no key held ran
+     its feet 1.55 m through 4 s of water -- a body pushing water in no direction
+     at all, which is the one thing every animal on that lake does not do. A
+     stroke is the thing that pushes a body along, so it is sized by the water the
+     body is actually pushing, and at a standstill there is none: the feet stay
+     where the hold puts them, 0.17 m behind the rear of the body and 0.085 m
+     under its origin, and they do not move. The wild body sitting in the water
+     with nowhere to go says the same for the animals. */
+  check('a body the water holds up that is going nowhere holds its legs still: it does not kick at the lake',
+    !!kFl && !!kick.wildStill && kFl.travel <= 0.002 && kFl.rise <= 0.002 &&
+    kick.wildStill.travel <= 0.002 && kick.wildStill.rise <= 0.002, kick);
+  check('a floating frog keeps its feet behind the body it hangs them from, not under its chest',
+    !!kFl && kFl.fwd <= kick.BACK + 0.05 && kFl.back <= kick.BACK + 0.005, kick);
   check('a swimming frog sweeps its feet well behind the body and a long way',
-    !!kSw && kSw.back <= kick.BACK - 0.08 && kSw.travel >= 0.15, kick);
+    !!kSw && kSw.back <= kick.BACK - 0.08 && kSw.travel >= 0.25, kick);
+  /* The fold of a breaststroke happens beside the hips, under the rear of the
+     body: the foot comes forward to 0.10 m behind the body's rear edge and no
+     further, and the drive then runs it back out to 0.43 m behind it. The sine
+     this replaces took the foot 0.03 m in front of the body's own centre, which
+     is a foot sweeping through the water under the animal's chest -- where it
+     can push the body nowhere at all. */
+  check('and the gathered foot stays under the rear of the body, never under its middle',
+    !!kSw && !!kWl && kSw.fwd <= kick.MID - 0.05 && kWl.fwd <= kick.MID - 0.05, kick);
   check('the sweep is a sweep: further along the body than up and down',
-    !!kSw && !!kWl && kSw.rise <= kSw.travel * 0.6 && kWl.rise <= kWl.travel * 0.6, kick);
-  check('and it stays under the body: the foot never comes up level with its belly',
-    !!kSw && !!kWl && kSw.footY[1] <= kick.BELLY && kWl.footY[1] <= kick.BELLY, kick);
-  check('the knee never straightens backwards through the stroke',
-    !!kFl && !!kSw && kFl.bendMin >= 0.05 && kSw.bendMin >= 0.05, kick);
+    !!kSw && !!kWl && kSw.rise <= kSw.travel * 0.75 && kWl.rise <= kWl.travel * 0.75, kick);
+  check('and the foot never comes up over the back of the body: it streams out at the height its own hip hangs it at',
+    !!kSw && !!kWl && kSw.footY[1] <= kick.TOP && kWl.footY[1] <= kick.TOP, kick);
+  /* the fold at the knee, read as the angle between the two segments that meet
+     at it and not as the difference of the two authored angles: that difference
+     runs from -1.6 to +0.9 through the stroke while the knee itself folds from 49
+     deg to 175, so it says nothing at all about the leg. 180 deg is a leg run out
+     straight behind the body, and the old sine took the knee to 179 deg and no
+     further: it never folded the leg under the body, which is the half of a
+     breaststroke that moves the water. */
+  check('the knee folds under the body and runs out straight again, and never goes past straight',
+    !!kSw && kSw.kneeMin >= 25 && kSw.kneeMin <= 70 && kSw.kneeMax >= 165 && kSw.kneeMax <= 178, kick);
+  /* and the pair of them, which is what the eye actually reads: the two feet open
+     to 0.54 m across at the gather, beside the hips and out past the flanks, and
+     shut to 0.16 m apart behind the body at the end of the drive. The sine kept
+     them 0.07-0.12 m apart through the whole cycle, each leg going up and down
+     under itself, and from behind the body changed no shape whatever. */
+  check('the stroke is a breaststroke: the pair gathers wide beside the hips and shuts behind the body',
+    !!kSw && kSw.gapMax >= 0.45 && kSw.gapMin <= 0.25, kick);
   check('the wild body was still crossing when its stroke was read',
     !!kWl && kWl.body.inWater === 1 && kWl.body.spd > 1, kick);
   check('a wild frog crossing the lake kicks the same way, feet behind it',
@@ -2291,25 +2368,30 @@ const { sim } = require('./simwait');
      over the other: read off the same matrices, a foot reached 0.115 m past the
      centre line of its own body floating and 0.119 m swimming, both feet pointed
      in, and the leg came only 0.024 m and 0.052 m past the flank -- a frog seen
-     from behind was a pair of legs crossed under itself. Turned out by 0.1 rad
-     at the hip and 0.1 at the knee, the centre of a foot sits 0.235 m and 0.236
-     m out on its own side, no foot reaches the centre line at all, and the leg
-     stands 0.148 m and 0.149 m past the flank. That is nearly twice as far out
-     as the haunch of the land pose reaches, which stands 0.078 m past the flank
-     with the foot 0.181 m off the centre line -- and it has to be further out,
-     because a webbed foot is a paddle and a paddle that never leaves the shadow
-     of its own body pushes nothing. It is not a great deal further out, though:
-     the 0.5 rad the fold used to be given at the knee alone throws the whole leg
-     0.218 m past the flank, and a frog floating against the wall of the lake has
-     its feet in the rock. A body standing in water keeps the land pose, and its
-     foot stays where the land pose puts it. */
+     from behind was a pair of legs crossed under itself. Turned out, the centre
+     of a foot sits 0.234 m out on its own side floating and 0.272 m out swimming,
+     no foot ever reaches the centre line, and the leg stands 0.147 m past the
+     flank at rest and 0.176 m at the widest point of the stroke. That is well out
+     past the haunch of the land pose, which stands 0.078 m past the flank with
+     the foot 0.181 m off the centre line -- and it has to be further out than
+     that, because a webbed foot is a paddle and a paddle that never leaves the
+     shadow of its own body pushes nothing. It is not more than a foot further
+     out, though: the foot is 0.133 m across, and a frog floating against the wall
+     of the lake has its feet in the rock if the leg reaches much beyond the
+     haunch plus one foot. The widest the leg ever gets is at a slow stroke, not a
+     fast one -- 0.192 m at 0.42 of the stroke against 0.175 m at the full stroke,
+     read over the whole range of stroke strengths -- which is the way a body
+     holds itself: legs out while it picks its way, legs in line when it is going
+     somewhere. A body standing in water keeps the land pose, and its foot stays
+     where the land pose puts it. */
   check('a body the water holds up holds its feet out at its own sides, not crossed under itself',
-    !!kFl && !!kSw && !!kWl && kFl.footX >= 0.18 && kSw.footX >= 0.18 && kWl.footX >= 0.18, kick);
+    !!kFl && !!kSw && !!kWl && kFl.footX >= 0.18 && kSw.footX >= 0.25 && kWl.footX >= 0.25, kick);
   check('and neither foot reaches across the centre line of its own body',
     !!kFl && !!kSw && !!kWl && kFl.footCross <= 0.005 && kSw.footCross <= 0.005 &&
     kWl.footCross <= 0.005, kick);
   check('the water legs stay within a webbed foot of the haunch they hang from',
-    !!kSw && !!kLd && kSw.legOut <= 0.16 && kLd.legOut <= 0.09 && kLd.footX >= 0.15, kick);
+    !!kSw && !!kWl && !!kLd && kSw.legOut <= 0.20 && kWl.legOut <= 0.20 &&
+    kLd.legOut <= 0.09 && kLd.footX >= 0.15, kick);
 
   /* 10w. and the body that is drawn never reaches under the ground it is
      standing on. Everything above asks what the legs are *doing*; this asks
@@ -3981,8 +4063,15 @@ What was measured before any of this was fixed, over 180 frames of walking
       for (const c of frogs) {
         const [x, , z] = cell(c);
         const wt = N.waterTop(W, x, z, W.h - 1);
-        if (wt < 0 || c.y > wt + 0.2) continue;
-        const d = wt - c.y;
+        /* the surface of the column as a height, not as the index of the cell
+           that holds the top of the water. A body the water is holding up floats
+           30 cm under that surface, which is a height above the index of the
+           water's own top cell: read the depth off the index and the frogs that
+           are doing the ordinary thing -- floating at the surface with their feet
+           under them -- look like they have left the water, get dropped from the
+           count, and every body left in it is called a block deeper than it is. */
+        if (wt < 0 || c.y > wt + 1) continue;
+        const d = wt + 1 - c.y;
         ys.push(d);
         const e = each.get(c);
         if (d < e.lo) e.lo = d; if (d > e.hi) e.hi = d;
@@ -4078,9 +4167,14 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   /* Forty seconds of the twelve frogs of Mirrorlake: at no instant are they all
      within 20 cm of one depth (once they were, 96-97% of the time), they are
-     spread over 2.1-3.2 m of it from the shallowest to the deepest at any one
-     instant, and they sit in four to six half-metre layers of the lake instead of
-     the one layer they used to hold.
+     spread over 2.3-3.0 m of it from the shallowest to the deepest at any one
+     instant (2.9-3.4 m at the widest instant of the window), and they sit in
+     four to five half-metre layers of the lake instead of the one layer they
+     used to hold. The depth is counted down from the top face
+     of the water, which is where the surface of the lake is: counted from the
+     index of the cell that holds the top of the water, the frogs floating at the
+     surface -- the ordinary thing a frog does -- looked like bodies that had left
+     the water and dropped out of the count altogether.
      The birds belong to the sky over the ground under them. No bird's body, from
      its feet to the head 0.7 m above them, ever overlaps a block it cannot pass
      through -- it did in 8.7-14.6% of the frames before the step gate was asked
@@ -4352,11 +4446,22 @@ What was measured before any of this was fixed, over 180 frames of walking
     };
     const glide = (secs, inp) => {
       const n = Math.round(secs * 60), ys = [];
-      let gr = 0;
+      /* the count starts from where the body actually is, not from whatever the
+         flag happened to hold when the last window closed: the body has just been
+         set down at a height by hand, and the first frame of the window answers
+         the water question for it all over again */
+      const wt0 = N.waterTop(W, Math.floor(p.x), Math.floor(p.z), W.h - 1);
+      let gr = 0, wF = 0, wPrev = (wt0 >= 0 && p.y < wt0 + 1) ? 1 : 0;
       for (let i = 0; i < n; i++) {
         g.input = inp; g.particles.n = 0; g.hover = null;
         p.update(1 / 60, g.input, g);
         if (p.grounded) gr++;
+        // how many times the frame changed its mind about whether this body is
+        // in the water at all: the draw, the stroke of the legs and the speed the
+        // body swims at all hang off that one flag
+        const wNow = p.inWater ? 1 : 0;
+        if (wNow !== wPrev) wF++;
+        wPrev = wNow;
         ys.push(p.y);
       }
       // the last second on its own: is the body at rest, and how often did it change its mind
@@ -4368,6 +4473,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
       return { y: +p.y.toFixed(3), g: p.grounded ? 1 : 0, grPct: Math.round(gr / n * 100),
         headW: p.headWater ? 1 : 0, spd: +Math.hypot(p.vx, p.vz).toFixed(3),
+        wFlips: wF,
         span: +(Math.max(...tail) - Math.min(...tail)).toFixed(4), rev };
     };
     const out = { wt, bed };
@@ -4417,8 +4523,18 @@ What was measured before any of this was fixed, over 180 frames of walking
     Object.assign(p, was);
     return out;
   });
+  /* The level the water holds a body at is a height, not a cell: the top face of
+     the topmost water block, less the 30 cm a floating back sits under it. The
+     float level used to be taken off the index of that block, which set every
+     body the water holds a full block under the surface -- the wild frogs of
+     Mirrorlake hover 30 cm down and 3 m down, and at (64.5,92.5) they were 1.3 m
+     down and 4 m down, and the body you wear with them. A frog half a metre tall
+     floats with its head out: the eyes and nostrils of an animal that breathes
+     both air and water clear the surface, and its feet, 30 cm down, do not. */
   check('a body that breathes water and stops moving floats, it does not settle on the bottom',
-    !buoy.error && buoy.mid.g === 0 && buoy.mid.y > buoy.bed + 1 && buoy.mid.headW === 1, buoy);
+    !buoy.error && buoy.mid.g === 0 && buoy.mid.y > buoy.bed + 1 && buoy.mid.headW === 0, buoy);
+  check('and it floats at the surface of the water, not a block under it: 30 cm down from the top face of it, head out',
+    !buoy.error && Math.abs(buoy.mid.y - (buoy.wt + 1 - 0.3)) < 0.05 && buoy.mid.headW === 0, buoy);
   check('and it comes to rest there: the height does not swing and it never changes its mind',
     !buoy.error && buoy.mid.span < 0.01 && buoy.mid.rev === 0 && buoy.mid.spd < 0.01, buoy);
   check('the water holds the body you wear at the level a wild frog floats at ' +
@@ -4433,8 +4549,29 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('a body that asks to go down still reaches the lakebed, and the water takes it back when it stops asking',
     !buoy.error && buoy.dive.g === 1 && Math.abs(buoy.dive.y - buoy.bed) <= 0.01
     && buoy.diveLet.g === 0 && Math.abs(buoy.diveLet.y - buoy.wild.shallow) < 0.25, buoy);
-  check('and the climb key still breaks the surface, which is how a body gets out of deep water',
-    !buoy.error && buoy.up.headW === 0 && buoy.up.y > buoy.wt, buoy);
+  /* The surface is the ceiling of the water's hold: a body the water is holding
+     cannot kick itself above the level the water holds it at, and so cannot kick
+     itself out of the middle of a lake. It leaves the way a body leaves water --
+     into the shallows where the bottom is, and up off its own feet from there,
+     which is the route the branch in entities.js already documents. Without the
+     ceiling a frog holding the climb key at the surface of (56.5,94.5) crossed
+     that surface 45 times in 240 frames, and every crossing took the stroke off
+     its legs and put it back on again: seen from the bank, its feet flickered. */
+  check('the climb key brings the head out of the water, and the surface stops the body there: ' +
+        'it cannot kick itself out of the lake',
+    !buoy.error && buoy.up.headW === 0 && buoy.up.g === 0 &&
+    buoy.up.y > buoy.wt && buoy.up.y <= buoy.wt + 1 - 0.3 + 0.05, buoy);
+  /* and the flag the draw hangs off does not relay. `inWater` used to be put to
+     the cells -- is the cell at the body's feet liquid, is the one at its middle
+     -- and a body bobbing across its own surface answered that a different way
+     every frame: at (56.5,14.9,94.5) a frog pushed up by its own push key changed
+     its mind 42 times in 240 frames, and with it the whole water branch of its
+     movement, its cruising speed of 4.65 or 4.23, and the stroke of its legs,
+     which snapped 0.19 m out and back again every few frames. The surface of the
+     column is a property of the place, not of where the body happens to sit in
+     it, which is the same reason `heldUp` reads the column and not the body. */
+  check('and the water does not flicker on and off a body sitting at its surface',
+    !buoy.error && buoy.mid.wFlips === 0 && buoy.surf.wFlips === 0 && buoy.up.wFlips === 0, buoy);
   check('a body that breathes air is not held up: left alone it comes to rest on the bottom',
     !buoy.error && buoy.human.g === 1 && Math.abs(buoy.human.y - buoy.bed) <= 0.01
     && buoy.humanSurf.g === 1, buoy);
