@@ -450,8 +450,9 @@
       gl.uniform3fv(u.uLiqK, e.liqK || [0, 0, 0]);
       // the other half of the same law, for the things that are not baked: a
       // body's vertices are built every frame, so the caller hands over the
-      // surface of the water that body stands in. The world's own meshes take
-      // none of it -- their depth came in with them.
+      // surface of the water that body stands in -- and a column with no water
+      // in it answers -1, which the shader's max() takes to no depth at all.
+      // The world's own meshes take none of it: their depth came in with them.
       gl.uniform3fv(u.uWaterK, opts.waterK || [0, 0, 0]);
       gl.uniform1f(u.uWaterY, opts.waterY || 0);
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);

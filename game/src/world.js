@@ -211,16 +211,18 @@
     }
     /* The height of the surface of the liquid in a column, whether or not the
        thing asking is standing in it: the top face of the topmost liquid block,
-       and 0 where the column holds none. The static world carries its own depth
-       in with it (see liquidAbsorb), but anything built fresh each frame -- a
-       body, a fruit dropped on the lakebed -- has to be told how far under the
-       water it stands, and that is a fact about the place it is in rather than
-       about the lens looking at it. `liquidTopAt` answers the other question:
-       the surface of the column a lens is *inside*, which is what the haze and
-       the absorption of the frame itself are keyed to. */
+       and -1 where the column holds none -- the same answer for "no water" the
+       cell reading gives, so the two conventions cannot disagree about whether a
+       column is in the lake at all. The static world carries its own depth in
+       with it (see liquidAbsorb), but anything built fresh each frame -- a body,
+       a fruit dropped on the lakebed -- has to be told how far under the water
+       it stands, and that is a fact about the place it is in rather than about
+       the lens looking at it. `liquidTopAt` answers the other question: the
+       surface of the column a lens is *inside*, which is what the haze and the
+       absorption of the frame itself are keyed to. */
     liquidSurfaceAt(x, z) {
       for (let y = this.h - 1; y >= 0; y--) if (this.liquidAt(x, y, z)) return y + 1;
-      return 0;
+      return -1;
     }
     markDirty(x, z) {
       const c0x = Math.max(0, Math.floor((x - 1) / this.cs)), c1x = Math.min(this.cx - 1, Math.floor((x + 1) / this.cs));

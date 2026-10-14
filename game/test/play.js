@@ -3292,7 +3292,24 @@ What was measured before any of this was fixed, over 180 frames of walking
         bodyWithWater: seen.filter(s => !s.ident && s.waterY === shallow.top + 1).length,
         worldWithWater: seen.filter(s => s.ident && s.waterY > 0).length };
     })();
-    return back({ shallow, deep, jelly: jellies.length, down, up, floor, lamps, air, body });
+    /* 7. the two conventions for one column, side by side: the cell the water
+       tops out in, and the height of the surface over it. They are one apart,
+       the world answers both, and every float level in the valley is set off the
+       second while the physics asks the first a dozen times a frame. Swept over
+       the whole lake because a reading that disagreed with the other about
+       whether a column holds water at all would leave a body a metre under the
+       surface, or a metre outside a lake it is standing in. */
+    const conventions = (() => {
+      let bad = 0, wet = 0, dry = 0;
+      for (let z = 74; z < 140; z++) for (let x = 46; x < 112; x++) {
+        const wt = N.waterTop(W, x, z, W.h - 1), s = W.liquidSurfaceAt(x, z);
+        if (s !== (wt < 0 ? -1 : wt + 1)) bad++;
+        if (wt >= 0) wet++; else dry++;
+      }
+      return { bad, wet, dry,
+        shelf: W.liquidSurfaceAt(Math.floor(shallow.x), Math.floor(shallow.z)), top: shallow.top };
+    })();
+    return back({ shallow, deep, jelly: jellies.length, down, up, floor, lamps, air, body, conventions });
   });
   check('a body looking down at the lakebed sees water: the frame is blue over red',
     !lakebedView.error && lakebedView.down.blueMinusRed > 10, lakebedView);
@@ -3330,6 +3347,15 @@ What was measured before any of this was fixed, over 180 frames of walking
     lakebedView.body.bodyWithWater === lakebedView.body.bodyDraws, lakebedView);
   check('and the world\'s own meshes are handed none of it: their depth came in with them',
     lakebedView.body && lakebedView.body.worldWithWater === 0, lakebedView);
+  /* The cell the water tops out in and the height of the surface over it are one
+     apart, and both readings live in the world now. Swept over the whole lake:
+     6204 columns asked twice, and the two answers have to line up everywhere,
+     including on "there is no water here" -- a column the two disagree about is a
+     body a metre under the surface, or a metre outside a lake it stands in. */
+  check('one column, one answer for where its water stops: the cell reading and the height reading agree everywhere, and both say -1 for none',
+    lakebedView.conventions && lakebedView.conventions.bad === 0 && lakebedView.conventions.wet > 200 &&
+    lakebedView.conventions.dry > 0 &&
+    lakebedView.conventions.shelf === lakebedView.conventions.top + 1, lakebedView);
 
   /* 11. A body in the air or in the water is a body that has to travel.
      Three things were wrong with how such a body moved, and they showed up

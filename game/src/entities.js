@@ -224,7 +224,7 @@
          property of the place rather than of where the body happens to sit
          inside it, which is the same reason `heldUp` a few lines below reads the
          column and not the body, and the reason that one stopped chattering. */
-      const wSurf = waterSurface(W, cx, cz);
+      const wSurf = W.liquidSurfaceAt(cx, cz);
       this.inWater = wSurf >= 0 && this.y < wSurf;
       /* The surface this body stands in, handed to the draw. How far under
          water a body's skin is -- and therefore how much of its colour the
@@ -413,7 +413,7 @@
       /* the cell convention again, one below the surface height: this asks
          whether the column holds water deep enough past the level the body would
          stand at for the water to be holding the body rather than the body
-         standing on the bottom -- see `waterSurface` by the helpers. */
+         standing on the bottom -- see `liquidSurfaceAt` in world.js. */
       const wt = this.inWater ? wSurf - 1 : -1;
       const bedTop = this.inWater ? standY(W, cx, cz, this.y) : -1;
       const heldUp = canBreathe && wt > bedTop;
@@ -767,23 +767,19 @@
       if (w.solidAt(x, y, z) && !N.TREE_BLOCK[w.get(x, y, z)]) return y;
     return top;
   }
+  /* The cell convention: which cell holds the top of the water, or -1 where the
+     column holds none. Most of this file wants the cell -- how deep the column
+     is, whether the bottom is within reach, whether the body can stand on it --
+     but the surface itself is a *height*, the top face of that cell, and the two
+     conventions are one apart: the world answers that one (`liquidSurfaceAt` in
+     world.js), and both say -1 for no water. The float level used to be taken
+     off the cell index, which set every body the water holds a full block under
+     the surface: the wild frogs of Mirrorlake hover 30 cm down and 3 m down (see
+     the dive cycle below) and at (56.5,94.5) they were 1.3 m down and 4 m down,
+     and the body you wear with them. */
   function waterTop(w, x, z, from) {
     for (let y = from; y >= 0; y--) if (w.liquidAt(x, y, z)) return y;
     return -1;
-  }
-  /* The same column read as a height rather than as a cell: the top face of the
-     topmost water block, which is where the surface of the water is. `waterTop`
-     answers which cell, and most of this file wants the cell -- how deep the
-     column is, whether the bottom is within reach, whether the body can stand on
-     it -- but a body the water is holding up is held at a *height*, and the two
-     conventions are one apart. The float level used to be taken off the cell
-     index, which set every body the water holds a full block under the surface:
-     the wild frogs of Mirrorlake hover 30 cm down and 3 m down (see the dive
-     cycle below) and at (56.5,94.5) they were 1.3 m down and 4 m down, and the
-     body you wear with them. */
-  function waterSurface(w, x, z) {
-    const t = waterTop(w, x, z, w.h - 1);
-    return t >= 0 ? t + 1 : -1;
   }
   /* The part of the day a species is out (docs/en/03 s3: day / night / both /
      dusk). `night` is the curve the sky already runs on: 1 at midnight, 0 at
@@ -1055,7 +1051,7 @@
          the surface bobs across that boundary; the surface of the column is a
          property of the place. It is the same question the body you wear asks,
          in Player#update. */
-      const wSurf = waterSurface(world, Math.floor(this.x), Math.floor(this.z));
+      const wSurf = world.liquidSurfaceAt(Math.floor(this.x), Math.floor(this.z));
       const inWater = wSurf >= 0 && this.y < wSurf;
       this.inWater = inWater;      // the draw reads it: a body built for water kicks, it does not run
       // and the draw reads the surface itself: see Player#update, and uWaterY in engine.js
@@ -1618,7 +1614,7 @@
         const hop = this.isAmphibian() ? sp.hop : null;
         // the cell convention, one below the surface: `room` below counts the
         // blocks of water between the bottom and the surface, and wants at least
-        // two of them (see `waterSurface` by the helpers)
+        // two of them (see `liquidSurfaceAt` in world.js)
         const wt = this.isAmphibian() ? wSurf - 1 : -1;
         // the water holds this body up only where there is water deep enough to
         // hold it up: at the edge of the lake the bottom is, and the legs go back
