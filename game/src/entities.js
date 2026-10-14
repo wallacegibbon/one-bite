@@ -36,6 +36,34 @@
   const AHEAD = 7;
 
   /* ============================ player ============================ */
+  /* The walk clock. A body's gait is where it is in its own stride, and it is
+     advanced by the ground the body covered and not by the clock: one cycle of
+     the legs carries the body exactly as far as its own feet reach, which is what
+     lets a foot that has reached the ground stay there instead of being dragged
+     along it under the body. Where that reach comes from is argued, and measured
+     off the model, in the stride block of models.js.
+     The distance is the body's own displacement and not its velocity times the
+     frame: a body pushing on a wall covers no ground, and its legs have to stop
+     with its body instead of running on the spot against it. And the ground a
+     body covers while the air is holding it up does not count either -- an owl
+     crossing the valley is not walking across it.
+     A body with no leg that walks reaches nowhere: a frog hops and a jelly
+     drifts, and their gait is left unset, which is how the draw knows there is
+     no stride for that body to ride. */
+  function walkGait(body, modelId, sc, move, dx, dz, spd, dt) {
+    const len = N.gaitStride(modelId, sc, move);
+    if (len <= 0) return;
+    /* The ground the body covered, and never more of it than the body's own
+       speed says it could cover in this frame. A body that has come up against
+       a wall creeps the last couple of millimetres of it with its speed already
+       come to nothing, and the stride a body takes at no speed is nothing
+       either: the quotient of those two is a stride count of 1e13, and the legs
+       of a person standing against a wall go through ten trillion steps. */
+    const walked = Math.min(Math.hypot(dx, dz), spd * dt) * (1 - (body.airAmt || 0));
+    if (walked <= 0) return;
+    body.gait = (body.gait || 0) + walked / len;
+  }
+
   class Player {
     constructor(world) {
       this.world = world;
@@ -63,6 +91,10 @@
       this.dry = 0;                // seconds this amphibian body has been out of water
       this.wasCold = false;        // whether the ridge cold is already biting (drives one log line)
       this.moveAmt = 0;            // horizontal movement this frame (drives animation)
+      /* where the body is in its own stride, in whole cycles, and how hard it is
+         asking for one. The stride is kept by the body and not by the clock --
+         see walkGait above -- and a body with no leg that walks has none. */
+      this.gait = null;
       // the speed the body is trying to travel at this frame, m/s (the draw
       // sizes a swim stroke against it)
       this.cruise = 0;
@@ -92,6 +124,11 @@
     bodyScale() {
       return this.form ? N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature].scale : HUMAN.scale;
     }
+    /* How hard this body is asking for a stride, 0..1: 5 m/s is the fastest it
+       travels on its own feet. The draw sizes the swing by this and the walk
+       clock sizes the stride by it, and they have to be the same number or the
+       foot slips all the same -- so it is said once, here. */
+    walkMove() { return Math.min(1, Math.hypot(this.vx, this.vz) / 5); }
     /* Held breath is a property of the body. A frog body does not need air at
        all (breatheAir: false, handled by the caller); every body that does need
        it holds it for the same eighteen seconds. No body in the valley carries
@@ -207,6 +244,7 @@
     update(dt, inp, game) {
       const f = this.formDef;
       const W = this.world;
+      const gx = this.x, gz = this.z;      // where the stride starts from
       const cx = Math.floor(this.x), cz = Math.floor(this.z);
       const cyHead = Math.floor(this.y + this.size()[1] - 0.12);
       this.headWater = W.liquidAt(cx, cyHead, cz);
@@ -682,6 +720,9 @@
 
       // ---- fright decay ----
       this.fright = Math.max(0, this.fright - dt * 0.12);
+
+      walkGait(this, this.modelId, this.bodyScale(), this.walkMove(),
+        this.x - gx, this.z - gz, Math.hypot(this.vx, this.vz), dt);
     }
   }
 
@@ -893,6 +934,9 @@
       this.t = Math.random() * 10;
       this.phase = Math.random() * 6.28;
       this.state = 'wander';
+      /* where the body is in its own stride: kept by the ground it covers, not by
+         the clock (see walkGait above) */
+      this.gait = null;
       this.tx = x; this.tz = z;
       this.pause = Math.random() * 3;
       this.speed = 0;
@@ -953,6 +997,7 @@
     update(dt, pl, world, game) {
       const sp = this.sp;
       this.t += dt;
+      const gx = this.x, gz = this.z;      // where the stride starts from
       const dxp = pl.x - this.x, dzp = pl.z - this.z, dyp = pl.y - this.y;
       const dp = Math.sqrt(dxp * dxp + dzp * dzp + dyp * dyp);
 
@@ -1864,6 +1909,9 @@
       if (aura > 0 && dp < aura && att !== 'hostile' && !this.sameSpeciesAs(pl.form) && this.state !== 'flee' && !this.isFlyer()) {
         this.state = 'flee'; this.alarm = 1;
       }
+
+      walkGait(this, sp.model, sp.scale, N.walkMove(this.speed, sp.speed),
+        this.x - gx, this.z - gz, this.speed, dt);
     }
   }
 

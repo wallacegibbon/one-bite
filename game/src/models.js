@@ -40,7 +40,10 @@
     human: {
       eye: 1.55,
       parts: [
-        { name: 'hips', boxes: [[-1.15, 3.8, -0.8, 2.3, 0.8, 1.6, '#39414d']] },
+        /* the root carries the heave, as every other body's root does: the legs
+           hanging off it are the ones the body stands on, so they answer for the
+           move and keep their feet where they put them (see the FOOT block) */
+        { name: 'hips', anim: 'bob', boxes: [[-1.15, 3.8, -0.8, 2.3, 0.8, 1.6, '#39414d']] },
         { name: 'torso', parent: 'hips', pivot: [0, 4.6, 0], anim: 'twist', boxes: [
           [-1.2, 4.6, -0.85, 2.4, 2.4, 1.7, '#4a5a78'],           // chest
           [-1.4, 6.95, -0.8, 2.8, 0.35, 1.6, '#41506c'],          // shoulder line
@@ -74,14 +77,19 @@
             [1.18, 4.2, -0.48, 0.44, 0.5, 0.96, '#e2b28e']
           ] },
         { name: 'thighL', parent: 'hips', pivot: [-0.62, 3.9, 0], anim: 'walk', sign: 1, stands: 1,
-          air: [-0.55, 0, 0], boxes: [[-1.0, 2.4, -0.6, 0.8, 1.5, 1.2, '#39414d']] },
+          /* the trouser reaches up past the hip it turns on and into the hips box:
+             the hips are the part that rides the stride (see `bob`), and a leg
+             carved only up to the hinge shows a slit of sky between them at the
+             top of every rise. Same colour, so all it changes is that there is
+             never a gap. */
+          air: [-0.55, 0, 0], boxes: [[-1.0, 2.4, -0.6, 0.8, 1.7, 1.2, '#39414d']] },
         { name: 'shinL', parent: 'thighL', pivot: [-0.62, 2.45, 0], anim: 'knee', sign: 1, stands: 1,
           air: [0.95, 0, 0], boxes: [
             [-0.95, 0.85, -0.55, 0.65, 1.6, 1.1, '#414a57'],      // trouser
             [-1.0, 0, -0.65, 0.75, 0.85, 1.65, '#2b2522']         // boot, toe in front
           ] },
         { name: 'thighR', parent: 'hips', pivot: [0.62, 3.9, 0], anim: 'walk', sign: -1, stands: 1,
-          air: [-0.55, 0, 0], boxes: [[0.2, 2.4, -0.6, 0.8, 1.5, 1.2, '#39414d']] },
+          air: [-0.55, 0, 0], boxes: [[0.2, 2.4, -0.6, 0.8, 1.7, 1.2, '#39414d']] },
         { name: 'shinR', parent: 'thighR', pivot: [0.62, 2.45, 0], anim: 'knee', sign: -1, stands: 1,
           air: [0.95, 0, 0], boxes: [
             [0.3, 0.85, -0.55, 0.65, 1.6, 1.1, '#414a57'],
@@ -242,19 +250,19 @@
           [-0.8, 5.4, 2.62, 0.4, 0.4, 0.24, '#1a1410'],           // eyes
           [0.4, 5.4, 2.62, 0.4, 0.4, 0.24, '#1a1410']
         ] },
-        { name: 'legFL', parent: 'body', pivot: [-1.45, 3.0, 1.6], anim: 'walk', sign: 1,
+        { name: 'legFL', parent: 'body', pivot: [-1.45, 3.0, 1.6], anim: 'walk', stands: 1, sign: 1,
           boxes: [[-2.0, 1.0, 0.9, 1.1, 2.0, 1.4, '#5a5248']] },
         { name: 'shinFL', parent: 'legFL', pivot: [-1.45, 1.0, 1.6], anim: 'knee', sign: 1, bend: -1,
           boxes: [[-2.0, 0, 0.85, 1.1, 1.0, 1.55, '#4c453d']] },
-        { name: 'legFR', parent: 'body', pivot: [1.45, 3.0, 1.6], anim: 'walk', sign: -1,
+        { name: 'legFR', parent: 'body', pivot: [1.45, 3.0, 1.6], anim: 'walk', stands: 1, sign: -1,
           boxes: [[0.9, 1.0, 0.9, 1.1, 2.0, 1.4, '#5a5248']] },
         { name: 'shinFR', parent: 'legFR', pivot: [1.45, 1.0, 1.6], anim: 'knee', sign: -1, bend: -1,
           boxes: [[0.9, 0, 0.85, 1.1, 1.0, 1.55, '#4c453d']] },
-        { name: 'legBL', parent: 'body', pivot: [-1.45, 3.0, -1.6], anim: 'walk', sign: -1,
+        { name: 'legBL', parent: 'body', pivot: [-1.45, 3.0, -1.6], anim: 'walk', stands: 1, sign: -1,
           boxes: [[-2.0, 1.0, -2.3, 1.1, 2.0, 1.4, '#5a5248']] },
         { name: 'shinBL', parent: 'legBL', pivot: [-1.45, 1.0, -1.6], anim: 'knee', sign: -1, bend: 1,
           boxes: [[-2.0, 0, -2.4, 1.1, 1.0, 1.55, '#4c453d']] },
-        { name: 'legBR', parent: 'body', pivot: [1.45, 3.0, -1.6], anim: 'walk', sign: 1,
+        { name: 'legBR', parent: 'body', pivot: [1.45, 3.0, -1.6], anim: 'walk', stands: 1, sign: 1,
           boxes: [[0.9, 1.0, -2.3, 1.1, 2.0, 1.4, '#5a5248']] },
         { name: 'shinBR', parent: 'legBR', pivot: [1.45, 1.0, -1.6], anim: 'knee', sign: 1, bend: 1,
           boxes: [[0.9, 0, -2.4, 1.1, 1.0, 1.55, '#4c453d']] }
@@ -404,8 +412,9 @@
   }
   /* ---------------- part animation ---------------- */
   const _m = { a: N.M4.create(), b: N.M4.create(), c: N.M4.create(), d: N.M4.create(), e: N.M4.create(), f: N.M4.create() };
-  const WALK_RATE = 7;    // leg cycle per second at full speed; every legged body shares it
-  const WALK_STRIDE = 0.75; // how far a walking leg swings at the hip, at a full stride
+  const WALK_STRIDE = 0.9;  // how far a walking leg reaches at the hip, at a full stride
+  const STANCE_WALK = 0.62;  // the share of a stride a foot is on the ground, at a walk
+  const STANCE_RUN = 0.30;   // ... and at the fastest the body travels: it flies between steps
   const FLAP_RATE = 11;   // wing beat per second in the air
   const SWIM_RATE = 4.2;  // the stroke's own clock, in rad/s: one stroke every 1.5 s
 
@@ -445,8 +454,181 @@
     [0.56, 0.85, 0.75, -0.38, -0.16, 0.12],   // driven: the knees extend and the feet shoot back
     [1.00, 0.85, 0.75, -0.38, -0.16, 0.00]    // and gliding on to the next stroke
   ];
-  const KNEE_LAG = -Math.PI / 2; // the fold peaks at the middle of the forward swing
   const KNEE_FLEX = 0.62;       // how far a knee folds at that peak, at a full stride
+  const BOB = 0.20;             // how far the body rides a stride, in its own model units
+
+  /* ---------------- the stride ----------------
+     A walk cycle has one job that a sine cannot do: a foot that has reached the
+     ground has to *stay* there while the body goes past it.
+     The cycle used to be one clock for every legged body -- the hip at sin(t *
+     7), the rate a constant, the body driven along by its own speed -- and the
+     two were never the same thing. Read off the matrices the draw uploads, a
+     bear's foot was moving along the ground at 2.3 m/s while its body went past
+     at 2.1, and a person's at 3.0 against 4.1: a foot was on the ground for four
+     frames in five and held still in none of them, and the whole animal was
+     skating on grass. It is not a tuning problem. The foot is at the bottom of
+     its arc exactly where the sine is turning over fastest, so the fastest moment
+     of the swing is the moment the foot needs to be at its slowest, and no rate
+     fixes that.
+     So the cycle is written as the two acts it has, and the ground keeps the
+     time. `stance` is the foot on the ground and the body travelling past it:
+     the hinge turns back at exactly the rate the ground takes the foot along,
+     and the foot does not move. `swing` is the foot off the ground coming back
+     under the body, eased at both ends so a foot arrives and leaves without a
+     jerk, and it is the only half of a stride a knee may fold in.
+     The share of the cycle each act takes is not a constant either: a walk has
+     a foot on the ground for 62% of it and a run for 30%, and the body is in the
+     air between the steps. That is where the length of a stride comes from, and
+     it is the reason a fast body takes long steps without swinging its legs any
+     wider: the foot is on the ground for a moment, and then it travels the rest
+     of the stride through the air along with the body.
+     What ties the two acts together is the model's own number, not a constant:
+     `stanceSpan` below measures how far this model's foot actually reaches, from
+     the frame it lands on to the frame it leaves, through the same matrices the
+     draw uploads. One cycle of the legs then carries the body exactly that far,
+     and the caller advances the phase by the ground the body covered. What that
+     buys, besides the foot holding: a body going nowhere has no stride and its
+     legs stop; a body walking into a wall stops its legs with its body instead of
+     running on the spot; and the rate of the steps stops being a constant and
+     comes out of the leg alone. Read off the matrices the draw uploads, a person
+     at 4.7 m/s takes 1.85 m steps at 2.33 a second and at 2 m/s takes steps of
+     under a metre at the same rate; a bear at 5.2 m/s takes 1.95 m steps at
+     2.29. A body with short legs steps fast and a body with long legs steps
+     slowly, which is what animals do, and the length of a step, not its rate, is
+     what the speed buys. */
+
+  /* where the foot is along its own stride: +1 at the reach out in front of the
+     body it lands on, -1 at the reach behind it it leaves from. The stance is a
+     straight line, because a foot on the ground is being carried along a flat
+     surface by the body and a straight line is the only thing that keeps it
+     there; the swing is eased, because a foot does not start and stop. */
+  function stanceOf(move) { return STANCE_WALK + (STANCE_RUN - STANCE_WALK) * move; }
+  /* how wide the hip swings at a given speed. This is the knob that decides how
+     a body's speed turns into steps, and the two ways to get a faster body out
+     of it are both wrong on their own: swing the legs wider and the body takes
+     long slow strides, keep the swing and shorten the time a foot is down and it
+     takes long fast ones, and either way the rate of the steps falls as the body
+     goes faster, which is the opposite of what a body does.
+     What a body does is hold its step rate nearly the same and change the length
+     of a step: a person walking at 1 m/s takes steps of 0.4 m at about 2.5 a
+     second and running at 4.7 m/s takes steps of 1.9 m at about the same 2.5 a
+     second. Read the same way, the reach of the foot under the body -- which is
+     what a stance is worth along the ground -- goes 0.22 m, 0.40 m, 0.58 m at
+     1, 2 and 4.7 m/s: it grows slower than the speed does, and the whole of the
+     rest is bought by the stance taking a smaller share of the cycle.
+     So the swing is made proportional to speed *times the stance*, and the two
+     cancel in the one place they have to: a stride comes out proportional to the
+     speed, and the rate of the steps comes out a property of the leg alone. */
+  function ampOf(move) { return move * stanceOf(move) / STANCE_WALK; }
+  function footAt(u, stance) {
+    u -= Math.floor(u);
+    if (u < stance) return 1 - 2 * u / stance;
+    const w = (u - stance) / (1 - stance);
+    return -1 + 2 * (w * w * (3 - 2 * w));
+  }
+  /* the knee's fold: nothing at all through the stance -- the leg under a body
+     is the leg holding that body up, and a knee that folds there drops the body
+     through its own foot -- and one hump through the swing, peaking in the
+     middle of it, which is where a foot has to be clear of the ground. */
+  function foldAt(u, stance) {
+    u -= Math.floor(u);
+    return u < stance ? 0 : Math.sin((u - stance) / (1 - stance) * Math.PI);
+  }
+  /* the hinge angle that puts the foot at a given place along the stride. A foot
+     hanging L under a hinge reaches L sin(angle) fore and aft, and the stance
+     needs that *reach* to go backwards at the speed of the body: turning the
+     angle at a constant rate instead leaves the foot still in the middle of a
+     stance and dragging at both ends of one, which is the same mistake the sine
+     made with the signs changed. And the hinge turns the other way round from
+     the reach, because a positive angle about x carries a foot hanging under it
+     towards -z (see rotX in engine.js) and every model here faces +z -- a
+     muzzle, a beak and a toe all say so. */
+  function hipAt(A, u, stance) { return -Math.asin(Math.sin(A) * footAt(u, stance)); }
+  /* Which way round the body rides its own stride, and the one place a walk and
+     a run are not the same gesture.
+     While some foot is always on the ground the legs are struts, and a body on
+     struts is at its highest over the middle of a stance, where the strut is
+     straight and under it, and at its lowest where it trades one strut for the
+     other. Once a stance is less than half a cycle there is a moment in every
+     stride with no foot down at all: the body is flying, and the leg is a spring
+     instead of a strut -- it comes down onto a foot, bends it, and is thrown
+     back off it, so it is at its LOWEST over the middle of a stance and at its
+     highest in the middle of the flight. The same cosine the other way round.
+     It turns over where the stance is half a cycle, and is fully turned by
+     STANCE_RUN, which is the share at which the body is off the ground for
+     two strides in five. */
+  function rideOf(stance) {
+    return 1 - 2 * Math.min(1, Math.max(0, (0.5 - stance) / (0.5 - STANCE_RUN)));
+  }
+
+  /* how far the foot of a standing leg reaches fore and aft under the body, in
+     model units, measured at the two ends of a stance. That distance is what the
+     body has to travel while the foot is on the ground, so it is what one cycle
+     of the legs is worth along the ground.
+     The point measured is the middle of the sole: the middle of the bottom face
+     of the lowest box on the limb. It has to be that point and not "whichever
+     corner of the foot is lowest", because the model has no ankle -- the sole
+     rocks from toe to heel as the leg sweeps through a stance, and the lowest
+     corner changes identity halfway along it, jumping the whole length of the
+     foot in a frame. A material point of the foot does not move when the foot is
+     planted, which is the whole claim, and it is the point the matrices hold
+     still.
+     The model's own numbers cannot say this: the hinge that is lowest is not the
+     one the foot hangs from, and the lift that keeps a foot out of the ground
+     (the FOOT block above) moves the whole limb. So it is measured, once per
+     model, through the matrices the draw uploads. A body with no leg that walks
+     -- a frog hops, a jelly drifts -- reaches nowhere, and 0 is how the caller
+     learns not to run a cycle at all. */
+  const SPAN = {};
+  function stanceSpan(modelId) {
+    if (SPAN[modelId] !== undefined) return SPAN[modelId];
+    const m = MODELS[modelId];
+    let best = 0;
+    if (m) {
+      const entries = m.parts.map(p => ({ part: p, pivot: p.pivot || [0, 0, 0] }));
+      const under = p => { const out = [p]; for (const q of m.parts) if (q.parent === p.name) out.push(...under(q)); return out; };
+      const st = { t: 0, gait: 0, phase: 0, move: 1, air: 0, crouch: 0, off: 0 };
+      for (const p of m.parts) {
+        if (!p.stands || p.anim !== 'walk' || p.stride === 0) continue;
+        const limb = under(p);
+        let sole = null;
+        for (const q of limb) for (const b of (q.boxes || [])) if (!sole || b[1] < sole.b[1]) sole = { q, b };
+        if (!sole) continue;
+        const entry = entries.find(e => e.part === sole.q);
+        /* the two ends of a stance at the speed the sample is taken at: the hip
+           reaches its furthest forward at the start of one and its furthest back
+           at the end of it, and where that end falls in the cycle depends on how
+           fast the body is going */
+        const zs = [0, stanceOf(st.move)].map(u => {
+          st.gait = u; st._loc = {};
+          const mm = partMatrix(N.M4.create(), N.M4.create(), entry, st, entries);
+          const cx = sole.b[0] + sole.b[3] / 2, cy = sole.b[1], cz = sole.b[2] + sole.b[5] / 2;
+          return mm[2] * cx + mm[6] * cy + mm[10] * cz + mm[14];
+        });
+        best = Math.max(best, Math.abs(zs[0] - zs[1]));
+      }
+    }
+    SPAN[modelId] = best;
+    return best;
+  }
+  /* how hard a body of this top speed is asking for a stride: 1 at its own
+     speed and above, nothing at all below a crawl. The draw sizes the swing with
+     it and the caller sizes the stride with it, and the two have to be the same
+     number or the foot slips all the same. */
+  function walkMove(spd, top) {
+    return Math.min(1, spd / (top || 3)) * (spd > 0.2 ? 1 : 0);
+  }
+  /* the stride one cycle of the walk carries this body along the ground, in
+     metres. The span was measured through the matrices at the fastest the body
+     goes, the reach is L sin(angle) with the angle a share of a full stride so
+     it scales with sin, and only the stance part of a cycle covers it -- and how
+     much of a cycle the stance is depends on how fast the body is travelling. */
+  function gaitStride(modelId, sc, move) {
+    const span = stanceSpan(modelId);
+    if (!span || !(move > 0)) return 0;
+    return span * sc * Math.sin(WALK_STRIDE * ampOf(move)) /
+           Math.sin(WALK_STRIDE * ampOf(1)) / stanceOf(move);
+  }
 
   /* where the stroke is at a point in the cycle, eased between the keys: the
      legs reach a key and stop there for a moment rather than swinging through
@@ -465,11 +647,15 @@
   }
 
   /* The angles one part takes this frame, in model space.
-     st: { t, phase, move, air, off, crouch, beat, swim } -- `air` is whether the
-     body is off the ground, `off` how far above it in body heights, `crouch` how
-     loaded its legs are, `beat` the shared wing phase, `swim` that the body is
+     st: { t, gait, phase, move, air, off, crouch, beat, swim } -- `air` is whether
+     the body is off the ground, `off` how far above it in body heights, `crouch`
+     how loaded its legs are, `beat` the shared wing phase, `swim` that the body is
      moving through water with the bodies built for it. All of them are read off
      the body's own motion by the caller.
+     `gait` is where the body is in its own stride, in whole cycles, and it is the
+     one of them that is not a clock at all: the caller advances it by the ground
+     the body has covered (see the stride block above). It is left out for a body
+     that has no leg which walks.
      `heave` is how far the parts above this one in the model have already moved
      up or down this frame -- the body breathing as it walks -- and only a limb
      standing on the ground is passed one. See the FOOT block above the models. */
@@ -480,6 +666,14 @@
     /* how far this part takes part in the walk cycle. Absent is the whole
        swing; 0 is a leg that does not walk at all -- a frog's, which hops. */
     const stride = p.stride === undefined ? 1 : p.stride;
+    /* where this part is in the body's stride. The other side of the body is
+       half a stride behind it, and that is what `sign` says of a limb: it is a
+       delay and not a flip of the shape, because flip the shape and both sides
+       take their stance at the same moment and the body is left with nothing
+       under it for 38% of every stride. The body's own phase only shifts the
+       whole animal against the others of its kind. */
+    const u = (st.gait || 0) + ph / (Math.PI * 2) + (sg < 0 ? 0.5 : 0);
+    const stance = stanceOf(st.move);
     let rx = 0, ry = 0, rz = 0, dy = 0, sc = 1;
     /* the share of this part's turn that comes from the land gait, kept apart
        from the pose blends below: the lift that goes with a swing belongs to the
@@ -506,11 +700,11 @@
       const s = st.beat !== undefined ? st.beat : beat;
       rz = sg * (s < 0 ? -s * 0.5 : 0) * air;
     } else if (anim === 'walk') {
-      /* the swing of a leg (or arm) that walks: one cycle per stride, mirrored
-         left to right by `sign`, and sized by how fast the body is actually
-         travelling. `stride` is the part's own share of it -- a frog's legs
-         take none, because a frog does not walk on land, it hops. */
-      rx = sg * Math.sin(t * WALK_RATE + ph) * st.move * WALK_STRIDE * stride;
+      /* the swing of a leg (or arm) that walks: one cycle per stride, the two
+         sides of the body half a stride apart, and sized by how fast the body is
+         actually travelling. `stride` is the part's own share of it -- a frog's
+         legs take none, because a frog does not walk on land, it hops. */
+      rx = hipAt(WALK_STRIDE * stride * ampOf(st.move), u, stance);
       gait = rx;
     } else if (anim === 'knee') {
       /* A knee folds one way, and it folds while the foot is off the ground:
@@ -525,31 +719,35 @@
          with the thighs, and the lag is the same on both sides for the same
          reason -- a per-side phase offset would desync the pair and give one
          leg a longer stride than the other.
-         The thigh cycle is sin(u): a leg is swinging forward through one half
-         of it and bearing weight through the other, so lagging the fold by a
-         quarter cycle puts its peak at the middle of the forward swing, which
-         is exactly where a foot has to be off the ground. Lagged the other way
-         the knee folds hardest at the middle of the stride, where the foot is
-         planted, and a model with no ankle has nowhere for that to go but
-         down: read off the draw, a frog walking on flat ground had its shin
-         0.17 m inside the ground in 229 frames of 240. And the whole cycle
-         rides on `move`: a body standing still has no swing to fold, and its
-         knees hold the angle the model was carved at. And it rides on the
-         leg's own `stride`, because the fold is there to let the foot clear the
-         ground during a swing: no swing, no fold. */
-      const s = Math.sin(t * WALK_RATE + ph + KNEE_LAG);
-      rx = (p.bend === undefined ? 1 : p.bend) * KNEE_FLEX * stride * Math.max(0, sg * s) * st.move;
+         When it folds is now said by the stride itself and not by a quarter
+         cycle of a clock: nothing at all through the stance, and one hump
+         through the swing peaking in the middle of it, which is where a foot
+         has to be clear of the ground. A lag against a sine could only guess at
+         that: it put the fold at the middle of the forward swing and at the
+         middle of the stance of every other body at once, and a model with no
+         ankle has nowhere for a folded planted knee to go but down -- read off
+         the draw, a frog walking on flat ground had its shin 0.17 m inside the
+         ground in 229 frames of 240. And the whole cycle rides on `move`: a body
+         standing still has no swing to fold, and its knees hold the angle the
+         model was carved at. And it rides on the leg's own `stride`, because the
+         fold is there to let the foot clear the ground during a swing: no swing,
+         no fold. */
+      rx = (p.bend === undefined ? 1 : p.bend) * KNEE_FLEX * stride * foldAt(u, stance) * st.move;
       gait = rx;
     } else if (anim === 'elbow') {
       /* the same fold on an arm, smaller, and with a little of it always held:
-         an arm hanging dead straight is a stick. An arm swings opposite the
-         leg on the same side, which the `sign` on the two parts already says,
-         so it folds at the middle of its own forward swing on the same lag. */
+         an arm hanging dead straight is a stick. An arm swings opposite the leg
+         on the same side, which is what the half stride `sign` buys it. */
       rx = (p.bend === undefined ? 1 : p.bend) *
-           (0.12 + 0.3 * Math.max(0, sg * Math.sin(t * WALK_RATE + ph + KNEE_LAG)) * st.move);
+           (0.12 + 0.3 * foldAt(u, stance) * st.move);
       gait = rx;
     } else if (anim === 'twist') {
-      ry = Math.sin(t * WALK_RATE + ph + Math.PI) * st.move * 0.16;
+      /* the part above the legs turning against them: it comes round one way as
+         the limbs on that side reach forward and back through as they sweep
+         behind. On the stride and not on the clock, or the shoulders and the
+         feet are two unrelated things the moment the body is travelling at any
+         speed other than the one the clock happens to agree with. */
+      ry = footAt(u, stance) * st.move * 0.16;
     } else if (anim === 'nod') {
       rx = Math.sin(t * 1.9 + ph) * (st.move * 0.06 + 0.02);
     } else if (anim === 'wag') {
@@ -558,8 +756,26 @@
       /* when the body is flying, the heave is the wing beat: the body drops as
          the wings push down. Two unrelated sines is what made a flying body look
          like a body with two loose parts bolted to it. */
+      /* On the ground the heave is the stride: the body is at its highest over
+         the middle of a stance, where the leg under it is straight and holding
+         it up, and at its lowest at the ends of one, where the leg is angled
+         away and the other is coming through under it -- twice a stride, because
+         the body stands now on one leg and now on the other. On the clock it was
+         a sine of its own that had nothing to do with the feet: read off the
+         draw, a bear at its own speed took 2.8 steps a second while its body
+         came up and down 0.35 times a second. The idle part stays on the clock,
+         because a body standing still still breathes; and a body with no leg
+         that walks has no stride to ride either, so it keeps the sine whole.
+         `rideOf` turns the same cosine over once the stride grows a flight phase
+         (see above), and a body that has never had a part carrying the heave
+         gets one now: the person's own body had no `bob` part at all, so the
+         one body in the valley you look at for an hour was the one body that
+         slid along grass at a height nothing ever changed. */
       dy = st.fly ? -Math.max(0, st.beat !== undefined ? st.beat : beat) * 0.16
-                  : Math.sin(t * 2.2 + ph) * (st.move * 0.12 + 0.05);
+                  : (st.gait === undefined || st.gait === null
+                     ? Math.sin(t * 2.2 + ph) * st.move * BOB
+                     : rideOf(stance) * Math.cos((u - stance / 2) * 4 * Math.PI) * st.move * BOB) +
+                    Math.sin(t * 2.2 + ph) * 0.05;
     } else if (anim === 'pulse') {
       sc = 1 + (0.10 + 0.16 * st.move) * (0.5 + 0.5 * Math.sin(t * 2.6 + ph));
     }
@@ -733,6 +949,13 @@
   }
 
   N.MODELS = MODELS;
+  N.gaitStride = gaitStride;
+  N.walkMove = walkMove;
+  /* the other half of the law, for anything that has to know when a foot is on
+     the ground: game/test/play.js measures the drawn foot against this window,
+     and a second copy of the two shares there would be one more thing to keep
+     in step by hand */
+  N.stanceOf = stanceOf;
   N.MODEL_H = MODEL_H;
   N.MODEL_W = MODEL_W;
   N.buildModelMeshes = buildModelMeshes;

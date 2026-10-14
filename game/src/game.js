@@ -1156,7 +1156,9 @@
         N.M4.mul(base, base, sm);
         const st = {
           t: this.time + c.phase,
-          move: Math.min(1, c.speed / (c.sp.speed || 3)) * (c.speed > 0.2 ? 1 : 0),
+          // the stride this body is in, and how hard it is asking for one: both
+          // are measured by the body's own update, off the ground it covered
+          gait: c.gait, move: N.walkMove(c.speed, c.sp.speed),
           fly: c.isFlyer() && c.state !== 'roost',
           air: c.airAmt || 0, crouch: c.crouch || 0, phase: c.phase,
           /* how far above the ground it would stand on this body is, in its own
@@ -1208,7 +1210,7 @@
         N.M4.mul(base, base, sm);
         const st = {
           t: this.time,
-          move: Math.min(1, Math.hypot(p.vx, p.vz) / 5),
+          gait: p.gait, move: p.walkMove(),
           fly: !!p.formDef.fly && !p.grounded,
           air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0,
           // the same clearance the creatures' bodies get: see above

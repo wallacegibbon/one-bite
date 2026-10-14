@@ -1926,23 +1926,39 @@ const { sim } = require('./simwait');
      way. */
   const stride = await step('swimPoseIsSynchronous', () => {
     const N = window.FRUTARIA, g = window.game;
-    const read = (model, sw, t) => {
+    const read = (model, sw, t, gait, move) => {
       /* the renderer only hands a stroke to a body the water is holding up, so
-         the swim sample carries that too -- it is the pair the draw really gets */
-      const st = { t, phase: 0, move: 1, air: 0, crouch: 0, swim: sw, held: sw };
+         the swim sample carries that too -- it is the pair the draw really gets.
+         A stride is not on that clock at all: the phase of a walk comes from the
+         ground the body has covered, so a walking sample carries a `gait` and a
+         stroking one carries a clock, and passing either in place of the other
+         asks the body to do something it has stopped doing */
+      const st = { t, gait, phase: 0, move, air: 0, crouch: 0, swim: sw, held: sw };
       const a = {};
       for (const e of g.ensureModel(model)) a[e.part.name] = N.partAngles(e, st);
       return a;
     };
-    // three samples a third of a cycle apart: caught mid-swing, not at a zero crossing
-    const at = (model, sw) => [0, 1, 2].map(k => read(model, sw, 0.31 + k * 0.37));
+    /* three samples a quarter of a stride apart, and clear of the crossings:
+       caught mid-swing and mid-stance, not at the moment a foot hangs under the
+       hip it turns on. A stroke's cycle is the clock's; a stride's is one stride
+       of ground, and the stride is not a constant this file knows the length of.
+       The walk is sampled at the fastest a body goes, where a leg swings furthest
+       and a stride is shortest: the claim is that the two sides of a body are
+       opposite, and it is easiest to see and hardest to satisfy there. */
+    const at = (model, sw) => [0, 1, 2].map(k =>
+      read(model, sw, sw ? 0.31 + k * 0.37 : 0, sw ? 0 : 0.30 + k * 0.25, 1));
     const d = (s, a, b) => s.map(x => +(x[a].rx - x[b].rx).toFixed(3));
     const walk = at('bear', 0), land = at('frog', 0), kick = at('frog', 1);
-    /* a pair of knees folds in turn, not both at once: sampled over a span
-       longer than any stride, so the extremes are the stride's own and this file
-       keeps no copy of the walk rate */
+    /* A pair of knees folds in turn and not both at once -- and that is a claim
+       about a walk, not about a run. At the fastest a body travels a foot is on
+       the ground for 30% of the cycle, so both feet are off the ground together
+       for half of it: that is what a run is, and a knee that is off the ground
+       is folded. So the pair is sampled at a walking speed, where the two sides
+       cannot be in the same act at the same moment, and the fold is read against
+       what a knee reaches at that speed instead of against a constant. Sampled
+       over a stride and a half, so the extremes are the stride's own. */
     const span = [];
-    for (let k = 0; k < 24; k++) span.push(read('bear', 0, k * 0.0625));
+    for (let k = 0; k < 24; k++) span.push(read('bear', 0, 0, k * 0.0625, 0.35));
     const A = span.map(a => Math.abs(a.shinFL.rx)), B = span.map(a => Math.abs(a.shinFR.rx));
     return {
       walk: {
@@ -1964,7 +1980,7 @@ const { sim } = require('./simwait');
   check('a walking body alternates its legs: left is the mirror of right',
     stride.walk.front.every(v => Math.abs(v) > 0.3) && stride.walk.back.every(v => Math.abs(v) > 0.3), stride);
   check('and its knees fold in turn: one leg of a pair is always straight under it',
-    stride.walk.kneeMax > 0.3 && stride.walk.kneeBoth < 0.15, stride);
+    stride.walk.kneeMax > 0.15 && stride.walk.kneeBoth < 0.02, stride);
   check('a frog on land holds its legs: it hops, it does not stride',
     stride.hop.every(v => v === 0), stride);
   check('in the water they are in the same phase: a kick is both legs at once',
@@ -2572,6 +2588,280 @@ What was measured before any of this was fixed, over 180 frames of walking
     ['walk-frogpear', 'stand-frogpear', 'walk-human', 'stand-human', 'walk-bruinfig',
       'stand-bruinfig', 'walk-owlberry', 'stand-owlberry']
       .every(k => planted[k] && planted[k].gap < 0.005), planted);
+
+  /* The step above asks whether a foot gets under the ground. This one asks the
+     other half of the same question: whether a foot that has reached the ground
+     stays there while the body goes past it.
+     That is the one thing a walk cycle is for, and the cycle used to be one
+     clock for every legged body while the body was driven along by its own
+     speed, and the two had never been spoken to. Read off the matrices the draw
+     uploads, a bear's foot was travelling along the ground at 2.3 m/s while its
+     body went past at 2.1, and a person's at 3.0 against 4.1: a foot was on the
+     ground for four frames in five and held still in none of them, and the whole
+     animal was skating on grass. It is not a tuning problem -- a foot is at the
+     bottom of a sine's arc exactly where that sine is turning over fastest, so
+     the fastest moment of the swing is the moment the foot needs to be at its
+     slowest, and no rate fixes that.
+     So this is measured where it is made, and with no copy of the stride kept
+     here: the sole of a standing limb is the middle of the bottom face of the
+     lowest box on that limb, carried through the matrix the renderer really
+     uploaded for it, and "on the ground" is said by the ground -- a sole within
+     2 cm of the surface the body stands on. What a foot travels along the ground
+     while it is on it, against the ground the body covered in those same frames,
+     is the slip. It is a fraction and not a distance, because a fast body covers
+     more ground per step and a foot that slides a tenth as fast as its body is a
+     foot that has not landed whatever the stride is.
+     The frog is not in this list and says why below. */
+  const hold = await step('feetHoldTheirGround', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player, R = g.R;
+    const was = { form: p.form, formT: p.formT, formMax: p.formMax, x: p.x, y: p.y, z: p.z,
+      vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      bank: p.bank, tilt: p.tilt, squash: p.squash, grounded: p.grounded, airAmt: p.airAmt,
+      held: p.held, inWater: p.inWater, cruise: p.cruise, crouch: p.crouch, vital: p.vital,
+      dry: p.dry, fright: p.fright, air: p.air, gait: p.gait };
+    const wasG = { mode: g.mode, tp: g.thirdPerson, time: g.time, herd: g.herdCentres,
+      camD: g.cam.d, camFov: g.cam.fov, frame: g._camFrame };
+    const back = () => {
+      Object.assign(p, was);
+      g.mode = wasG.mode; g.thirdPerson = wasG.tp; g.time = wasG.time;
+      g.herdCentres = wasG.herd; g.cam.d = wasG.camD; g.cam.fov = wasG.camFov;
+      g._camFrame = wasG.frame;
+    };
+    p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+    g.mode = 'play'; g.thirdPerson = true; g.cam.d = 3;
+    g.herdCentres = {};
+    // the same dry flat stretch the step above walks: the longest run of one
+    // height, and the walk goes -z, so the stretch has to be ahead of the body
+    const dry = (x, z) => {
+      let gy = 0;
+      for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z)) { gy = y + 1; break; }
+      if (gy < 12) return -1;
+      for (let y = gy; y <= gy + 3; y++) if (W.liquidAt(x, y, z)) return -1;
+      return gy;
+    };
+    let field = null;
+    for (let x = 8; x < W.w - 8; x++) for (let z = W.d - 9; z > 40; z--) {
+      const gy = dry(x, z);
+      if (gy < 0) continue;
+      let len = 1;
+      while (dry(x, z - len) === gy) len++;
+      if (!field || len > field.len) field = { x: x + 0.5, z: z + 0.5, gy, len };
+    }
+    const out = { field };
+    if (!field || field.len < 22) { back(); return out; }
+    /* the matrices the draw really uploaded, matched by object identity */
+    const got = new Map(), watch = new Set();
+    const realDraw = R.drawMesh;
+    R.drawMesh = function (mesh, m) { if (watch.has(mesh)) got.set(mesh, m.slice()); return realDraw.apply(this, arguments); };
+    const run = (label, form, keys, frames) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.x = field.x; p.y = field.gy + 1; p.z = field.z;
+      p.vx = p.vy = p.vz = 0; p.yaw = 0; p.faceYaw = 0; p.pitch = 0;
+      p.bank = 0; p.tilt = 0; p.squash = 0; p.crouch = 0;
+      p.grounded = true; p.airAmt = 0; p.held = 0; p.inWater = false; p.cruise = 0;
+      p.gait = null;
+      const raw = N.MODELS[p.modelId].parts;
+      const meshes = {};
+      for (const e of g.ensureModel(p.modelId)) meshes[e.part.name] = e.mesh;
+      const under = q => { const o = [q]; for (const r of raw) if (r.parent === q.name) o.push(...under(r)); return o; };
+      watch.clear(); got.clear();
+      const soles = [];
+      for (const q of raw) {
+        /* the top of a limb that walks and stands -- the thigh and not the shin,
+           because it is the thigh's turn that carries the foot along the ground,
+           and the sole of that foot is what the turn is measured against. A leg
+           with `stride: 0` is a leg that does not walk, and is not evidence. */
+        if (!q.stands || q.anim !== 'walk' || q.stride === 0) continue;
+        let own = null, box = null;
+        for (const r of under(q))
+          for (const b of (r.boxes || [])) if (!box || b[1] < box[1]) { box = b; own = r; }
+        const mesh = own && meshes[own.name];
+        if (!box || !mesh) continue;
+        watch.add(mesh);
+        soles.push({ name: q.name, mesh, sign: q.sign || 1,
+          px: box[0] + box[3] / 2, py: box[1], pz: box[2] + box[5] / 2 });
+      }
+      let slip = 0, body = 0, near = 0, drift = 0, worst = 0, who = null, went = 0;
+      let move = 0, moveN = 0, prev = null, px = p.x, pz = p.z;
+      const limit = field.len - 6;      // the flat stretch is only so long
+      for (let i = 0; i < frames; i++) {
+        p.update(1 / 60, keys, g);
+        g.time += 1 / 60;
+        got.clear();
+        g.updateEnv(); g._camFrame = g.shootCamera(p); g.render(); g._camFrame = null;
+        const at = {};
+        for (const s of soles) {
+          const m = got.get(s.mesh);
+          if (!m) continue;
+          at[s.name] = [m[0] * s.px + m[4] * s.py + m[8] * s.pz + m[12],
+                        m[1] * s.px + m[5] * s.py + m[9] * s.pz + m[13],
+                        m[2] * s.px + m[6] * s.py + m[10] * s.pz + m[14]];
+        }
+        if (prev) {
+          const moved = Math.hypot(p.x - px, p.z - pz);
+          /* only the flat stretch, and only with feet on the ground: a body
+             that has walked off the end of it, or one that is flying, is not
+             evidence of a step */
+          const onFoot = went < limit && p.grounded && (p.airAmt || 0) < 0.05;
+          const mv = p.walkMove();
+          const stance = p.gait === null ? -1 : N.stanceOf(mv);
+          /* the middle of the stance, and not its ends. A stride at a run is
+             three frames of foot on the ground out of twenty-odd of the cycle,
+             and the frame the phase turns over in belongs to neither act: the
+             foot is coming off the ground or going on to it, and it is moving
+             all the way. Take the middle of the window and every frame counted
+             is one the foot is standing still in, whatever the frame boundary
+             happened to fall on. */
+          const lo = 0.2 * stance, hi = 0.8 * stance;
+          for (const s of soles) {
+            const a = prev[s.name], b = at[s.name];
+            if (!a || !b || !onFoot) continue;
+            const d = Math.hypot(b[0] - a[0], b[2] - a[2]);
+            drift += d;
+            const u = p.gait + (s.sign < 0 ? 0.5 : 0);
+            const v = u - Math.floor(u);
+            if (!(v >= lo && v <= hi)) continue;            // off the ground: it may travel
+            near++; slip += d; body += moved;
+            if (d > worst) { worst = d; who = s.name; }
+          }
+          if (onFoot) { move += mv; moveN++; }
+          went += moved;
+        }
+        prev = at; px = p.x; pz = p.z;
+      }
+      const cycles = p.gait === null ? 0 : p.gait;
+      // the law is a number for one speed, and the walk spends most of its
+      // frames at one speed: the mean is over the frames that were measured
+      const mv = moveN ? move / moveN : 0;
+      out[label] = { frames, feet: soles.length, near,
+        went: +went.toFixed(1), measured: +Math.min(went, limit).toFixed(1),
+        cycles: +cycles.toFixed(2), cadence: +(cycles / (frames / 60)).toFixed(2),
+        cycleLen: cycles > 1 ? +(went / cycles).toFixed(2) : 0,
+        law: +N.gaitStride(p.modelId, p.bodyScale(), mv).toFixed(2),
+        slip: +slip.toFixed(3), drift: +drift.toFixed(3), body: +body.toFixed(2),
+        ratio: +(slip / Math.max(body, 1e-9)).toFixed(3),
+        worst: +worst.toFixed(4), who };
+    };
+    const go = { fwd: true, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
+    const still = { fwd: false, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
+    for (const f of [null, 'bruinfig', 'owlberry']) {
+      run('walk-' + (f === null ? 'human' : f), f, go, 180);
+      run('stand-' + (f === null ? 'human' : f), f, still, 120);
+    }
+    R.drawMesh = realDraw;
+    back();
+    return out;
+  });
+  /* Two claims, and they are the two halves of one stride.
+     First: one cycle of the legs is worth exactly as much ground as the model's
+     own foot reaches. Measured metres over measured cycles against the number
+     the model gives for that body at that speed -- 1.85 against 1.85 for a
+     person, 1.95 against 1.96 for a bear, 0.41 against 0.40 for an owl. Before
+     the stride was tied to the ground the cycle ran on a clock of its own and
+     this ratio was the body's speed over that clock, which had nothing to do
+     with the leg: a person took 6.3 m steps and a bear 1.9.
+     Second: a foot that is on the ground does not move along it. 0.006 of the
+     ground the body covers, for a person, and 0.014 for a bear -- the last of
+     it is a foot with no ankle, which rocks from toe to heel as the leg sweeps
+     under the body. Before, it was over 1: a foot was travelling along the
+     ground faster than the body it belongs to, and every body in the valley was
+     skating on grass. And the bound is not only there for a cycle on a clock of
+     the wrong rate: run the legs at the very rate the body's own legs happen to
+     come round at, and the foot still slips 0.05, because the phase of a sine
+     and the phase of a stride are not the same thing however you set the rate.
+     The owl's second number is not asserted and the reason is worth keeping in
+     the file: at 14.9 steps a second a cycle is four frames long and a foot is
+     on the ground for one of them, so there is nothing here to measure. That is
+     not the gait's fault -- it is a 0.4 m stride asked to carry a body at 6 m/s
+     -- and the first number says the legs are doing exactly what they should. */
+  const HOLD = 0.03;
+  for (const f of ['human', 'bruinfig', 'owlberry']) {
+    const hw = hold['walk-' + f];
+    check(`the drawn ${f} takes the stride its legs are worth: one cycle, one reach`,
+      !!hw && hw.cycles > 3 && Math.abs(hw.cycleLen - hw.law) < 0.08 * hw.law, hold);
+  }
+  for (const f of ['human', 'bruinfig']) {
+    const hw = hold['walk-' + f];
+    check(`the drawn ${f} plants its feet: a foot on the ground holds while the body goes past`,
+      !!hw && hw.near > 20 && hw.ratio < HOLD, hold);
+  }
+  for (const f of ['human', 'bruinfig', 'owlberry']) {
+    const hs = hold['stand-' + f];
+    check(`a ${f} standing still has no stride at all: its feet hold the ground`,
+      !!hs && hs.cycles === 0 && hs.drift < 0.01, hold);
+  }
+
+  /* A body with its feet on the ground has one more thing to say, and it is the
+     one thing a stride cannot help saying: the body itself goes up and down
+     twice a stride. The person's own body used to have no part carrying that
+     heave at all -- the owl, the bear and the frog each had one, and the body
+     you look at for an hour did not -- so a person crossing a field slid along
+     the grass at a height nothing ever touched.
+     Which way round it goes is not a style choice either, and the stride says
+     that too. While some foot is always down the legs are struts, and a body on
+     struts is highest over the middle of a stance, where the strut is straight
+     and under it, and lowest where it trades one strut for the other. Once a
+     stance is under half a cycle there is a moment in every stride with no foot
+     down at all: the body is flying and the leg is a spring, it comes down onto
+     a foot, bends it and is thrown off it again, so it is LOWEST over the middle
+     of a stance and highest in the middle of the flight. A person at their own
+     speed is in that second case -- a foot is down for 32% of a stride -- and
+     the heave the models had was written for the first one, so the body was at
+     the top of its rise exactly at the moment its own leg was taking its weight.
+     Measured off the pose the draw uploads: at 4.7 m/s a person's body falls
+     0.055 m and rises again across a stride, at the lowest point 0.16 of the
+     stride (the middle of the stance, 0.16) and the highest at 0.41 (the middle
+     of the flight, 0.41); at a walk -- a foot down for 56% of the stride -- the
+     same body is highest at 0.28 (the middle of the stance, 0.28) and lowest at
+     0.03 (the middle of the handover, 0.03).
+     The bound on how big the heave has to be is not arbitrary either: at 0.12 of
+     the model's units, the number it carried before, a person's body moves 0.033
+     m across a stride, and that is a body you cannot see moving. */
+  const ride = await step('bodyRidesItsStride', () => {
+    const N = window.FRUTARIA, g = window.game;
+    const SC = { human: 0.18, bear: 0.24, owl: 0.15 };
+    const out = {};
+    for (const model of ['human', 'bear', 'owl']) {
+      const entries = g.ensureModel(model);
+      const e = entries.find(q => q.part.anim === 'bob');
+      if (!e) { out[model] = { error: 'no part of this model carries the heave' }; continue; }
+      const at = (mv) => {
+        const stance = N.stanceOf(mv);
+        let lo = 1e9, hi = -1e9, loAt = -1, hiAt = -1;
+        for (let i = 0; i < 240; i++) {
+          const u = i / 240;
+          // t stays 0: the idle breath is a separate thing and this is about the stride
+          const a = N.partAngles(e, { t: 0, gait: u, phase: 0, move: mv, air: 0 });
+          if (a.dy < lo) { lo = a.dy; loAt = u; }
+          if (a.dy > hi) { hi = a.dy; hiAt = u; }
+        }
+        return { mv, stance: +stance.toFixed(3),
+          amp: +((hi - lo) * SC[model]).toFixed(3),
+          loAt: +loAt.toFixed(3), hiAt: +hiAt.toFixed(3),
+          midStance: +(stance / 2).toFixed(3),
+          // where the body is between two feet, and where it trades one for the other
+          midFlight: +((stance + 0.5) / 2).toFixed(3),
+          handover: +((stance - 0.5) / 2).toFixed(3) };
+      };
+      out[model] = { run: at(0.94), walk: at(0.2), slow: at(0.35) };
+    }
+    return out;
+  });
+  check('the body you look at for an hour rides its own stride',
+    !ride.human.error && ride.human.run.amp > 0.045, ride.human);
+  for (const m of ['human', 'bear', 'owl']) {
+    const r = ride[m] && ride[m].run;
+    check(`a ${m} at a run is at its lowest over the middle of a stance, not the top`,
+      r && r.stance < 0.5 && Math.abs(r.loAt - r.midStance) < 0.05 &&
+      Math.abs(r.hiAt - r.midFlight) < 0.05, ride[m]);
+    const w = ride[m] && ride[m].walk;
+    check(`and at a walk, with a foot always down, the other way round`,
+      w && w.stance > 0.5 && Math.abs(w.hiAt - w.midStance) < 0.05 &&
+      Math.abs(w.loAt - w.handover) < 0.05, ride[m]);
+  }
+  check('the heave is worth more ground the faster the body goes',
+    !!ride.human.run && !!ride.human.slow &&
+    ride.human.run.amp > ride.human.slow.amp * 1.5 && ride.human.slow.amp > 0, ride.human);
 
   /* A body in the air turns by tilting. The player's own body has leaned into a
      turn for a long time; nothing else in the world did, so an owl crossing the
