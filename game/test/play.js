@@ -5004,8 +5004,32 @@ What was measured before any of this was fixed, over 180 frames of walking
   const soak = await step('soakTheValley', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA, p = g.player;
     const look = () => {
-      const bad = { notANumber: [], outside: [], inRock: [], inCrown: 0, onFoliage: [], underTheMap: [], aboveTheAir: [] };
+      const bad = { notANumber: [], bodyNaN: [], outside: [], inRock: [], inCrown: 0, onFoliage: [], underTheMap: [], aboveTheAir: [] };
+      /* Every number a body carries, not just where it is. The draw multiplies
+         these into matrices -- `partMatrix` feeds the angles straight into
+         sin/cos -- and a NaN in one of them does not throw: it quietly removes a
+         limb, because WebGL draws a NaN matrix as nothing at all. The physics
+         hands most of these to itself, so a divide by zero or a square root of a
+         negative would sit in a body for the rest of the day and read as a
+         missing leg rather than as an error. `seen` is counted so the sweep
+         cannot go quiet by accident: a field nobody has is a field nobody is
+         checking. */
+      const NUMS = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'speed', 'yaw', 'pitch', 'tilt', 'bank',
+        'phase', 'held', 'airAmt', 'crouch', 'flap', 'squash', 'hopT', 'wind', 'bob', 't',
+        'flyY', 'diveTo', 'diveRate', 'climbTo', 'climbRate', 'huntH', 'homeX', 'homeZ',
+        'tx', 'tz', 'ox', 'oz', 'hw', 'hl', 'tall', 'alarm', 'pause', 'air', 'dry', 'vital',
+        'fright', 'faceYaw', 'formT', 'formMax', 'cruise', 'moveAmt', 'wSurf'];
+      const seen = {};
+      const sweep = (o, who) => {
+        for (const k of NUMS) {
+          const v = o[k];
+          if (typeof v !== 'number') continue;
+          seen[k] = (seen[k] || 0) + 1;
+          if (!isFinite(v)) bad.bodyNaN.push([who, k]);
+        }
+      };
       for (const c of g.creatures) {
+        sweep(c, c.sp.id);
         if (!isFinite(c.x) || !isFinite(c.y) || !isFinite(c.z) || !isFinite(c.speed) || !isFinite(c.yaw)) { bad.notANumber.push(c.sp.id); continue; }
         if (c.x < 0 || c.z < 0 || c.x >= W.w || c.z >= W.d || c.y < 0 || c.y >= W.h) bad.outside.push([c.sp.id, +c.x.toFixed(1), +c.y.toFixed(1), +c.z.toFixed(1)]);
         const bx = Math.floor(c.x), by = Math.floor(c.y + 0.2), bz = Math.floor(c.z);
@@ -5028,6 +5052,9 @@ What was measured before any of this was fixed, over 180 frames of walking
            got above the world it is in. */
         if (c.y > W.h - 1) bad.aboveTheAir.push([c.sp.id, +c.y.toFixed(1)]);
       }
+      // and the body the player is wearing, which feeds the same matrices
+      sweep(p, 'player');
+      bad.seen = Object.assign({}, seen);
       return bad;
     };
     const counts = () => ({ drops: g.drops.length, regrow: g.regrow.length, grow: g.growQueue.length, posts: g.posts.length, log: g.log.length, creatures: g.creatures.length });
@@ -5102,6 +5129,17 @@ What was measured before any of this was fixed, over 180 frames of walking
     !soak.after.underTheMap.length && !soak.after.aboveTheAir.length, soak.after);
   check('a body on foot spends the day on the ground, not on the crowns over it',
     !soak.after.onFoliage.length, soak.after);
+  /* A NaN does not throw. `partMatrix` feeds a body's angles straight into
+     sin/cos, and a NaN matrix is what WebGL draws as nothing at all: a leg that
+     quietly stops existing for the rest of the day, and a body that keeps
+     walking with three of them. Every number a body carries is swept here, the
+     body's own physics having handed most of them to itself. `seen` is the guard
+     on the guard -- a field no body has is a field this check never looked at,
+     and the list is only as wide as the bodies actually are. */
+  check('and every number a body carries stays a number, for the animals and for the body you wear',
+    !soak.after.bodyNaN.length && !soak.before.bodyNaN.length &&
+    soak.after.seen.wSurf > 20 && soak.after.seen.tilt > 20 && soak.after.seen.bank > 20 &&
+    soak.after.seen.held > 20 && soak.after.seen.airAmt > 20 && soak.after.seen.yaw > 20, soak.after);
   check('and no frame of that day moves a body further than its own body can',
     soak.jump.worst <= 0.4, soak.jump);
   check('the log, the scattered fruit and the queues do not grow without bound',
