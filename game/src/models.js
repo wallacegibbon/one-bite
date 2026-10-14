@@ -392,33 +392,6 @@
     }
   }
 
-  /* ---------------- first-person hands (anchored bottom-right) ---------------- */
-  const HANDS = {
-    hand: [[-0.3, -0.3, 0, 0.6, 0.6, 0.9, '#d8a884'],
-      [-0.34, 0.3, -0.1, 0.68, 0.34, 0.7, '#4a5a78'],             // cuff
-      [-0.28, 0.24, 0.82, 0.16, 0.16, 0.34, '#e2b28e'],           // fingers
-      [-0.06, 0.24, 0.82, 0.16, 0.16, 0.34, '#e2b28e'],
-      [0.16, 0.24, 0.82, 0.16, 0.16, 0.34, '#e2b28e'],
-      [-0.36, -0.05, 0.5, 0.14, 0.3, 0.24, '#e2b28e']],           // thumb
-    talon: [[-0.3, -0.3, 0, 0.55, 0.55, 0.8, '#8a7256'],
-      [-0.2, -0.45, 0.7, 0.35, 0.25, 0.42, '#c8a050'],
-      [0.1, -0.45, 0.7, 0.25, 0.25, 0.42, '#c8a050'],
-      [-0.2, -0.45, 1.06, 0.16, 0.12, 0.2, '#3a3028'],            // claw tips
-      [0.14, -0.45, 1.06, 0.12, 0.12, 0.2, '#3a3028'],
-      [-0.36, -0.1, 0.55, 0.16, 0.3, 0.3, '#75604a']],
-    web: [[-0.3, -0.3, 0, 0.55, 0.55, 0.7, '#5f8f4a'],
-      [-0.35, -0.45, 0.6, 0.7, 0.22, 0.55, '#6a9a52'],
-      [-0.34, -0.42, 1.05, 0.16, 0.16, 0.34, '#6a9a52'],          // toes
-      [-0.1, -0.42, 1.05, 0.16, 0.16, 0.34, '#6a9a52'],
-      [0.14, -0.42, 1.05, 0.16, 0.16, 0.34, '#6a9a52']],
-    claw: [[-0.3, -0.3, 0, 0.55, 0.55, 0.7, '#3a3038'],
-      [-0.25, -0.5, 0.6, 0.2, 0.2, 0.46, '#2a2428'],
-      [0.05, -0.5, 0.6, 0.2, 0.2, 0.46, '#2a2428'],
-      [-0.25, -0.5, 1.0, 0.14, 0.12, 0.22, '#d8d2c4'],            // claw
-      [0.05, -0.5, 1.0, 0.14, 0.12, 0.22, '#d8d2c4'],
-      [-0.45, -0.5, 0.55, 0.18, 0.2, 0.4, '#2a2428']],
-  };
-
   /* ---------------- build meshes ---------------- */
   function buildModelMeshes(gl, model) {
     const out = [];
@@ -429,13 +402,6 @@
     }
     return out;
   }
-  function buildHandMesh(gl, id) {
-    const boxes = HANDS[id] || HANDS.hand;
-    const mb = new N.MeshBuilder();
-    for (const b of boxes) mb.box(b[0], b[1], b[2], b[3], b[4], b[5], hex(b[6]), false, 1);
-    return mb.upload(gl);
-  }
-
   /* ---------------- part animation ---------------- */
   const _m = { a: N.M4.create(), b: N.M4.create(), c: N.M4.create(), d: N.M4.create(), e: N.M4.create(), f: N.M4.create() };
   const WALK_RATE = 7;    // leg cycle per second at full speed; every legged body shares it
@@ -700,7 +666,6 @@
   N.MODEL_H = MODEL_H;
   N.MODEL_W = MODEL_W;
   N.buildModelMeshes = buildModelMeshes;
-  N.buildHandMesh = buildHandMesh;
   N.partMatrix = partMatrix;
   /* the pose on its own, without a matrix or a mesh around it: a gait is a
      statement about these angles, and the frame only ever sees the silhouette a

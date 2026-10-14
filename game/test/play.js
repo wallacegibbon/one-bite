@@ -5168,6 +5168,75 @@ What was measured before any of this was fixed, over 180 frames of walking
     wall.restored && ['bank2', 'bank1', 'bank0'].every(k =>
       Object.keys(wall[k]).every(f => wall[k][f] === null || wall[k][f].boxIn === 0)), wall);
 
+  /* 11o. First person shows the valley, and nothing of the body wearing it. The
+     view used to carry a hand: a box-built paw bolted to the corner of the lens,
+     swapped whenever the body changed, drawn with the depth test off so nothing
+     could ever stand in front of it. It reached nothing, held nothing, pushed
+     nothing and indicated nothing; it cost a mesh per body, a draw call per
+     frame, a `hand` field on every body record and four model tables. The lens
+     stands where the body stands, and the renderer has always known what that
+     means: a body is not drawn when the lens is inside it, or you look at the
+     inside of your own skull. The hand was the one exception to that rule, so
+     the rule is now asked for directly -- the meshes a first-person frame draws
+     are exactly the meshes a frame from the same lens draws with the body's own
+     parts taken out of the world. Measured: 54 meshes, the same 54 both ways,
+     and one draw call and 72 triangles fewer in every first-person frame than
+     before the hand went (the village shot: 55 draws / 71256 tris before, 54 /
+     71184 after). */
+  const ownLens = await step('firstPersonShowsNoBody', () => {
+    const g = window.game, N = window.FRUTARIA, R = g.R, p = g.player;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
+      vx: p.vx, vy: p.vy, vz: p.vz, vital: p.vital, fright: p.fright, dry: p.dry, air: p.air,
+      third: g.thirdPerson, cam: g.cam, ready: g.camReady, frame: g._camFrame,
+      mode: g.mode, hover: g.hover, input: g.input, time: g.time };
+    p.form = null; p.vital = 10; p.fright = 0; p.dry = 0; p.air = 999;
+    g.mode = 'play'; g.hover = null; g.input = {};
+    g.time = N.DAY_LEN * (13 / 24);
+    p.x = N.spawn.x; p.y = N.spawn.y; p.z = N.spawn.z; p.vx = p.vy = p.vz = 0;
+    for (let i = 0; i < 30; i++) g.update(1 / 60);
+    g.particles.n = 0;
+    /* one lens, one field of view, held for both frames: the culling that picks
+       which chunks reach the frame reads the field of view, so a third-person
+       lens (which opens up by 8 degrees) would be a different world */
+    g.thirdPerson = false; g.camReady = false; g.cam = { d: 0, fov: p.fov() };
+    const cf = g.shootCamera(p);
+    const drawn = () => {
+      const set = new Set();
+      const orig = R.drawMesh;
+      R.drawMesh = (mesh, m, o) => { set.add(mesh); return orig.call(R, mesh, m, o); };
+      g.particles.n = 0; g.hover = null;
+      g._camFrame = cf;
+      g.render();
+      delete R.drawMesh;              // the wrapper was an own property
+      return set;
+    };
+    const first = drawn();
+    // the same lens, the same world, the body's own parts not in it
+    g.thirdPerson = true;
+    const keep = g.ensureModel.bind(g);
+    g.ensureModel = (id) => (id === p.modelId ? [] : keep(id));
+    const filmed = drawn();
+    delete g.ensureModel;
+    g.thirdPerson = was.third;
+    const extra = [...first].filter((m) => !filmed.has(m)).length;
+    const missing = [...filmed].filter((m) => !first.has(m)).length;
+    Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch, form: was.form,
+      vx: was.vx, vy: was.vy, vz: was.vz, vital: was.vital, fright: was.fright,
+      dry: was.dry, air: was.air });
+    g.cam = was.cam; g.camReady = was.ready; g._camFrame = was.frame;
+    g.mode = was.mode; g.hover = was.hover; g.input = was.input; g.time = was.time;
+    g.updateEnv();
+    return { meshes: first.size, same: first.size === filmed.size, extra, missing,
+      lens: [+cf.x.toFixed(1), +cf.y.toFixed(1), +cf.z.toFixed(1)],
+      noHandPath: typeof g.ensureHand === 'undefined' && typeof N.buildHandMesh === 'undefined',
+      noHandField: N.FRUITS.every((f) => !f.form || f.form.hand === undefined) &&
+                   N.HUMAN_FORM.hand === undefined };
+  });
+  check('first person draws exactly what the same lens draws with the body taken out of the world',
+    !ownLens.error && ownLens.same && ownLens.extra === 0 && ownLens.missing === 0, ownLens);
+  check('and the game keeps no first-person hand to draw, and no body record names one',
+    ownLens.noHandPath && ownLens.noHandField, ownLens);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

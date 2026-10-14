@@ -48,7 +48,6 @@
       this.cam = { d: 0, fov: 76 };      // yaw and pitch are the player's, never a copy
       this.camReady = false;
       this.dt = 0.016;
-      this.handMeshes = {};
       this.creatureMeshes = {};
       this.env = null;
       this.night = 0;
@@ -849,11 +848,6 @@
       if (!this.creatureMeshes[id]) this.creatureMeshes[id] = N.buildModelMeshes(this.R.gl, N.MODELS[id]);
       return this.creatureMeshes[id];
     }
-    ensureHand(id) {
-      if (!this.handMeshes[id]) this.handMeshes[id] = N.buildHandMesh(this.R.gl, id);
-      return this.handMeshes[id];
-    }
-
     /* ------------------------- main loop ------------------------- */
     update(dt) {
       if (!this.ready) return;
@@ -1240,23 +1234,6 @@
       }
       // particles
       this.particles.draw(R);
-      // first-person hand
-      if (!this.thirdPerson && this.mode !== 'dead') {
-        const hand = this.ensureHand(p.formDef.hand || 'hand');
-        const m = N.M4.create();
-        const fwd = [Math.sin(p.yaw) * Math.cos(p.pitch), Math.sin(p.pitch), -Math.cos(p.yaw) * Math.cos(p.pitch)];
-        const right = [Math.cos(p.yaw), 0, Math.sin(p.yaw)];
-        const swing = Math.sin(p.bob * 2) * 0.05 * (p.moveAmt > 0.01 ? 1 : 0);
-        N.M4.trans(m, cam.x + fwd[0] * 0.58 + right[0] * 0.30, cam.y + fwd[1] * 0.58 + right[1] * 0.30 - 0.36 + swing, cam.z + fwd[2] * 0.58 + right[2] * 0.30 - 0.02);
-        const ry = N.M4.create(); N.M4.faceY(ry, p.yaw);
-        N.M4.mul(m, m, ry);
-        const sc = 0.24;
-        const sm = N.M4.create(); N.M4.scale(sm, sc, sc, sc);
-        N.M4.mul(m, m, sm);
-        R.gl.disable(R.gl.DEPTH_TEST);
-        R.drawMesh(hand, m, { day: Math.max(0.55, this.daylight) });
-        R.gl.enable(R.gl.DEPTH_TEST);
-      }
     }
 
     /* ------------------------- identity (docs/en/03 section 6) ------------------------- */

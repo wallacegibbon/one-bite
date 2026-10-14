@@ -59,15 +59,16 @@
    *                 already gave you is the body the lake's lamps are lit for
    *   step        : auto step-up height in metres
    *   fov         : field of view
-   *   hand        : first-person hand model id
    * Fields that no body in the valley uses any more (climb, dig, armor, web,
    * herd) were deleted with the animals that had them, and `tongue` went with
    * them: the frog's niche is swimming and breathing water, not reaching things.
    * `airBonus` and `glow` went the same way when the jellyfish body was cut --
    * no body in the valley holds a second of extra breath or carries a light of
-   * its own. `poisonImmune` came back with the lamps: the animal is back without
-   * a body of its own, so the immunity sits on the body that already lives in
-   * that water.
+   * its own. `hand` went with the first-person hand it named: the lens shows the
+   * world, and a hand bolted to the corner of the lens was never part of the
+   * body you were wearing. `poisonImmune` came back with the lamps: the animal
+   * is back without a body of its own, so the immunity sits on the body that
+   * already lives in that water.
    * A field comes back when a fruit asks for it, not before.
    * Nothing here is a mental effect: a form inherits a body and the world's
    * reaction to that body, never a mind (docs/en/04 s5.0).
@@ -82,7 +83,7 @@
       form: {
         cn: '猫头鹰', en: 'owl', size: [0.55, 0.7], speed: 0.9, jump: 0.8, fly: 5.2, flySpeed: 7.0,
         turn: 1.4, glide: 0.35,
-        nightVision: 0.75, stealth: 0.45, fov: 88, hand: 'talon', step: 0.3
+        nightVision: 0.75, stealth: 0.45, fov: 88, step: 0.3
       },
       cost: ['白昼畏光：夜视在白天反成致盲', '爪无法操作门闩与果袋（不能开仓库）'],
       costEn: ['photophobic by day: night vision turns blinding in daylight', 'talons cannot work latches or fruit bags (cannot open storage)'],
@@ -98,7 +99,7 @@
       form: {
         cn: '雨蛙', en: 'frog', size: [0.5, 0.5], speed: 0.9, jump: 1.3, hop: { up: 0.72, kick: 1.25, period: 0.22 },
         swim: 1.1, turn: 1.9, breatheAir: false, poisonImmune: true,
-        dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, hand: 'web', step: 0.3
+        dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, step: 0.3
       },
       cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '太小：够不到高处的果，也推不开门'],
       costEn: ['the skin must stay wet: after 90 s out of water it dries and vitality keeps draining', 'too small: cannot reach high fruit, cannot push a door open'],
@@ -113,7 +114,7 @@
       duration: 480,
       form: {
         cn: '棕熊', en: 'bear', size: [1.4, 1.5], speed: 1.1, jump: 0.9, coldImmune: true,
-        turn: 1.6, aura: 8, step: 1.1, fov: 68, hand: 'claw'
+        turn: 1.6, aura: 8, step: 1.1, fov: 68
       },
       cost: ['无法精细操作（不能采摘小果、不能开仓库）', '体重：薄冰会裂，木桥会塌'],
       costEn: ['no fine motor control (cannot pick small fruit, cannot open storage)', 'weight: thin ice breaks, wooden bridges collapse'],

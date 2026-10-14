@@ -99,7 +99,6 @@ A model carries **no scale of its own**. One number sizes a body: the collision 
 The lamp jellyfish is the one model with **no box to be measured against**: nothing in the game collides with it (you swim through the lamps), and it bears no fruit, so no player ever wears it. It is checked against the size the codex gives it instead — **0.61 m across, 0.74 m from the top of the dome to the tip of the longest arm**, measured at its `scale` of 0.16.
 
 5 models: human, owl, frog, bear, jelly.
-4 first-person hands: hand, talon, web, claw.
 
 ## 2. Audio direction (not implemented, full design)
 
@@ -128,7 +127,7 @@ All code is classic `<script src>` global scripts hanging off the `window.FRUTAR
 | `src/engine.js` | mat4, MeshBuilder, shaders, Renderer (frustum culling, sky, particles) |
 | `src/world.js` | block table, voxel storage, chunked meshing (with AO), DDA ray picking |
 | `src/worldgen.js` | value-noise/fbm terrain + structure generation (castle/town/cave/lake/isles/forest) |
-| `src/models.js` | 4 models + 4 first-person hands + part animation matrices (with a parent chain, so limbs have joints) |
+| `src/models.js` | 5 models + part animation matrices (with a parent chain, so limbs have joints) |
 | `src/entities.js` | Player (AABB collision/breath/flight), Creature (attitude-driven AI), Particles |
 | `src/game.js` | main logic: fruit/backpack/spoilage/storage/quests/save/render loop |
 | `src/ui.js` | HUD, rotating minimap, item bar, storage panel, codex, help, death |

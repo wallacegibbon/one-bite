@@ -99,7 +99,6 @@ sit here looking implemented while nothing reads it.
 | `poisonImmune` | the lamp jellyfish sting does not bite | only the frog | live |
 | `step` | auto step-up height in metres | bear 1.1 = walks up any stair | live |
 | `fov` | field of view | frog 100 / bear 68 | live |
-| `hand` | first-person hand model | hand/talon/web/claw | live |
 
 Two of those fields are switches rather than numbers: `coldImmune` and
 `poisonImmune` change what can hurt you at all, not how much. Each one is the
