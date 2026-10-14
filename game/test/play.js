@@ -5034,6 +5034,140 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the lamps still trace the tower they were born on',
     space.lampFar[0] <= 6, space);
 
+  /* 11n. A body walked into a bank stands on its feet. The step-up lifts a body
+     over a riser, and the lift used to be tested at the spot the body already
+     stands in -- where of course there is room -- and the move was then retried
+     with the speed the collision had already zeroed along the axis it had to
+     stop, so the body never moved and the lift was kept anyway. A body pressed
+     against a bank it cannot climb was raised 0.15 m, dropped back, raised
+     again: walked at a bank two metres tall, a human stood on the ground in
+     **34%** of frames and its height swung **0.124 m** within a second, a bear
+     in **31%**. And the same broken retry meant the lift never once carried a
+     body up a step it could reach: a bear whose own record says its legs reach
+     **1.1 m**, walked at a step of one metre, gained **0.124 m** in three
+     seconds and stood on the ground in 31% of frames. Now the retry is handed
+     the move the body asked for, and a lift that ends where the body already
+     was is thrown away: the human and the bear stand on the ground in every one
+     of those frames with a swing of **0**, and the bear climbs the step it can
+     reach and ends standing on top of it, **1.02 m** up. A step taller than the
+     legs is still not climbed -- the human gains **0** against a step of a
+     metre and against a bank of two. And with nothing built there the same two
+     bodies simply walk: they were on the ground in **89%** and **78%** of the
+     frames of a shorter run, swinging the same 0.124 m, and they are on the
+     ground in every one of them now with a swing of 0. A hopping body is not
+     measured for standing: a frog at the same bank is off the ground in 77% of
+     frames because hopping is what its own record says it does on land, and
+     what is asked of it is that its feet come back down, which they do. */
+  const wall = await step('aBodyWalkedIntoABankStandsOnItsFeet', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    /* The bank is built, not hunted: one shelf, one riser, the same place and
+       the same height for every body and every run. */
+    let spot = null;
+    for (let z = 12; z < W.d - 12 && !spot; z++)
+      for (let x = 12; x < W.w - 12 && !spot; x++) {
+        const gy = N.terrainY(W, x, z, W.h - 1);
+        if (gy <= 8 || gy >= 24) continue;
+        if (N.waterTop(W, x, z, W.h - 1) >= 0) continue;
+        let flat = true;
+        for (let dz = -6; dz <= 6 && flat; dz++) for (let dx = -6; dx <= 6; dx++)
+          if (N.terrainY(W, x + dx, z + dz, W.h - 1) !== gy) { flat = false; break; }
+        if (!flat || N.terrainY(W, x, z - 2, W.h - 1) !== gy) continue;
+        /* room for the tallest body to stand and for the bank to be built: the
+           same reading the animals' own movement uses, where a trunk or a crown
+           or a fruit hanging in the air is not a wall */
+        const rockAt = (bx, by, bz) => W.solidAt(bx, by, bz) && !N.TREE_BLOCK[W.get(bx, by, bz)];
+        let room = true;
+        for (let dz = -6; dz <= 6 && room; dz++) for (let dx = -3; dx <= 3; dx++)
+          for (let dy = 0; dy <= 2; dy++)
+            if (rockAt(x + dx, gy + dy, z + dz)) { room = false; break; }
+        if (!room) continue;
+        spot = { x: x + 0.5, z: z + 0.5, gy, bx: x, bz: z - 2, block: W.get(x, gy - 1, z - 2) };
+      }
+    if (!spot) return { error: 'no flat shelf' };
+    /* The surface at gy means the top block of the ground is the one at gy - 1,
+       so a bank h blocks tall is the blocks at gy .. gy + h - 1. */
+    const cells = [];
+    for (const dx of [-2, -1, 0, 1, 2]) for (const dy of [0, 1])
+      cells.push([spot.bx + dx, spot.gy + dy, spot.bz]);
+    const was = cells.map(c => W.get(c[0], c[1], c[2]));
+    const build = (h) => cells.forEach(c =>
+      W.set(c[0], c[1], c[2], (c[1] === spot.gy ? 1 : 2) <= h ? spot.block : 0));
+    const pw = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, form: p.form,
+      formT: p.formT, formMax: p.formMax, grounded: p.grounded, inWater: p.inWater,
+      held: p.held, air: p.air, vital: p.vital, yaw: p.yaw, faceYaw: p.faceYaw,
+      pitch: p.pitch, input: g.input };
+    const run = (form, secs) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.x = spot.x; p.z = spot.z + 1.2;
+      p.y = N.groundY(W, Math.floor(spot.x), Math.floor(spot.z + 1.2), spot.gy + 6) + 0.0005;
+      p.vx = p.vy = p.vz = 0; p.pitch = 0;
+      const yw = Math.atan2(spot.bx - p.x, -(spot.bz - p.z)); p.faceYaw = yw; p.yaw = yw;
+      p.inWater = false; p.held = 0; p.air = 999; p.vital = 10; p.grounded = true;
+      p.airAmt = 0; p.crouch = 0; p.squash = 0; p.hopT = 0; p.wind = 0; p.bank = 0; p.tilt = 0;
+      if (p.hits(p.x, p.y, p.z)) return null;      // the body has to start free
+      const y0 = p.y;
+      let gnd = 0, n = 0, boxIn = 0, hi = y0;
+      const ys = [];
+      for (let i = 0; i < Math.round(secs * 60); i++) {
+        g.input = { fwd: 1 };
+        p.update(1 / 60, g.input, g); g.time += 1 / 60; n++;
+        if (p.grounded) gnd++;
+        if (p.hits(p.x, p.y, p.z)) boxIn++;
+        if (p.y > hi) hi = p.y;
+        ys.push(p.y);
+      }
+      g.input = {};
+      /* the gap between the feet and the surface under them over the last
+         second: a body that stands never has one, and a body that hops has it
+         only between the launch and the landing */
+      let gapMin = 1e9, gapMax = -1e9;
+      for (let i = ys.length - 60; i < ys.length; i++) {
+        const gap = ys[i] - N.standY(W, Math.floor(p.x), Math.floor(p.z), ys[i]);
+        if (gap < gapMin) gapMin = gap;
+        if (gap > gapMax) gapMax = gap;
+      }
+      const last = ys.slice(-60);
+      return { step: p.formDef.step || 0, gndPct: Math.round(gnd / n * 100),
+        span: +(Math.max.apply(null, last) - Math.min.apply(null, last)).toFixed(4),
+        gapMin: +gapMin.toFixed(4), gapMax: +gapMax.toFixed(4),
+        gained: +(hi - y0).toFixed(3), boxIn };
+    };
+    const res = { spot };
+    /* the third one has nothing built: the same body on the same shelf with
+       nothing in front of it, which is the control that says the rule above did
+       not stop a body walking */
+    for (const [h, secs] of [[2, 3], [1, 3], [0, 1.5]]) {
+      build(h);
+      const per = {};
+      for (const form of [null, 'frogpear', 'bruinfig', 'owlberry'])
+        per[form || 'human'] = run(form, secs);
+      res['bank' + h] = per;
+    }
+    cells.forEach((c, i) => W.set(c[0], c[1], c[2], was[i]));
+    Object.assign(p, pw);
+    g.input = pw.input;
+    res.restored = cells.every((c, i) => W.get(c[0], c[1], c[2]) === was[i]);
+    return res;
+  });
+  const onFeet = (k) => !!wall.bank2 && !!wall.bank2[k] && wall.bank2[k].gndPct >= 90;
+  check('a body walked into a bank taller than its own legs stays on its feet',
+    onFeet('human') && onFeet('bruinfig') && onFeet('owlberry'), wall);
+  check('and its height does not swing while it is pressed against it',
+    !!wall.bank2 && ['human', 'bruinfig'].every(k => wall.bank2[k].span <= 0.02), wall);
+  check('every body comes back down to its feet, hopping or not',
+    !!wall.bank2 && ['human', 'frogpear', 'bruinfig', 'owlberry']
+      .every(k => wall.bank2[k].gapMin <= 0.02), wall);
+  check('a step the body reaches with its own legs is still climbed',
+    !!wall.bank1 && wall.bank1.bruinfig.gained >= 0.9, wall);
+  check('and a step taller than that is not',
+    !!wall.bank1 && !!wall.bank2 && wall.bank1.human.gained <= 0.05 &&
+    wall.bank2.human.gained <= 0.05 && wall.bank2.bruinfig.gained <= 0.05, wall);
+  check('with nothing built in front of it the same body just walks',
+    !!wall.bank0 && ['human', 'bruinfig'].every(k => wall.bank0[k].gndPct >= 90 && wall.bank0[k].span <= 0.02), wall);
+  check('and no body is left inside the bank, or the bank inside the world',
+    wall.restored && ['bank2', 'bank1', 'bank0'].every(k =>
+      Object.keys(wall[k]).every(f => wall[k][f] === null || wall[k][f].boxIn === 0)), wall);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

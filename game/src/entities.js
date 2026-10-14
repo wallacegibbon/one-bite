@@ -534,19 +534,39 @@
         // auto step-up
         if (step > 0 && (wasGrounded || this.grounded) && !fly && !this.inWater) {
           const ox = this.x, oz = this.z;
-          let hit = this.axis('x', this.vx * sdt);
-          hit = this.axis('z', this.vz * sdt) || hit;
+          /* The move the body asked for, read off the speed **before** `axis`
+             runs: `axis` zeroes the speed along the axis it had to stop, so the
+             retry below used to be handed a zero and never moved the body at
+             all. The lift was then kept although it had bought nothing, and a
+             body pressed against a wall it cannot climb was raised 0.15 m a
+             frame and had to fall back: walked at a bank two metres tall on one
+             flat shelf, a human stood on the ground in 34% of the frames and
+             its height swung 0.124 m within a second, a bear in 31%, and even
+             with nothing built in front of them they were on the ground in 89%
+             and 78% with the same swing. That is the wobble at the water's
+             edge. And the lift had never once carried a body up a step it could
+             reach: a bear whose own record says its legs reach 1.1 m, walked at
+             a step of one metre, gained 0.124 m in three seconds. */
+          const wx = this.vx * sdt, wz = this.vz * sdt;
+          let hit = this.axis('x', wx);
+          hit = this.axis('z', wz) || hit;
           if (hit) {
+            const bx = this.x, bz = this.z;      // where the blocked move left it
             let done = false;
             for (let up = 0.15; up <= step + 1e-6 && !done; up += 0.15) {
               const oy = this.y;
               this.y = oy + up;
-              if (!this.hits(this.x, this.y, this.z)) {
-                this.x = ox; this.z = oz;
-                this.axis('x', this.vx * sdt); this.axis('z', this.vz * sdt);
-                if (!this.hits(this.x, this.y - 0.02, this.z)) this.y -= 0.02;
-                done = true;
-              } else this.y = oy;
+              if (this.hits(this.x, this.y, this.z)) { this.y = oy; continue; }
+              this.x = ox; this.z = oz;
+              this.axis('x', wx); this.axis('z', wz);
+              /* A lift is worth its height only when the body ends up somewhere
+                 its own feet could not reach. Where it lands back at the place
+                 the blocked move left it, what is in front of the body is not a
+                 step: it is a wall taller than the body can climb, and the body
+                 goes back down to its feet and stands there. */
+              if (Math.hypot(this.x - bx, this.z - bz) < 1e-4) { this.y = oy; continue; }
+              if (!this.hits(this.x, this.y - 0.02, this.z)) this.y -= 0.02;
+              done = true;
             }
           }
         } else {
