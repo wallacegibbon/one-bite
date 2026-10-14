@@ -3177,9 +3177,11 @@ What was measured before any of this was fixed, over 180 frames of walking
     const [tx, tz] = lake.tower;
     if (!jellies.length) return back({ error: 'no lamp jellyfish in the valley' });
 
-    // a shallow shelf of lake and a deep stretch of it, both searched for
-    let shallow = null, deep = null;
-    for (let z = 74; z < 140 && !(shallow && deep); z++) for (let x = 46; x < 112; x++) {
+    // a shallow shelf of lake and a deep stretch of it, both searched for, and
+    // the arm's-length bed B15 is about: two metres of water over the sand, so
+    // the lens is a metre and three quarters from the floor it is looking at
+    let shallow = null, deep = null, arm = null;
+    for (let z = 74; z < 140 && !(shallow && deep && arm); z++) for (let x = 46; x < 112; x++) {
       let top = -1;
       for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { top = y; break; }
       if (top < 0) continue;
@@ -3189,11 +3191,12 @@ What was measured before any of this was fixed, over 180 frames of walking
       const depth = top + 1 - bed;
       if (!shallow && depth >= 6 && depth <= 8) shallow = { x: x + 0.5, z: z + 0.5, top, bed, depth };
       if (!deep && depth >= 9) deep = { x: x + 0.5, z: z + 0.5, top, bed, depth };
-      if (shallow && deep) break;
+      if (!arm && depth === 3) arm = { x: x + 0.5, z: z + 0.5, top, bed, depth };
+      if (shallow && deep && arm) break;
     }
-    if (!shallow || !deep) return back({ error: 'no shallow shelf and no deep stretch in the lake' });
+    if (!shallow || !deep || !arm) return back({ error: 'no shallow shelf, no deep stretch and no arm-length shelf in the lake' });
 
-    const shot = (lx, lensY, lz, yaw, pitch) => {
+    const shot = (lx, lensY, lz, yaw, pitch, solo) => {
       const eyeOff = p.eyePos() - p.y;
       p.x = lx; p.y = lensY - eyeOff; p.z = lz; p.vx = p.vy = p.vz = 0;
       p.yaw = yaw; p.pitch = pitch;
@@ -3203,7 +3206,7 @@ What was measured before any of this was fixed, over 180 frames of walking
          changes the 99th percentile of the frame by dozens between two runs of
          identical code: the drops are drawn with an emissive boost of their own. */
       const herd = g.creatures, dropsWas = g.drops;
-      g.creatures = jellies; g.drops = [];
+      g.creatures = solo ? [] : jellies; g.drops = [];
       g._camFrame = g.shootCamera(p); g.updateEnv(); g.render();
       g.creatures = herd; g.drops = dropsWas;
       const env = { fogDen: +g.env.fogDen.toFixed(4), emisKeep: g.env.emisKeep,
@@ -3222,10 +3225,23 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (l > 200) hi++;
       }
       lums.sort((a, b) => a - b);
+      /* Straight down the crosshair, on its own. The whole frame answers "what
+         does this lens see", which is not the question the arm's-length bed
+         asks: a complaint about the floor a metre and a half in front of the
+         face is answered by the patch in front of the crosshair, and nothing
+         else. An 80x80 square at the centre is about a metre and a half of
+         lakebed from that distance. */
+      const cx = Math.floor(w / 2), cy = Math.floor(h / 2), R = 40;
+      let pn = 0, psum = 0, pbr = 0;
+      for (let y = cy - R; y < cy + R; y++) for (let x = cx - R; x < cx + R; x++) {
+        const i = (y * w + x) * 4;
+        pn++; psum += 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]; pbr += px[i + 2] - px[i];
+      }
       g._camFrame = null;
       return { env, meanLum: +(sum / n).toFixed(1), blueMinusRed: +(br / n).toFixed(1),
         maxLum: Math.round(lmax), p99: Math.round(lums[Math.floor(n * 0.99)]),
-        over200: +(100 * hi / n).toFixed(2) };
+        over200: +(100 * hi / n).toFixed(2),
+        near: { meanLum: +(psum / pn).toFixed(1), blueMinusRed: +(pbr / pn).toFixed(1) } };
     };
 
     // 1. just under the surface, straight down at the bed it is swimming over
@@ -3309,7 +3325,28 @@ What was measured before any of this was fixed, over 180 frames of walking
       return { bad, wet, dry,
         shelf: W.liquidSurfaceAt(Math.floor(shallow.x), Math.floor(shallow.z)), top: shallow.top };
     })();
-    return back({ shallow, deep, jelly: jellies.length, down, up, floor, lamps, air, body, conventions });
+    /* 8. the floor at arm's length. The complaint was a lakebed that would not
+       turn the colour of water with its face a metre and a half from the lens:
+       the haze at 0.14 per metre is 6% over that much water, so nothing that
+       works along the viewing path can answer it. Only the daylight coming down
+       through the lake can, and that is the absorption term. Two metres of
+       water over sand, the lens 25 cm under the surface -- the scan's `top` is
+       the topmost water *cell*, so the surface itself is one above it -- and
+       looking straight down.
+       9. the control: the same frame with that law switched off, which is what
+       the lake used to be. "Blue over red" on its own can be met by painting
+       the lake blue; this pair can only be met by the absorption doing the
+       work, because the same shot without it is dry sand again.
+       10. the same patch deeper down: the law has to keep working as the bed
+       goes deeper, or it is a tint and not a depth. */
+    const armDown = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true);
+    const ueWas = g.updateEnv;
+    g.updateEnv = function () { ueWas.call(g); g.env.liqK = [0, 0, 0]; };
+    const armDry = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true);
+    g.updateEnv = ueWas;
+    const armDeep = shot(shallow.x, shallow.top + 1 - 0.25, shallow.z, 0, -1.5, true);
+    return back({ shallow, deep, arm, jelly: jellies.length, down, up, floor, lamps, air,
+      body, conventions, armDown, armDry, armDeep });
   });
   check('a body looking down at the lakebed sees water: the frame is blue over red',
     !lakebedView.error && lakebedView.down.blueMinusRed > 10, lakebedView);
@@ -3356,6 +3393,21 @@ What was measured before any of this was fixed, over 180 frames of walking
     lakebedView.conventions && lakebedView.conventions.bad === 0 && lakebedView.conventions.wet > 200 &&
     lakebedView.conventions.dry > 0 &&
     lakebedView.conventions.shelf === lakebedView.conventions.top + 1, lakebedView);
+  /* The floor a metre and a half in front of the lens, measured where the lens
+     is looking rather than over the whole frame: the haze cannot reach a bed
+     that close, so this is the absorption term's own ground. Two metres of
+     water over sand reads (116,159,127) -- teal-green, and 42 luminance darker
+     than the same frame with the law switched off, which is (201,186,134): the
+     colour of a lakebed that has never been under water. */
+  check('the lakebed at arm\'s length, two metres down, is the colour of water and not of dry sand',
+    lakebedView.arm && lakebedView.armDown && lakebedView.armDown.near.blueMinusRed > 5 &&
+    lakebedView.armDown.near.meanLum < 160, lakebedView);
+  check('and it is the absorption that does it: switch the law off and the same patch is dry sand again',
+    lakebedView.armDry && lakebedView.armDry.near.blueMinusRed < -40 &&
+    lakebedView.armDry.near.meanLum - lakebedView.armDown.near.meanLum > 25, lakebedView);
+  check('the same patch keeps getting bluer as the bed goes deeper: it is a depth, not a tint',
+    lakebedView.armDeep && lakebedView.armDeep.near.blueMinusRed > lakebedView.armDown.near.blueMinusRed + 15,
+    lakebedView);
 
   /* 11. A body in the air or in the water is a body that has to travel.
      Three things were wrong with how such a body moved, and they showed up
