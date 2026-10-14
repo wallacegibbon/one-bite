@@ -199,20 +199,20 @@
             [0.76, 0, 1.2, 0.82, 0.22, 0.8, '#6a9a52']
           ] },
         { name: 'thighL', parent: 'body', pivot: [-1.35, 1.75, -0.75], anim: 'walk', sign: -1, stride: 0, stands: 1,
-          air: [0.55, 0, 0.12], crouch: [-0.5, 0, 0.12], swimKick: 1, heldPose: [0, 0, 0.3], boxes: [
+          air: [0.55, 0, 0.12], crouch: [-0.5, 0, 0.12], swimKick: 1, heldPose: [0, 0, -0.1], boxes: [
             [-1.95, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']         // the muscle
           ] },
         { name: 'shinL', parent: 'thighL', pivot: [-1.42, 1.0, -1.35], anim: 'knee', sign: -1, stride: 0, stands: 1, bend: -1,
-          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0.5], boxes: [
+          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, -0.1], boxes: [
             [-1.8, 0.1, -1.3, 0.8, 1.0, 1.0, '#4e7a3c'],
             [-1.9, 0, -0.6, 1.02, 0.24, 1.4, '#6a9a52']           // long foot
           ] },
         { name: 'thighR', parent: 'body', pivot: [1.35, 1.75, -0.75], anim: 'walk', sign: 1, stride: 0, stands: 1,
-          air: [0.55, 0, -0.12], crouch: [-0.5, 0, -0.12], swimKick: 1, heldPose: [0, 0, -0.3], boxes: [
+          air: [0.55, 0, -0.12], crouch: [-0.5, 0, -0.12], swimKick: 1, heldPose: [0, 0, 0.1], boxes: [
             [0.9, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']
           ] },
         { name: 'shinR', parent: 'thighR', pivot: [1.42, 1.0, -1.35], anim: 'knee', sign: 1, stride: 0, stands: 1, bend: -1,
-          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, -0.5], boxes: [
+          air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0.1], boxes: [
             [1.0, 0.1, -1.3, 0.8, 1.0, 1.0, '#4e7a3c'],
             [0.88, 0, -0.6, 1.02, 0.24, 1.4, '#6a9a52']
           ] }
@@ -563,11 +563,26 @@
        up level with the body's own belly; a quarter of a stroke ahead it
        travels 0.42 m, rises 0.16 m, and runs out under the body instead.
        `held` is the water holding the body up -- in water, breathing it, and not
-       standing on the bottom. That is what folds the knee and puts the feet
-       **behind** the body instead of under it, and the stroke swings around that
-       hold; a body the water is not holding (wading, or dug down on the lakebed)
-       keeps the land pose, because under the body is where its feet belong when
-       something is holding them up instead. */
+       standing on the bottom. That is what folds the knee, puts the feet
+       **behind** the body instead of under it, and rolls the whole leg out
+       **away** from the centre line with it; a body the water is not holding
+       (wading, or dug down on the lakebed) keeps the land pose, because under
+       the body is where its feet belong when something is holding them up
+       instead. The roll turns out and not in, and it turns a little. Turned in,
+       it carried each webbed foot over the other and laid it on the far side of
+       the body: read off the matrices the draw uploads, a foot reached 0.115 m
+       past the centre line of its own body floating and 0.119 m swimming, the
+       leg came only 0.024 m and 0.052 m past the body's own flank, and seen from
+       behind the animal was a pair of legs crossed under itself with both feet
+       pointing in. Turned out by 0.1 rad at the hip and 0.1 at the knee the
+       centre of a foot sits 0.235 m and 0.236 m out on its own side, neither
+       foot ever reaches the centre line, and the two read as paddles. The turn
+       is split over both
+       joints rather than hung on the knee, because this leg carries its foot
+       2.15 of its own units in front of the knee it turns on: the 0.5 rad the
+       fold used to be given at the knee alone throws the leg 0.22 m past the
+       flank of a body whose flank stands 0.17 m off the centre line, and a frog
+       floating against the wall of the lake has its feet in the rock. */
     const swim = st.swim || 0, held = st.held || 0;
     if (swim > 0.01 || held > 0.01) {
       const u = t * SWIM_RATE + ph;

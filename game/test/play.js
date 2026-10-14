@@ -2088,7 +2088,7 @@ const { sim } = require('./simwait');
        the model data is hand-mirrored and a pose that is right on one side can be
        wrong on the other. */
     const splayAt = (st) => {
-      let leg = 0, foot = 0;
+      let leg = 0, foot = 0, cross = 0;
       for (const e of [shin, shinR]) {
         const m = pm.call(N, N.M4.create(), N.M4.create(), e, st, parts);
         let lo = 1e9, hi = -1e9;
@@ -2101,16 +2101,20 @@ const { sim } = require('./simwait');
                 if (px > hi) hi = px;
               }
         leg = Math.max(leg, -lo, hi);
+        /* and how far this leg reaches past the body's own centre line, onto the
+           side of the other one: a foot that does that is a foot pointing in */
+        const side = e.part.name.endsWith('L') ? -1 : 1;
+        cross = Math.max(cross, side < 0 ? Math.max(0, hi) : Math.max(0, -lo));
         const fb = e.part.boxes[e.part.boxes.length - 1];
         const cx = fb[0] + fb[3] / 2, cy = fb[1] + fb[4] / 2, cz2 = fb[2] + fb[5] / 2;
         foot = Math.max(foot, Math.abs((m[0] * cx + m[4] * cy + m[8] * cz2 + m[12]) * SC));
       }
-      return { leg: leg - FLANK, foot };
+      return { leg: leg - FLANK, foot, cross };
     };
     const stroke = (st0) => {
       if (!st0) return null;
       const cz = [], cy = [], bend = [];
-      let leg = 0, foot = 0, legsum = 0, footsum = 0;
+      let leg = 0, foot = 0, cross = 0, legsum = 0, footsum = 0;
       for (let i = 0; i <= 180; i++) {
         const st = Object.assign({}, st0, { t: st0.t + i / 60, _loc: 1 });
         const f = footAt(st);
@@ -2119,6 +2123,7 @@ const { sim } = require('./simwait');
         const sp = splayAt(st);
         if (sp.leg > leg) leg = sp.leg;
         if (sp.foot > foot) foot = sp.foot;
+        if (sp.cross > cross) cross = sp.cross;
         legsum += sp.leg; footsum += sp.foot;
       }
       const mx = a => Math.max(...a), mn = a => Math.min(...a);
@@ -2127,7 +2132,8 @@ const { sim } = require('./simwait');
         move: r3(st0.move || 0),
         back: r3(mn(cz)), fwd: r3(mx(cz)), travel: r3(mx(cz) - mn(cz)), rise: r3(mx(cy) - mn(cy)),
         footY: [r3(mn(cy)), r3(mx(cy))], bendMin: r3(mn(bend)), bendMax: r3(mx(bend)),
-        legOut: r3(leg), footX: r3(foot), legAvg: r3(legsum / 181), footAvg: r3(footsum / 181) };
+        legOut: r3(leg), footX: r3(foot), footCross: r3(cross),
+        legAvg: r3(legsum / 181), footAvg: r3(footsum / 181) };
     };
     const place = (at, y) => {
       p.x = at.x; p.z = at.z; p.y = y; p.vx = p.vy = p.vz = 0; p.yaw = 0; p.faceYaw = 0; p.pitch = 0;
@@ -2280,21 +2286,30 @@ const { sim } = require('./simwait');
   check('a wild body standing in water too shallow to hold it up has feet, not a kick',
     !!kick.wildWade && kick.wildWade.body.inWater === 1 && kick.wildWade.held === 0 &&
     kick.wildWade.swim === 0 && kick.wildWade.back > kick.BACK, kick);
-  /* and the legs are in under the body, not out at its sides. The fold of the
-     knee alone leaves a leg bolted to the flank: what was read off the matrices
-     before the hold was given its roll was a shin standing 0.063 m past the
-     flank of a body 0.169 m half-wide, with the centre of the foot 0.152 m off
-     the centre line -- a frog seen from behind looked like a pair of trousers
-     dropped over the water. Now 0.052 m and 0.061 m swimming, 0.024 m and 0.007
-     m floating, and the feet crossed one over the other behind it. On land the
-     legs stay out at the sides, as the haunch of a frog does: 0.078 m and
-     0.181 m, which is the pose the water pose is measured against. */
-  check('a body the water holds up keeps its legs in under it, not out at its sides',
-    !!kFl && !!kWl && kFl.legOut <= 0.035 && kWl.legOut <= 0.035 && kFl.legAvg <= 0.03, kick);
-  check('and its feet come back under the body: the foot centre is well inside the flank',
-    !!kSw && !!kFl && !!kWl && kSw.footX <= 0.09 && kFl.footX <= 0.09 && kWl.footX <= 0.09, kick);
-  check('the water pose is narrower than the land pose, which keeps its legs out as a haunch does',
-    !!kLd && !!kSw && kLd.legOut >= 0.07 && kLd.footX >= 0.15 && kSw.footX < kLd.footX - 0.05, kick);
+  /* and the legs are out at the body's own sides, not crossed under it. The
+     hold's roll used to turn the other way, and that carried each webbed foot
+     over the other: read off the same matrices, a foot reached 0.115 m past the
+     centre line of its own body floating and 0.119 m swimming, both feet pointed
+     in, and the leg came only 0.024 m and 0.052 m past the flank -- a frog seen
+     from behind was a pair of legs crossed under itself. Turned out by 0.1 rad
+     at the hip and 0.1 at the knee, the centre of a foot sits 0.235 m and 0.236
+     m out on its own side, no foot reaches the centre line at all, and the leg
+     stands 0.148 m and 0.149 m past the flank. That is nearly twice as far out
+     as the haunch of the land pose reaches, which stands 0.078 m past the flank
+     with the foot 0.181 m off the centre line -- and it has to be further out,
+     because a webbed foot is a paddle and a paddle that never leaves the shadow
+     of its own body pushes nothing. It is not a great deal further out, though:
+     the 0.5 rad the fold used to be given at the knee alone throws the whole leg
+     0.218 m past the flank, and a frog floating against the wall of the lake has
+     its feet in the rock. A body standing in water keeps the land pose, and its
+     foot stays where the land pose puts it. */
+  check('a body the water holds up holds its feet out at its own sides, not crossed under itself',
+    !!kFl && !!kSw && !!kWl && kFl.footX >= 0.18 && kSw.footX >= 0.18 && kWl.footX >= 0.18, kick);
+  check('and neither foot reaches across the centre line of its own body',
+    !!kFl && !!kSw && !!kWl && kFl.footCross <= 0.005 && kSw.footCross <= 0.005 &&
+    kWl.footCross <= 0.005, kick);
+  check('the water legs stay within a webbed foot of the haunch they hang from',
+    !!kSw && !!kLd && kSw.legOut <= 0.16 && kLd.legOut <= 0.09 && kLd.footX >= 0.15, kick);
 
   /* 10w. and the body that is drawn never reaches under the ground it is
      standing on. Everything above asks what the legs are *doing*; this asks
