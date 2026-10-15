@@ -27,6 +27,11 @@
      0.5 m body at this level is entirely under the surface plane. */
   const FLOAT_UNDER = 0.3;
 
+  /* The speed the worn body's stride law is calibrated at, in m/s. See
+     `Player.walkMove` for why this is a number the player's body carries and a
+     wild body does not need. */
+  const WALK_TOP = 5;
+
   /* How far ahead of itself a flying body looks for ground it would have to
      climb, in metres. It is the reach of the body's own climb: the climb is
      eased at 2.2/s, so a body closes 63% of the height it wants in 0.45 s, and
@@ -124,11 +129,20 @@
     bodyScale() {
       return this.form ? N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature].scale : HUMAN.scale;
     }
-    /* How hard this body is asking for a stride, 0..1: 5 m/s is the fastest it
-       travels on its own feet. The draw sizes the swing by this and the walk
-       clock sizes the stride by it, and they have to be the same number or the
-       foot slips all the same -- so it is said once, here. */
-    walkMove() { return Math.min(1, Math.hypot(this.vx, this.vz) / 5); }
+    /* How hard this body is asking for a stride, 0..1. The draw sizes the swing
+       by this and `walkGait` sizes the stride by it, and they have to be the same
+       number or the foot slips all the same -- so it is said once, here.
+       `WALK_TOP` is not the fastest this body can go on foot: a sprint reaches
+       4.7 x 1.45 = 6.8 m/s (`Player.update`), and the law has nothing left to say
+       above 1. It is the speed at which the stride law is calibrated, and it sits
+       a little above the human body's cruising 4.7 m/s on purpose: at 4.7 the body
+       is at 0.94 of the law, which is what puts its steps at 1.85 m and its legs
+       at 2.33 a second -- what a person actually does at that speed -- and leaves
+       the last sixth of the law for a body going faster still. A wild body needs no
+       such constant because it is measured against its own record
+       (`N.walkMove(c.speed, sp.speed)`); a worn body travels at the human body's
+       speed in the shape of something else, and so carries its own number. */
+    walkMove() { return Math.min(1, Math.hypot(this.vx, this.vz) / WALK_TOP); }
     /* Held breath is a property of the body. A frog body does not need air at
        all (breatheAir: false, handled by the caller); every body that does need
        it holds it for the same eighteen seconds. No body in the valley carries
