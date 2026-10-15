@@ -7895,6 +7895,69 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the twelve bars are the twelve bars they were, at the same size',
     !hlBox.error && hlBox.verts === 432 && hlBox.boxErr < 1e-6, hlBox);
 
+  /* A re-meshed chunk has to hand its old geometry back, or the card keeps a
+     copy of a valley that no longer exists. Nothing in the game can see that
+     happening: a buffer nobody refers to is invisible, costs memory for the rest
+     of the session, and first shows up as a player who has been picking fruit
+     for an hour. So the accounting is read straight off the GL context -- every
+     buffer the mesher makes and every one it gives back -- over whole rebuilds
+     of the valley, and over the one write a player takes hundreds of times:
+     `Game.setBlock` flags the chunk, `rebuildDirty` re-meshes it. */
+  const meshAcct = await step('noMeshIsLeftBehindWhenAChunkIsRemeshed', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl;
+    const P = WebGLRenderingContext.prototype;
+    const fNew = P.createBuffer, fDel = P.deleteBuffer;
+    let made = 0, freed = 0, live = 0;
+    P.createBuffer = function () { const o = fNew.apply(this, arguments); if (o) { made++; live++; } return o; };
+    P.deleteBuffer = function (o) { if (o) { freed++; live--; } return fDel.apply(this, arguments); };
+    const out = {};
+    try {
+      const n = W.cx * W.cz;
+      const standing = () => { let k = 0; for (let ci = 0; ci < n; ci++) for (const m of W.chunks[ci]) if (m) k++; return k; };
+      out.standingBefore = standing();
+      const deltas = [];
+      for (let pass = 0; pass < 3; pass++) {
+        const at = live;
+        for (let ci = 0; ci < n; ci++) W.buildChunk(gl, ci);
+        deltas.push(live - at);
+      }
+      out.deltas = deltas;
+      out.standingAfter = standing();
+      out.made = made; out.freed = freed;
+
+      /* one block written and the rebuild that follows it, which is what a pick
+         costs. The cell is filled and emptied again, so the valley it leaves
+         behind is the valley it came in with, and the two diff entries the
+         writes record are taken back out at the end. */
+      const p = g.player, px = Math.floor(p.x), pz = Math.floor(p.z);
+      let at = null;
+      for (let y = 1; y < W.h - 1 && !at; y++) if (!W.get(px, y, pz) && W.solidAt(px, y - 1, pz)) at = { x: px, y, z: pz };
+      const fb = N.FRUIT_BLOCK_REV[N.FRUITS[0].id];
+      const ci = Math.floor(pz / W.cs) * W.cx + Math.floor(px / W.cs);
+      const meshBefore = W.chunks[ci];
+      const dBefore = g.diffs.length;
+      const at0 = live;
+      g.setBlock(at.x, at.y, at.z, fb);
+      g.setBlock(at.x, at.y, at.z, 0);
+      const rebuilt = W.rebuildDirty(gl, 1000);
+      out.pick = { at: [at.x, at.y, at.z], block: fb, ci, delta: live - at0, rebuilt,
+        replaced: W.chunks[ci] !== meshBefore, left: W.anyDirty(),
+        back: W.get(at.x, at.y, at.z) === 0 && g.diffs.length === dBefore + 2 };
+      g.diffs.length = dBefore;
+      out.made = made; out.freed = freed;
+      return out;
+    } finally {
+      P.createBuffer = fNew; P.deleteBuffer = fDel;
+    }
+  });
+  check('rebuilding the whole valley leaves no buffer standing over the one it replaces',
+    meshAcct.deltas && meshAcct.deltas.every(d => d === 0) && meshAcct.made === meshAcct.freed, meshAcct);
+  check('and the valley is standing on the same number of meshes it was',
+    meshAcct.standingBefore === meshAcct.standingAfter && meshAcct.standingBefore > 200, meshAcct);
+  check('picking a block costs a chunk re-mesh and no buffers',
+    meshAcct.pick && meshAcct.pick.delta === 0 && meshAcct.pick.replaced && meshAcct.pick.rebuilt > 0 &&
+    !meshAcct.pick.left && meshAcct.pick.back, meshAcct.pick);
+
 
   /* A save is the only thing standing between a day of walking and nothing at
      all. The step that used to cover it read one field back -- the id -- and the
