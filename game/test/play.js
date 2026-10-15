@@ -4937,11 +4937,15 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
       return { y: +p.y.toFixed(3), g: p.grounded ? 1 : 0, grPct: Math.round(gr / n * 100),
         headW: p.headWater ? 1 : 0, spd: +Math.hypot(p.vx, p.vz).toFixed(3),
+        // the body's own eyes relative to the surface of its column: negative is
+        // under the water, and it is the eyes and not the feet that decide what a
+        // body standing in a lake can see over the surface of it
+        eye: +(p.eyePos() - (wt0 + 1)).toFixed(3),
         wFlips: wF,
         span: +(Math.max(...tail) - Math.min(...tail)).toFixed(4), rev };
     };
     const out = { wt, bed };
-    place('frogpear', bed + 3, lake); out.mid = glide(10, {});          // let go of mid-water
+    place('frogpear', bed + 3, lake); out.tall = +p.size()[1].toFixed(3); out.mid = glide(10, {}); // let go of mid-water
     place('frogpear', wt + 0.6, lake); out.surf = glide(10, {});        // let go of at the surface
     place('frogpear', bed + 0.0001, lake); out.fromBed = glide(12, {}); // put on the bottom, left
     place('frogpear', bed + 3, lake);
@@ -4988,17 +4992,28 @@ What was measured before any of this was fixed, over 180 frames of walking
     return out;
   });
   /* The level the water holds a body at is a height, not a cell: the top face of
-     the topmost water block, less the 30 cm a floating back sits under it. The
-     float level used to be taken off the index of that block, which set every
-     body the water holds a full block under the surface -- the wild frogs of
-     Mirrorlake hover 30 cm down and 3 m down, and at (64.5,92.5) they were 1.3 m
-     down and 4 m down, and the body you wear with them. A frog half a metre tall
-     floats with its head out: the eyes and nostrils of an animal that breathes
-     both air and water clear the surface, and its feet, 30 cm down, do not. */
+     the topmost water block, less the height of that body, less the 30 cm its
+     back hangs under the surface. The float level used to be taken off the index
+     of that block, which set every body the water holds a full block under the
+     surface -- the wild frogs of Mirrorlake hover 30 cm down and 3 m down, and at
+     (64.5,92.5) they were 1.3 m down and 4 m down, and the body you wear with
+     them. And the 30 cm used to be measured to the **feet**, which for a body
+     half a metre tall left its head 20 cm out of the water: seen from the bank a
+     floating frog was a cork with four legs under it, and the eyes of the body
+     you wear -- 0.42 m up from its own feet -- sat 12 cm *above* the surface, so
+     the animal built for the lake looked at the shore and never once into it.
+     Measured to the crown, the whole body hangs in: at (72.5,85.5) a frogpear let
+     go of mid-water holds 14.2 against a surface of 15 and a bed top at 8 -- feet
+     80 cm down, back 30 cm down, eyes 38 cm down -- and the valley's own frog in
+     that same column holds 14.27 at the top of its dip and 8.13 at the bottom of
+     it. The depth is the body's own height plus that 30 cm, so a bigger water
+     animal hangs deeper by exactly its own size and no new number is needed. */
   check('a body that breathes water and stops moving floats, it does not settle on the bottom',
-    !buoy.error && buoy.mid.g === 0 && buoy.mid.y > buoy.bed + 1 && buoy.mid.headW === 0, buoy);
-  check('and it floats at the surface of the water, not a block under it: 30 cm down from the top face of it, head out',
-    !buoy.error && Math.abs(buoy.mid.y - (buoy.wt + 1 - 0.3)) < 0.05 && buoy.mid.headW === 0, buoy);
+    !buoy.error && buoy.mid.g === 0 && buoy.mid.y > buoy.bed + 1 && buoy.mid.headW === 1, buoy);
+  check('and it hangs under the surface instead of floating on it: its own height down, plus ' +
+        'the 30 cm its back sits under the top face of the water, and its eyes are in the water',
+    !buoy.error && Math.abs(buoy.mid.y - (buoy.wt + 1 - buoy.tall - 0.3)) < 0.05 &&
+    buoy.mid.headW === 1 && buoy.mid.eye < -0.2, buoy);
   check('and it comes to rest there: the height does not swing and it never changes its mind',
     !buoy.error && buoy.mid.span < 0.01 && buoy.mid.rev === 0 && buoy.mid.spd < 0.01, buoy);
   check('the water holds the body you wear at the level a wild frog floats at ' +
@@ -5014,17 +5029,31 @@ What was measured before any of this was fixed, over 180 frames of walking
     !buoy.error && buoy.dive.g === 1 && Math.abs(buoy.dive.y - buoy.bed) <= 0.01
     && buoy.diveLet.g === 0 && Math.abs(buoy.diveLet.y - buoy.wild.shallow) < 0.25, buoy);
   /* The surface is the ceiling of the water's hold: a body the water is holding
-     cannot kick itself above the level the water holds it at, and so cannot kick
-     itself out of the middle of a lake. It leaves the way a body leaves water --
-     into the shallows where the bottom is, and up off its own feet from there,
-     which is the route the branch in entities.js already documents. Without the
-     ceiling a frog holding the climb key at the surface of (56.5,94.5) crossed
-     that surface 45 times in 240 frames, and every crossing took the stroke off
-     its legs and put it back on again: seen from the bank, its feet flickered. */
+     cannot kick itself out of the middle of a lake. It leaves the way a body
+     leaves water -- into the shallows where the bottom is, and up off its own
+     feet from there, which is the route the branch in entities.js already
+     documents. Without the ceiling a frog holding the climb key at the surface of
+     (56.5,94.5) crossed that surface 45 times in 240 frames, and every crossing
+     took the stroke off its legs and put it back on again: seen from the bank, its
+     feet flickered.
+     The ceiling is the surface, which is not the same thing as the level the water
+     holds a resting body at. Those two were one number only because that level was
+     measured to the feet and happened to land just under the surface; now a body
+     hangs its own height down, and a ceiling taken from the level would mean a
+     frog holding the climb key could never bring its head to the top of the water
+     at all. So the level is where a body that stops moving comes to rest, the
+     surface is how high a body that keeps asking can get, and between the two a
+     body swims: the key held for 4 s puts the feet at 14.98 against a surface of
+     15 and the eyes 40 cm out of the water, and the moment the key comes off the
+     water takes the body back down to the level it holds it at. The ceiling is
+     asked of where the frame is about to put the body rather than of where the
+     body stands: with the old test, which asked where the body stood, the surface
+     of (64.5,92.5) was crossed twice in 240 frames with the key held, and every
+     crossing took the body out of the water branch and put it back in. */
   check('the climb key brings the head out of the water, and the surface stops the body there: ' +
         'it cannot kick itself out of the lake',
-    !buoy.error && buoy.up.headW === 0 && buoy.up.g === 0 &&
-    buoy.up.y > buoy.wt && buoy.up.y <= buoy.wt + 1 - 0.3 + 0.05, buoy);
+    !buoy.error && buoy.up.headW === 0 && buoy.up.g === 0 && buoy.up.eye > 0.3 &&
+    buoy.up.y > buoy.wt + 1 - 0.1 && buoy.up.y < buoy.wt + 1, buoy);
   /* and the flag the draw hangs off does not relay. `inWater` used to be put to
      the cells -- is the cell at the body's feet liquid, is the one at its middle
      -- and a body bobbing across its own surface answered that a different way

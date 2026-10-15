@@ -20,12 +20,32 @@
      wing shows atan(sideways / 9.8). */
   const LEAN_G = 9.8;
 
-  /* How far under the surface the water holds a body it is holding up. One
-     number for every such body: the twelve wild frogs of the valley and the
-     body you wear while you are one float at the same depth, and the creature
-     step and the player step both read this. It is measured to the feet, so a
-     0.5 m body at this level is entirely under the surface plane. */
+  /* How far under the surface the water holds a body it is holding up, measured
+     to the **crown** of that body and not to its feet. One number for every such
+     body: the twelve wild frogs of the valley and the body you wear while you are
+     one float at the same depth, and the creature step and the player step both
+     read this.
+     The reference point is the whole of the matter. This used to be measured to
+     the feet, and a body half a metre tall therefore hung with its head 20 cm out
+     of the water: seen from the bank it was a cork with four legs under it, and
+     the eyes of the body you wear -- 0.42 m up from its own feet -- sat 12 cm
+     *above* the surface, so the animal built for the lake looked at the shore and
+     never once into it. Measured to the crown, the same 30 cm is what the comment
+     always said it was -- how far a floating back sits under the surface -- and
+     the body hangs the way a body that breathes water hangs: all of it in, eyes
+     38 cm down, back 30 cm down, feet 80 cm down. The depth is the body's own
+     height plus that 30 cm, so a bigger water animal hangs deeper by exactly its
+     own size and nobody has to remember a new number. */
   const FLOAT_UNDER = 0.3;
+  /* The level the water holds a body at: the surface of the column it is in, less
+     the height of that body, less the 30 cm its crown hangs under the surface.
+     A height, not a cell -- see `liquidSurfaceAt` in world.js. */
+  function floatLevel(wSurf, tall) { return wSurf - tall - FLOAT_UNDER; }
+  /* The ceiling of the water's hold is the surface itself, less a hair. Whether a
+     body is in the water at all is decided by its feet being under the surface
+     (`inWater`, far above), so a body allowed to come level with the surface
+     answers that question a different way on every frame it is there. */
+  const SURF_KEEP = 0.02;
 
   /* The speed the worn body's stride law is calibrated at, in m/s. See
      `Player.walkMove` for why this is a number the player's body carries and a
@@ -527,17 +547,16 @@
            the bottom, and that is what it costs to wear a body that was not
            built for the lake. */
         const push = speed * 1.5;
-        // the level the water holds a body at is a height, not a cell: 30 cm
-        // under the surface of the column, which is where a floating back is
-        if (heldUp && !inp.sneak) this.vy += ((wSurf - FLOAT_UNDER) - this.y) * 2.2 * dt;
+        // the level the water holds a body at is a height, not a cell, and it is
+        // the body's own height plus the 30 cm its back hangs under the surface
+        if (heldUp && !inp.sneak) this.vy += (floatLevel(wSurf, this.size()[1]) - this.y) * 2.2 * dt;
         else this.vy -= 5.2 * dt * 0.55;
         this.vy += (inp.jump ? push : 0) * dt;
         if (inp.sneak) this.vy -= push * 0.6 * dt;
         this.vy -= this.vy * Math.min(0.9, 3.2 * dt);
         this.vy = Math.max(-4.5, Math.min(4.6, this.vy));
         /* The surface is the ceiling of the water's hold: a body the water is
-           holding up cannot kick itself above the level the water holds it at,
-           and so cannot kick itself out of the water. It leaves the way a body
+           holding up cannot kick itself out of the water. It leaves the way a body
            leaves water -- into the shallows where the bottom is, and up off its
            own feet from there -- which is the route the branch below already
            documents, and which is why the ceiling belongs to `heldUp` and not to
@@ -546,8 +565,27 @@
            push key crosses the surface, loses the water, falls back and crosses
            it again: at (56.5,14.9,94.5) a frog with the key held went over that
            line 45 times in 240 frames, and every crossing took the stroke off
-           its legs and put it back on again. */
-        if (heldUp && this.y >= wSurf - FLOAT_UNDER && this.vy > 0) this.vy = 0;
+           its legs and put it back on again.
+           The ceiling is the surface, which is not the same thing as the level the
+           water holds a resting body at. Those two were one number only because
+           that level was measured to the feet and happened to land just under the
+           surface; now a body hangs its own height down, and a ceiling taken from
+           it would mean a frog holding the climb key could never bring its head to
+           the top of the water at all. So: the level is where a body that stops
+           moving comes to rest, the surface is how high a body that keeps asking
+           can get, and between the two a body swims. A frog at rest hangs 80 cm
+           down with its eyes 38 cm under; the key held for 4 s puts its feet at
+           14.98 against a surface of 15 and its eyes 40 cm out of the water, and
+           the moment the key comes off the water takes it back down to the level
+           it holds it at.
+           The ceiling is asked of where the frame is about to put the body, not of
+           where the body happens to be: the velocity decided here is spent later,
+           over the substeps of the move, and a body at 14.93 with 4.6 m/s of climb
+           in its legs is 0.077 m from the surface and over it before the frame
+           ends. Asked of the body's own height instead, the surface of (64.5,92.5)
+           was crossed twice in 240 frames with the key held, and every crossing
+           took the body out of the water branch and put it back in. */
+        if (heldUp && this.vy > 0 && this.y + this.vy * dt >= wSurf - SURF_KEEP) this.vy = 0;
       } else {
         /* Feet that are on the bottom are feet that can push off it, water
            around them or not. That is the whole of getting out of a lake: the
@@ -829,9 +867,9 @@
      conventions are one apart: the world answers that one (`liquidSurfaceAt` in
      world.js), and both say -1 for no water. The float level used to be taken
      off the cell index, which set every body the water holds a full block under
-     the surface: the wild frogs of Mirrorlake hover 30 cm down and 3 m down (see
-     the dive cycle below) and at (56.5,94.5) they were 1.3 m down and 4 m down,
-     and the body you wear with them. */
+     the surface: the wild frogs of Mirrorlake hang just under the surface and
+     down into deeper water (see the dive cycle below) and at (56.5,94.5) they
+     were 1.3 m down and 4 m down, and the body you wear with them. */
   function waterTop(w, x, z, from) {
     for (let y = from; y >= 0; y--) if (w.liquidAt(x, y, z)) return y;
     return -1;
@@ -1690,17 +1728,20 @@
              is squared so a body spends most of its time shallow and dips less
              often than it rises; the surface is the ceiling and the bottom is
              the floor, so in a column too shallow to swim in the frog simply
-             stands, and in the deep part one frog can be 30 cm down while
-             another is 3 m down and coming up. The depth is closed at the speed
+             stands, and in the deep part one frog can be hanging just under the
+             surface while another is deep down and coming up. The depth is closed
+             at the speed
              the animal's own record swims at, not at a fraction of the distance
              left: the lerp was an elevator that ran fastest the instant it
              started, and a frog put down on the lakebed 4.7 m under the surface
              came up 0.47 m in its very first frame -- 28 m/s, faster than a
              falling bear -- every frame after it slower than the one before. */
           const cyc = 0.5 + 0.5 * Math.sin(this.t * this.diveRate + this.phase);
-          // `wt + 1` is the surface: the shallowest a frog holds is 30 cm under
-          // the water, not 30 cm under the top block of it
-          const target = Math.max(gyH + 0.05, wt + 1 - (FLOAT_UNDER + this.diveTo * cyc * cyc));
+          /* the shallowest a frog holds is the level the water holds the body you
+             wear at -- its own height down, plus the 30 cm its back hangs under
+             the surface -- and it is measured off the surface, not off the top
+             block of the water (`wt + 1` and `wSurf` are the same height) */
+          const target = Math.max(gyH + 0.05, floatLevel(wSurf, this.tall) - this.diveTo * cyc * cyc);
           const rate = sp.swimSpeed || sp.speed || 1.5;
           const want = target - this.y;
           const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;
