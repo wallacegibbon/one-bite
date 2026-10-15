@@ -4521,6 +4521,93 @@ What was measured before any of this was fixed, over 180 frames of walking
     { air: [mt.air && mt.air.chk, mt.airNoLaw && mt.airNoLaw.chk],
       sky: [mt.sky && mt.sky.chk, mt.skyNoLaw && mt.skyNoLaw.chk] });
 
+  /* The night's motes are put down by the game, not by the world, and the column
+     read the spawner asked -- "the highest solid thing in this column" -- answers
+     with the lakebed wherever there is a lake. Over ninety seconds standing on
+     the shore of Mirrorlake the old spawner let go **28** of **76** fireflies
+     under the surface of the lake and **16** inside a block, and **34%** of the
+     motes the night was keeping alive glowed through up to **8.4 m** of water.
+     The test asks the spawner where it let them go, and then follows them: a
+     mote born in the air that is later found under a surface has drifted into
+     water it was never meant to enter. A day run over the same shore is asked
+     for the same numbers, to prove the night run is not being handed motes by
+     something else. */
+  const motes = await step('nightMotesKeepToTheAir', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player, P = g.particles;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, third: g.thirdPerson, time: g.time, mode: g.mode, lens: g._lens,
+      frame: g._camFrame, env: g.env, hover: g.hover, creatures: g.creatures, drops: g.drops,
+      input: g.input, amb: g.ambTimer, parts: P.n };
+    const back = (v) => {
+      p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch;
+      p.vx = was.vx; p.vy = was.vy; p.vz = was.vz; p.form = was.form;
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover; g.input = was.input;
+      g.ambTimer = was.amb; g.creatures = was.creatures; g.drops = was.drops;
+      P.n = was.parts;
+      delete P.spawn;
+      return v;
+    };
+    /* a dry column with a lake running north of it: the shore the spawner is
+       asked to scatter its motes around, and the water it must not scatter them
+       into. The lake has to run 4 blocks at least, so the ring of 4..18 m the
+       spawner draws its motes from reaches it */
+    let shore = null;
+    for (let z = 60; z < W.d - 20 && !shore; z++) for (let x = 40; x < W.w - 20 && !shore; x++) {
+      if (W.liquidSurfaceAt(x, z) >= 0) continue;
+      let wet = 0;
+      for (let k = 1; k <= 8; k++) if (W.liquidSurfaceAt(x + k, z) >= 0) wet++;
+      if (wet < 4) continue;
+      shore = { x: x + 0.5, z: z + 0.5 };
+    }
+    if (!shore) return back({ error: 'no shore with a lake 4 blocks wide within 8' });
+    const gy = N.groundY(W, shore.x | 0, shore.z | 0, 40);
+    g.mode = 'play'; g.thirdPerson = false; g.hover = null; p.form = null;
+    g.creatures = []; g.drops = []; g.input = {};
+    const stand = () => { p.x = shore.x; p.z = shore.z; p.y = gy + 1; p.vx = p.vy = p.vz = 0; };
+    const runs = {};
+    for (const tag of ['night', 'day']) {
+      g.time = N.DAY_LEN * (tag === 'night' ? 22 / 24 : 13 / 24);
+      stand(); g.update(1 / 60); g.update(1 / 60);      // let the environment settle
+      P.n = 0;
+      const born = { total: 0, inSolid: 0, underWater: 0, inAir: 0, hover: 0 };
+      const real = P.spawn;
+      P.spawn = function (x, y, z, vx, vy, vz, life, c, size, grav) {
+        born.total++;
+        if (grav === 0) born.hover++;
+        const s = W.liquidSurfaceAt(x | 0, z | 0);
+        if (W.solidAt(x | 0, y | 0, z | 0)) born.inSolid++;
+        else if (s >= 0 && y < s) born.underWater++;
+        else born.inAir++;
+        return real.call(this, x, y, z, vx, vy, vz, life, c, size, grav);
+      };
+      let samples = 0, liveSolid = 0, liveUnder = 0, maxUnder = 0;
+      for (let f = 0; f < 900; f++) {
+        stand();
+        g.update(1 / 60);
+        for (let i = 0; i < P.n; i++) {
+          samples++;
+          if (W.solidAt(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) liveSolid++;
+          const s = W.liquidSurfaceAt(P.px[i] | 0, P.pz[i] | 0);
+          if (s >= 0 && P.py[i] < s) { liveUnder++; if (s - P.py[i] > maxUnder) maxUnder = s - P.py[i]; }
+        }
+      }
+      delete P.spawn;
+      runs[tag] = { born, samples, liveSolid, liveUnder, maxUnder: +maxUnder.toFixed(2), live: P.n };
+    }
+    return back({ shore, runs });
+  });
+  const mo = motes.runs || {};
+  check('the night over a lake shore really is scattering fireflies, and the day over the same shore is not',
+    !motes.error && mo.night && mo.night.born.hover > 20 && mo.day && mo.day.born.total === 0,
+    { night: mo.night && mo.night.born, day: mo.day && mo.day.born });
+  check('no firefly is born under the surface of a lake, nor buried in a block',
+    mo.night && mo.night.born.underWater === 0 && mo.night.born.inSolid === 0,
+    mo.night && mo.night.born);
+  check('and none of the night\'s motes is found glowing through the lake it was put beside',
+    mo.night && mo.night.samples > 2000 && mo.night.liveUnder === 0 && mo.night.maxUnder === 0,
+    mo.night && { samples: mo.night.samples, liveUnder: mo.night.liveUnder, maxUnder: mo.night.maxUnder });
+
   /* A chunk is a box 16 wide, 16 deep and the whole height of the map, and it
      was thrown away as a ball 15 across centred at half that height. Its own
      corners are 26.5 out from that centre, so a chunk whose only piece on screen

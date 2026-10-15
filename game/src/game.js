@@ -1020,12 +1020,23 @@
       if (this.ambTimer > 0) return;
       this.ambTimer = 0.12;
       const n = this.night;
-      // fireflies (forest at night)
+      // fireflies (forest at night). A firefly flies in the air, and the column
+      // read answers "the highest solid thing in this column" -- over a lake
+      // that is the lakebed, so the old span put **25** of **71** fireflies
+      // under the surface of Mirrorlake, and **33%** of the night's motes ended
+      // up glowing through as much as **9.4 m** of lake: the same strange bright
+      // dot the lakebed used to be. The surface of the water is the floor to
+      // lift off from where there is one, and a column with no room above its
+      // highest solid -- a cliff that goes on past the search height -- leaves
+      // the mote unmade rather than buried (**11** of **71** were buried).
       if (n > 0.4 && Math.random() < 0.7) {
         const a = Math.random() * 6.283, r = 4 + Math.random() * 14;
         const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
-        const y = N.groundY(this.world, Math.floor(x), Math.floor(z), Math.floor(p.y + 6)) + 0.6;
-        P.spawn(x, y, z, (Math.random() - 0.5) * 0.6, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6, 3 + Math.random() * 3, [0.7, 1, 0.45], 0.16, 0);
+        const fx = Math.floor(x), fz = Math.floor(z);
+        const gy = Math.max(N.groundY(this.world, fx, fz, Math.floor(p.y + 6)),
+                            this.world.liquidSurfaceAt(fx, fz)) + 0.6;
+        if (!this.world.solidAt(fx, gy | 0, fz))
+          P.spawn(x, gy, z, (Math.random() - 0.5) * 0.6, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6, 3 + Math.random() * 3, [0.7, 1, 0.45], 0.16, 0);
       }
       // bubbles off a body that is swimming under. They are born under the
       // surface and pop at it, so the span they are scattered over is the water
