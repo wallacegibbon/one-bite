@@ -1020,6 +1020,11 @@ const { sim } = require('./simwait');
     const wasB = { x: bird.x, y: bird.y, z: bird.z, flyY: bird.flyY, state: bird.state, airAmt: bird.airAmt };
     g.night = 0;
     for (let i = 0; i < 60; i++) bird.update(1 / 60, away, g.world, g);
+    /* The pose is eased, so the reading is a limit and not a switch: a bird that
+       has been on its branch for a second holds its wings within a hundredth of
+       folded, and a bird that has been in the air for a second and a half holds
+       them within a hundredth of open. Asking for the exact 0 and 1 the flag used
+       to answer with asks whether the easing exists, which is not the question. */
     const roost = bird.airAmt;
     /* One frame of night is not enough to judge the wings. The owl wakes, stands
        on the branch and only then decides to leave it, and how many frames that
@@ -1028,9 +1033,16 @@ const { sim } = require('./simwait');
        run of 3, which is a test asking whether the owl had made up its mind yet
        rather than whether a bird in the air holds its wings open. */
     g.night = 1;
-    let abroad = 0;
-    for (let i = 0; i < 180; i++) { bird.update(1 / 60, away, g.world, g); abroad = Math.max(abroad, bird.airAmt); }
-    const npcOwl = { roost, abroad, state: bird.state };
+    let abroad = 0, airJump = 0, airWas = bird.airAmt;
+    for (let i = 0; i < 180; i++) {
+      bird.update(1 / 60, away, g.world, g);
+      abroad = Math.max(abroad, bird.airAmt);
+      // the biggest single frame's change in how much the air holds this body
+      airJump = Math.max(airJump, Math.abs(bird.airAmt - airWas));
+      airWas = bird.airAmt;
+    }
+    const npcOwl = { roost: +roost.toFixed(4), abroad: +abroad.toFixed(4),
+      airJump: +airJump.toFixed(3), state: bird.state };
     Object.assign(bird, wasB);
     Object.assign(p, was);
     return { spot, human, frog, jumpHuman, jumpFrog, npcFrog, npcOwl, hop: N.FRUIT_BY_ID.frogpear.form.hop };
@@ -1045,7 +1057,15 @@ const { sim } = require('./simwait');
     gait.jumpFrog.apex > gait.jumpHuman.apex && gait.jumpFrog.apex < 4 && gait.jumpHuman.apex < 2.5, gait);
   check('a frog in the valley leaves the ground', gait.npcFrog.rise > 0.3 && gait.npcFrog.hops >= 2, gait.npcFrog);
   check('an owl folds its wings on the branch and opens them in the air',
-    gait.npcOwl.roost === 0 && gait.npcOwl.abroad === 1, gait.npcOwl);
+    gait.npcOwl.roost < 0.01 && gait.npcOwl.abroad > 0.99, gait.npcOwl);
+  /* The bird does not change its whole posture in the frame it leaves the
+     branch: the wings, the tucked legs and the length of the body all ride the
+     same number, and a frame's worth of that number is what decides whether the
+     animal takes off or teleports into its flight pose. Measured, the frame that
+     the flag flipped in moved it the whole way -- 1.0 -- and the eased one moves
+     it 0.117. */
+  check('a bird coming off its branch takes its poses with it over the frames it is leaving',
+    gait.npcOwl.airJump < 0.5, gait.npcOwl);
 
   /* 10k. the lens is the hand. The watching camera used to trail the aim, so
      while you were turning the mouse the body ran off in a direction the screen
@@ -5254,6 +5274,152 @@ What was measured before any of this was fixed, over 180 frames of walking
     !beat.error && beat.up.flap > 0.9 && beat.up.vy > 0, beat);
   check('the stroke the renderer uploads goes with the beat, not with the clock',
     !beat.error && beat.riding.heave < beat.full.heave * 0.3 && beat.riding.stroke < beat.full.stroke - 0.1, beat);
+
+  /* 11f2. A body built for the air lies along the way it is going. The owl is
+     carved standing, because standing is what it does by day wedged in a hollow,
+     and the flight used to draw that same body with wings on it: read off the
+     matrices the draw uploads, an owl crossing the valley at 7 m/s held its spine
+     73 degrees up from the horizontal, its head 87 degrees above its own body and
+     its feet 0.24 m under its centre, and it stood 0.73 m tall against 0.50 m
+     long -- a heron, standing on the wind. The posture belongs to the model and
+     the path angle to the caller (see models.js, entities.js). */
+  const prone = await step('aBirdFliesProne', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
+    const { sky } = window.__mv;
+    if (!sky) return { error: 'no open air' };
+    const was = { form: p.form, formT: p.formT, formMax: p.formMax, x: p.x, y: p.y, z: p.z,
+      vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      bank: p.bank, tilt: p.tilt, grounded: p.grounded, airAmt: p.airAmt, flap: p.flap,
+      vital: p.vital, dry: p.dry, fright: p.fright, air: p.air, input: g.input,
+      mode: g.mode, tp: g.thirdPerson, time: g.time, frame: g._camFrame };
+    const back = () => {
+      Object.assign(p, was);
+      g.mode = was.mode; g.thirdPerson = was.tp; g.time = was.time;
+      g.input = was.input; g._camFrame = was.frame;
+    };
+    /* the matrices the draw really uploaded, not a copy of them worked out
+       afterwards: `partMatrix` hands the renderer the world matrix of every part,
+       so this is the frame itself. The body being worn is told from the animals
+       drawn with the same meshes by the origin the draw hung it on -- the draw
+       puts the player's own position in the base matrix before it turns or
+       scales it, and the matrices it hands over are already in metres. */
+    const read = () => {
+      const seen = new Map();
+      const pm = N.partMatrix;
+      N.partMatrix = function (out, base, e, st, ps) {
+        const m = pm.apply(this, arguments);
+        if (Math.abs(base[12] - p.x) < 1e-3 && Math.abs(base[13] - p.y) < 1e-3 &&
+            Math.abs(base[14] - p.z) < 1e-3 && !seen.has(e.part.name))
+          seen.set(e.part.name, { m: m.slice(), e });
+        return m;
+      };
+      const d = 5.0, th = -Math.PI / 2;
+      g._camFrame = { x: p.x - d * Math.sin(th), y: p.y + 0.2, z: p.z + d * Math.cos(th),
+        yaw: th, pitch: 0, fov: 20, d, inBody: false };
+      g.updateEnv(); g.render(); g._camFrame = null;
+      N.partMatrix = pm;
+      const box = (m, e) => {
+        let n = 0, x = 0, y = 0, z = 0, lo = 1e9, hi = -1e9, ylo = 1e9, yhi = -1e9;
+        for (const b of e.part.boxes)
+          for (const fx of [b[0], b[0] + b[3]])
+            for (const fy of [b[1], b[1] + b[4]])
+              for (const fz of [b[2], b[2] + b[5]]) {
+                x += m[0] * fx + m[4] * fy + m[8] * fz + m[12];
+                y += m[1] * fx + m[5] * fy + m[9] * fz + m[13];
+                z += m[2] * fx + m[6] * fy + m[10] * fz + m[14];
+                const wy = m[1] * fx + m[5] * fy + m[9] * fz + m[13];
+                const wz = m[2] * fx + m[6] * fy + m[10] * fz + m[14];
+                n++;
+                if (wz < lo) lo = wz; if (wz > hi) hi = wz;
+                if (wy < ylo) ylo = wy; if (wy > yhi) yhi = wy;
+              }
+        return { x: x / n, y: y / n, z: z / n, lo, hi, ylo, yhi,
+          up: [m[4], m[5], m[6]],
+          // the way the tail's fan points away from the hinge it hangs on
+          out: [-(m[4] + m[8]), -(m[5] + m[9]), -(m[6] + m[10])] };
+      };
+      const w = {};
+      for (const [name, s] of seen) w[name] = box(s.m, s.e);
+      // fore along the heading, measured from the body's own feet: at yaw 0 a
+      // body faces -z, so fore is -z
+      const sy = Math.sin(p.faceYaw), cy = Math.cos(p.faceYaw);
+      const fore = v => (v.x - p.x) * sy - (v.z - p.z) * cy;
+      const up = v => v.y, deg = v => Math.atan2(v[1], Math.hypot(v[0], v[2])) * 57.2958;
+      let ylo = 1e9, yhi = -1e9, flo = 1e9, fhi = -1e9;
+      for (const k in w) {
+        ylo = Math.min(ylo, w[k].ylo); yhi = Math.max(yhi, w[k].yhi);
+        flo = Math.min(flo, w[k].lo); fhi = Math.max(fhi, w[k].hi);
+      }
+      return {
+        spine: +deg(w.body.up).toFixed(1),
+        fan: +deg(w.tail.out).toFixed(1),
+        headFore: +fore(w.head).toFixed(2), bodyFore: +fore(w.body).toFixed(2),
+        legFore: +fore(w.legL).toFixed(2), legUp: +(up(w.legL) - up(w.body)).toFixed(2),
+        tall: +(yhi - ylo).toFixed(2), long: +(fhi - flo).toFixed(2),
+        air: +(p.airAmt || 0).toFixed(2), tilt: +(p.tilt || 0).toFixed(2),
+        vy: +p.vy.toFixed(2), y: +p.y.toFixed(1)
+      };
+    };
+    const go = () => ({ fwd: true, jump: false, sneak: false, sprint: false });
+    const still = () => ({ fwd: false, jump: false, sneak: false, sprint: false });
+    g.mode = 'play'; g.thirdPerson = true;
+    const start = (form, air) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+      p.x = sky.x; p.z = sky.z;
+      p.y = air ? sky.y : N.groundY(W, Math.floor(sky.x), Math.floor(sky.z), 50);
+      p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0;
+      p.grounded = !air; p.airAmt = 0; p.flap = air ? 1 : 0;
+    };
+    /* the crossing: a body held in the air by the same keys the player holds.
+       The frame is taken twice -- once six frames off the ground, where the
+       posture is still arriving, and once with the body going level, because
+       the posture is what is being asked about and the path angle the caller
+       adds on top of it is already tested by `divingBodyNosesDown`. The sky
+       clearing is clear from y 36 to y 52, and a glide of 0.8 s falls 6.5 m,
+       so from the top of it the body is still in the air at the end. */
+    const cross = frames => {
+      start('owlberry', true);
+      let lift = null;
+      for (let i = 0; i < frames; i++) {
+        p.yaw = 0; g.input = go(); g.particles.n = 0; g.hover = null;
+        p.update(1 / 60, g.input, g);
+        if (i === 5) lift = read();
+      }
+      const fell = p.grounded ? 1 : 0;
+      p.grounded = false; p.tilt = 0; p.bank = 0; p.vy = 0;
+      return { lift, fell, fly: read() };
+    };
+    const crossed = cross(48);
+    /* the same body with its feet on the ground: it keeps the posture it was
+       carved in, because the pose is asked for by the air under it and not by
+       the shape of it */
+    start('owlberry', false);
+    for (let i = 0; i < 90; i++) {
+      p.yaw = 0; g.input = still(); g.particles.n = 0; g.hover = null;
+      p.update(1 / 60, g.input, g);
+    }
+    const perch = read();
+    back();
+    return { fly: crossed.fly, lift: crossed.lift, fell: crossed.fell, perch };
+  });
+  /* The spine is the body's own up, so 90 is a body standing and 0 is a body
+     lying along the horizontal. The fan is the direction the tail points away
+     from the hinge it hangs on: 0 is a tail in line with the body it streams
+     out of, and the posture the model used to have held it 27 degrees up. */
+  check('a bird in the air lies along the way it is going',
+    !prone.error && !prone.fell && prone.fly.spine < 30 && prone.fly.long > prone.fly.tall, prone);
+  check('its head is in front of its body and its legs are folded behind it',
+    !prone.error && prone.fly.headFore > prone.fly.bodyFore + 0.15 &&
+    prone.fly.legFore < prone.fly.bodyFore - 0.15, prone);
+  check('and its tail streams out behind it instead of up over its back',
+    !prone.error && Math.abs(prone.fly.fan) < 15, prone);
+  check('a bird with its feet on the ground keeps the posture it was carved in',
+    !prone.error && prone.perch.spine > 85 && prone.perch.tall > prone.perch.long &&
+    Math.abs(prone.perch.legFore - prone.perch.bodyFore) < 0.1, prone);
+  check('and it lies down over the frames it is taking off, not in the one the flag changes',
+    !prone.error && prone.lift.air < 0.7 && prone.lift.air > 0.05 &&
+    prone.lift.spine > prone.fly.spine + 15 && prone.fly.air > 0.95, prone);
 
   /* 11g. The animals the game drives are the same kind of body. What it replaced
      was an ease toward the target bearing at 4 a second: an owl started a turn

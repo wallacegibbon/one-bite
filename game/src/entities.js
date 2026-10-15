@@ -1715,7 +1715,13 @@
            wings of a bird that is flying. */
         const gyU = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y));
         // a roosting owl is a bird on a branch: wings folded, no beat
-        this.airAmt = sleeping ? 0 : (this.y > gyU + 0.4 ? 1 : 0);
+        /* Eased and not snapped, for the same reason the hop's air pose is (see
+           the amphibian below): a bird coming off a branch or settling onto one
+           takes its poses with it, and a flag that flips in one frame flips the
+           wings, the tucked legs and the whole length of the body from standing
+           to prone in that frame. */
+        const airWant = sleeping || this.y <= gyU + 0.4 ? 0 : 1;
+        this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
       } else if (this.isAquatic()) {
         const wt = waterColumn(world, this.x, this.z);          // -1: no water to hover in
         /* Search down from the animal's own feet, not from above its head: a

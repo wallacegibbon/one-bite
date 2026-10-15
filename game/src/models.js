@@ -114,13 +114,33 @@
     owl: {
       eye: 0.60,
       parts: [
-        { name: 'body', anim: 'bob', boxes: [
+        /* The body is carved standing, because standing is what it does by day
+           wedged in a hollow. A body that flies does not stand: it lies along
+           the way it is going, head in front, tail and folded legs behind. The
+           pitch that lays it down belongs to the model and not to the caller:
+           the caller's `tilt` is the angle of the path it is travelling (see
+           entities.js), and if that one number also carried the posture then a
+           level flight would have no posture at all -- which is exactly what it
+           had. Read off the matrices the draw uploads, an owl crossing the valley
+           at 7 m/s held its spine 72 degrees up from the horizontal, its head
+           87 degrees above its own body and its feet 0.24 m under its centre:
+           the same body, wings aside, that stands on a branch. So the body says
+           here how far it lays itself down, and the hinge it lays itself around
+           is the hip the legs hang from, so the legs and the tail go where a
+           body turning nose-over-heels takes them instead of being left behind.
+           The head answers back: a body laid 72 degrees over would otherwise spend
+           the whole of its flight looking at the ground it is hunting over, so the
+           face comes back to 5 degrees under the horizon -- where an owl after a
+           vole wants it. Blended by the air under the body (`air`, eased, like
+           every other pose), so a bird leaving a branch lies down over a few frames
+           instead of snapping flat in one. */
+        { name: 'body', anim: 'bob', pivot: [0, 0.95, 0.1], fly: [1.25, 0, 0], boxes: [
           [-1.1, 0.9, -1.0, 2.2, 2.15, 2.0, '#8a7256'],
           [-0.85, 1.05, 0.86, 1.7, 1.75, 0.3, '#d8c9a8'],         // breast
           [-0.9, 0.95, -0.7, 1.8, 0.45, 1.5, '#c6b594'],          // belly
           [-0.55, 2.75, -0.9, 1.1, 0.35, 1.6, '#7a6248']          // mantle
         ] },
-        { name: 'head', parent: 'body', pivot: [0, 3.0, 0], anim: 'nod', boxes: [
+        { name: 'head', parent: 'body', pivot: [0, 3.0, 0], anim: 'nod', fly: [-1.16, 0, 0], boxes: [
           [-1.2, 3.0, -1.0, 2.4, 1.6, 1.9, '#9a8266'],
           [-1.15, 3.1, 0.78, 1.0, 1.3, 0.26, '#e6d7b4'],          // facial disc
           [0.15, 3.1, 0.78, 1.0, 1.3, 0.26, '#e6d7b4'],
@@ -148,7 +168,21 @@
             [1.03, 0.5, -1.3, 0.42, 1.1, 1.95, '#5f4c38'],
             [1.03, 0.42, 0.62, 0.42, 0.5, 0.72, '#54432f']
           ] },
-        { name: 'tail', parent: 'body', pivot: [0, 1.35, -1.0], anim: 'wag', boxes: [
+        /* The tail is carved at the rear of the trunk, which is where a standing
+           bird carries it and the wrong place for a flying one: laid 72 degrees
+           over, that rear corner is on top, and the tail flies like a flag. Its own
+           pose brings the fan back to the line of the body. Measured, not guessed,
+           off the same matrices and read as the elevation of the direction the fan
+           points away from its hinge: with nothing said it lies 27 degrees above
+           the horizon while the body it hangs from lies 18 degrees above it -- 9
+           degrees above the line of the body, and its centre 0.17 m above the
+           trunk's -- at -0.95 it droops 28 degrees below the horizon and 46 degrees
+           under that line, and -0.45 leaves it 1 degree above the horizon and 18
+           degrees under the line, which is a folded tail streaming behind. The legs
+           need no pose of their own here: the `air` tuck they already hold, turned
+           by the body lying down, becomes a fold under the breast instead of a limb
+           dangling where a standing bird leaves it. */
+        { name: 'tail', parent: 'body', pivot: [0, 1.35, -1.0], anim: 'wag', fly: [-0.45, 0, 0], boxes: [
           [-0.62, 0.45, -1.7, 1.24, 0.95, 0.8, '#6a543c']
         ] },
         { name: 'legL', parent: 'body', pivot: [-0.5, 0.95, 0.1], anim: 'walk', sign: -1, stands: 1,
@@ -929,6 +963,18 @@
     const lift = p.stands ? Math.min(air, st.off === undefined ? 1 : st.off) : air;
     if (lift > 0.01 && p.air) { rx += p.air[0] * lift; ry += p.air[1] * lift; rz += p.air[2] * lift; }
     if (cr > 0.01 && p.crouch) { rx += p.crouch[0] * cr; ry += p.crouch[1] * cr; rz += p.crouch[2] * cr; }
+    /* The pose of a body the air is holding up: an animal built for the air lies
+       along the way it is going. It is asked for by `fly` -- the caller already
+       says which body is flying -- and it is *carried* by `air`, the same eased
+       0..1 the wings and the tucked legs are carried by, so a bird coming off a
+       branch lies down over a few frames the way a bird does and not in the one
+       frame the flag changes. The part that says nothing says nothing: a body
+       with wings that is standing keeps the pose it was carved in, and the owl's
+       legs need no pose of their own here, because laying the body over turns the
+       `air` tuck they already hold into a fold under the breast instead of a
+       dangling limb. */
+    const flying = st.fly ? Math.min(1, air) : 0;
+    if (flying > 0.01 && p.fly) { rx += p.fly[0] * flying; ry += p.fly[1] * flying; rz += p.fly[2] * flying; }
     /* The lift that goes with a swing, and the answer to the heave. See the
        FOOT block above the models: this is the joint the model does not have,
        and this is the limb refusing to be carried down when the body above it
