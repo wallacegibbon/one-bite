@@ -77,6 +77,69 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
       coreBlock: tree ? g.world.get(tree.x, tree.y, tree.z) : null
     };
   });
+  /* ---------- 1b. the page writes the valley on its own ------------------
+     Between one save and the next the valley lives only in this tab, so the
+     page has to write it when it is taken away: a reload, a closed tab, a
+     phone put to sleep. Two hooks answer that, and a third rule says when they
+     must keep their hands off: a page still sitting on the start screen is
+     holding a valley it has not loaded. */
+  const leave = await step('leaveSave', () => {
+    const g = window.game;
+    localStorage.removeItem(window.FRUTARIA.SAVE_KEY);
+    const before = { day: g.day, x: g.player.x };
+    g.day += 5; g.player.x += 0.5;
+    window.dispatchEvent(new Event('pagehide'));
+    const s = JSON.parse(localStorage.getItem(window.FRUTARIA.SAVE_KEY) || 'null');
+    g.day = before.day; g.player.x = before.x;
+    return { written: !!s, day: s && s.day, want: before.day + 5, moved: s ? +(s.p.x - before.x).toFixed(2) : null };
+  });
+  check('a page being taken away writes the valley without being asked',
+    leave.written && leave.day === leave.want && leave.moved === 0.5, leave);
+
+  const sleep = await step('sleepSave', () => {
+    const g = window.game;
+    localStorage.removeItem(window.FRUTARIA.SAVE_KEY);
+    const before = g.day;
+    g.day += 3;
+    // a phone is put to sleep without ever getting a pagehide; the page learns
+    // about it through `visibilitychange` with `document.hidden` true. The flag
+    // is a getter on the document prototype, so it is shadowed for the moment
+    // the event is dispatched and then handed back exactly as it was.
+    const desc = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden') ||
+      Object.getOwnPropertyDescriptor(HTMLDocument.prototype, 'hidden');
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'hidden', { configurable: true, get: desc.get, set: desc.set });
+    const s = JSON.parse(localStorage.getItem(window.FRUTARIA.SAVE_KEY) || 'null');
+    g.day = before;
+    return { written: !!s, day: s && s.day, want: before + 3, hiddenBack: document.hidden };
+  });
+  check('a page put to sleep writes the valley too',
+    sleep.written && sleep.day === sleep.want && sleep.hiddenBack === false, sleep);
+
+  /* Ctrl+S is the save key the page can always answer to. It has to be read as
+     a chord and not as the movement key it is spelled with: 's' walks the body
+     backwards, and a player saving the valley should not take a step. */
+  const chord = await step('chordBefore', () => {
+    const g = window.game;
+    localStorage.removeItem(window.FRUTARIA.SAVE_KEY);
+    return { day: g.day, z: +g.player.z.toFixed(3) };
+  });
+  await page.keyboard.down('Control');
+  await page.keyboard.down('s');
+  await sim(page, 0.6);
+  const during = await step('chordDuring', () => {
+    const g = window.game;
+    const s = JSON.parse(localStorage.getItem(window.FRUTARIA.SAVE_KEY) || 'null');
+    return { written: !!s, day: s && s.day, z: +g.player.z.toFixed(3), back: g.input.back,
+             label: document.getElementById('btnSave').textContent };
+  });
+  await page.keyboard.up('s');
+  await page.keyboard.up('Control');
+  check('Ctrl+S saves the valley', during.written && during.day === chord.day, { saved: chord, during });
+  check('Ctrl+S is a chord, not a step backwards', during.z === chord.z && during.back === false, { before: chord, during });
+  check('the save button names the key that works', /Ctrl\+S/.test(during.label), during.label);
+
   await step('save', () => { window.game.save(); const s = localStorage.getItem(window.FRUTARIA.SAVE_KEY); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
 
   /* ---------- 2. reload the page: the valley must come back on its own ---------- */
@@ -97,6 +160,15 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
   check('the start screen offers the save back', menu.startLabel !== 'Start exploring' && menu.startLabel !== '开始探索', menu);
   check('the start screen quotes the save', menu.note.length > 0, menu);
   check('clearing the save is offered', menu.freshVisible, menu);
+  // and the leave hooks must keep their hands off a valley nobody loaded
+  const offered = await step('menuLeave', () => {
+    const before = localStorage.getItem(window.FRUTARIA.SAVE_KEY);
+    window.dispatchEvent(new Event('pagehide'));
+    document.dispatchEvent(new Event('visibilitychange'));
+    return { kept: localStorage.getItem(window.FRUTARIA.SAVE_KEY) === before, bytes: (before || '').length };
+  });
+  check('a page nobody started does not write a fresh valley over the save it is offering',
+    offered.kept && offered.bytes > 0, offered);
 
   await page.click('#btnStart');
   await sim(page, 0.9);

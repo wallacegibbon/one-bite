@@ -40,7 +40,7 @@ The scripts are read **once**, when the page loads. After changing or pulling th
 | `N` | Give yourself a name (the valley addresses you by your epithet, not your name) |
 | `L` | Switch the interface language (中文 / English) |
 | `1`–`9` / mouse wheel | Select item |
-| `F5` | Save (localStorage) |
+| `Ctrl+S` | Save (localStorage; the page also saves itself as it closes or hides) |
 | `Esc` | Close panel |
 | Storage panel: `E` / `Tab` | Store / retrieve |
 | Storage panel: `←` `→` | Select a backpack item; `↑` `↓` select a storage item |

@@ -37,10 +37,17 @@
   }
   document.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
-    keys[k] = true;
+    /* Ctrl+S (Cmd+S on a Mac) is the save key the page can always answer to.
+       It has to be taken out of the movement keys before it is read: 's' is
+       also the key that walks the body backwards, and a player saving the
+       valley should not take a step. Every other chord is left alone --
+       sneaking is Ctrl held down with WASD on top of it. */
+    const saveChord = (k === 's' && (e.ctrlKey || e.metaKey));
+    if (!saveChord) keys[k] = true;
     if (k === 'control') keys['control'] = true;
     setKeys();
     if (!started) return;
+    if (saveChord) { e.preventDefault(); game.save(); return; }
     if (k === 'e' && game.mode === 'play') game.interact();
     if (k === 'f' && game.mode === 'play') game.useSelected();
     if (k === 'r' && game.mode === 'play' && game.player.form) game.revert(N.t('log.revertManual'));
@@ -53,6 +60,9 @@
       if (v !== null) { game.setName(v); ui.update(); }
     }
     if (k === 'escape') { ui.showCellar(false); ui.showJournal(false); ui.showHelp(false); ui.showDead(false); game.mode = 'play'; }
+    // F5 stays for the browsers that hand that key to the page. The ones that
+    // keep it for themselves lose nothing either: the page has already written
+    // the valley on its way out (see the leave hooks below).
     if (k === 'f5') { game.save(); e.preventDefault(); }
     if (k >= '1' && k <= '9') { game.sel = Math.min(game.inv.length - 1, +k - 1); ui.invSig = ''; }
     if (game.mode === 'cellar') {
@@ -67,6 +77,20 @@
   });
   document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; keys['control'] = e.key === 'Control' ? false : keys['control']; setKeys(); });
   window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+  /* ---------------- leaving the page ----------------
+     Between one save and the next the valley exists only in this tab. The page
+     can be taken away at any moment -- a reload, a closed tab, a phone switched
+     to another app -- and the game used to answer that by losing everything
+     since the last time the player pressed the save button. So the page writes
+     the valley on its way out: `pagehide` is the hook that fires on a reload,
+     on a close and on a navigation, and `visibilitychange` covers the phone
+     that is put to sleep without ever getting a pagehide.
+     Both are gated on `started`: a page sitting on the start screen is holding
+     a valley it has not loaded, and writing that fresh world would overwrite
+     the very save the screen is offering back. */
+  window.addEventListener('pagehide', () => { if (started) game.save(); });
+  document.addEventListener('visibilitychange', () => { if (started && document.hidden) game.save(); });
 
   canvas.addEventListener('mousedown', () => { if (started && game.mode === 'play') canvas.requestPointerLock(); });
   document.addEventListener('mousemove', e => {
