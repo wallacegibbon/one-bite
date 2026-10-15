@@ -165,12 +165,13 @@
     },
 
     /* ---------------- frog ----------------
-       0.50 m, wide and low, no neck, eyes on top of the skull. The hind leg is
-       three bones: the muscle (thigh), the folded shin, the long foot. A frog
-       does not walk, so the hind leg has a crouch pose (loading a hop) and an
-       air pose (extended), and the throat pulses while it breathes. The whole
-       animal is kept inside the 0.5 m box it collides with -- the snout used to
-       reach 0.13 m past it, so a frog against a wall had its head in the wall. */
+       0.50 m, wide and low, no neck, eyes set wide apart at the corners of the
+       skull. The hind leg is three bones: the muscle (thigh), the folded shin,
+       the long foot. A frog does not walk, so the hind leg has a crouch pose
+       (loading a hop) and an air pose (extended), and the throat pulses while
+       it breathes. The whole animal is kept inside the 0.5 m box it collides
+       with -- the snout used to reach 0.13 m past it, so a frog against a wall
+       had its head in the wall. */
     frog: {
       eye: 0.42,
       parts: [
@@ -186,11 +187,11 @@
         { name: 'head', parent: 'body', pivot: [0, 1.9, 1.15], anim: 'nod', boxes: [
           [-1.25, 1.3, 1.15, 2.5, 1.4, 1.05, '#6a9a52'],
           [-1.05, 1.36, 2.16, 2.1, 0.26, 0.14, '#39592b'],        // mouth line
-          [-1.0, 2.5, 1.3, 0.85, 0.8, 0.85, '#e8e0a0'],           // eyes, on top
-          [0.15, 2.5, 1.3, 0.85, 0.8, 0.85, '#e8e0a0'],
-          [-0.85, 2.6, 2.02, 0.5, 0.5, 0.24, '#1a1208'],          // pupils
-          [0.35, 2.6, 2.02, 0.5, 0.5, 0.24, '#1a1208'],
-          [-0.55, 2.15, 2.14, 0.26, 0.22, 0.16, '#39592b'],       // nostrils
+          [-1.2, 2.5, 1.3, 0.85, 0.8, 0.85, '#e8e0a0'],          // eyes, on top, at the corners
+          [0.35, 2.5, 1.3, 0.85, 0.8, 0.85, '#e8e0a0'],
+          [-1.05, 2.6, 2.02, 0.5, 0.5, 0.24, '#1a1208'],         // pupils
+          [0.55, 2.6, 2.02, 0.5, 0.5, 0.24, '#1a1208'],
+          [-0.56, 2.15, 2.14, 0.26, 0.22, 0.16, '#39592b'],       // nostrils
           [0.3, 2.15, 2.14, 0.26, 0.22, 0.16, '#39592b']
         ] },
         { name: 'throat', parent: 'head', pivot: [0, 1.4, 1.4], anim: 'pulse', boxes: [

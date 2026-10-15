@@ -93,6 +93,38 @@ const extents = (modelId, sc) => {
   if (bad.length) process.exitCode = 1;
 }
 
+/* The frog's eyes sit at the corners of its skull. A human asked for them to be
+   further apart, and a face tuned by eye is a face that walks straight back the
+   moment anybody touches the model again, so the shape is pinned here: the two
+   eye boxes are mirror images, each centre sits at least 0.6 of the skull's own
+   half-width out from the centre line, the gap between them is at least three
+   quarters of an eye's own width (it was barely a third), every eye still stands
+   wholly on the skull it is drawn on, and each pupil stays inside the eye it sits
+   on. The eye height the float law reads is a field of its own (`eye`), so this
+   says nothing about it and everything about how the face is set. */
+{
+  const head = F.MODELS.frog.parts.find(q => q.name === 'head');
+  const skull = head.boxes[0];
+  const by = (c) => head.boxes.filter(b => b[6] === c).sort((p, q) => p[0] - q[0]);
+  const eye = by('#e8e0a0'), pupil = by('#1a1208');
+  const bad = [];
+  if (eye.length !== 2 || pupil.length !== 2) bad.push('脸上少了一对部件');
+  else {
+    const mid = (b) => b[0] + b[3] / 2;
+    const [el, er] = eye, [pl, pr] = pupil;
+    const hw = skull[3] / 2, ew = el[3], gap = er[0] - (el[0] + el[3]);
+    if (Math.abs(mid(el) + mid(er)) > 1e-9) bad.push('两眼不对称');
+    if (Math.abs(mid(el)) < 0.6 * hw) bad.push(`眼太靠中线 ${mid(el).toFixed(2)}`);
+    if (gap < 0.75 * ew) bad.push(`两眼太挤 ${gap.toFixed(2)} < ${(0.75 * ew).toFixed(2)}`);
+    if (Math.abs(mid(el)) + ew / 2 > hw) bad.push('眼长在颅外');
+    if (pl[0] < el[0] - 1e-9 || pl[0] + pl[3] > el[0] + el[3] + 1e-9 ||
+        pr[0] < er[0] - 1e-9 || pr[0] + pr[3] > er[0] + er[3] + 1e-9) bad.push('瞳孔跑出眼睛');
+    console.log('蛙脸', bad.length ? '!! ' + bad.join(', ')
+      : `OK 眼距 ${gap.toFixed(2)} 眼宽 ${ew.toFixed(2)} 颅宽 ${skull[3].toFixed(2)} 眼心 ${mid(er).toFixed(2)}`);
+  }
+  if (bad.length) process.exitCode = 1;
+}
+
 const gl = {
   ARRAY_BUFFER: 1, STATIC_DRAW: 2, FLOAT: 3, UNSIGNED_BYTE: 4,
   createBuffer: () => ({}), bindBuffer() {}, bufferData() {}, deleteBuffer() {}
