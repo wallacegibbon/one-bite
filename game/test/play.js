@@ -6328,7 +6328,9 @@ What was measured before any of this was fixed, over 180 frames of walking
      wild frogs of the valley have always done the opposite: the creature step
      holds them under the surface and never through the bottom. One rule now, off
      one number: the water holds a body that breathes water at
-     `waterTop - FLOAT_UNDER`, clamped by the bottom, whether or not its feet
+     `floatLevel(surface, tall, hover)` -- the film of its own column, less the
+     body's own height, less the depth its row asks for, all three in metres --
+     clamped by the bottom, whether or not its feet
      happen to be on something -- and a wild frog, which is never still, rides a
      slow cycle of its own between that level and deeper water, so the level the
      water holds the body you wear at is the shallow end of the band a wild frog
@@ -6350,7 +6352,8 @@ What was measured before any of this was fixed, over 180 frames of walking
     const cx = Math.floor(lake.x), cz = Math.floor(lake.z);
     const wt = N.waterTop(W, cx, cz, W.h - 1);
     const bed = N.standY(W, cx, cz, wt);
-    if (wt - bed < 4) return { error: 'the open water is not deep enough to measure in' };
+    // the depth of the column in metres: the film is the top face of that cell
+    if (wt + 1 - bed < 4) return { error: 'the open water is not deep enough to measure in' };
     const was = { form: p.form, formT: p.formT, formMax: p.formMax, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
       pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
       dry: p.dry, fright: p.fright, grounded: p.grounded };
@@ -6795,7 +6798,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         const gy = N.groundY(W, x, z, W.h - 1), ty = N.terrainY(W, x, z, W.h - 1);
         const wt = N.waterTop(W, x, z, W.h - 1);
         if (!kinds.canopy && gy > ty + 3) kinds.canopy = [x, z];
-        if (!kinds.deep && wt > 0 && wt - ty >= 3) kinds.deep = [x, z];
+        if (!kinds.deep && wt > 0 && wt + 1 - ty >= 3) kinds.deep = [x, z];   // metres of water over the ground
         if (!kinds.slope && Math.abs(N.terrainY(W, x + 2, z, W.h - 1) - ty) >= 4) kinds.slope = [x, z];
       }
     }
