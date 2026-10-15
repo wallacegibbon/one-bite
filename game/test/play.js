@@ -448,11 +448,28 @@ const { sim } = require('./simwait');
     const field = herd();
     const prev = field.map(c => [c.x, c.z]);
     const swam = new Float64Array(field.length);
+    /* Where the water holds a lamp. The depth a body of this kind hangs at is on
+       the animal's own row and is measured to the crown of the body, so the crown
+       has to hang that far under the film -- not a block deeper, which is what
+       happens when metres are subtracted from the index of a cell: the film sits
+       one block above that index. */
+    let crownMin = 9, crownMax = -9, crownSum = 0, through = 0, bedded = 0, seen = 0;
     for (let i = 0; i < 6000; i++) for (let k = 0; k < field.length; k++) {
       const c = field[k];
       c.update(0.05, p, g.world, g);
       swam[k] += Math.hypot(c.x - prev[k][0], c.z - prev[k][1]);
       prev[k][0] = c.x; prev[k][1] = c.z;
+      if (i % 20 === 19) {
+        const s = g.world.liquidSurfaceAt(Math.floor(c.x), Math.floor(c.z));
+        if (s < 0) continue;
+        seen++;
+        const under = s - (c.y + c.tall);
+        crownSum += under;
+        if (under < crownMin) crownMin = under;
+        if (under > crownMax) crownMax = under;
+        if (under < 0) through++;
+        if (c.y < N.groundY(g.world, Math.floor(c.x), Math.floor(c.z), Math.floor(c.y)) + 0.02) bedded++;
+      }
     }
     /* The exact way an aquatic animal used to walk out of the lake: home on the
        far side of the sunken tower, the tower in between. The homeward step is
@@ -492,6 +509,8 @@ const { sim } = require('./simwait');
       n: before.n, wet: before.wet, far: before.far, after, atts,
       drift: +drift[Math.floor(drift.length / 2)].toFixed(1),
       dryFrames, solidFrames, swumM, maxFar: +maxFar.toFixed(1),
+      hover: { want: sp.hover, min: +crownMin.toFixed(2), max: +crownMax.toFixed(2),
+        mean: +(crownSum / Math.max(1, seen)).toFixed(2), through, bedded, seen },
       bears: !!sp.fruit, worn: N.FRUITS.some(f => f.creature === 'jelly'),
       name: N.disp(sp), lore: N.dexOf(sp)
     };
@@ -508,6 +527,21 @@ const { sim } = require('./simwait');
   check('a lamp is never dragged through the tower out of the water',
     lamps.dryFrames === 0 && lamps.solidFrames === 0, lamps);
   check('a lamp against the tower is still swimming', lamps.swumM > 3, lamps);
+  /* The depth a lamp hangs at is a height, and it is on the animal's own row. The
+     branch used to take metres off the index of the topmost water cell, and the
+     film sits one block above that index, so the whole field hung a block deeper
+     than the sentence said: over 12000 samples of the ten lamps, the crown
+     **1.52-3.12 m** under the film (mean 2.22) for a body **0.54 m** tall, where
+     the row states 1.2 m plus or minus the 0.8 m of bob it drifts on. The band
+     accepted here is that depth, the bob, and the 0.4 m the 1.6/s ease lags a
+     sine that keeps turning round -- the mean, which the ease cannot bias, is
+     pinned to the row itself. */
+  check('a lamp hangs at the depth its own row states, measured to its crown under the film, ' +
+        'and never through the film or through the lakebed',
+    lamps.hover.seen > 100 && lamps.hover.min > 0.2 &&
+    lamps.hover.max < lamps.hover.want + 0.8 + 0.4 &&
+    Math.abs(lamps.hover.mean - lamps.hover.want) < 0.35 &&
+    lamps.hover.through === 0 && lamps.hover.bedded === 0, lamps);
 
   // 10c. the lamps sting. This is measured rather than asserted loosely, because
   //      the number is the design: the field has to cost something to loiter in

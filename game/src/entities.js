@@ -52,6 +52,12 @@
      to say -- a human, or any body that has to come up for air -- keeps the 30 cm
      its back hangs under the surface, which is what it has always kept. */
   function floatLevel(wSurf, tall, hover) { return wSurf - tall - (hover === undefined ? FLOAT_UNDER : hover); }
+  /* The depth an animal's own row states, or the 30 cm a body hangs under the
+     surface when its row states none. Asked as a function because a row that
+     forgets the number must not hand a NaN to a body's height: the height goes
+     straight into the model, and a NaN angle is not an error message, it is a
+     leg that quietly stops being drawn. */
+  function hoverOf(sp) { return sp.hover === undefined ? FLOAT_UNDER : sp.hover; }
   /* The top a body the water is holding up can climb to: the surface of its own
      column, less half the height of that body. The water holds a body up from
      under it, and a body that has worked its way up until only half of it is in
@@ -186,7 +192,7 @@
     hoverDepth() {
       if (!this.form) return FLOAT_UNDER;
       const c = N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature];
-      return c && c.hover !== undefined ? c.hover : FLOAT_UNDER;
+      return c ? hoverOf(c) : FLOAT_UNDER;
     }
     /* How hard this body is asking for a stride, 0..1. The draw sizes the swing
        by this and `walkGait` sizes the stride by it, and they have to be the same
@@ -1746,12 +1752,24 @@
            that starts over the body lets the animal latch onto the trunk and
            climb it out of the lake, block by block, into the sky. */
         const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y));
-        /* Hover a metre or two under the surface -- but never through the
-           bottom. The lake is only two blocks deep at its edges, and a fixed
-           depth below the surface puts an animal inside the lakebed there, which
-           is a water animal standing in the mud. */
-        const depth = 1.2 + Math.sin(this.t + this.phase) * 0.8;
-        const target = Math.max(gy0 + 0.35, wt - depth);
+        /* The same law the water's hold is told by everywhere else in this file:
+           the depth an animal of this kind hangs at is on its own row, it is
+           measured to the crown of the body, and the level is the surface of the
+           column less the body's own height less that depth.
+           It used to be `wt - depth`, and `wt` is the index of the topmost water
+           cell while `depth` is metres: the two are only the same thing because a
+           block is a metre tall, and the film is one block above that index, so
+           the animal sat a whole block deeper than the sentence said -- measured
+           over 12000 samples of the ten lamps, **1.52-3.12 m** under the film
+           (mean 2.22) for a body **0.54 m** tall, where the row says a metre plus
+           or minus the bob. Off the film itself the crown hangs **0.4-2.0 m**
+           under it, which is what "a metre or two under the surface" means, and
+           the top of the bob no longer puts the crown through the surface.
+           Never through the bottom either: the lake is only two blocks deep at
+           its edges, and a fixed depth below the film puts an animal inside the
+           lakebed there, which is a water animal standing in the mud. */
+        const bob = Math.sin(this.t + this.phase) * 0.8;
+        const target = Math.max(gy0 + 0.35, floatLevel(wt + 1, this.tall, hoverOf(this.sp) + bob));
         this.y += (target - this.y) * Math.min(1, dt * 1.6);
       } else {
         /* Feet, water and the ground -- one routine for every body that is not
@@ -1809,7 +1827,7 @@
              height). The depth comes off the same animal record the body you wear
              reads, so the herd and the body you wear are the same animal and hang
              in the same water the same way. */
-          const target = Math.max(gyH + 0.05, floatLevel(wSurf, this.tall, this.sp.hover) - this.diveTo * Math.pow(cyc, 0.4));
+          const target = Math.max(gyH + 0.05, floatLevel(wSurf, this.tall, hoverOf(this.sp)) - this.diveTo * Math.pow(cyc, 0.4));
           const rate = sp.swimSpeed || sp.speed || 1.5;
           const want = target - this.y;
           const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;

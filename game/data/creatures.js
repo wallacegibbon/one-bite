@@ -76,6 +76,11 @@
       habitat: ['mirrorlake'], at: 'tower', spread: 4, active: 'both',
       locomotion: 'water', speed: 0.8, swimSpeed: 2.2, turn: 0.8, alert: 4, herd: 10,
       sting: 0.25,
+      /* how far under the surface film a body of this kind hangs, measured to the
+         crown of it: the lamp drifts a metre or two down, and the bob it rides
+         belongs to the drift, not to the record. No body is ever worn from this
+         animal, so unlike the frog's this depth is the animal's own alone. */
+      hover: 1.2,
       attitude: { self: 'calm', default: 'ignore' },
       dex: '镜湖的灯。水母田的位置就是湖底沉塔的轮廓——从水面看下去，塔在发光。它们不追人，也不躲人；你从它们中间游过去，它们只当你是水，而你的身体不是。没人知道它们为什么亮着。',
       dexEn: 'The lamps of Mirrorlake. The jellyfish field sits exactly in the outline of the sunken tower on the lakebed — from the surface, the tower glows. They neither chase you nor run from you; swim through them and they treat you as water, which your body is not. Nobody knows why they are lit.'

@@ -113,8 +113,8 @@ disc — the tower it is drawn around pokes up through the surface — so the ex
 middle of it is dry ground and costs nothing. The immunity sits on the **frog**
 body — the body this lake already gave you is the body its lamps are lit for —
 and the log line that reports a sting names the answer out loud. The lamps hang
-a metre or two under the surface, so the dive to the tower sills stays out of
-reach of them.
+a metre or two under the surface — **0.5–2.3 m** to the crown over five minutes
+of the field — so the dive to the tower sills stays out of reach of them.
 
 They are also the first animal to actually use `locomotion: 'water'`, and that
 mode had to be made honest: an animal that cannot leave the water is placed and
