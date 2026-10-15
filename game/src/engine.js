@@ -91,32 +91,48 @@
        light reaching a surface under water has come down through that much of
        it, which is a fact about the surface being lit and not about the lens
        looking at it, so the static world has its depth baked into its vertices
-       at mesh time instead of being handed one plane for the whole frame. */
+       at mesh time instead of being handed one plane for the whole frame.
+       A face the mesher knows stands under water hands the surface height in
+       directly instead (see `surf` below), because the point question gets that
+       one wrong. */
     constructor(under) { this.pos = []; this.col = []; this.dat = []; this.n = 0; this.under = under || null; }
     /* one vertex: position, colour [r,g,b], shade (0..1 brightness*AO), emis (0/1),
        and the depth under water in 1/8 m steps (capped at 32 m, which is far
        past where the lake's own haze has taken everything). The depth is
        interpolated between vertices and turned into absorption per fragment,
-       so the step is never a band: the gradient across a block face is smooth. */
-    v(x, y, z, c, shade, emis) {
+       so the step is never a band: the gradient across a block face is smooth.
+       `surf`, when the caller hands one, is the height of the surface of the
+       water this face stands under, and the depth is that less the vertex's own
+       height. It is asked of the face rather than of the point because a corner
+       of a submerged face can stand inside the solid next door, where no water
+       reaches down: measured that way the far corner of a lakebed step came
+       back with no water over it at all, and the base of every step in
+       Mirrorlake lit up the colour of dry sand.
+       Two more bytes ride along for the water's own face, and every other mesh
+       carries zeros in them: `top`, 1 when this face is the top face of its
+       column and 0 when it is one of the four that can appear round its edge.
+       That says which way the face is pointing, which is what decides how much
+       of the view it throws back at the lens instead of letting through. */
+    v(x, y, z, c, shade, emis, top, surf) {
       this.pos.push(x, y, z);
       this.col.push((c[0] * 255) | 0, (c[1] * 255) | 0, (c[2] * 255) | 0, c.length > 3 ? (c[3] * 255) | 0 : 255);
       this.dat.push((Math.min(1, shade) * 255) | 0, emis ? 255 : 0,
-        this.under ? Math.min(255, (this.under(x, y, z) * 8) | 0) : 0);
+        Math.min(255, ((surf !== undefined ? Math.max(0, surf - y)
+          : (this.under ? this.under(x, y, z) : 0)) * 8) | 0), top ? 255 : 0);
       this.n++;
     }
     /* quad: 4 points */
-    quad(p, c, shade, emis) {
-      this.v(p[0], p[1], p[2], c, shade, emis);
-      this.v(p[3], p[4], p[5], c, shade, emis);
-      this.v(p[6], p[7], p[8], c, shade, emis);
-      this.v(p[0], p[1], p[2], c, shade, emis);
-      this.v(p[6], p[7], p[8], c, shade, emis);
-      this.v(p[9], p[10], p[11], c, shade, emis);
+    quad(p, c, shade, emis, top, surf) {
+      this.v(p[0], p[1], p[2], c, shade, emis, top, surf);
+      this.v(p[3], p[4], p[5], c, shade, emis, top, surf);
+      this.v(p[6], p[7], p[8], c, shade, emis, top, surf);
+      this.v(p[0], p[1], p[2], c, shade, emis, top, surf);
+      this.v(p[6], p[7], p[8], c, shade, emis, top, surf);
+      this.v(p[9], p[10], p[11], c, shade, emis, top, surf);
     }
     /* quad with per-vertex AO */
-    quadAO(p, c, sh, emis) {
-      const put = (i) => this.v(p[i * 3], p[i * 3 + 1], p[i * 3 + 2], c, sh[i], emis);
+    quadAO(p, c, sh, emis, top, surf) {
+      const put = (i) => this.v(p[i * 3], p[i * 3 + 1], p[i * 3 + 2], c, sh[i], emis, top, surf);
       put(0); put(1); put(2); put(0); put(2); put(3);
     }
     box(x, y, z, w, h, d, c, emis, ao) {
@@ -154,11 +170,22 @@
   const VS_WORLD = `
   precision highp float;
   attribute vec3 aPos; attribute vec4 aCol; attribute vec2 aData; attribute float aUnder;
+  attribute float aTop;
   uniform mat4 uProj, uView, uModel;
   uniform float uFogDen, uDay, uTime, uWave, uEmisBoost, uEmisKeep;
   uniform float uWaterY;
   uniform vec3 uAmb, uWaterK, uLiqK;
-  varying vec4 vCol; varying float vFog;
+  /* The colour a body of this liquid paints over a view. Read here (the water
+     the light climbs out of) and in the fragment shader (the water the surface
+     mirrors back), so its precision has to be spelled out: the default here is
+     highp and the default there is mediump, and a uniform declared at two
+     precisions will not link at all. */
+  uniform mediump vec3 uVeil;
+  uniform vec3 uHazeK;      // per metre, per colour: what the liquid the lens sits in eats
+  uniform float uHazeOn;    // 1 when that haze replaces the air's, 0 in air
+  uniform float uInWater;   // 1 when the lens is inside a liquid at all
+  uniform vec3 uCamPos;     // the lens, in world space: the pane needs the direction it is looked at from
+  varying vec4 vCol; varying vec3 vFog; varying vec3 vEye; varying vec3 vPan;
   void main(){
     vec4 wp = uModel * vec4(aPos, 1.0);
     if (uWave > 0.5) wp.y += sin(uTime*1.7 + wp.x*0.9 + wp.z*0.7)*0.055 + sin(uTime*0.6 + wp.z*0.25)*0.03;
@@ -166,8 +193,19 @@
     gl_Position = uProj * vp;
     float d = length(vp.xyz);
     float emis = aData.y;
+    // The haze has two laws, because the stuff a lens looks through is not one
+    // thing. Air scatters: nothing happens in the first metre and everything at
+    // a hundred, which is the squared-exponential curve of aerial perspective.
+    // Water absorbs, and it starts eating the red from the first metre -- and
+    // it eats the three colours at three very different rates, which is why a
+    // lake 3 m deep is teal and one 9 m deep is blue and neither is grey. One
+    // scalar weight can only grey a frame towards one colour, and that is how
+    // the near lakebed kept the colour of dry sand: at 0.14 per metre the old
+    // haze over a metre and three quarters of water is 6%.
+    // In air uHazeOn is 0 and the second term is not evaluated at all, so a dry
+    // frame is bit for bit what it was.
     float fog = 1.0 - exp(-uFogDen*uFogDen*d*d);
-    vFog = fog * (1.0 - emis*uEmisKeep);
+    vFog = mix(vec3(fog), 1.0 - exp(-uHazeK * d), uHazeOn) * (1.0 - emis*uEmisKeep);
     float lit = mix(max(uDay, 0.10), 1.25 + uEmisBoost, emis);
     // aCol is uploaded with normalized=TRUE, so aCol.a is already 0..1: dividing
     // it by 255 again made every blended surface 0.4% opaque, and the lake had no
@@ -236,12 +274,91 @@
     float under = max(0.0, uWaterY - wp.y) * keep;
     vec3 dayLight = exp(-uLiqK * (aUnder * 0.125 * keep) - uWaterK * under);
     vCol = vec4(aCol.rgb * aData.x * lit * dayLight + uAmb, aCol.a);
+    /* The way back up. Light that reaches a lens standing over a lake has come
+       up through the water over the surface it left, and that leg obeys the
+       same law again: the red goes first, and the water puts its own colour
+       into the ray as it travels. The distance is the water that surface has
+       above it -- the same number the leg down already used -- and it is asked
+       of the surface being looked at rather than of the lens, which is what
+       makes a lake the same water seen from either side of its skin. Under the
+       surface the lens is already inside the water, and the haze term above
+       carries the whole path, so the leg is not asked for twice.
+       A surface that lights itself is exempt from the sun's leg and not from
+       this one: a lamp in the middle of a lake is not lit by the daylight
+       coming down, but what it sends out still has to climb out. */
+    vec3 back = uInWater > 0.5 ? vec3(0.0)
+      : uLiqK * (aUnder * 0.125) + uWaterK * max(0.0, uWaterY - wp.y);
+    vec3 surv = exp(-back);
+    vCol.rgb = mix(vCol.rgb, uVeil, 1.0 - surv);
+    /* The water's own face: which way it points, which side of it the lens is
+       on, and how much water lies between the lens and that face. The last is
+       only asked when the lens is under the surface, because that is the only
+       time the surface can be between the lens and what it is looking at --
+       looking up at the sky out of a lake, or across at a bank that stands over
+       the water. A lens over the lake never has the surface in front of a
+       surface it can see, and there the veil is carried by the surface under
+       the water instead, where it was just applied. */
+    vEye = wp.xyz - uCamPos;
+    vPan = vec3(aTop, uInWater, uInWater > 0.5 ? d : 0.0);
   }`;
   const FS_WORLD = `
   precision mediump float;
-  varying vec4 vCol; varying float vFog;
+  varying vec4 vCol; varying vec3 vFog; varying vec3 vEye; varying vec3 vPan;
   uniform vec3 uFogCol; uniform float uTintA; uniform vec3 uTint;
+  /* uLiqK is read here as well as in the vertex shader, where the default
+     precision is highp: a uniform declared at two precisions will not link at
+     all, so the one here is spelled out. */
+  uniform highp vec3 uLiqK;
+  uniform vec3 uVeil, uZen, uHor;
+  uniform float uPane;
   void main(){
+    if (uPane > 0.5) {
+      /* The water's own face, drawn in two passes over the frame.
+         Everything the water does to light on its way *through* it is asked of
+         the surface the light came from: the sun's leg down to a lakebed and the
+         leg back up from it to a lens over the lake are both applied to that
+         lakebed in the vertex shader, and the water a lens is sitting in is the
+         haze. What is left for the face is what only the face knows -- how much
+         of the view it throws back, and whether there is water between the lens
+         and whatever lies behind it. The second is the case of looking up at the
+         sky out of a lake, or across at a bank that stands over the water: the
+         ray leaves the water through this face, and the water it has just come
+         through is the distance from the lens to the face. That is vPan.z, and
+         it is zero whenever the lens is over the lake rather than in it, which
+         is what keeps the veil from being counted twice.
+         Two passes because the survival of what lies behind is per colour -- the
+         red of the sky seen through three metres of lake is eaten more than
+         twice over while its blue is barely touched -- and a blend can only ever
+         scale the frame behind it by one number. The first pass scales the frame
+         by what survives and by what the interface lets through; the second adds
+         the colour the water put into the ray on the way, and what the interface
+         threw back.
+         Which way this face points: the mesher puts a water face only where
+         water meets air, so it is the top face of a column or one of the four
+         that can stand round its edge. The first faces straight up, the rest are
+         vertical, and for a vertical face the horizontal part of the view ray is
+         the measure of how hard it is looked at along itself.
+         Schlick, air to water: 2% straight down, running to everything as the
+         view grazes the surface. This is the term that makes a lake a mirror
+         from the bank and a window from a boat, and it is what keeps a grazing
+         view of a shallow shelf from showing the sand through the far side of
+         the lake: at a flat angle the surface gives back the sky instead.
+         Seen from under the water the surface reflects the lake rather than the
+         sky, so the mirror takes the water's own colour there; what it would
+         really show outside Snell's window is the lakebed at that angle, and
+         this is the cheap version of that -- the same colour, not the picture. */
+      float d = length(vEye);
+      vec3 v = vEye / max(d, 1e-4);
+      float cn = mix(sqrt(max(0.0, 1.0 - v.y * v.y)), abs(v.y), vPan.x);
+      float F = 0.02 + 0.98 * pow(1.0 - cn, 5.0);
+      vec3 surv = exp(-uLiqK * vPan.z);
+      if (uPane < 1.5) { gl_FragColor = vec4(surv * (1.0 - F), 1.0); return; }
+      float ry = mix(v.y, abs(v.y), vPan.x);
+      vec3 mir = mix(uHor, uZen, clamp(ry, 0.0, 1.0));
+      mir = mix(mir, uVeil, vPan.y);
+      gl_FragColor = vec4((1.0 - F) * uVeil * (1.0 - surv) + F * mir, 1.0);
+      return;
+    }
     vec3 c = mix(vCol.rgb, uFogCol, clamp(vFog, 0.0, 1.0));
     c = mix(c, uTint, uTintA);
     gl_FragColor = vec4(c, vCol.a);
@@ -312,7 +429,7 @@
       const gl = this.gl = canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
       if (!gl) throw new Error(N.t('err.webgl'));
       this.canvas = canvas;
-      this.pWorld = prog(gl, VS_WORLD, FS_WORLD, ['aPos', 'aCol', 'aData', 'aUnder']);
+      this.pWorld = prog(gl, VS_WORLD, FS_WORLD, ['aPos', 'aCol', 'aData', 'aUnder', 'aTop']);
       this.pSky = prog(gl, VS_SKY, FS_SKY, ['aCorner']);
       this.pPart = prog(gl, VS_PART, FS_PART, ['aPos', 'aCol', 'aSize']);
 
@@ -347,6 +464,9 @@
 
       M4.persp(this.proj, cam.fov * Math.PI / 180, this.aspect, 0.06, env.far);
       M4.lookYaw(this.view, cam.x, cam.y, cam.z, cam.yaw, cam.pitch);
+      // the lens in world space: the water's face is asked what it looks like
+      // from where the frame is looked at from, not from where it stands
+      this.camPos = [cam.x, cam.y, cam.z];
       const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
       this.fwd = [sy * cp, sp, -cy * cp];
       this.right = [cy, 0, sy];
@@ -386,6 +506,29 @@
       for (let i = 0; i < 6; i++) {
         const p = P[i];
         if (p[0] * x + p[1] * y + p[2] * z + p[3] < -r) return false;
+      }
+      return true;
+    }
+
+    /* The same six planes asked of a box instead of a ball, for the things in
+       this world that really are boxes. A chunk is 16 wide, 16 deep and the
+       whole height of the map -- 48 -- tall, and the ball that used to stand in
+       for one was 15 across, centred at half that height. Its own corners are
+       26.5 out from that centre, so a chunk whose only piece on screen was one
+       of them was thrown away whole and the sky showed through the hole: a lens
+       just above Mirrorlake, looking down at 69 degrees, drew a frame that
+       disagreed in **56,633** of its pixels with the same lens drawn with no
+       culling at all, every one of them the far corner of a chunk of lakebed,
+       and two other lenses over the same water put 75,369 and 42,186 pixels of
+       the same hole in a frame. Against a plane a box only has to answer at the
+       one corner that points furthest along that plane's own normal: if that
+       corner is outside, all of the box is. */
+    visibleBox(x0, y0, z0, x1, y1, z1) {
+      const P = this.planes;
+      for (let i = 0; i < 6; i++) {
+        const p = P[i];
+        const px = p[0] > 0 ? x1 : x0, py = p[1] > 0 ? y1 : y0, pz = p[2] > 0 ? z1 : z0;
+        if (p[0] * px + p[1] * py + p[2] * pz + p[3] < 0) return false;
       }
       return true;
     }
@@ -431,6 +574,14 @@
         u.uWaterK = gl.getUniformLocation(P.p, 'uWaterK');
         u.uWaterY = gl.getUniformLocation(P.p, 'uWaterY');
         u.uLiqK = gl.getUniformLocation(P.p, 'uLiqK');
+        u.uHazeK = gl.getUniformLocation(P.p, 'uHazeK');
+        u.uHazeOn = gl.getUniformLocation(P.p, 'uHazeOn');
+        u.uInWater = gl.getUniformLocation(P.p, 'uInWater');
+        u.uCamPos = gl.getUniformLocation(P.p, 'uCamPos');
+        u.uPane = gl.getUniformLocation(P.p, 'uPane');
+        u.uVeil = gl.getUniformLocation(P.p, 'uVeil');
+        u.uZen = gl.getUniformLocation(P.p, 'uZen');
+        u.uHor = gl.getUniformLocation(P.p, 'uHor');
         u._done = 1;
       }
       gl.uniformMatrix4fv(u.uProj, false, this.proj);
@@ -455,6 +606,20 @@
       // The world's own meshes take none of it: their depth came in with them.
       gl.uniform3fv(u.uWaterK, opts.waterK || [0, 0, 0]);
       gl.uniform1f(u.uWaterY, opts.waterY || 0);
+      /* What the stuff the lens is sitting in does to the light coming back
+         along the viewing path: per colour, per metre, and it replaces the
+         air's haze entirely. Air hands over nothing and uHazeOn 0 keeps the
+         air's own curve, so a frame drawn in air is bit for bit what it was. */
+      gl.uniform3fv(u.uHazeK, e.hazeK || [0, 0, 0]);
+      gl.uniform1f(u.uHazeOn, e.hazeOn || 0);
+      // The water's own face: which side of the surface the lens is on, where
+      // the lens is, and whether this draw is that face at all.
+      gl.uniform1f(u.uInWater, e.inWater ? 1 : 0);
+      gl.uniform3fv(u.uCamPos, this.camPos || [0, 0, 0]);
+      gl.uniform1f(u.uPane, opts.pane || 0);
+      gl.uniform3fv(u.uVeil, e.veil || [0, 0, 0]);
+      gl.uniform3fv(u.uZen, e.zenith);
+      gl.uniform3fv(u.uHor, e.horizon);
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);
       gl.uniform1f(u.uTime, e.time);
       gl.uniform1f(u.uWave, opts.wave ? 1 : 0);
@@ -474,15 +639,18 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.col);
       gl.vertexAttribPointer(P.a.aCol, 4, gl.UNSIGNED_BYTE, true, 0, 0);
       gl.enableVertexAttribArray(P.a.aCol);
-      // three bytes a vertex now: shade, emissive, and the depth under water.
-      // The stride is spelled out because the three share one buffer.
+      // four bytes a vertex: shade, emissive, the depth under water, and which
+      // way the face points if it is the water's own surface. The stride is
+      // spelled out because the four share one buffer.
       gl.bindBuffer(gl.ARRAY_BUFFER, mesh.dat);
-      gl.vertexAttribPointer(P.a.aData, 2, gl.UNSIGNED_BYTE, true, 3, 0);
+      gl.vertexAttribPointer(P.a.aData, 2, gl.UNSIGNED_BYTE, true, 4, 0);
       gl.enableVertexAttribArray(P.a.aData);
       // not normalized: the byte is the depth in 1/8 m steps, and the shader
       // wants the step, not a fraction of a full scale
-      gl.vertexAttribPointer(P.a.aUnder, 1, gl.UNSIGNED_BYTE, false, 3, 2);
+      gl.vertexAttribPointer(P.a.aUnder, 1, gl.UNSIGNED_BYTE, false, 4, 2);
       gl.enableVertexAttribArray(P.a.aUnder);
+      gl.vertexAttribPointer(P.a.aTop, 1, gl.UNSIGNED_BYTE, true, 4, 3);
+      gl.enableVertexAttribArray(P.a.aTop);
     }
 
     resetAttribs() { const gl = this.gl; for (let i = 0; i < 8; i++) gl.disableVertexAttribArray(i); }
@@ -495,11 +663,21 @@
       this.setWorldUniforms(P, opts);
       gl.uniformMatrix4fv(P.u.uModel, false, model || IDENT);
       this.bindAttribs(P, mesh);
-      if (opts.blend) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
+      /* Glass blends over what is already in the frame and writes no depth, so
+         what shows through it is decided by the depth the opaque pass left
+         behind. The water's face blends too, but with a different pair of
+         factors, because it is drawn twice: the first pass multiplies the frame
+         by what the water leaves of it, the second adds what the water put into
+         the ray and what the surface threw back. Neither writes depth. */
+      if (opts.pane) {
+        gl.enable(gl.BLEND); gl.depthMask(false);
+        if (opts.pane === 1) gl.blendFunc(gl.DST_COLOR, gl.ZERO);
+        else gl.blendFunc(gl.ONE, gl.ONE);
+      } else if (opts.blend) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
       if (opts.noCull) gl.disable(gl.CULL_FACE);
       gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
       if (opts.noCull) gl.enable(gl.CULL_FACE);
-      if (opts.blend) { gl.disable(gl.BLEND); gl.depthMask(true); }
+      if (opts.blend || opts.pane) { gl.disable(gl.BLEND); gl.depthMask(true); }
       this.stats.draws++; this.stats.tris += mesh.count / 3;
     }
 

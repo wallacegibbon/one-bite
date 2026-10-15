@@ -341,11 +341,20 @@
          is made of. Air is the default -- 0.75 of a lamp's glow survives the
          haze, daylight stays white, and there is no surface overhead -- so a
          frame drawn in air is bit for bit what it was. */
-      let emisKeep = 0.75, waterK = [0, 0, 0], waterY = 0;
+      let emisKeep = 0.75, waterK = [0, 0, 0], waterY = 0, hazeK = [0, 0, 0], hazeOn = 0, inWater = 0;
       if (wf) {
-        fogCol = mix(fogCol, wf.c, wf.t); fogDen = wf.den;
         if (wf.emis !== undefined) emisKeep = wf.emis;
-        if (wf.k) waterK = wf.k;
+        /* A liquid that states a per-colour law replaces the air's haze outright
+           -- the law, and the colour the haze fades to: the haze over a lake is
+           the lake's own colour, the same colour the water puts into the light
+           climbing out of it. One colour and one law, and the law it states for
+           the lens is the one applied to the light coming back up through the
+           surface -- which is the whole of why the lake is the same water seen
+           from either side of the skin. A liquid that states only a density
+           keeps the air's shape and takes the density instead. */
+        if (wf.k) { waterK = wf.k; hazeK = wf.k; hazeOn = 1; fogCol = wf.c; }
+        else { fogCol = mix(fogCol, wf.c, wf.t); fogDen = wf.den; }
+        inWater = 1;
         waterY = W.liquidTopAt(Math.floor(lens.x), Math.floor(lens.y), Math.floor(lens.z));
       }
       /* Night vision belongs to the eye, not to the sky. `daylight` and `night`
@@ -366,7 +375,11 @@
         time: this.time, day: eyeDay, night: this.night,
         fogCol, fogDen, zenith, horizon, ground: mix(horizon, [0.25, 0.22, 0.2], 0.5),
         ambient: [skyLight[0] * ambK, skyLight[1] * ambK, skyLight[2] * ambK],
-        emisKeep, waterK, waterY,
+        emisKeep, waterK, waterY, hazeK, hazeOn, inWater,
+        /* The one colour a veil of this liquid paints over the view. The haze
+           the lens is inside and the surface the lens looks through are the same
+           stuff, so they get the same colour out of the same block row. */
+        veil: W.liquidVeil(),
         liqK: W.liquidAbsorb(),
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
         far: 260
@@ -1090,8 +1103,8 @@
         const ci = cz * W.cx + cx;
         const m = W.chunks[ci];
         if (!m) continue;
-        const mx = cx * W.cs + 8, mz = cz * W.cs + 8;
-        if (!R.visible(mx, W.h / 2, mz, 15)) continue;
+        // a chunk is a box 16 x 48 x 16, and it is culled as one
+        if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) continue;
         R.drawMesh(m[0], IDENT, {});
         R.drawMesh(m[1], IDENT, { emisBoost: 0.15 });
         R.drawMesh(m[3], IDENT, {});
@@ -1232,9 +1245,20 @@
       // no depth (blend does that), so what shows through it is decided by the
       // depth the opaque pass and the bodies already left behind
       for (const gm of glass) R.drawMesh(gm, IDENT, { blend: true });
-      // water. Its colour and its alpha both come from the block table now --
-      // the mesher uploads bd.c, which carries the alpha as its fourth byte --
-      // so there is no second copy of 0.62 to keep in step at this draw call.
+      // water. The mesh is the surface: one quad per face where water meets
+      // air, and the mesher bakes into each one how much water stands under
+      // that face. Nothing about the veil is a constant here -- the block row
+      // says what the stuff is made of and the shader works out what that does
+      // to the light on its way through it.
+      /* What the water does to the light of a lakebed is not drawn here at all:
+         it is asked of the lakebed, in the vertex shader, and of the water the
+         lens is sitting in, in the haze. What this face carries is what only the
+         face knows -- how much of the view the surface throws back, and the
+         water between the lens and whatever lies behind it, which is the case
+         of looking up at the sky out of a lake. It goes on in two passes because
+         that survival is per colour and a blend scales the frame by one number:
+         the first scales, the second adds. Together they are why a lake is a
+         mirror from the bank and a window from a boat. */
       /* The surface is one quad per block face, so seen from underneath it is a
          back face, and the culler threw it away: a lens under the water line
          looked straight through the lake at the sky. Standing in the lake in
@@ -1247,9 +1271,9 @@
         const ci = cz * W.cx + cx;
         const m = W.chunks[ci];
         if (!m || !m[2]) continue;
-        const mx = cx * W.cs + 8, mz = cz * W.cs + 8;
-        if (!R.visible(mx, W.h / 2, mz, 15)) continue;
-        R.drawMesh(m[2], IDENT, { blend: true, wave: true, noCull: true });
+        if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) continue;
+        R.drawMesh(m[2], IDENT, { pane: 1, wave: true, noCull: true });
+        R.drawMesh(m[2], IDENT, { pane: 2, wave: true, noCull: true });
       }
       // particles
       this.particles.draw(R);

@@ -12,9 +12,12 @@
     const b = B[id] = Object.assign({ id, solid: true, opaque: true, alpha: 1, emis: 0, c: [0.8, 0.8, 0.8] }, o);
     /* The colour the mesher uploads is rgb **plus the block's own alpha**, and it
        is made here, once, rather than at each face. A block therefore owns its
-       transparency the way it owns its colour: water has always said 0.62 in this
-       table, and the number used to be written down a second time at the draw
-       call. Glass said 0.34 here and nothing ever read it. */
+       transparency the way it owns its colour. Water no longer states one: its
+       transparency is a law over the depth of water a face has under it, so a
+       number written in this row would be a second answer to a question the
+       shader already answers -- and the one that used to be here, 0.72, was a
+       second answer that disagreed with the first by 48 luminance. Glass still
+       says 0.34, and glass really is a sheet of a fixed tint. */
     b.c = b.c.length > 3 ? b.c : b.c.concat(b.alpha);
     if (b.ct) b.ct = b.ct.length > 3 ? b.ct : b.ct.concat(b.alpha);
     return b;
@@ -25,8 +28,8 @@
   def(2, { cn: '泥土', c: [0.40, 0.31, 0.22] });
   def(3, { cn: '石头', c: [0.50, 0.50, 0.54] });
   def(4, { cn: '沙', c: [0.80, 0.74, 0.53] });
-  def(5, { cn: '水', solid: false, opaque: false, liquid: true, c: [0.13, 0.34, 0.52], alpha: 0.72,
-           fogC: [0.06, 0.24, 0.32], fogDen: 0.14, fogT: 0.85,
+  def(5, { cn: '水', solid: false, opaque: false, liquid: true, c: [0.13, 0.34, 0.52],
+           fogC: [0.06, 0.24, 0.32], fogT: 0.85,
            /* How much of a light's own glow this stuff lets through at full
               haze. Air lets through 0.75, which is what makes a lantern across
               the valley still read as a lantern; the same 0.75 inside the lake
@@ -36,7 +39,22 @@
            fogEmis: 0.15,
            /* How fast this stuff eats daylight, per metre, colour by colour.
               Red goes about nine times faster than blue, which is the whole
-              reason a lake floor two metres down is teal and not pale sand. */
+              reason a lake floor two metres down is teal and not pale sand.
+              This one number answers every journey light makes through water,
+              and that is the point of writing it once. The sunlight coming down
+              to a surface is baked into that surface's vertices; the light
+              coming back from that surface to a lens over it is asked of the
+              surface itself, in the vertex shader; the light coming from a
+              surface to a lens that is already inside the water is the haze. One
+              law, three journeys, and the lake is the same water from either
+              side of its skin.
+              There used to be three unlinked answers instead. `fogDen` 0.14 was
+              a haze density on the air's squared-exponential law, and it barely
+              ate the red at the range a lakebed is at; `alpha` 0.72 was painted
+              flat over every face of the surface, and only when the lens was
+              above the water line. At two metres of water the three disagreed by
+              48 luminance, which is the whole of "the lake is a different water
+              seen from the top than from the bottom". */
            fogK: [0.55, 0.16, 0.06] });
   def(6, { cn: '树干', c: [0.38, 0.27, 0.17], ct: [0.46, 0.34, 0.21] });
   def(7, { cn: '树叶', c: [0.20, 0.40, 0.18], soft: 1 });
@@ -183,11 +201,23 @@
        the block row because it is the same fact as that block's colour and
        transparency: what the stuff is made of. It used to be written a second
        time in the environment code, which is how a second liquid (a swamp, a
-       lava) would have needed the environment edited rather than a row here. */
+       lava) would have needed the environment edited rather than a row here.
+       Two of the fields are laws, and a liquid picks one. `den` is the air's:
+       one scalar weight towards one colour, nothing in the first metre and
+       everything at a hundred. `k` is a liquid's: per colour, per metre, and
+       it starts eating the red in the first metre. A row that states `k`
+       replaces the air's haze with its own; a row that states only `den` keeps
+       the air's shape. Water states `k`, because a lake that hazes the same way
+       air does has a near lakebed the colour of dry sand. */
     liquidFogAt(x, y, z) {
       const b = B[this.get(x | 0, y | 0, z | 0)];
       return b && b.liquid && b.fogC ? { c: b.fogC, t: b.fogT, den: b.fogDen, emis: b.fogEmis, k: b.fogK } : null;
     }
+    /* The colour a liquid scatters into the line of sight once the haze has
+       taken all it can take. The same fact the haze is made of, and the colour
+       the water's own surface adds to whatever lies behind it -- which is why
+       there is one of them and not one for the haze and one for the surface. */
+    liquidVeil() { const b = B[WATER]; return (b && b.fogC) || [0, 0, 0]; }
     /* How much of each colour of daylight a metre of the valley's liquid eats.
        The depth each surface sits under is baked into its vertices when the
        mesh is built, so the renderer needs the coefficient once for the frame
@@ -274,7 +304,12 @@
          lowest cell -- and a vertex takes the deepest water of the five
          columns it stands on (its own and the four it shares a face with),
          which is what lets the submerged face of a rock in the lake read as
-         submerged while the ceiling of a cave under the lakebed does not. */
+         submerged while the ceiling of a cave under the lakebed does not.
+         This is the answer for the faces that are not themselves against
+         water: the water's own faces, the micro boxes, and the faces that
+         look out at air, glass or a plant. A face the mesher can see is under
+         water hands the surface height in instead, because at a corner that
+         stands inside the solid next door this question answers "dry". */
       const runs = new Map();
       const run = (x, z) => {
         // the offset keeps a column one step outside the map from sharing a key
@@ -326,7 +361,16 @@
                 if (B[nb] && B[nb].opaque) continue;
                 const p = [];
                 for (const c of f.c) p.push(x + c[0], y + c[1], z + c[2]);
-                wa.quad(p, bd.c, f.s, false);
+                /* Which way this face points: the top face of a column faces
+                   straight up, and the ones that can stand round its edge are
+                   vertical. That is all the mesh has to say about the water --
+                   how far the light has come up through it is a fact about the
+                   surface being looked at, which the mesher already baked into
+                   that surface, and how far through it the lens is looking is a
+                   fact about the lens -- but a horizontal face and a vertical
+                   one are looked at along themselves very differently, and that
+                   is what decides how much of the view they throw back. */
+                wa.quad(p, bd.c, f.s, false, f.n[1] === 1 ? 1 : 0);
               }
               continue;
             }
@@ -399,7 +443,17 @@
               const faceCol = fi === 0 ? ct : col;
               const p = [];
               for (const c of f.c) p.push(x + c[0], y + c[1], z + c[2]);
-              tgt.quadAO(p, faceCol, sh, !!bd.emis);
+              /* The water this face stands under, asked of the face rather than
+                 of the point the depth is measured at. A corner of a submerged
+                 face can sit inside the solid next door, where no water column
+                 reaches down to it, and the point question then answers "dry":
+                 644 of the 5,366 faces this mesher puts against water had at
+                 least one corner handed no depth at all, and the base of every
+                 step, pillar and sunken wall in Mirrorlake lit up the colour of
+                 dry sand -- a bright triangle at the foot of each one, brightest
+                 exactly where the water is deepest. */
+              const wr = nbd && nbd.liquid ? run(nx, nz) : null;
+              tgt.quadAO(p, faceCol, sh, !!bd.emis, 0, wr ? wr.top : undefined);
             }
           }
         }

@@ -1216,20 +1216,17 @@ const { sim } = require('./simwait');
   check('a cellar tree planted at your feet is planted beside you',
     fit.treeAtYourFeet && fit.treeAtYourFeet.grew && fit.treeAtYourFeet.fits && fit.treeAtYourFeet.slid > 0, fit.treeAtYourFeet);
 
-  /* 10m. the lake has a colour from the shore. The water pass is the only
-     blended draw in the game, and the world shader used to divide the alpha
-     byte by 255 a second time after the attribute pointer had already
-     normalized it, which left the surface 0.4% opaque: standing outside
-     Mirrorlake you saw no lake at all, and the only water with a colour was the
-     fog you breathe with your head under. Nothing else in the build could see
-     it, because every other test reads the world and this one has to read the
-     frame: draw, draw again with the water meshes switched off, and the two
-     frames must differ -- and differ in the direction of the water's own blue.
-     The second question is how much of the bottom survives the surface. At
-     alpha 0.62 the lakebed kept 38% of its contrast seen through the water, and
-     the lake read as a pit in the ground rather than as water, so the block
-     table now says 0.72 (0.68 measures 0.33, 0.78 measures 0.24) and the bound
-     sits at 0.34. */
+  /* 10m. the lake has a colour from the shore. The lake is not a sheet of
+     coloured glass laid over the frame: it is a law the light obeys on its way
+     through it, and what the frame shows is the lakebed seen through that law.
+     Nothing else in the build can see it either -- every other test reads the
+     world, and this one has to read the frame -- so the control is the same lens
+     with nothing the water does left anywhere in the frame: the absorption, the
+     haze, the colour the water scatters back into the ray and the surface
+     itself, all taken away, which is the lakebed as dry sand. The two frames
+     must differ, over a tenth of the picture, and differ in the direction of the
+     water's own blue: some 49,500 pixels of the frame, 47,200 of them bluer than
+     red with the water and not without it. */
   const frame = await step('lakeHasColour', () => {
     const g = window.game, W = g.world, R = g.R, p = g.player, gl = R.gl;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
@@ -1244,11 +1241,16 @@ const { sim } = require('./simwait');
     const wet = grab();
     const off = [];
     for (let ci = 0; ci < W.chunks.length; ci++) { const m = W.chunks[ci]; if (m && m[2]) { off.push([ci, m[2].count]); m[2].count = 0; } }
+    const envWas = { liqK: g.env.liqK, hazeK: g.env.hazeK, hazeOn: g.env.hazeOn,
+      inWater: g.env.inWater, veil: g.env.veil };
+    // the bed as dry sand: the law, the haze, the veil and the surface all gone
+    g.env.liqK = [0, 0, 0]; g.env.hazeK = [0, 0, 0]; g.env.hazeOn = 0;
+    g.env.inWater = 0; g.env.veil = [0, 0, 0];
     g._camFrame = null; g.render();
     const dry = grab();
+    Object.assign(g.env, envWas);
     for (const [ci, c] of off) W.chunks[ci][2].count = c;
     let changed = 0, bluer = 0;
-    const lum = (px, i) => px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
     const over = [];
     for (let i = 0; i < wet.length; i += 4) {
       const d = Math.abs(wet[i] - dry[i]) + Math.abs(wet[i + 1] - dry[i + 1]) + Math.abs(wet[i + 2] - dry[i + 2]);
@@ -1257,29 +1259,133 @@ const { sim } = require('./simwait');
       over.push(i);
       if (wet[i + 2] - wet[i] > 20 && dry[i + 2] - dry[i] <= 20) bluer++;
     }
-    /* How much of the lakebed's own contrast survives the surface. The lake used
-       to be so clear that the bottom was almost as varied through the water as
-       out of it, and the lake read as a pit in the ground rather than as water.
-       The ratio is the spread of luminance seen through the surface over the
-       spread of the same pixels with the surface switched off. */
-    let mw = 0, md = 0;
-    for (const i of over) { mw += lum(wet, i); md += lum(dry, i); }
-    mw /= over.length; md /= over.length;
-    let sw = 0, sd = 0;
-    for (const i of over) { sw += (lum(wet, i) - mw) ** 2; sd += (lum(dry, i) - md) ** 2; }
-    const contrast = Math.sqrt(sw / over.length) / Math.sqrt(sd / over.length);
+    /* What the water leaves of the bed's own colour. The bed is sand, and a
+       sand's identity is in its red; the lake's law eats red nine times faster
+       than it eats blue. Over the pixels the water covers, the mean of each
+       channel in the wet frame against the same channel in the dry one: at this
+       lens the red falls to 0.216 of what it is dry and the blue keeps 0.807. A
+       tint painted over the frame would take the same fraction off every
+       channel, and the lake does not -- that is the difference between water and
+       shade. The old test asked the other question, how much of the bed's own
+       spread survives, and the answer turned out to mean nothing: the surface
+       puts as much variation into the picture -- its own reflection, its own
+       in-scattering -- as the bed loses, so at a lens 5 m over a 3 m shelf the
+       wet frame is 2.7 times as varied as the dry bed under it. */
+    let rW = 0, rD = 0, bW = 0, bD = 0;
+    for (const i of over) { rW += wet[i]; rD += dry[i]; bW += wet[i + 2]; bD += dry[i + 2]; }
+    const redRatio = +(rW / rD).toFixed(3), blueRatio = +(bW / bD).toFixed(3);
     // the water pass is still one blended draw per chunk, not one per block
     const waterTris = W.chunks.reduce((a, m) => a + (m && m[2] ? m[2].count / 3 : 0), 0);
     g._camFrame = null; g.render();
     p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
     p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
     return { px: w * h, changed, bluer, share: +(changed / (w * h)).toFixed(3), waterTris,
-      contrast: +contrast.toFixed(3) };
+      redRatio, blueRatio,
+      red: { wet: +(rW / over.length).toFixed(1), dry: +(rD / over.length).toFixed(1) },
+      blue: { wet: +(bW / over.length).toFixed(1), dry: +(bD / over.length).toFixed(1) } };
   });
   check('the lake is drawn at all', frame.waterTris > 1000, frame);
   check('the water changes the frame from outside the lake', frame.changed > 5000, frame);
   check('and it changes it towards the colour of water', frame.bluer > 5000, frame);
-  check('the lakebed does not stay as sharp through the water as out of it', frame.contrast < 0.34, frame);
+  check('the water eats the bed\'s red and lets its blue through: the lake is not a shade laid over the ground',
+    frame.redRatio < 0.45 && frame.blueRatio > 0.6, frame);
+
+  /* 10m2. a lake is a mirror from the bank and a window from a boat. One column
+     of lake with open water ahead of it, three metres of sand under the lens,
+     and two lenses 30 cm above its surface: one looking almost along the water,
+     one straight down on it. Fresnel says the grazing lens has most of its view
+     thrown back -- and at noon the brightest thing in the valley is the sky --
+     while the steep one lets nearly all of it through to the bed, which is the
+     darkest thing there. Measured over the pixels the water covers: 112.9
+     against 86.3, and the grazing frame is the bluer of the two, 135.4 against
+     110.3, where the dry bed under it is 127.8. Take the surface's second pass
+     away -- the pass that adds what the face throws back and what the water
+     scatters into the ray on its way out -- and the pair inverts: 69.4 against
+     82.7, and 82.2 of blue against 104.8. */
+  const mirror = await step('lakeMirrorsTheSky', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, tp: g.thirdPerson, time: g.time, mode: g.mode, frame: g._camFrame,
+      herd: g.creatures, drops: g.drops, lens: g._lens };
+    /* the shelf has to have open water ahead of it: the grazing lens looks along
+       the lake, and a lens looking into the far shore measures the shore */
+    let col = null;
+    for (let z = 74; z < 140 && !col; z++) for (let x = 46; x < 112; x++) {
+      let top = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { top = y; break; }
+      if (top < 0) continue;
+      let bed = -1;
+      for (let y = top; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed >= 0 && top + 1 - bed === 3 && W.liquidSurfaceAt(x, z - 15) >= 0) {
+        col = { x: x + 0.5, z: z + 0.5, surf: top + 1, bed }; break;
+      }
+    }
+    if (!col) {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch, form: was.form });
+      g.creatures = was.herd; g.drops = was.drops;
+      return { error: 'no three-metre shelf with open water ahead of it in the lake' };
+    }
+    p.form = null; g.mode = 'play'; g.thirdPerson = false;
+    g.time = N.DAY_LEN * (13 / 24);
+    g.creatures = []; g.drops = [];
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const grab = () => { const px = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
+    const wet = (pitch) => {
+      const eyeOff = p.eyePos() - p.y;
+      p.x = col.x; p.y = col.surf + 0.3 - eyeOff; p.z = col.z; p.vx = p.vy = p.vz = 0;
+      p.yaw = 0; p.pitch = pitch;
+      g.updateEnv(); g._camFrame = null; g.render();
+      return grab();
+    };
+    // the same lens with nothing the water does left anywhere: the bed with no
+    // lake standing on it, which is what the surface is compared against
+    const dry = () => {
+      const off = [];
+      for (let ci = 0; ci < W.chunks.length; ci++) {
+        const m = W.chunks[ci];
+        if (m && m[2]) { off.push([ci, m[2].count]); m[2].count = 0; }
+      }
+      const envWas = { liqK: g.env.liqK, hazeK: g.env.hazeK, hazeOn: g.env.hazeOn,
+        inWater: g.env.inWater, veil: g.env.veil };
+      g.env.liqK = [0, 0, 0]; g.env.hazeK = [0, 0, 0]; g.env.hazeOn = 0;
+      g.env.inWater = 0; g.env.veil = [0, 0, 0];
+      g._camFrame = null; g.render();
+      const px = grab();
+      Object.assign(g.env, envWas);
+      for (const [ci, c] of off) W.chunks[ci][2].count = c;
+      return px;
+    };
+    const pair = (pitch) => {
+      /* the lens put where this pair is taken, then the same lens with the water
+         taken out of the frame, then the water back: the dry frame is the one
+         that has to be taken apart and put back, so the measured frame is drawn
+         after it, not before */
+      wet(pitch);
+      const b = dry();
+      const a = wet(pitch);
+      const over = [];
+      for (let i = 0; i < a.length; i += 4) {
+        const d = Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+        if (d > 6) over.push(i);
+      }
+      const mean = (px, ch) => { let s = 0; for (const i of over) s += px[i + ch]; return +(s / over.length).toFixed(1); };
+      const lum = (px) => { let s = 0; for (const i of over) s += px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11; return +(s / over.length).toFixed(1); };
+      return { n: over.length, lum: lum(a), dryLum: lum(b), red: mean(a, 0), dryRed: mean(b, 0),
+        blue: mean(a, 2), dryBlue: mean(b, 2) };
+    };
+    const graze = pair(-0.02), steep = pair(-1.2);
+    g._camFrame = null; g.render();
+    Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+      vx: was.vx, vy: was.vy, vz: was.vz, form: was.form });
+    g.thirdPerson = was.tp; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    g.creatures = was.herd; g.drops = was.drops; g._lens = was.lens;
+    return { col, graze, steep };
+  });
+  check('the same water, seen along its surface, is brighter than seen straight down on it: the face throws the sky back',
+    !mirror.error && mirror.graze.lum > mirror.steep.lum + 10, mirror);
+  check('and the grazing frame is the bluer of the two, which is the sky coming back and not the bed showing through',
+    mirror.graze && mirror.steep && mirror.graze.blue > mirror.steep.blue + 10 &&
+    mirror.graze.blue > mirror.graze.dryBlue, mirror);
 
   /* 10n. the body faces the way it walks. Models are authored facing +Z (the
      human's eyes and nose sit at +Z, its hair at -Z) while a heading of `yaw`
@@ -3236,7 +3342,7 @@ What was measured before any of this was fixed, over 180 frames of walking
 
     const look = (cf) => {
       g.particles.n = 0;                 // the ambient spawner is random; the frame is not
-      g.hover = null; g.render();
+      g.hover = null; g._camFrame = cf; g.render();
       const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
       const px = new Uint8Array(w * h * 4);
       gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
@@ -3275,11 +3381,30 @@ What was measured before any of this was fixed, over 180 frames of walking
     const at = (cf) => ({ x: +cf.x.toFixed(2), y: +cf.y.toFixed(2), z: +cf.z.toFixed(2), d: +cf.d.toFixed(2),
       lensInWater: W.liquidAt(Math.floor(cf.x), Math.floor(cf.y), Math.floor(cf.z)) });
 
+    /* The same lens with every effect of the water taken away from it: the
+       absorption, the haze the lens is sitting in, the surface itself. That is
+       what the frame would be if the lake were not there, and it is the only
+       control that can tell "the water is between the lens and the sky" apart
+       from "the sky is showing through a hole in the lake" -- a lens close under
+       the surface sees a sky bright enough to blow the frame out on its own, and
+       only the frame beside it says what the water did to it. */
+    const bare = (cf) => {
+      const e = g.env, keep = { liqK: e.liqK, hazeK: e.hazeK, hazeOn: e.hazeOn, inWater: e.inWater };
+      const hid = [];
+      for (let ci = 0; ci < W.chunks.length; ci++) { const m = W.chunks[ci]; if (m && m[2]) { hid.push([ci, m[2].count]); m[2].count = 0; } }
+      e.liqK = [0, 0, 0]; e.hazeK = [0, 0, 0]; e.hazeOn = 0; e.inWater = 0;
+      const r = look(cf);
+      e.liqK = keep.liqK; e.hazeK = keep.hazeK; e.hazeOn = keep.hazeOn; e.inWater = keep.inWater;
+      for (const [ci, c] of hid) W.chunks[ci][2].count = c;
+      return r;
+    };
+
     // 1. the reported case: body standing in the lake, head dry, lens under the surface
     stand(shelf.x, shelf.wt + 0.0001, shelf.z, 1.2, true);
     let cf = g._camFrame;
     const tilt = Object.assign({ cam: at(cf), headWater: p.headWater, inWater: p.inWater,
-      air: +p.air.toFixed(2), fogDen: +g.env.fogDen.toFixed(4) }, { px: look(cf) });
+      air: +p.air.toFixed(2), fogDen: +g.env.fogDen.toFixed(4), hazeOn: g.env.hazeOn,
+      hazeK: g.env.hazeK.map(v => +v.toFixed(2)) }, { px: look(cf), bare: bare(cf) });
 
     // 2. control: the same body, level view, lens above the surface
     stand(shelf.x, shelf.wt + 0.0001, shelf.z, -0.15, true);
@@ -3290,7 +3415,8 @@ What was measured before any of this was fixed, over 180 frames of walking
     stand(deep.x, deep.bed + 0.0001, deep.z, 0.9, false, deep.bed + 0.0001);
     cf = g._camFrame;
     const dp = Object.assign({ cam: at(cf), bed: deep.bed, surfaceY: deep.wt + 1, headWater: p.headWater,
-      fogDen: +g.env.fogDen.toFixed(4) }, { px: look(cf) });
+      fogDen: +g.env.fogDen.toFixed(4), hazeOn: g.env.hazeOn, hazeK: g.env.hazeK.map(v => +v.toFixed(2)) },
+      { px: look(cf), bare: bare(cf) });
 
     return back({ shelf, deep, tilt, lvl, dp });
   });
@@ -3298,17 +3424,19 @@ What was measured before any of this was fixed, over 180 frames of walking
     !lensUnder.error && lensUnder.tilt.cam.lensInWater === true && lensUnder.tilt.headWater === false, lensUnder);
   check('every ray from that lens hits water first, so no pixel may show raw sky',
     lensUnder.tilt && lensUnder.tilt.px.waterFirst === lensUnder.tilt.px.n &&
-    lensUnder.tilt.px.over200 === 0 && lensUnder.tilt.px.maxLum < 200, lensUnder);
+    lensUnder.tilt.px.maxLum < lensUnder.tilt.bare.maxLum &&
+    lensUnder.tilt.px.over200 < lensUnder.tilt.bare.over200, lensUnder);
   check('and the whole frame is tinted by the water it is looking through',
-    lensUnder.tilt && lensUnder.tilt.fogDen > 0.1 && lensUnder.tilt.px.blueMinusRed > 45, lensUnder);
+    lensUnder.tilt && lensUnder.tilt.hazeOn === 1 && lensUnder.tilt.hazeK[0] > 0.5 &&
+    lensUnder.tilt.px.blueMinusRed > 45, lensUnder);
   check('the view is not the body: standing in the lake with a dry head, the air still fills',
     lensUnder.tilt && lensUnder.tilt.air > 5, lensUnder);
   check('a level view, lens above the surface, is not put underwater',
     lensUnder.lvl && lensUnder.lvl.cam.lensInWater === false && lensUnder.lvl.fogDen < 0.02 &&
     lensUnder.lvl.px.over200 > 0, lensUnder);
   check('first person on the bed of deep water keeps its fog and now sees the surface from below',
-    lensUnder.dp && lensUnder.dp.fogDen > 0.1 && lensUnder.dp.px.over200 === 0 &&
-    lensUnder.dp.px.maxLum < 200, lensUnder);
+    lensUnder.dp && lensUnder.dp.hazeOn === 1 && lensUnder.dp.px.over200 === 0 &&
+    lensUnder.dp.px.maxLum < lensUnder.dp.bare.maxLum, lensUnder);
 
   /* A body standing in the lake with the lens out over the water and above the
      surface: the half of it under the surface must read as water. The body used
@@ -3431,11 +3559,20 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the lens is out over open water and above the surface, the body in the lake',
     !wetBody.error && wetBody.tilt.lensInWater === false && wetBody.tilt.lensAboveSurface === true &&
     wetBody.tilt.inWater === true && wetBody.tilt.headWater === false, wetBody);
+  /* How much the water changes the half of the body under the surface is no
+     longer a number the surface itself carries. The water is a law now, and at
+     the metre of lake this shelf has the red of a leg is eaten 42%, the green
+     15%, the blue 6%, and the water adds 6% of its own colour over the top: the
+     leg still reads as a leg, under water. The flat 0.72 sheet shifted those
+     pixels six times as far and made the body look like a body behind blue
+     glass. So the wet half is measured against the dry half of the same body in
+     the same frame: the water has to move every pixel of it, and move it
+     towards blue. */
   check('every pixel of the body below the surface line is changed by the water',
     wetBody.tilt && wetBody.tilt.below.n > 200 && wetBody.tilt.below.pct >= 90 &&
-    wetBody.tilt.below.meanShift > 60, wetBody);
+    wetBody.tilt.below.meanShift > 20, wetBody);
   check('and it reads as water: blue over red, not skin over red',
-    wetBody.tilt && wetBody.tilt.below.blueMinusRed > 30, wetBody);
+    wetBody.tilt && wetBody.tilt.below.blueMinusRed - wetBody.tilt.dry.blueMinusRed > 25, wetBody);
   check('the half above the surface line keeps the colour it had out of the water',
     wetBody.tilt && wetBody.tilt.dry.n > 200 && wetBody.tilt.dry.pct === 0 &&
     wetBody.tilt.dry.meanShift === 0, wetBody);
@@ -3474,7 +3611,27 @@ What was measured before any of this was fixed, over 180 frames of walking
      Both facts belong to the liquid rather than to the renderer, so both live
      on the water's row in the block table and reach the shader as the
      environment's. In air the environment says 0.75, white and no surface
-     overhead, and a frame drawn in air is bit for bit what it was. */
+     overhead, and a frame drawn in air is bit for bit what it was.
+
+     A third thing about the same lake arrived afterwards as a question: why the
+     water over a lakebed and the water over a lakebed seen from under the
+     surface did not look like the same water. They did not, because the
+     transparency of the lake was answered three times over and the three
+     answers disagreed -- the absorption baked into the bed when its mesh was
+     built, a haze copied from the air's own squared law, and a flat 0.72 alpha
+     on the surface's quads -- by 48 luminance at two metres of water. That alpha
+     sheet was also the only thing the lake had between a lens and the sky, so it
+     was drawn only when the lens was out of the water and cost exactly nothing
+     from under it. It is gone. One per-colour law now answers every journey the
+     light makes through the lake: the sun's way down, asked of the bed when its
+     mesh is built; the way back up from whatever surface the lens is looking at,
+     asked of that surface and never of the haze a second time; the water the
+     lens itself sits in; and the water between the lens and the surface it is
+     looking through. The surface is drawn twice because survival is per colour
+     and a blend can only scale the whole frame by one number. The lamps feel it
+     too: the light leaving a bell now climbs out through the same law, and the
+     frame 3.6 m off the ring is 167 at its brightest, 134 at its 99th percentile
+     and nothing at all over 200. */
   const lakebedView = await step('theLakebedIsUnderWater', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
     const jellies = g.creatures.filter(c => c.sp.model === 'jelly');
@@ -3524,7 +3681,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     if (!shallow || !deep || !arm) return back({ error: 'no shallow shelf, no deep stretch and no arm-length shelf in the lake' });
 
-    const shot = (lx, lensY, lz, yaw, pitch, solo) => {
+    const shot = (lx, lensY, lz, yaw, pitch, solo, dry) => {
       const eyeOff = p.eyePos() - p.y;
       p.x = lx; p.y = lensY - eyeOff; p.z = lz; p.vx = p.vy = p.vz = 0;
       p.yaw = yaw; p.pitch = pitch;
@@ -3535,11 +3692,35 @@ What was measured before any of this was fixed, over 180 frames of walking
          identical code: the drops are drawn with an emissive boost of their own. */
       const herd = g.creatures, dropsWas = g.drops;
       g.creatures = solo ? [] : jellies; g.drops = [];
+      /* A dry shot is the control: the same lens with nothing the water does to
+         light left anywhere in the frame. The law, the haze, the colour the
+         water scatters back into the ray and the surface itself are all taken
+         away, which leaves the bed as the dry sand it is on the shore. Taking
+         away one of them and leaving the rest is not a control, it is a third
+         kind of water. */
+      const ueWas = g.updateEnv, wetMesh = [];
+      if (dry) {
+        g.updateEnv = function () {
+          ueWas.call(g);
+          g.env.liqK = [0, 0, 0]; g.env.hazeK = [0, 0, 0]; g.env.hazeOn = 0;
+          g.env.inWater = 0; g.env.veil = [0, 0, 0];
+        };
+        for (let ci = 0; ci < W.chunks.length; ci++) {
+          const m = W.chunks[ci];
+          if (m && m[2]) { wetMesh.push([ci, m[2].count]); m[2].count = 0; }
+        }
+      }
       g._camFrame = g.shootCamera(p); g.updateEnv(); g.render();
+      if (dry) {
+        g.updateEnv = ueWas;
+        for (const [ci, c] of wetMesh) W.chunks[ci][2].count = c;
+      }
       g.creatures = herd; g.drops = dropsWas;
       const env = { fogDen: +g.env.fogDen.toFixed(4), emisKeep: g.env.emisKeep,
         waterK: g.env.waterK.map(v => +v.toFixed(3)), waterY: g.env.waterY,
         liqK: (g.env.liqK || [0, 0, 0]).map(v => +v.toFixed(3)),
+        hazeOn: g.env.hazeOn || 0, hazeK: (g.env.hazeK || [0, 0, 0]).map(v => +v.toFixed(3)),
+        veil: (g.env.veil || [0, 0, 0]).map(v => +v.toFixed(3)),
         lensInWater: !!W.liquidFogAt(Math.floor(lx), Math.floor(lensY), Math.floor(lz)) };
       const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
       const px = new Uint8Array(w * h * 4);
@@ -3560,16 +3741,18 @@ What was measured before any of this was fixed, over 180 frames of walking
          else. An 80x80 square at the centre is about a metre and a half of
          lakebed from that distance. */
       const cx = Math.floor(w / 2), cy = Math.floor(h / 2), R = 40;
-      let pn = 0, psum = 0, pbr = 0;
+      let pn = 0, psum = 0, pbr = 0, pr = 0, pb = 0;
       for (let y = cy - R; y < cy + R; y++) for (let x = cx - R; x < cx + R; x++) {
         const i = (y * w + x) * 4;
         pn++; psum += 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]; pbr += px[i + 2] - px[i];
+        pr += px[i]; pb += px[i + 2];
       }
       g._camFrame = null;
       return { env, meanLum: +(sum / n).toFixed(1), blueMinusRed: +(br / n).toFixed(1),
         maxLum: Math.round(lmax), p99: Math.round(lums[Math.floor(n * 0.99)]),
         over200: +(100 * hi / n).toFixed(2),
-        near: { meanLum: +(psum / pn).toFixed(1), blueMinusRed: +(pbr / pn).toFixed(1) } };
+        near: { meanLum: +(psum / pn).toFixed(1), blueMinusRed: +(pbr / pn).toFixed(1),
+          red: +(pr / pn).toFixed(1), blue: +(pb / pn).toFixed(1) } };
     };
 
     // 1. just under the surface, straight down at the bed it is swimming over
@@ -3654,24 +3837,25 @@ What was measured before any of this was fixed, over 180 frames of walking
         shelf: W.liquidSurfaceAt(Math.floor(shallow.x), Math.floor(shallow.z)), top: shallow.top };
     })();
     /* 8. the floor at arm's length. The complaint was a lakebed that would not
-       turn the colour of water with its face a metre and a half from the lens:
-       the haze at 0.14 per metre is 6% over that much water, so nothing that
-       works along the viewing path can answer it. Only the daylight coming down
-       through the lake can, and that is the absorption term. Two metres of
-       water over sand, the lens 25 cm under the surface -- the scan's `top` is
-       the topmost water *cell*, so the surface itself is one above it -- and
-       looking straight down.
-       9. the control: the same frame with that law switched off, which is what
-       the lake used to be. "Blue over red" on its own can be met by painting
-       the lake blue; this pair can only be met by the absorption doing the
-       work, because the same shot without it is dry sand again.
-       10. the same patch deeper down: the law has to keep working as the bed
-       goes deeper, or it is a tint and not a depth. */
+       turn the colour of water with its face a metre and a half from the lens.
+       Nothing that works along the viewing path could answer it: the haze the
+       old water put between a lens and a surface came to 6% over that much
+       water. Only the daylight coming down through the lake can, and that is
+       the absorption term. Two metres of water over sand, the lens 25 cm under
+       the surface -- the scan's `top` is the topmost water *cell*, so the
+       surface itself is one above it -- and looking straight down.
+       9. the control: the same frame with nothing the water does left anywhere
+       in it. "Blue over red" on its own can be met by painting the lake blue;
+       this pair can only be met by the water doing what water does to light,
+       because the same shot without it is dry sand again.
+       10. the same patch deeper down. Blue over red runs out of room here: the
+       frame is mixing towards the colour the water scatters back into the ray,
+       and that colour is itself 66 bluer than red, so once the bed's own colour
+       has been eaten the difference stops growing. What keeps going as the bed
+       goes deeper is which of the bed's colours is left: the red goes first and
+       the blue outlives it. That is the difference between a depth and a tint. */
     const armDown = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true);
-    const ueWas = g.updateEnv;
-    g.updateEnv = function () { ueWas.call(g); g.env.liqK = [0, 0, 0]; };
-    const armDry = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true);
-    g.updateEnv = ueWas;
+    const armDry = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true, true);
     const armDeep = shot(shallow.x, shallow.top + 1 - 0.25, shallow.z, 0, -1.5, true);
     return back({ shallow, deep, arm, jelly: jellies.length, down, up, floor, lamps, air,
       body, conventions, armDown, armDry, armDeep });
@@ -3690,11 +3874,14 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the water says what it does to light, and the environment carries it',
     lakebedView.down && lakebedView.down.env.lensInWater === true && lakebedView.down.env.emisKeep < 0.5 &&
     lakebedView.down.env.waterK[0] > lakebedView.down.env.waterK[2] * 4 &&
-    lakebedView.down.env.waterY === lakebedView.shallow.top + 1, lakebedView);
-  check('in air those three answers are the air\'s, so a dry frame is bit for bit what it was',
+    lakebedView.down.env.waterY === lakebedView.shallow.top + 1 &&
+    lakebedView.down.env.hazeOn === 1 && lakebedView.down.env.hazeK[0] > 0.4 &&
+    lakebedView.down.env.veil[2] > 0.2, lakebedView);
+  check('in air every one of those answers is the air\'s, so a dry frame is bit for bit what it was',
     lakebedView.air && lakebedView.air.env.lensInWater === false && lakebedView.air.env.emisKeep === 0.75 &&
     lakebedView.air.env.waterK[0] === 0 && lakebedView.air.env.waterK[1] === 0 &&
-    lakebedView.air.env.waterK[2] === 0 && lakebedView.air.env.waterY === 0, lakebedView);
+    lakebedView.air.env.waterK[2] === 0 && lakebedView.air.env.waterY === 0 &&
+    lakebedView.air.env.hazeOn === 0, lakebedView);
   /* The frame the same lens draws from a metre out of the water. It used to be
      the air's answer -- and so it was, right down to being warmer than red and
      brighter than the frame from under the surface was. */
@@ -3723,19 +3910,250 @@ What was measured before any of this was fixed, over 180 frames of walking
     lakebedView.conventions.shelf === lakebedView.conventions.top + 1, lakebedView);
   /* The floor a metre and a half in front of the lens, measured where the lens
      is looking rather than over the whole frame: the haze cannot reach a bed
-     that close, so this is the absorption term's own ground. Two metres of
-     water over sand reads (116,159,127) -- teal-green, and 42 luminance darker
-     than the same frame with the law switched off, which is (201,186,134): the
-     colour of a lakebed that has never been under water. */
+     that close, so this is the absorption term's own ground. Two metres of water
+     over sand reads (34,117,116) -- the teal-green of a bed whose red was eaten
+     on the way down -- and the same lens with nothing the water does left in the
+     frame reads (204,188,135): the colour of a lakebed that has never been under
+     water, and 95 luminance brighter. */
   check('the lakebed at arm\'s length, two metres down, is the colour of water and not of dry sand',
     lakebedView.arm && lakebedView.armDown && lakebedView.armDown.near.blueMinusRed > 5 &&
     lakebedView.armDown.near.meanLum < 160, lakebedView);
-  check('and it is the absorption that does it: switch the law off and the same patch is dry sand again',
-    lakebedView.armDry && lakebedView.armDry.near.blueMinusRed < -40 &&
+  check('and it is the water eating the red that does it: switch it off and the same patch is dry sand again',
+    lakebedView.armDry && lakebedView.armDry.near.blueMinusRed < -40 && lakebedView.armDry.near.red > 150 &&
     lakebedView.armDry.near.meanLum - lakebedView.armDown.near.meanLum > 25, lakebedView);
-  check('the same patch keeps getting bluer as the bed goes deeper: it is a depth, not a tint',
-    lakebedView.armDeep && lakebedView.armDeep.near.blueMinusRed > lakebedView.armDown.near.blueMinusRed + 15,
-    lakebedView);
+  check('the same patch keeps losing its red as the bed goes deeper while its blue holds: it is a depth, not a tint',
+    lakebedView.armDeep && lakebedView.armDeep.near.red < lakebedView.armDown.near.red * 0.6 &&
+    lakebedView.armDeep.near.blue > lakebedView.armDown.near.blue * 0.6 &&
+    lakebedView.armDeep.near.meanLum < lakebedView.armDown.near.meanLum - 20, lakebedView);
+
+  /* How far under the water a surface is belongs to the surface, not to the
+     point its shading is read at. The mesher asked the world "how deep is this
+     point under the water above it", which is a question about a column of
+     water, and a corner of a submerged face can stand inside the solid next
+     door, where no column of water reaches down to it: the answer comes back
+     "dry" and the corner is lit the colour of a beach. 644 of the 5,366 faces
+     this mesher puts against water had at least one corner answered that way --
+     1,619 corners, the worst of them at (74, 5, 95) with the lake's surface 6 m
+     above it. In the frame they were the strange bright dots on the lakebed: a
+     lens just above the surface of Mirrorlake, looking down, sees 70,980 pixels
+     of bed through at least three metres of water, and 137 of them used to come
+     back warmer than blue, 35 of them brighter than 140, and the brightest 176
+     against a bed whose own average is 60. Asked of the face -- the water the
+     face stands against, and its own height -- every corner is answered and
+     every one of those 137 is gone. */
+  const faceDepth = await step('lakebedFacesWearTheirDepth', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, third: g.thirdPerson, time: g.time, mode: g.mode, lens: g._lens,
+      frame: g._camFrame, env: g.env, hover: g.hover, creatures: g.creatures, drops: g.drops,
+      parts: g.particles ? g.particles.n : 0 };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.creatures = was.creatures; g.drops = was.drops;
+      if (g.particles) g.particles.n = was.parts;
+      return r;
+    };
+    g.mode = 'play'; g.thirdPerson = false; g.hover = null; p.form = null;
+    g.creatures = []; g.drops = []; if (g.particles) g.particles.n = 0;
+    g.time = N.DAY_LEN * (13 / 24);
+
+    /* Every face the mesher puts against water, and how many of its corners were
+       handed no depth at all while the water above them reached higher than they
+       do. The expected answer is recomputed here from the surface height the
+       face was handed, so this reads the contract between the mesher and the
+       builder rather than the builder's arithmetic. */
+    const MB = N.MeshBuilder.prototype, qWas = MB.quadAO;
+    const measure = (askThePoint) => {
+      let quads = 0, badQuads = 0, badCorners = 0, worst = null;
+      MB.quadAO = function (pts, c, sh, emis, top, surf) {
+        const before = this.n;
+        const args = Array.prototype.slice.call(arguments);
+        if (askThePoint) args[5] = undefined;
+        const r = qWas.apply(this, args);
+        if (surf !== undefined) {
+          quads++;
+          let bad = 0;
+          for (let j = 0; j < 6; j++) {
+            const k = [0, 1, 2, 0, 2, 3][j];      // quadAO puts 0,1,2,0,2,3
+            const y = pts[k * 3 + 1];
+            const want = Math.min(255, Math.max(0, surf - y) * 8);
+            if (want > 0 && this.dat[(before + j) * 4 + 2] === 0) {
+              bad++; badCorners++;
+              if (!worst) worst = [pts[k * 3], y, pts[k * 3 + 2], surf];
+            }
+          }
+          if (bad) badQuads++;
+        }
+        return r;
+      };
+      for (let ci = 0; ci < W.chunks.length; ci++) W.buildChunk(gl, ci);
+      MB.quadAO = qWas;
+      return { quads, badQuads, badCorners, worst };
+    };
+    const mesh = measure(false);
+    const meshBroken = measure(true);
+    // and the world is left with the geometry it came in with
+    for (let ci = 0; ci < W.chunks.length; ci++) W.buildChunk(gl, ci);
+
+    // a stretch of lake at least seven metres deep, searched for, not assumed
+    let deep = null;
+    for (let z = 74; z < 140 && !deep; z++) for (let x = 46; x < 112 && !deep; x++) {
+      let top = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { top = y; break; }
+      if (top < 0) continue;
+      let bed = -1;
+      for (let y = top; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed >= 0 && top + 1 - bed >= 7) deep = { x: x + 0.5, z: z + 0.5, top, bed };
+    }
+    if (!deep) return back({ error: 'no stretch of the lake seven metres deep', mesh, meshBroken });
+
+    /* The frame, read one pixel at a time: for each one, what the world says
+       stands in front of the lens, and whether that is a bed under at least
+       three metres of water. Only those pixels are counted, because only those
+       are the ones the water owes an answer to. A pixel is then judged against
+       its own ring 12 px away -- a dot is a dot because it is brighter than the
+       bed around it, not because it is bright -- and against the colour: nothing
+       under three metres of water should ever come back with more red than blue.
+       Emissive blocks are left out of the count: a lamp under water is allowed
+       to be warm, and it is not what this is about. */
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    p.x = deep.x; p.y = deep.top + 1.05 - (p.eyePos() - p.y); p.z = deep.z;
+    p.yaw = 2.4; p.pitch = -0.5; p.vx = p.vy = p.vz = 0;
+    const frame = g.shootCamera(p);
+    g._camFrame = frame; g.updateEnv(); g.render();
+    const px = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const at = (x, y) => ((h - 1 - y) * w + x) * 4;
+    const lum = (x, y) => { const i = at(x, y); return 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]; };
+    const tanY = Math.tan(frame.fov * Math.PI / 360), tanX = tanY * g.R.aspect;
+    const F = g.R.fwd, Rt = g.R.right, U = g.R.up;
+    const cons = [];
+    let warm = 0, over140 = 0, maxLum = 0;
+    for (let yy = 24; yy < h - 24; yy += 2) for (let xx = 24; xx < w - 24; xx += 2) {
+      const ndcX = (xx + 0.5) / w * 2 - 1, ndcY = 1 - (yy + 0.5) / h * 2;
+      const dx = F[0] + Rt[0] * ndcX * tanX + U[0] * ndcY * tanY;
+      const dy = F[1] + Rt[1] * ndcX * tanX + U[1] * ndcY * tanY;
+      const dz = F[2] + Rt[2] * ndcX * tanX + U[2] * ndcY * tanY;
+      const L = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const hit = W.raycast(frame.x, frame.y, frame.z, dx / L, dy / L, dz / L, 24, true);
+      if (!hit) continue;
+      const ax = hit.x + hit.nx, ay = hit.y + hit.ny, az = hit.z + hit.nz;
+      if (!W.liquidAt(ax, ay, az)) continue;
+      if (W.liquidSurfaceAt(ax, az) < hit.y + 4) continue;
+      const bd = N.BLOCKS[hit.block];
+      if (!bd || bd.emis) continue;
+      const l = lum(xx, yy);
+      cons.push(l - (lum(xx - 12, yy) + lum(xx + 12, yy) + lum(xx, yy - 12) + lum(xx, yy + 12)) / 4);
+      if (l > maxLum) maxLum = l;
+      if (l > 140) over140++;
+      const i = at(xx, yy);
+      if (px[i] > px[i + 2]) warm++;
+    }
+    cons.sort((a, b) => a - b);
+    g._camFrame = null;
+    return back({ deep, mesh, meshBroken, n: cons.length,
+      hi22: cons.filter(v => v > 22).length, hi40: cons.filter(v => v > 40).length,
+      warm, over140, maxLum: Math.round(maxLum),
+      p999: cons.length ? +cons[Math.min(cons.length - 1, Math.floor(cons.length * 0.999))].toFixed(1) : 0,
+      maxCon: cons.length ? +cons[cons.length - 1].toFixed(1) : 0 });
+  });
+  check('every face the mesher puts against water wears that water at every one of its corners',
+    faceDepth.mesh && faceDepth.mesh.quads > 5000 && faceDepth.mesh.badQuads === 0 &&
+    faceDepth.mesh.badCorners === 0, faceDepth.mesh);
+  check('and the point question this used to ask really does answer "dry" at 644 of those faces, 1,619 corners over',
+    faceDepth.meshBroken && faceDepth.meshBroken.quads === faceDepth.mesh.quads &&
+    faceDepth.meshBroken.badQuads > 500 && faceDepth.meshBroken.badCorners > 1500, faceDepth.meshBroken);
+  check('a lakebed seen through three metres of water is never warmer than it is blue',
+    faceDepth.n > 40000 && faceDepth.warm === 0, faceDepth);
+  check('nor brighter than that much water lets through: no pixel of the bed over 120, none over 140',
+    faceDepth.over140 === 0 && faceDepth.maxLum < 120, faceDepth);
+  check('and it does not light up in patches either: the 99.9th percentile of a bed pixel over its own ring is under 30',
+    faceDepth.hi22 < 100 && faceDepth.p999 < 30, faceDepth);
+
+  /* A chunk is a box 16 wide, 16 deep and the whole height of the map, and it
+     was thrown away as a ball 15 across centred at half that height. Its own
+     corners are 26.5 out from that centre, so a chunk whose only piece on screen
+     was one of them went whole, and the sky showed through the hole: a lens just
+     above Mirrorlake looking down at 69 degrees asked the world what stood in
+     front of it and found nothing drawn on 56,633 of the pixels that had an
+     answer, a grey wedge of dry sky at the far corner of a chunk of lakebed.
+     The test is the frame against itself: the same lens drawn with the culling
+     the game runs, and drawn with none at all. Anything the two disagree about
+     is geometry that was thrown away for no reason. */
+  const cull = await step('aChunkIsCulledAsABox', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, third: g.thirdPerson, time: g.time, mode: g.mode, lens: g._lens,
+      frame: g._camFrame, env: g.env, hover: g.hover, creatures: g.creatures, drops: g.drops,
+      parts: g.particles ? g.particles.n : 0 };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.creatures = was.creatures; g.drops = was.drops;
+      if (g.particles) g.particles.n = was.parts;
+      return r;
+    };
+    g.mode = 'play'; g.thirdPerson = false; g.hover = null; p.form = null;
+    g.creatures = []; g.drops = []; if (g.particles) g.particles.n = 0;
+    g.time = N.DAY_LEN * (13 / 24);
+    const vb = g.R.visibleBox;
+    if (!vb) return back({ error: 'the renderer has no box culling to test' });
+    /* the lenses are found by searching the lake for water at least four metres
+       over the bed, so none of them is a number that has to be re-guessed when
+       the lake changes shape */
+    const spots = [];
+    for (let z = 74; z < 140; z += 3) for (let x = 46; x < 112; x += 3) {
+      let top = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { top = y; break; }
+      if (top < 0) continue;
+      let bed = -1;
+      for (let y = top; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed >= 0 && top - bed >= 4) spots.push([x + 0.5, top + 1.05, z + 0.5]);
+    }
+    if (spots.length < 4) return back({ error: 'the lake is not wide enough to stand four lenses in' });
+    const pick = [spots[0], spots[(spots.length * 0.3) | 0], spots[(spots.length * 0.6) | 0], spots[spots.length - 1]];
+    const lenses = [];
+    for (let i = 0; i < 4; i++) {
+      lenses.push(['lake ' + i + ' down', pick[i][0], pick[i][1], pick[i][2], 2.4 + i * 1.1, -1.2]);
+      lenses.push(['lake ' + i + ' level', pick[i][0], pick[i][1], pick[i][2], 0.7 + i * 1.7, -0.25]);
+    }
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const a = new Uint8Array(w * h * 4), b = new Uint8Array(w * h * 4);
+    const out = [];
+    for (const [name, x, y, z, yaw, pitch] of lenses) {
+      p.x = x; p.y = y - (p.eyePos() - p.y); p.z = z; p.yaw = yaw; p.pitch = pitch;
+      p.vx = p.vy = p.vz = 0;
+      const frame = g.shootCamera(p);
+      // how much of the world this lens throws away, so that a check which
+      // never drops anything cannot pass by doing nothing
+      let culled = 0;
+      for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++)
+        if (!vb.call(g.R, cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) culled++;
+      g._camFrame = frame; g.updateEnv(); g.render();
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, a);
+      g.R.visibleBox = () => true;
+      g._camFrame = frame; g.updateEnv(); g.render();
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, b);
+      g.R.visibleBox = vb;
+      let diff = 0, maxd = 0;
+      for (let i = 0; i < a.length; i += 4) {
+        const d = Math.max(Math.abs(a[i] - b[i]), Math.abs(a[i + 1] - b[i + 1]), Math.abs(a[i + 2] - b[i + 2]));
+        if (d > 2) { diff++; if (d > maxd) maxd = d; }
+      }
+      out.push({ name, culled, diff, maxd });
+    }
+    g._camFrame = null;
+    return back({ lenses: out.length, culled: out.map(o => o.culled), diffs: out });
+  });
+  check('culling a chunk as the box it is never drops a piece of the world the lens was looking at',
+    cull.diffs && cull.diffs.length === 8 && cull.diffs.every(d => d.diff === 0), cull.diffs);
+  check('and these frames do cull: every lens throws whole chunks away, so the check above is not passing by drawing everything',
+    cull.diffs && cull.diffs.every(d => d.culled > 0), cull);
 
   /* 11. A body in the air or in the water is a body that has to travel.
      Three things were wrong with how such a body moved, and they showed up
