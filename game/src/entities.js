@@ -925,7 +925,13 @@
      off the cell index, which set every body the water holds a full block under
      the surface: the wild frogs of Mirrorlake hang just under the surface and
      down into deeper water (see the dive cycle below) and at (56.5,94.5) they
-     were 1.3 m down and 4 m down, and the body you wear with them. */
+     were 1.3 m down and 4 m down, and the body you wear with them. Three reads
+     have now been pulled off this index and onto the film: the level the water
+     holds a body at, the level a wild aquatic animal hovers at, and the floor a
+     flying body holds a few metres above -- each of which subtracts or compares a
+     number of metres, and each of which was therefore a block wrong while it was
+     reading a cell. Anything that counts blocks or asks about a cell keeps using
+     this one. */
   function waterTop(w, x, z, from) {
     for (let y = from; y >= 0; y--) if (w.liquidAt(x, y, z)) return y;
     return -1;
@@ -1645,9 +1651,21 @@
            long as it is there: two of six birds did exactly that for three minutes.
            The water is a floor the same way the ground is: an owl crossing
            Mirrorlake crosses the surface, not the lakebed seven metres under it.
-           Measured to the lakebed, a bird hunting a lake hunts it from underneath. */
+           Measured to the lakebed, a bird hunting a lake hunts it from underneath.
+           And it is read as the surface, not as the index of the topmost water
+           block: the ground read beside it answers a height (the top face, `y + 1`),
+           while a cell index sits a whole block under the film, so the two answers
+           were a metre apart and the floor over water came out a metre lower than
+           the floor over land. The lowest height a hunting bird is ever asked to
+           hold is 1.6 m over the floor, so over the lake that was 0.6 m above the
+           film, and the body rides a bob of 0.9 m on top of that floor: six birds
+           put over Mirrorlake for a night spent 247 of 12895 samples with their
+           feet on the film itself (lowest height over the water **0 m**, mean
+           **3.72 m**), and the same six after spend no sample there (lowest
+           **0.89 m**, mean **5.61 m**), where the sentence says a bird holds a few
+           metres above whatever is under it. */
         const fl0 = Math.max(groundY(world, bx, bz, Math.floor(this.y)),
-          waterTop(world, bx, bz, world.h - 1));
+          world.liquidSurfaceAt(bx, bz));
         /* `flyY` is the ceiling a bird will not ask to be above, not the height
            it flies at, and it has to be a height the world has: an owl put down on
            a canopy used to be given a flight height of 51.5 in a world 48 tall, so

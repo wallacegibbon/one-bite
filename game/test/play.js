@@ -5759,11 +5759,16 @@ What was measured before any of this was fixed, over 180 frames of walking
     // the floor of the sky above it, and a bird flying under that crown would be
     // counted as standing on it.
     const over = c => { const [x, , z] = cell(c);
-      return Math.max(N.groundY(W, x, z, Math.floor(c.y)), N.waterTop(W, x, z, W.h - 1)); };
+      return Math.max(N.groundY(W, x, z, Math.floor(c.y)), W.liquidSurfaceAt(x, z)); };
     // and the top of everything in the column it is in: a bird at or over that is
-    // in open sky, a bird well under it has a ceiling right above its head
+    // in open sky, a bird well under it has a ceiling right above its head.
+    // Both reads answer a height -- the top face of the highest solid, the film of
+    // the water -- and `waterTop` answers the index of a cell, one block under that
+    // film, so it is not what this max is for: over the lake it called a point a
+    // metre under the water the top of the column, and a bird skimming the film
+    // counted as being in open sky a metre early.
     const top = c => { const [x, , z] = cell(c);
-      return Math.max(N.groundY(W, x, z, W.h - 1), N.waterTop(W, x, z, W.h - 1)); };
+      return Math.max(N.groundY(W, x, z, W.h - 1), W.liquidSurfaceAt(x, z)); };
     // a body is not a point: the owl model is 4.7 units tall at a scale of 0.15,
     // so its head reaches 0.7 m over its feet. Does that box overlap a block it
     // cannot pass through? leaves are a ceiling a body flies through, stone is not
@@ -6408,6 +6413,96 @@ What was measured before any of this was fixed, over 180 frames of walking
      speed and the same landing squash the player's body and a hopping frog use.
      The same ledge after: 16 m in 1.17 s, the speed rising from nothing to
      26.8 m/s, arriving with a squash of 0.3 and walking on. */
+  /* 11j2. A bird crossing open water keeps the height the law asks for. The floor
+     a flying body holds a few metres above is read from its own cell down over
+     land -- `groundY`, the top face of the ground -- and over the lake it used to
+     be read as the index of the topmost water cell. Those two answers are a block
+     apart, so the floor over water came out a metre under the film: the hard floor
+     the law puts under a hunting body -- 1.6 m over whatever it is crossing -- sat
+     0.6 m above the water, and the body rides a further bob of 0.9 m on top of
+     that floor, so the lowest it ever came was 0.3 m under the film, which the
+     step gate then held at the film itself. Six birds put over Mirrorlake for a
+     night spent 247 of 12895 samples with their feet on the film (lowest height
+     over the water 0 m, mean 3.72 m); the same six after spend no sample there
+     (lowest 0.89 m, mean 5.61). The step measures one body with the hunt asked to
+     want low, so that the only thing holding it up is the floor this is about:
+     lowest height over the film **0 m** (p10 0.02, median 1.0) before, **0.78 m**
+     (p10 0.96, median 2.17) after -- the floor 1.6 m less the 0.9 m bob, to 8 cm. */
+  const skim = await step('aBirdOverWaterKeepsItsHeight', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
+    const { lake } = window.__mv;
+    if (!lake) return { error: 'no open water to measure over' };
+    const surf = W.liquidSurfaceAt(Math.floor(lake.x), Math.floor(lake.z));
+    if (surf < 0) return { error: 'the open water has no surface' };
+    const bird = g.creatures.filter(c => c.isFlyer() && !c.sleeping)[0];
+    if (!bird) return { error: 'no flying body in the valley' };
+    const keepP = { x: p.x, y: p.y, z: p.z, vital: p.vital };
+    const keepT = { time: g.time, night: g.night };
+    const keep = { x: bird.x, y: bird.y, z: bird.z, homeX: bird.homeX, homeZ: bird.homeZ,
+      flyY: bird.flyY, state: bird.state, sleeping: bird.sleeping, pause: bird.pause,
+      t: bird.t, phase: bird.phase, yaw: bird.yaw, tx: bird.tx, tz: bird.tz, vy: bird.vy,
+      huntH: bird.huntH };
+    /* An owl asleep is a bird on a branch, not a bird hunting: a sleeping body is
+       asked to settle onto the floor under it, which is a different question. The
+       ceiling is put well above the head so what is being measured is the floor. */
+    g.time = 21 * 60; g.night = 1;
+    bird.x = lake.x; bird.z = lake.z; bird.y = surf + 6;
+    bird.homeX = bird.x; bird.homeZ = bird.z; bird.flyY = surf + 12;
+    bird.state = 'wander'; bird.sleeping = false; bird.pause = 0; bird.vy = 0;
+    /* The height a hunting body asks for is the higher of a floor the law puts
+       under it -- 1.6 m over whatever it is crossing -- and a hunt height of its
+       own, which is dealt out between 2.6 and 6 m and rides a sine of its own
+       with an 18 s period. Left alone, the hunt term wins most frames and the
+       floor is never exercised: a first version of this step measured the hunt
+       and passed with the floor still a block under the film. So the hunt is
+       asked to want low, and the only thing left holding the body up is the
+       floor this is about. */
+    bird.huntH = -2;
+    p.x = 4; p.z = 4; p.y = W.h - 2; p.vital = 10;
+    const hs = [];
+    let offWater = 0, inRock = 0, inWater = 0;
+    /* Two full periods of the hunt sine, not one window: the hard floor under a
+       hunting body only binds at the bottom of that sine, and its period is about
+       18 s, so a 15 s window measures whichever phase the body happened to start
+       in -- which is how a first version of this step passed with the floor still
+       a block under the film. */
+    for (let i = 0; i < 3600; i++) {
+      bird.update(1 / 60, p, W, g);
+      const bx = Math.floor(bird.x), bz = Math.floor(bird.z);
+      const s = W.liquidSurfaceAt(bx, bz);
+      if (s < 0) { offWater++; continue; }   // it left the lake; the ground is its floor
+      /* Well inside the lake, not at its edge: a body on its way down to the shore
+         is being asked for the height of the ground it is landing on, and that
+         number has nothing to do with the floor over water. */
+      /* Open water: nothing solid at or above the film. The sunken tower stands
+         inside the lake, and over it the floor the law works from is the top of
+         the tower, which is a perfectly good floor and not the one this asks about. */
+      if (N.groundY(W, bx, bz, W.h - 1) >= s) { offWater++; continue; }
+      const wy = Math.floor(s) - 1;   // the topmost water *cell*: the film is its top face
+      if (!W.liquidAt(bx - 1, wy, bz) || !W.liquidAt(bx + 1, wy, bz) ||
+          !W.liquidAt(bx, wy, bz - 1) || !W.liquidAt(bx, wy, bz + 1)) { offWater++; continue; }
+      hs.push(bird.y - s);
+      if (bird.y < s) inWater++;
+      if (W.solidAt(bx, Math.floor(bird.y), bz)) inRock++;
+    }
+    hs.sort((a, b) => a - b);
+    const n = hs.length;
+    Object.assign(bird, keep);
+    Object.assign(p, keepP);
+    g.time = keepT.time; g.night = keepT.night;
+    if (n < 300) return { error: 'the body left the water too often', n, offWater };
+    return { tall: +bird.tall.toFixed(2), n, offWater, surf, min: +hs[0].toFixed(2),
+      p10: +hs[Math.floor(n * 0.1)].toFixed(2), median: +hs[n >> 1].toFixed(2),
+      inWater, inRock };
+  });
+  /* 1.6 m is what the law puts under a hunting body over the floor it is crossing;
+     the ease that closes on that height and the sine of the hunt are allowed 0.3 m
+     of it, which is what the 0.45 m the check asks for is made of. */
+  check('a bird crossing open water holds the height the law asks for above the film, ' +
+        'not a block less than that',
+    !skim.error && skim.min > 0.45 && skim.p10 > 0.6 && skim.median > 1.2 &&
+    skim.median < 3 && skim.inWater === 0 && skim.inRock === 0, skim);
+
   const footing = await step('aBodyOnFootFalls', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA, p = g.player;
     const bear = g.creatures.find(c => c.sp.id === 'bear');
@@ -6563,8 +6658,13 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.die('probe');
       const cls = g.drops.map(d => {
         const bx = Math.floor(d.x), bz = Math.floor(d.z), by = Math.floor(d.y);
-        const gy = N.terrainY(W, bx, bz, W.h - 1), wt = N.waterTop(W, bx, bz, W.h - 1);
-        const surf = wt >= gy ? wt + 1 : gy;
+        const gy = N.terrainY(W, bx, bz, W.h - 1), wSurf = W.liquidSurfaceAt(bx, bz);
+        /* the surface a fruit is asked to come to rest at, in the units the game
+           uses for it: both of these answers are heights, and `waterTop` answers
+           the index of a cell -- a block under the film -- so comparing it against
+           a height loses a metre to the ground in a column where a solid stands
+           above the water's own top cell */
+        const surf = wSurf >= gy ? wSurf : gy;
         return { inSolid: W.solidAt(bx, by, bz), off: Math.abs(d.y - surf),
           sunk: W.liquidAt(bx, by, bz), far: Math.hypot(d.x - spot.x, d.z - spot.z) };
       });

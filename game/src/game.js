@@ -221,7 +221,7 @@
                above whatever is in the column, and the ceiling it will not ask to
                be above starts above that. */
             const top = Math.max(N.groundY(this.world, bx, bz, this.world.h - 1),
-              N.waterTop(this.world, bx, bz, this.world.h - 1));
+              this.world.liquidSurfaceAt(bx, bz));
             c.y = Math.min(top + 1.5 + Math.random() * 4, this.world.h - 3);
             c.flyY = Math.min(Math.max(c.y + 5 + Math.random() * 8, top + 2), this.world.h - 3);
           }
@@ -766,8 +766,13 @@
       const restY = (x, z) => {
         const bx = Math.floor(x), bz = Math.floor(z);
         const gy = N.terrainY(W, bx, bz, W.h - 1);
-        const wt = N.waterTop(W, bx, bz, W.h - 1);
-        const y = wt >= gy ? wt + 1 : gy;
+        /* Both answers are heights -- the top face of the ground, the film of the
+           water -- so they are compared as what they are. `waterTop` answers the
+           index of the topmost water block, which is one block under the film:
+           compared against a height it loses a metre to the ground in exactly the
+           shallow water where the two are closest. */
+        const wSurf = W.liquidSurfaceAt(bx, bz);
+        const y = wSurf >= gy ? wSurf : gy;
         return W.solidAt(bx, y, bz) ? null : y;
       };
       const home = restY(p.x, p.z);
