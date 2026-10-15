@@ -7476,6 +7476,84 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and the game keeps no first-person hand to draw, and no body record names one',
     ownLens.noHandPath && ownLens.noHandField, ownLens);
 
+  /* 11p. The minimap paints the lake as water. The HUD map is a 160 x 160 canvas
+     built once from the world: for every column it asks what that column shows to
+     a lens straight above it, and paints the colour of that block, with the
+     water's own palette and a shade that follows the depth of the water. The
+     scan asked for the highest **solid** block, and water is not solid -- the
+     block row says so, and everything else in the game believes it -- so the
+     scan walked down through the whole lake and stopped at the lakebed. Every
+     one of the valley's **2,029** wet columns was painted with the colour of its
+     own floor (Mirrorlake's sand and mud: 112/104/74, 148/137/98), the lake read
+     as a dry pit in the middle of the green, and the water palette the same
+     function holds was never reached by a single pixel. The depth run was wrong
+     the same way: it counted **up** from wherever the scan had stopped, which
+     asks the sky how much water is above the lake and always answers one.
+     Measured over the whole map: **0** of 2,029 wet columns painted as water
+     before, **1,890** after (the other **139** have something solid standing
+     over the water -- the sunken tower, the keep, a tree -- and show that).
+     The land is the control: a dry column is painted with the colour of the
+     block on top of it, and the shading scales all three channels by one number,
+     so the order between red and blue cannot change -- **0** dry columns may
+     come out blue-dominant where their own block is red-dominant. */
+  const mmPaint = await step('theMinimapPaintsTheLakeAsWater', () => {
+    const N = window.FRUTARIA, W = window.game.world, ui = window.ui;
+    /* the base is built once, at boot, against the world as it was then; build
+       it again here so the step measures the code against the world as it is */
+    ui.buildMinimap();
+    const S = ui.mmBase.width, D = ui.mmBase.height;
+    const img = ui.mmBase.getContext('2d').getImageData(0, 0, S, D).data;
+    const px = (x, z) => { const i = (z * S + x) * 4; return [img[i], img[i + 1], img[i + 2]]; };
+    const B = N.BLOCKS;
+    /* the POI dots are painted over the base, and they are warm: a marker
+       sitting over open water is not the map calling the lake dry */
+    const marked = (x, z) => N.POIS.some(q => Math.hypot(q.x - x, q.z - z) <= 2.5);
+    let wet = 0, open = 0, hidden = 0, skipped = 0, openWarm = 0;
+    let dry = 0, dryWrong = 0;
+    const deep = [], shallow = [];
+    for (let z = 0; z < D; z++) for (let x = 0; x < S; x++) {
+      const surf = W.liquidSurfaceAt(x, z);
+      let topSolid = -1;
+      for (let y = W.h - 1; y >= 0; y--) { const b = W.get(x, y, z); if (b && B[b] && B[b].solid) { topSolid = y; break; } }
+      const p = px(x, z);
+      const warm = p[0] > p[2];                 // red over blue: a surface, not water
+      if (surf >= 0) {
+        wet++;
+        if (topSolid >= surf) { hidden++; continue; }   // something stands over the water
+        if (marked(x, z)) { skipped++; continue; }
+        open++;
+        if (warm) openWarm++;
+        let depth = 0;
+        for (let y = surf - 1; y >= 0 && W.liquidAt(x, y, z); y--) depth++;
+        if (depth >= 6) deep.push(p); else if (depth <= 2) shallow.push(p);
+      } else {
+        dry++;
+        if (marked(x, z)) continue;
+        const bd = B[W.get(x, topSolid, z)] || {};
+        const c = bd.ct || bd.c || [0, 0, 0];
+        if (c[0] > c[2] && !warm) dryWrong++;
+      }
+    }
+    const mean = (a, k) => a.length ? +(a.reduce((s, v) => s + v[k], 0) / a.length).toFixed(1) : null;
+    const lum = p => 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2];
+    const lumOf = a => a.length ? +(a.reduce((s, v) => s + lum(v), 0) / a.length).toFixed(1) : null;
+    return { wet, open, hidden, skipped, openWarm, dry, dryWrong,
+      deepN: deep.length, shallowN: shallow.length,
+      deepLum: lumOf(deep), shallowLum: lumOf(shallow),
+      deepRed: mean(deep, 0), shallowRed: mean(shallow, 0),
+      deepBlue: mean(deep, 2), shallowBlue: mean(shallow, 2),
+      lake: px(60, 90), wood: px(30, 40) };
+  });
+  check('the valley has a lake big enough to measure on the map',
+    !mmPaint.error && mmPaint.wet > 1000 && mmPaint.open > 800, mmPaint);
+  check('every column the water is the top of is painted as water, not as its own floor',
+    mmPaint.openWarm === 0, mmPaint);
+  check('and the depth of the water is counted down into it, not up into the sky',
+    mmPaint.deepN > 100 && mmPaint.shallowN > 100 &&
+    mmPaint.shallowRed - mmPaint.deepRed >= 20 && mmPaint.deepBlue > mmPaint.deepRed, mmPaint);
+  check('the land is still painted with the colour of what stands on it',
+    mmPaint.dry > 10000 && mmPaint.dryWrong === 0, mmPaint);
+
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
   process.exitCode = errs.length ? 1 : 0;

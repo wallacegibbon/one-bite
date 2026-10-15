@@ -44,12 +44,29 @@
       const ctx = this.mmBase.getContext('2d');
       const img = ctx.createImageData(S, D);
       for (let z = 0; z < D; z++) for (let x = 0; x < S; x++) {
+        /* The face this column shows to a lens straight above it. Water is what
+           a column with water in it shows, so the scan has to stop at it -- and
+           it used to stop only at a **solid** block, which water is not: the
+           scan walked straight down through the whole lake and stopped at the
+           lakebed, so every one of the valley's **2,029** wet columns was
+           painted with the colour of its own floor (the sand and mud of
+           Mirrorlake, 112/104/74 and 148/137/98) and the water palette below it
+           was never reached at all. Cloud, fruit, reeds and the glowcap ring
+           are still walked through: they hang in a column, they are not what it
+           shows. */
         let y = W.h - 1, b = 0;
-        for (; y > 0; y--) { b = W.get(x, y, z); if (b && N.BLOCKS[b] && N.BLOCKS[b].solid && !N.BLOCKS[b].liquid) break; }
+        for (; y >= 0; y--) {
+          b = W.get(x, y, z);
+          const bb = N.BLOCKS[b];
+          if (bb && (bb.solid || bb.liquid)) break;
+        }
         const bd = N.BLOCKS[b] || { c: [0, 0, 0] };
         let c = bd.ct || bd.c;
         let water = 0, depth = 0;
-        if (b === N.WATER) { water = 1; for (let yy = y; yy < W.h && W.liquidAt(x, yy, z); yy++) depth++; }
+        /* The run of water is counted **down** from the cell the scan stopped
+           at, which is the top of it: counting up from there asks the sky how
+           much water is above the lake and always answers one. */
+        if (b === N.WATER) { water = 1; for (let yy = y; yy >= 0 && W.liquidAt(x, yy, z); yy--) depth++; }
         const sh = 0.55 + Math.min(0.45, (y - 5) / 40);
         let r, g, bl;
         if (water) { const t = Math.min(1, depth / 12); r = 30 + (1 - t) * 60; g = 80 + (1 - t) * 70; bl = 120 + (1 - t) * 60; }
