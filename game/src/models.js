@@ -456,6 +456,12 @@
   ];
   const KNEE_FLEX = 0.62;       // how far a knee folds at that peak, at a full stride
   const BOB = 0.20;             // how far the body rides a stride, in its own model units
+  /* how much of an arm's bend is held all the way through the stride at the
+     fastest a body goes. The fold on top of it is the arm clearing itself on its
+     way back; this is the arm being carried, and it grows with the square of the
+     speed because it is the swinging that costs, and the swinging goes with the
+     speed twice over -- more strides to swing through, and each one wider. */
+  const ELBOW_RUN = 0.55;
 
   /* ---------------- the stride ----------------
      A walk cycle has one job that a sine cannot do: a foot that has reached the
@@ -737,9 +743,16 @@
     } else if (anim === 'elbow') {
       /* the same fold on an arm, smaller, and with a little of it always held:
          an arm hanging dead straight is a stick. An arm swings opposite the leg
-         on the same side, which is what the half stride `sign` buys it. */
+         on the same side, which is what the half stride `sign` buys it.
+         And the arm is held the more bent the faster the body goes. A body
+         walking lets its arm hang; a body running carries it bent, because a
+         straight arm swung through 2.3 strides a second is a pendulum the body
+         has to stop and start again twice a stride, while a bent one is carried.
+         Read off the draw before, a person at 4.7 m/s held the elbow at 0.12 rad
+         -- seven degrees -- which is the angle a person standing still holds it
+         at, and swung it through the whole stride with the elbow straight. */
       rx = (p.bend === undefined ? 1 : p.bend) *
-           (0.12 + 0.3 * foldAt(u, stance) * st.move);
+           (0.12 + 0.3 * foldAt(u, stance) * st.move + ELBOW_RUN * st.move * st.move);
       gait = rx;
     } else if (anim === 'twist') {
       /* the part above the legs turning against them: it comes round one way as

@@ -2863,6 +2863,44 @@ What was measured before any of this was fixed, over 180 frames of walking
     !!ride.human.run && !!ride.human.slow &&
     ride.human.run.amp > ride.human.slow.amp * 1.5 && ride.human.slow.amp > 0, ride.human);
 
+  /* A body's arms are the last thing still kept by a clock. They were already on
+     the stride for the swing, but the *bend* of the elbow was one angle for every
+     speed: read off the pose the draw uploads, a person at 4.7 m/s held the elbow
+     at 0.12 rad -- seven degrees -- which is the angle a person standing still
+     holds it at, and swung a straight arm through the whole stride. A body
+     walking lets its arm hang; a body running carries it bent, because a straight
+     arm swung through 2.3 strides a second is a pendulum the body has to stop and
+     start again twice a stride. Measured after: the elbow is held at 0.12 rad
+     standing, 0.14 at a walk, 0.61 at a run, and reaches 0.89 in mid-swing. */
+  const arm = await step('armsAreCarriedNotSwung', () => {
+    const N = window.FRUTARIA, g = window.game;
+    const entries = g.ensureModel('human');
+    const fe = entries.find(q => q.part.name === 'foreL');
+    const am = entries.find(q => q.part.name === 'armL');
+    const at = (mv) => {
+      let held = 1e9, peak = 0, swing = 0, lo = 1e9, hi = -1e9;
+      for (let i = 0; i < 240; i++) {
+        const st = { t: 0, gait: i / 240, phase: 0, move: mv, air: 0 };
+        const a = Math.abs(N.partAngles(fe, st).rx);
+        held = Math.min(held, a); peak = Math.max(peak, a);
+        const w = N.partAngles(am, st).rx;
+        lo = Math.min(lo, w); hi = Math.max(hi, w);
+      }
+      return { mv, held: +held.toFixed(3), peak: +peak.toFixed(3),
+        swing: +(hi - lo).toFixed(3) };
+    };
+    return { stand: at(0), walk: at(0.2), jog: at(0.5), run: at(0.94) };
+  });
+  check('a standing body still hangs its arm', arm.stand.held < 0.13, arm);
+  check('a walking body still hangs its arm', arm.walk.held < 0.20, arm);
+  check('a running body carries its arm bent, and the bend is worth four times the walk',
+    arm.run.held > 0.5 && arm.run.held > arm.walk.held * 4 && arm.run.peak > 0.8, arm);
+  check('and the arm is held the more bent the faster the body goes',
+    arm.stand.held < arm.walk.held && arm.walk.held < arm.jog.held &&
+    arm.jog.held < arm.run.held, arm);
+  check('the arm still swings through the stride, and wider the faster the body goes',
+    arm.run.swing > 0.8 && arm.walk.swing > 0.2 && arm.walk.swing < arm.run.swing, arm);
+
   /* A body in the air turns by tilting. The player's own body has leaned into a
      turn for a long time; nothing else in the world did, so an owl crossing the
      valley with its yaw swinging through ninety degrees stayed dead level. */
