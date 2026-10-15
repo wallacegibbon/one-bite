@@ -4742,30 +4742,32 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.time = N.DAY_LEN * (tag === 'night' ? 22 / 24 : 13 / 24);
       stand(); g.update(1 / 60); g.update(1 / 60);      // let the environment settle
       P.n = 0;
-      const born = { total: 0, inSolid: 0, underWater: 0, inAir: 0, hover: 0 };
+      const born = { total: 0, inSolid: 0, underWater: 0, inAir: 0, hover: 0, offMap: 0 };
       const real = P.spawn;
       P.spawn = function (x, y, z, vx, vy, vz, life, c, size, grav) {
         born.total++;
         if (grav === 0) born.hover++;
         const s = W.liquidSurfaceAt(x | 0, z | 0);
+        if (!W.inside(x | 0, y | 0, z | 0)) born.offMap++;
         if (W.solidAt(x | 0, y | 0, z | 0)) born.inSolid++;
         else if (s >= 0 && y < s) born.underWater++;
         else born.inAir++;
         return real.call(this, x, y, z, vx, vy, vz, life, c, size, grav);
       };
-      let samples = 0, liveSolid = 0, liveUnder = 0, maxUnder = 0;
+      let samples = 0, liveSolid = 0, liveUnder = 0, liveOff = 0, maxUnder = 0;
       for (let f = 0; f < 900; f++) {
         stand();
         g.update(1 / 60);
         for (let i = 0; i < P.n; i++) {
           samples++;
+          if (!W.inside(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) liveOff++;
           if (W.solidAt(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) liveSolid++;
           const s = W.liquidSurfaceAt(P.px[i] | 0, P.pz[i] | 0);
           if (s >= 0 && P.py[i] < s) { liveUnder++; if (s - P.py[i] > maxUnder) maxUnder = s - P.py[i]; }
         }
       }
       delete P.spawn;
-      runs[tag] = { born, samples, liveSolid, liveUnder, maxUnder: +maxUnder.toFixed(2), live: P.n };
+      runs[tag] = { born, samples, liveSolid, liveUnder, liveOff, maxUnder: +maxUnder.toFixed(2), live: P.n };
     }
     return back({ shore, runs });
   });
@@ -4779,6 +4781,158 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and none of the night\'s motes is found glowing through the lake it was put beside',
     mo.night && mo.night.samples > 2000 && mo.night.liveUnder === 0 && mo.night.maxUnder === 0,
     mo.night && { samples: mo.night.samples, liveUnder: mo.night.liveUnder, maxUnder: mo.night.maxUnder });
+  check('and none of them is let go off the edge of the map, where the world answers "air" to a question that was never asked',
+    mo.night && mo.night.born.offMap === 0 && mo.night.liveOff === 0,
+    mo.night && { bornOff: mo.night.born.offMap, liveOff: mo.night.liveOff });
+  check('and none of the night\'s motes is inside a block, where a mote is not seen through the block but simply is not',
+    mo.night && mo.night.samples > 2000 && mo.night.liveSolid === 0,
+    mo.night && { samples: mo.night.samples, liveSolid: mo.night.liveSolid });
+
+  /* A mote is drawn, not walked. It has no size and no mass, and the frame it is
+     added into has already been depth-tested, so a mote inside a block is not seen
+     *through* the block -- it is simply not there, for as long as it is in there,
+     holding a slot off the 900 and fading where nobody can see it. The four ways
+     the valley makes light were asked where it went, following every mote for the
+     whole of a life. The night over a lake shore: **703** of **12,917** samples
+     inside a block. The dust of the highest isle: **20,793** of **65,627**
+     (**31.7%**), and **87** of its **371** grains were already inside a block at
+     the moment they were born, because the span they are scattered over is a box
+     and the isle is standing in it. A spark burst at the ground it stands on:
+     **286** of **4,109** samples under that ground; thrown up under a crown:
+     **426** of **4,080** inside the needles over its own head. And the ring the
+     night's motes are scattered over reaches eighteen metres out from the body,
+     which near the edge of the map is off the map, where `get` answers "air" to a
+     question that was never asked: standing eight blocks in from the edge, **85**
+     of **682** fireflies were let go outside the valley and **21,863** of
+     **149,080** samples (**14.7%**) were spent there, glowing at nothing. After:
+     **0** at every one of the four, and a mote deliberately closed inside a needle
+     still walks its way out in **19** frames. */
+  const sparks = await step('aMoteKeepsToTheAirItWasGiven', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, P = g.particles, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, night: g.night, amb: g.ambTimer, parts: P.n,
+      mode: g.mode, headWater: p.headWater };
+    const back = (v) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, headWater: was.headWater });
+      g.night = was.night; g.ambTimer = was.amb; g.mode = was.mode; P.n = was.parts;
+      return v;
+    };
+    // one column of each kind to throw sparks at: open ground, a riser, a crown
+    let open = null, wall = null, crown = null;
+    for (let z = 12; z < W.d - 12 && (!open || !wall || !crown); z++) {
+      for (let x = 12; x < W.w - 12 && (!open || !wall || !crown); x++) {
+        if (W.liquidSurfaceAt(x, z) >= 0) continue;
+        const gy = N.groundY(W, x, z, W.h - 1), ty = N.terrainY(W, x, z, W.h - 1);
+        if (ty < 12 || ty > 34) continue;
+        if (!open && gy === ty) open = [x, z];
+        /* a crown to throw sparks up into: needles four blocks over the ground,
+           and the two blocks over the ground themselves empty, so the burst is
+           let go in air and the needles it rises into are the thing being asked
+           about -- a column with the trunk in it would bury the burst at its
+           birth, and a mote born inside a block keeps its move by the rule below */
+        if (!crown && gy > ty + 3 && !W.solidAt(x, ty + 1, z) && !W.solidAt(x, ty + 2, z) &&
+            W.solidAt(x, ty + 4, z)) crown = [x, z];
+        if (!wall) for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
+          if (N.terrainY(W, x + dx, z + dz, W.h - 1) - ty >= 3) { wall = [x, z]; break; }
+      }
+    }
+    if (!open || !wall || !crown) return back({ error: 'no open ground, no riser and no crown to measure on' });
+    const burst = (at, y) => {
+      P.n = 0;
+      g.particleBurst(at[0] + 0.5, y, at[1] + 0.5, [1, 0.6, 0.2], 40);
+      let samples = 0, inSolid = 0, inLeaf = 0, far = 0;
+      for (let f = 0; f < 200; f++) {
+        for (let i = 0; i < P.n; i++) {
+          samples++;
+          const cx = P.px[i] | 0, cy = P.py[i] | 0, cz = P.pz[i] | 0;
+          if (W.solidAt(cx, cy, cz)) { if (N.TREE_BLOCK[W.get(cx, cy, cz)]) inLeaf++; else inSolid++; }
+          const d = Math.hypot(P.px[i] - (at[0] + 0.5), P.py[i] - y, P.pz[i] - (at[1] + 0.5));
+          if (d > far) far = d;
+        }
+        P.update(1 / 60, W);
+      }
+      return { samples, inSolid, inLeaf, far: +far.toFixed(2) };
+    };
+    const rows = {
+      ground: burst(open, N.terrainY(W, open[0], open[1], W.h - 1) + 0.2),
+      wall: burst(wall, N.terrainY(W, wall[0], wall[1], W.h - 1) + 0.2),
+      crown: burst(crown, N.terrainY(W, crown[0], crown[1], W.h - 1) + 0.2)
+    };
+    // the dust of the highest isle, at the game's own rate from the game's own spot
+    const beams = N.POIS.find(q => q.id === 'beams');
+    p.x = beams.x; p.z = beams.z; p.y = beams.y; p.headWater = false;
+    g.night = 0; g.ambTimer = 0; P.n = 0;
+    let born = 0, bornIn = 0, dSamples = 0, dIn = 0;
+    for (let f = 0; f < 3600; f++) {
+      const nWas = P.n;
+      g.ambient(1 / 60);
+      for (let i = nWas; i < P.n; i++) {
+        born++;
+        if (W.solidAt(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) bornIn++;
+      }
+      for (let i = 0; i < P.n; i++) {
+        dSamples++;
+        if (W.solidAt(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) dIn++;
+      }
+      P.update(1 / 60, W);
+    }
+    rows.dust = { born, bornIn, samples: dSamples, inSolid: dIn };
+    /* the ring the night's motes are scattered over reaches eighteen metres out
+       from the body, so a body standing near the edge of the map scatters some of
+       them off the map, where `get` answers "air" to a question that was never
+       asked and nothing stops them again */
+    let edge = null;
+    for (let z = 8; z < W.d - 8 && !edge; z++) {
+      for (let x = 8; x < 16 && !edge; x++) {
+        if (W.liquidSurfaceAt(x, z) >= 0) continue;
+        const gy = N.groundY(W, x, z, W.h - 1);
+        if (gy > 6 && gy < W.h - 8) edge = [x, z];
+      }
+    }
+    if (!edge) return back({ error: 'no dry column within eighteen of the edge', rows });
+    p.x = edge[0] + 0.5; p.z = edge[1] + 0.5; p.y = N.groundY(W, edge[0], edge[1], W.h - 1);
+    g.night = 1; g.ambTimer = 0; P.n = 0;
+    let eBorn = 0, eOff = 0, eSamples = 0, eLiveOff = 0;
+    for (let f = 0; f < 3600; f++) {
+      const nWas = P.n;
+      g.ambient(1 / 60);
+      for (let i = nWas; i < P.n; i++) {
+        eBorn++;
+        if (!W.inside(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) eOff++;
+      }
+      for (let i = 0; i < P.n; i++) {
+        eSamples++;
+        if (!W.inside(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) eLiveOff++;
+      }
+      P.update(1 / 60, W);
+    }
+    rows.edge = { at: edge, born: eBorn, bornOff: eOff, samples: eSamples, off: eLiveOff };
+    /* and a mote the world has already closed around keeps its own move: it is a
+       mote inside a needle, not a mote pressed against one, and it can still work
+       its way out -- the same answer a flying body gets from the height gate. */
+    const cy = N.groundY(W, crown[0], crown[1], W.h - 1) - 1;   // the topmost needle cell
+    P.n = 0;
+    P.spawn(crown[0] + 0.5, cy + 0.5, crown[1] + 0.5, 0, 1.5, 0, 5, [1, 1, 1], 0.2, 0);
+    let out = -1;
+    for (let f = 0; f < 240 && out < 0; f++) {
+      P.update(1 / 60, W);
+      if (P.n === 0) break;
+      if (!W.solidAt(P.px[0] | 0, P.py[0] | 0, P.pz[0] | 0)) out = f;
+    }
+    rows.escape = { cell: [crown[0], cy, crown[1]], block: W.get(crown[0], cy, crown[1]), out };
+    return back(rows);
+  });
+  check('a spark burst keeps to the air it was thrown into: on open ground, against a riser, under a crown',
+    !sparks.error && sparks.ground.samples > 2000 && sparks.ground.inSolid === 0 &&
+    sparks.wall.inSolid === 0 && sparks.crown.inSolid === 0 && sparks.crown.inLeaf === 0 &&
+    sparks.ground.far > 0.5, sparks);
+  check('the dust of the highest isle is let go above the beams and not inside the isle that holds them',
+    !sparks.error && sparks.dust.born > 100 && sparks.dust.bornIn === 0 && sparks.dust.inSolid === 0,
+    sparks.dust);
+  check('and the night keeps its motes inside the valley: standing near the edge of the map does not scatter them off it',
+    !sparks.error && sparks.edge.born > 100 && sparks.edge.bornOff === 0 && sparks.edge.off === 0,
+    sparks.edge);
+  check('a mote the world has already closed around still keeps its move, and works its way out of it',
+    !sparks.error && sparks.escape.out > 0 && sparks.escape.out < 240, sparks.escape);
 
   /* A chunk is a box 16 wide, 16 deep and the whole height of the map, and it
      was thrown away as a ball 15 across centred at half that height. Its own

@@ -2120,7 +2120,46 @@
     update(dt, world) {
       for (let i = 0; i < this.n; i++) {
         this.life[i] -= dt;
-        this.px[i] += this.vx[i] * dt; this.py[i] += this.vy[i] * dt; this.pz[i] += this.vz[i] * dt;
+        /* A mote is drawn, not walked. It has no size and no mass, and the frame
+           it is added into has already been depth-tested, so a mote inside a block
+           is not seen *through* the block -- it is simply not there, for as long as
+           it is in there, holding a slot off the 900 and fading where nobody can
+           see it. The valley was spending a great deal of its light that way, and
+           `play.js` measures it at four spots, following every mote it is given for
+           the whole of a life. Standing on a lake shore at night: **703** of
+           **12,917** mote-samples inside a block. The dust of the highest isle:
+           **20,793** of **65,627** (**31.7%**), and **87** of its **371** grains
+           were already inside a block at the moment they were born, because the
+           span they are scattered over is a box and the isle is standing in it. A
+           spark burst thrown at the ground it stands on: **286** of **4,109**
+           samples under that ground; thrown up under a crown: **426** of **4,080**
+           inside the needles over its own head. And the ring the night's motes are
+           scattered over reaches eighteen metres out from the body, which near the
+           edge of the map is off the map, where `get` answers "air" to a question
+           that was never asked: standing eight blocks in from the edge, **85** of
+           **682** fireflies were let go outside the valley and **21,863** of
+           **149,080** samples (**14.7%**) were spent there, glowing at nothing.
+           So the world is a wall to a mote the same way it is a wall to a body: the
+           move into a solid is refused and the mote spends itself against the face
+           it reached -- one read, the same one the bubble rule below already pays.
+           A mote that is *already* inside one keeps its move, so it can still work
+           its way out (**19** frames out of a needle); that is the answer a flying
+           body gets from the height gate in `Creature.update` too. */
+        const nx = this.px[i] + this.vx[i] * dt;
+        const ny = this.py[i] + this.vy[i] * dt;
+        const nz = this.pz[i] + this.vz[i] * dt;
+        /* `inside` is part of the same question and not a second one: outside the
+           map `get` answers "air" to a question that was never asked, so a mote
+           that drifts off the edge has no wall to stop it and flies on out of the
+           valley for the rest of its life -- **21,863** of **149,080** mote-samples
+           spent outside the map at a body standing eight blocks in from the edge,
+           and the spawner being kept on the map leaves **0** of them there. */
+        if (world && !world.solidAt(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0) &&
+            (!world.inside(nx | 0, ny | 0, nz | 0) || world.solidAt(nx | 0, ny | 0, nz | 0))) {
+          this.vx[i] = this.vy[i] = this.vz[i] = 0;
+        } else {
+          this.px[i] = nx; this.py[i] = ny; this.pz[i] = nz;
+        }
         this.vy[i] -= this.grav[i] * dt;
         this.vx[i] *= 1 - 0.6 * dt; this.vz[i] *= 1 - 0.6 * dt;
         /* A bubble is a bubble only inside water. It is the one buoyant thing
