@@ -292,6 +292,11 @@
        above carries the whole path along the ray, so the leg is not asked for
        twice -- which is also why the murk used to arrive the moment a lens went
        under and leave the moment it came back to the surface line.
+       It is asked of the face, not of the path: a bed seen across a spur of dry
+       land is veiled by more water than this ray really walks, and marching the
+       ray per pixel is the only way to ask the question exactly. What the cap
+       buys is the common case -- the ray walks its own lake, and the further it
+       has to climb out along it, the more of it the lake eats.
        A surface that lights itself is exempt from the sun's leg and not from
        this one: a lamp in the middle of a lake is not lit by the daylight
        coming down, but what it sends out still has to climb out. */
