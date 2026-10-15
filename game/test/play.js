@@ -6158,16 +6158,21 @@ What was measured before any of this was fixed, over 180 frames of walking
     const wt = N.waterTop(W, cx, cz, W.h - 1);
     const bed = N.standY(W, cx, cz, wt);
     if (wt - bed < 4) return { error: 'the open water is not deep enough to measure in' };
-    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
+    const was = { form: p.form, formT: p.formT, formMax: p.formMax, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
       pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
       dry: p.dry, fright: p.fright, grounded: p.grounded };
     const place = (form, y, at) => {
-      p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+      /* the form's own clock pinned too: a window that measures a body which
+         reverts to human half way through is measuring a different body, and the
+         numbers it prints would still look like a frog's */
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
       p.x = at.x; p.z = at.z; p.y = y;
       p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
     };
     const glide = (secs, inp) => {
       const n = Math.round(secs * 60), ys = [];
+      const tall = p.size()[1];
       /* the count starts from where the body actually is, not from whatever the
          flag happened to hold when the last window closed: the body has just been
          set down at a height by hand, and the first frame of the window answers
@@ -6199,6 +6204,12 @@ What was measured before any of this was fixed, over 180 frames of walking
         // under the water, and it is the eyes and not the feet that decide what a
         // body standing in a lake can see over the surface of it
         eye: +(p.eyePos() - (wt0 + 1)).toFixed(3),
+        // and how much of the body itself stands over the film at the end of the
+        // window -- the complaint this answers is a whole body out of the water,
+        // so it is the share of the body's own height, not a height, that has to
+        // be pinned: 1.0 is a body standing on the lake with nothing of it in
+        above: +(p.y + tall - (wt0 + 1)).toFixed(3),
+        share: +((p.y + tall - (wt0 + 1)) / tall).toFixed(3),
         wFlips: wF,
         span: +(Math.max(...tail) - Math.min(...tail)).toFixed(4), rev };
     };
@@ -6290,32 +6301,39 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('a body that asks to go down still reaches the lakebed, and the water takes it back when it stops asking',
     !buoy.error && buoy.dive.g === 1 && Math.abs(buoy.dive.y - buoy.bed) <= 0.01
     && buoy.diveLet.g === 0 && Math.abs(buoy.diveLet.y - buoy.wild.shallow) < 0.25, buoy);
-  /* The surface is the ceiling of the water's hold: a body the water is holding
-     cannot kick itself out of the middle of a lake. It leaves the way a body
-     leaves water -- into the shallows where the bottom is, and up off its own
+  /* The water's hold has a top, and it is not the surface: a body the water is
+     holding cannot kick itself out of the middle of a lake. It leaves the way a
+     body leaves water -- into the shallows where the bottom is, and up off its own
      feet from there, which is the route the branch in entities.js already
-     documents. Without the ceiling a frog holding the climb key at the surface of
+     documents. Without a ceiling a frog holding the climb key at the surface of
      (56.5,94.5) crossed that surface 45 times in 240 frames, and every crossing
      took the stroke off its legs and put it back on again: seen from the bank, its
      feet flickered.
-     The ceiling is the surface, which is not the same thing as the level the water
-     holds a resting body at. Those two were one number only because that level was
-     measured to the feet and happened to land just under the surface; now a body
-     hangs its own height down, and a ceiling taken from the level would mean a
-     frog holding the climb key could never bring its head to the top of the water
-     at all. So the level is where a body that stops moving comes to rest, the
-     surface is how high a body that keeps asking can get, and between the two a
-     body swims: the key held for 4 s puts the feet at 14.98 against a surface of
-     15 and the eyes 40 cm out of the water, and the moment the key comes off the
-     water takes the body back down to the level it holds it at. The ceiling is
+     The ceiling is the surface less half the body, which is not the same thing as
+     the level the water holds a resting body at. Those two were one number only
+     because that level was measured to the feet and happened to land just under
+     the surface; now a body hangs its own height down, and a ceiling taken from
+     the level would mean a frog holding the climb key could never bring its head
+     to the top of the water at all. So the level is where a body that stops moving
+     comes to rest, the ceiling is how high a body that keeps asking can get, and
+     between the two a body swims: the key held for 4 s over a column 7 m deep
+     leaves the feet 25 cm under the film, half of a 50 cm body over the water and
+     the eyes 17 cm over it, and the moment the key comes off the water takes the
+     body back down to the level it holds it at. Half the body because a body that
+     has worked half of itself out of the water is no longer being held up by
+     water at all -- it is standing on a surface that is not there. The old
+     ceiling, the surface less a hair, put the feet at 14.98 against a surface of
+     15, which for that body is 96% of it over the lake: a frog standing on open
+     water, which is what the player saw and asked to have stopped. The ceiling is
      asked of where the frame is about to put the body rather than of where the
      body stands: with the old test, which asked where the body stood, the surface
      of (64.5,92.5) was crossed twice in 240 frames with the key held, and every
      crossing took the body out of the water branch and put it back in. */
-  check('the climb key brings the head out of the water, and the surface stops the body there: ' +
-        'it cannot kick itself out of the lake',
-    !buoy.error && buoy.up.headW === 0 && buoy.up.g === 0 && buoy.up.eye > 0.3 &&
-    buoy.up.y > buoy.wt + 1 - 0.1 && buoy.up.y < buoy.wt + 1, buoy);
+  check('the climb key brings the head out of the water, and the water stops the body ' +
+        'half of itself under the surface: it cannot stand on the middle of a lake',
+    !buoy.error && buoy.up.headW === 0 && buoy.up.g === 0 && buoy.up.eye > 0.1 &&
+    Math.abs(buoy.up.y - (buoy.wt + 1 - buoy.tall * 0.5)) < 0.05 &&
+    buoy.up.share <= 0.52 && buoy.up.share > 0.4, buoy);
   /* and the flag the draw hangs off does not relay. `inWater` used to be put to
      the cells -- is the cell at the body's feet liquid, is the one at its middle
      -- and a body bobbing across its own surface answered that a different way

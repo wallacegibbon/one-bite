@@ -52,11 +52,26 @@
      to say -- a human, or any body that has to come up for air -- keeps the 30 cm
      its back hangs under the surface, which is what it has always kept. */
   function floatLevel(wSurf, tall, hover) { return wSurf - tall - (hover === undefined ? FLOAT_UNDER : hover); }
-  /* The ceiling of the water's hold is the surface itself, less a hair. Whether a
-     body is in the water at all is decided by its feet being under the surface
-     (`inWater`, far above), so a body allowed to come level with the surface
-     answers that question a different way on every frame it is there. */
-  const SURF_KEEP = 0.02;
+  /* The top a body the water is holding up can climb to: the surface of its own
+     column, less half the height of that body. The water holds a body up from
+     under it, and a body that has worked its way up until only half of it is in
+     the water is not being held up by water any more -- it is standing on the
+     lake, on a surface that is not there. Measured off the body worn from the
+     frog, with the climb key held for 5 s over a column 7 m deep, the old
+     ceiling -- the surface less a hair -- let the feet come to **14.98** against
+     a surface of **15**, which for a body **0.5 m** tall is **96%** of it over
+     the water: a frog standing on the middle of a lake. Against this ceiling the
+     same body stops with its feet **25 cm** in, half of it over the film and its
+     eyes **17 cm** over it, which is still the head out of the water the animal
+     needs, and the water takes it back down to the level it holds it at the
+     moment the key comes off. Half the body is the collision box's half, the same
+     height `floatLevel` above measures, so the two ends of the water's hold are
+     told in the same units and a bigger water animal is carried up just as far
+     over the film as it is hung down under it.
+     Whether a body is in the water at all is decided by its feet being under the
+     surface (`inWater`, far above), and this leaves them half a body under it, so
+     that answer cannot change its mind on the frame the body stops climbing. */
+  function surfCeiling(wSurf, tall) { return wSurf - tall * 0.5; }
 
   /* The speed the worn body's stride law is calibrated at, in m/s. See
      `Player.walkMove` for why this is a number the player's body carries and a
@@ -599,18 +614,20 @@
            it again: at (56.5,14.9,94.5) a frog with the key held went over that
            line 45 times in 240 frames, and every crossing took the stroke off
            its legs and put it back on again.
-           The ceiling is the surface, which is not the same thing as the level the
-           water holds a resting body at. Those two were one number only because
-           that level was measured to the feet and happened to land just under the
+           The ceiling is not the surface itself but `surfCeiling` -- the surface
+           less half the body -- and that is what the player asked for. The two
+           were one number only because the level the water holds a resting body
+           at used to be measured to the feet and happened to land just under the
            surface; now a body hangs its own height down, and a ceiling taken from
-           it would mean a frog holding the climb key could never bring its head to
-           the top of the water at all. So: the level is where a body that stops
-           moving comes to rest, the surface is how high a body that keeps asking
-           can get, and between the two a body swims. A frog at rest hangs 80 cm
-           down with its eyes 38 cm under; the key held for 4 s puts its feet at
-           14.98 against a surface of 15 and its eyes 40 cm out of the water, and
-           the moment the key comes off the water takes it back down to the level
-           it holds it at.
+           that level would mean a frog holding the climb key could never bring
+           its head to the top of the water at all. So: the level is where a body
+           that stops moving comes to rest, the ceiling is how high a body that
+           keeps asking can get, and between the two a body swims. A frog at rest
+           hangs 80 cm down with its eyes 38 cm under; the key held for 5 s over a
+           column 7 m deep stops it with its feet 25 cm under the film -- half of
+           its 50 cm body over the water, eyes 17 cm over it, and the surface
+           itself never crossed once in 300 frames -- and the moment the key comes
+           off the water takes it back down to the level it holds it at.
            The ceiling is asked of where the frame is about to put the body, not of
            where the body happens to be: the velocity decided here is spent later,
            over the substeps of the move, and a body at 14.93 with 4.6 m/s of climb
@@ -618,7 +635,7 @@
            ends. Asked of the body's own height instead, the surface of (64.5,92.5)
            was crossed twice in 240 frames with the key held, and every crossing
            took the body out of the water branch and put it back in. */
-        if (heldUp && this.vy > 0 && this.y + this.vy * dt >= wSurf - SURF_KEEP) this.vy = 0;
+        if (heldUp && this.vy > 0 && this.y + this.vy * dt >= surfCeiling(wSurf, this.size()[1])) this.vy = 0;
       } else {
         /* Feet that are on the bottom are feet that can push off it, water
            around them or not. That is the whole of getting out of a lake: the
