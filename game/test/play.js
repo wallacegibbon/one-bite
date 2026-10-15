@@ -6660,6 +6660,112 @@ What was measured before any of this was fixed, over 180 frames of walking
     !skim.error && skim.min > 0.45 && skim.p10 > 0.6 && skim.median > 1.2 &&
     skim.median < 3 && skim.inWater === 0 && skim.inRock === 0, skim);
 
+  /* A body in the air pays for height out of the speed it has. The height a
+     flying body wants is eased, and an ease closes a distance at a rate
+     proportional to the distance left: when the floor under the body drops away
+     -- the lip of the valley, the edge of a ridge -- the height it wants drops
+     with it and the answer is a dive. Measured over two days and 302,394 frames
+     of flight, the height rate reached 26.8 m/s (p99 9.7, p50 0.63) for a body
+     whose own row gives it 7 m/s of air speed and which crosses the valley at
+     2.94: 6,000 frames were faster than the animal can fly, and 1,841 fell more
+     than four times faster than they went forward. The fastest part of such a
+     drop takes a tenth of a second, which is shorter than the attitude (eased at
+     4.5/s) and the wing beat (3.5/s) need to follow, so the owl came down with
+     its nose level and its wings still on the beat: from the bank, a stone. */
+  const stone = await step('aBirdDoesNotDropFasterThanItCanFly', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
+    const bird = g.creatures.filter(c => c.isFlyer() && !c.sleeping)[0];
+    if (!bird) return { error: 'no flying body in the valley' };
+    /* A body is not a point and leaves are not a wall: the flock step asks the
+       same question and excludes the blocks a tree is made of, so this does too. */
+    const hard = (x, y, z) => W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)];
+    /* A patch of open sky to let the bird down through: 13 columns each way whose
+       floors are all within two rows of one height and whose 16 blocks over them
+       hold nothing a body cannot pass through. The bird is put in the middle of
+       it and the window closes when it reaches the height the law asks for, so
+       what is measured is the drop and not the wood it may later fly into. */
+    const open = (x, z) => {
+      if (W.liquidSurfaceAt(x, z) >= 0) return false;      // over water the film is the floor
+      const t = N.groundY(W, x, z, W.h - 1);
+      if (t < 20 || t > 30) return false;
+      for (let y = t + 1; y <= t + 16; y++) if (hard(x, y, z)) return false;
+      return true;
+    };
+    let sx = -1, sz = -1, top = 0;
+    for (let z = 20; z < W.d - 20 && sx < 0; z += 2) {
+      for (let x = 20; x < W.w - 20; x += 2) {
+        if (!open(x, z)) continue;
+        let all = true;
+        for (let dz = -6; dz <= 6 && all; dz += 2)
+          for (let dx = -6; dx <= 6; dx += 2) if (!open(x + dx, z + dz)) { all = false; break; }
+        if (!all) continue;
+        sx = x; sz = z; top = N.groundY(W, x, z, W.h - 1); break;
+      }
+    }
+    if (sx < 0) return { error: 'no open sky to let a bird down through' };
+    const keepP = { x: p.x, y: p.y, z: p.z, vital: p.vital };
+    const keepT = { time: g.time, night: g.night };
+    const keep = { x: bird.x, y: bird.y, z: bird.z, homeX: bird.homeX, homeZ: bird.homeZ,
+      flyY: bird.flyY, state: bird.state, sleeping: bird.sleeping, pause: bird.pause,
+      t: bird.t, phase: bird.phase, yaw: bird.yaw, tx: bird.tx, tz: bird.tz, vy: bird.vy,
+      huntH: bird.huntH, speed: bird.speed, tilt: bird.tilt, flap: bird.flap };
+    g.time = 21 * 60; g.night = 1;
+    bird.x = sx + 0.5; bird.z = sz + 0.5; bird.y = top + 14;
+    bird.homeX = bird.x; bird.homeZ = bird.z; bird.flyY = top + 20;
+    bird.state = 'wander'; bird.sleeping = false; bird.pause = 0; bird.vy = 0;
+    bird.huntH = 2.6; bird.tilt = 0;
+    p.x = 4; p.z = 4; p.y = W.h - 2; p.vital = 10;
+    const flySpeed = bird.sp.flySpeed || bird.sp.speed || 3;
+    const dt = 1 / 60;
+    /* The drop: from the moment it is put up there to the moment the height the
+       law asks for is reached. How fast it went down, how much ground it covered
+       on the way, how far its nose got round, and whether it was ever inside
+       anything it cannot pass through. */
+    let maxRate = 0, lost = 0, ground = 0, inRock = 0, tiltMax = 0, frames = 0;
+    let px = bird.x, pz = bird.z, py = bird.y;
+    while (frames < 900 && bird.y - top > 5.5) {
+      bird.update(dt, p, W, g);
+      frames++;
+      const v = Math.abs(bird.y - py) / dt;
+      if (v > maxRate) maxRate = v;
+      ground += Math.hypot(bird.x - px, bird.z - pz) / dt * dt;
+      if (bird.y < py) lost += py - bird.y;
+      tiltMax = Math.max(tiltMax, Math.abs(bird.tilt || 0));
+      px = bird.x; pz = bird.z; py = bird.y;
+      if (hard(Math.floor(bird.x), Math.floor(bird.y), Math.floor(bird.z))) inRock++;
+    }
+    const arrived = +(bird.y - top).toFixed(2);
+    const drop = { frames, lost: +lost.toFixed(1), ground: +ground.toFixed(1) };
+    /* and the height it settles at once the drop is over: the cap is not allowed
+       to leave the body hanging 14 m above the floor it was asked for. Only the
+       frames over the same open patch count -- past it, the height a bird crosses
+       is the wood it flew into, which is a different question. */
+    const hs = [];
+    let left = 0;
+    for (let i = 0; i < 600; i++) {
+      bird.update(dt, p, W, g);
+      const bx = Math.floor(bird.x), bz = Math.floor(bird.z);
+      if (!open(bx, bz)) { left++; continue; }
+      hs.push(bird.y - N.groundY(W, bx, bz, W.h - 1));
+      if (hard(bx, Math.floor(bird.y), bz)) inRock++;
+    }
+    hs.sort((a, b) => a - b);
+    Object.assign(bird, keep);
+    Object.assign(p, keepP);
+    g.time = keepT.time; g.night = keepT.night;
+    return { flySpeed, maxRate: +maxRate.toFixed(2), tiltMax: +tiltMax.toFixed(2),
+      drop, arrived, glide: +(ground / Math.max(0.001, lost)).toFixed(2), inRock,
+      n: hs.length, left, low: +hs[0].toFixed(2), median: +hs[hs.length >> 1].toFixed(2),
+      high: +hs[hs.length - 1].toFixed(2), spot: [sx, top, sz] };
+  });
+  check('a flying body never loses height faster than the air speed its own row gives it',
+    !stone.error && stone.maxRate <= stone.flySpeed, stone);
+  check('the drop is a glide over ground and not a fall through it: it covers at least ' +
+        'as much ground as height',
+    !stone.error && stone.glide >= 0.6 && stone.drop.lost > 6, stone);
+  check('and it still comes to the height the law asks for, outside the rock',
+    !stone.error && stone.arrived <= 5.5 && stone.arrived > 1 && stone.median > 1.2 &&
+    stone.median < 7 && stone.inRock === 0 && stone.n > 200, stone);
   const footing = await step('aBodyOnFootFalls', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA, p = g.player;
     const bear = g.creatures.find(c => c.sp.id === 'bear');

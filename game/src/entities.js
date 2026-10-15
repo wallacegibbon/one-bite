@@ -1735,7 +1735,29 @@
         const cap = ceil;
         const target = Math.min(cap, base + Math.sin(this.t * 1.1 + this.phase) * 0.9);
         const yWas = this.y;
-        this.y += (target - this.y) * Math.min(1, dt * 2.2);
+        /* The height is eased, and an ease closes a distance at a rate
+           proportional to the distance left -- so when the floor under the body
+           drops away (the lip of the valley, the edge of a ridge, the far side of
+           a bank) the height it wants drops with it and the answer is a dive.
+           Measured over two days and 302,394 frames of flight: the height rate
+           reaches **26.8 m/s** (p99 9.7, p50 0.63) for a body whose own row gives
+           it **7 m/s** of air speed and which is crossing the valley at 2.94;
+           **6,000** frames are faster than the animal can fly, and **1,841** fall
+           more than four times faster than they go forward. From the bank that is
+           a stone and not a bird, and the pose says so: the nose is still level
+           and the wings still on the beat through the fastest part of the fall,
+           because the attitude is eased at 4.5/s and the stroke at 3.5/s while
+           the drop itself takes a tenth of a second.
+           A body in air pays for height out of the speed it has, so it rises or
+           falls no faster than it is going through the air. The ease is capped at
+           the speed this body is holding, never above the air speed its row
+           gives it, and never below 1.2 m/s -- a body that has stopped at its
+           waypoint still has to settle onto its roost, and a body that has just
+           woken up still has to come off it. */
+        const glide = Math.min(sp.flySpeed || sp.speed || 3, Math.max(1.2, this.speed));
+        const rise = (target - this.y) * Math.min(1, dt * 2.2);
+        const reach = glide * dt;
+        this.y += Math.abs(rise) > reach ? (rise > 0 ? reach : -reach) : rise;
         /* and it arrives. An ease closes the distance and never touches it, so a
            body eased to the top of a crown whose highest needle is at 46 came to
            rest at 46.99 -- which is inside the needle it was being kept out of,
