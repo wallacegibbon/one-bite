@@ -7748,31 +7748,50 @@ What was measured before any of this was fixed, over 180 frames of walking
         }
       }
     }
-    let worstMs = { ms: 0, verts: 0, ci: -1 }, worstPerK = { ms: 0, verts: 1, ci: -1 }, total = 0;
-    for (let ci = 0; ci < W.cx * W.cz; ci++) {
-      let ms = 1e9;
-      for (let k = 0; k < 2; k++) {
+    /* The cost, asked two ways: as time, and as a count of the lookups the water
+       question costs. The time is the number a frame feels, and it is also the
+       number this machine is worst at telling: other things ran through the whole
+       pass, and one chunk of 7,000 vertices is a couple of milliseconds of work,
+       which is mostly noise -- the same sweep read 1.8 ms a chunk on a quiet
+       machine and 2.8 ms on a loaded one. So the budget here is generous, and the
+       sharp edge is the count: the question "how much water stands over this
+       vertex" has to be answered out of a table, not out of a hash. Asked of a
+       hash it cost five lookups a vertex, 5.5M of them over the valley, which is
+       what this file used to do. */
+    let best = null;
+    const mapGet = Map.prototype.get;
+    let gets = 0;
+    Map.prototype.get = function (k) { gets++; return mapGet.call(this, k); };
+    for (let pass = 0; pass < 3; pass++) {
+      let total = 0, nv = 0, worst = { ms: 0, ci: -1 };
+      for (let ci = 0; ci < W.cx * W.cz; ci++) {
         const t = performance.now(); W.buildChunk(R.gl, ci);
-        ms = Math.min(ms, performance.now() - t);
+        const ms = performance.now() - t;
+        total += ms;
+        let n = 0; const m = W.chunks[ci];
+        if (m) for (const q of m) if (q) n += q.count;
+        nv += n;
+        if (ms > worst.ms) worst = { ms, ci };
       }
-      total += ms;
-      let n = 0; const m = W.chunks[ci];
-      if (m) for (const q of m) if (q) n += q.count;
-      if (ms > worstMs.ms) worstMs = { ms: +ms.toFixed(2), verts: n, ci };
-      if (ms / Math.max(1, n) > worstPerK.ms / worstPerK.verts) worstPerK = { ms: +ms.toFixed(2), verts: n, ci };
+      if (!best || total < best.total) best = { total, nv, worst };
     }
+    Map.prototype.get = mapGet;
     N.MeshBuilder.prototype.upload = up0;
     return { chunks: wetCi.length, verts, wet, bad, badEx, cross, deep,
-      worstMs, worstPerK: +(worstPerK.ms / Math.max(1, worstPerK.verts) * 1000).toFixed(3),
-      worstPerKAt: worstPerK.ci, worstPerKN: worstPerK.verts,
-      meanMs: +(total / (W.cx * W.cz)).toFixed(2) };
+      sweepVerts: best.nv, sweepMs: +best.total.toFixed(1),
+      meanMs: +(best.total / (W.cx * W.cz)).toFixed(2),
+      worstMs: { ms: +best.worst.ms.toFixed(2), ci: best.worst.ci },
+      perK: +(best.total / Math.max(1, best.nv) * 1000).toFixed(3),
+      mapGets: gets, getsPerK: +(gets / Math.max(1, best.nv) * 1000).toFixed(1) };
   });
   check('every depth byte the mesher uploads is one the lake itself gives',
     !meshWater.error && meshWater.bad === 0 && meshWater.wet > 5000, meshWater);
   check('and some of them can only have come from a column in the next chunk over',
     !meshWater.error && meshWater.cross > 20, meshWater);
-  check('the most expensive chunk in the valley rebuilds inside the budget a frame gives meshing',
-    !meshWater.error && meshWater.worstMs.ms < 6 && meshWater.worstPerK < 0.5, meshWater);
+  check('the water question is answered out of a table, not out of a hash',
+    !meshWater.error && meshWater.getsPerK < 100 && meshWater.mapGets < 200000, meshWater);
+  check('and the whole valley rebuilds inside the budget a frame gives meshing',
+    !meshWater.error && meshWater.worstMs.ms < 12 && meshWater.perK < 1, meshWater);
 
   /* ---- the box round the block the crosshair is on ----
      The twelve bars used to be rebuilt in world coordinates every frame and
@@ -7844,6 +7863,113 @@ What was measured before any of this was fixed, over 180 frames of walking
     !hlBox.error && hlBox.drawn === 6 && hlBox.aimErr < 1e-6, hlBox);
   check('the twelve bars are the twelve bars they were, at the same size',
     !hlBox.error && hlBox.verts === 432 && hlBox.boxErr < 1e-6, hlBox);
+
+
+  /* A save is the only thing standing between a day of walking and nothing at
+     all. The step that used to cover it read one field back -- the id -- and the
+     rest of the valley could have been dropped on the floor and nothing would
+     have said so. The whole valley is read back now: every cell hashed, a save
+     written of a valley deliberately unlike the one standing here, that valley
+     then edited under the save, and the game restarted -- the blocks come from
+     the seed again, which is what closing the tab and coming back really does --
+     so that the only thing between a bare generated valley and the valley that
+     was saved is the save itself. */
+  const trip = await step('aSaveRoundTripPutsTheValleyBack', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
+    // what this step is about to disturb, put back at the end: the steps before
+    // it earned this pack and this clock, and they are over now, not this one
+    const was = { time: g.time, day: g.day, inv: g.inv, stashes: g.stashes, diffs: g.diffs,
+      regrow: g.regrow, growQueue: g.growQueue, drops: g.drops, buffs: g.buffs, posts: g.posts,
+      seen: g.seen, dex: g.dexFruit, stats: g.stats, upg: Object.assign({}, g.upg),
+      owl: g._owlUnlocked, quests: g.quests.map(q => q.done),
+      p: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vital: p.vital,
+        form: p.form, formT: p.formT, formMax: p.formMax, dry: p.dry } };
+    const hash = () => {
+      let h = 2166136261;
+      const b = W.blocks;
+      for (let i = 0; i < b.length; i++) { h ^= b[i]; h = (h * 16777619) >>> 0; }
+      return h >>> 0;
+    };
+    // three fruit the valley is holding, each with open sky over it
+    const fruit = [];
+    for (let y = 1; y < W.h && fruit.length < 3; y++)
+      for (let z = 0; z < W.d && fruit.length < 3; z++)
+        for (let x = 0; x < W.w && fruit.length < 3; x++) {
+          const b = W.get(x, y, z);
+          if (N.FRUIT_BLOCK[b] && !W.get(x, y + 1, z)) fruit.push([x, y, z, b]);
+        }
+    if (fruit.length < 3) return { error: 'the valley holds no fruit to edit', found: fruit.length };
+    const before = hash(), diffsBefore = g.diffs.length;
+    // 1. a save of a valley that is not this one: a later clock, a fuller pack, a
+    //    body moved and fed, a codex with a new creature in it, an upgrade earned,
+    //    a pit still growing, a fruit waiting to come back
+    const upgId = N.STORAGE.backpack.upgrades[0].id;
+    const fid = N.FRUITS[0].id;
+    g.day += 3; g.time += 137;
+    g.upg[upgId] = true;
+    g.stats.harvested += 7;
+    g.seen.owl = true;
+    g.inv.push({ kind: 'fruit', id: fid, fresh: 3, maxFresh: 9 });
+    g.regrow.push({ x: fruit[0][0], y: fruit[0][1], z: fruit[0][2], b: fruit[0][3], t: 40 });
+    g.growQueue.push({ x: fruit[1][0], y: fruit[1][1], z: fruit[1][2], t: 60, fruit: fid });
+    const at = { x: p.x + 0.25, y: p.y, z: p.z + 0.25 };
+    if (W.solidAt(Math.floor(at.x), Math.floor(at.y), Math.floor(at.z))) at.x = p.x;
+    p.x = at.x; p.z = at.z; p.vital = 4.25; p.dry = 0.5;
+    const saved = { day: g.day, time: g.time, harvested: g.stats.harvested, inv: g.inv.length,
+      regrow: g.regrow.length, growQueue: g.growQueue.length, vital: p.vital, dry: p.dry,
+      x: p.x, z: p.z };
+    g.save();
+    // 2. edit the valley under that save: pick the three fruit, and raise a trunk
+    //    in the open sky over the last of them -- an edit the save cannot know of
+    for (const f of fruit) g.setBlock(f[0], f[1], f[2], 0);
+    const raised = [fruit[2][0], fruit[2][1] + 1, fruit[2][2]];
+    const raisedWas = W.get(raised[0], raised[1], raised[2]);
+    g.setBlock(raised[0], raised[1], raised[2], N.BLOCK_ID.trunk);
+    const mid = hash(), pushed = g.diffs.length - diffsBefore;
+    // 3. close the tab and come back: the blocks come off the seed again, and the
+    //    chunk flags are cleared with them, so the save is the only thing that can
+    //    put this valley back -- and the only thing that can flag what it touches
+    W.blocks.fill(0);
+    N.generate(W, g.seed);
+    W.dirty.fill(0);
+    const bare = hash();
+    const ok = g.load();
+    const after = hash();
+    const dirty = W.dirty.reduce((a, b) => a + b, 0);
+    const got = {
+      day: g.day === saved.day, time: Math.abs(g.time - saved.time) < 1e-9,
+      harvested: g.stats.harvested === saved.harvested, inv: g.inv.length === saved.inv,
+      regrow: g.regrow.length === saved.regrow, growQueue: g.growQueue.length === saved.growQueue,
+      upg: !!g.upg[upgId], seen: !!g.seen.owl,
+      vital: Math.abs(p.vital - saved.vital) < 1e-9,
+      dry: Math.abs((p.dry || 0) - saved.dry) < 1e-9,
+      at: Math.abs(p.x - saved.x) < 1e-9 && Math.abs(p.z - saved.z) < 1e-9,
+      fruit: fruit.every(f => W.get(f[0], f[1], f[2]) === f[3]),
+      raised: W.get(raised[0], raised[1], raised[2]) === raisedWas,
+      diffs: g.diffs.length === diffsBefore
+    };
+    // the blocks need nothing put back: the load returned them to the valley that
+    // was standing here. the rest of the game state does
+    Object.assign(g, { time: was.time, day: was.day, inv: was.inv, stashes: was.stashes,
+      diffs: was.diffs, regrow: was.regrow, growQueue: was.growQueue, drops: was.drops,
+      buffs: was.buffs, posts: was.posts, seen: was.seen, dexFruit: was.dex, stats: was.stats });
+    g._owlUnlocked = was.owl;
+    g.quests.forEach((q, i) => { q.done = was.quests[i]; });
+    for (const k in g.upg) delete g.upg[k];
+    Object.assign(g.upg, was.upg);
+    Object.assign(p, was.p);
+    return { ok, cells: W.blocks.length, before, mid, bare, after,
+      edited: mid !== before, bareDiffers: bare !== before, same: after === before,
+      pushed, dirty, diffsBefore, got };
+  });
+  check('a save written today puts every one of the valley\'s 1.2M cells back tomorrow',
+    !trip.error && trip.ok && trip.edited && trip.bareDiffers && trip.same, trip);
+  check('an edit made after the save was written is not in it and does not come back',
+    !trip.error && trip.pushed === 4 && trip.got.raised && trip.got.fruit, trip);
+  check('the clock, the pack, the body, the codex, the upgrade and the queues come back too',
+    !trip.error && Object.keys(trip.got).every(k => trip.got[k]), trip);
+  check('what a load replays is flagged for re-meshing, not left as numbers in a grid',
+    !trip.error && trip.dirty > 0 && trip.dirty <= 100, trip);
 
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
