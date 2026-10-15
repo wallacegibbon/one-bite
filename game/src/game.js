@@ -1279,8 +1279,9 @@
         R.drawMesh(m[2], IDENT, { pane: 1, wave: true, noCull: true });
         R.drawMesh(m[2], IDENT, { pane: 2, wave: true, noCull: true });
       }
-      // particles
-      this.particles.draw(R);
+      // particles: the world goes along, because what eats a mote's light is
+      // the water it sits in, and only the world knows where the water is
+      this.particles.draw(R, this.world);
     }
 
     /* ------------------------- identity (docs/en/03 section 6) ------------------------- */

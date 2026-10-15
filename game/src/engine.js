@@ -422,14 +422,40 @@
 
   const VS_PART = `
   precision highp float;
-  attribute vec3 aPos; attribute vec4 aCol; attribute float aSize;
+  attribute vec3 aPos; attribute vec4 aCol; attribute float aSize; attribute float aUnder;
   uniform mat4 uProj, uView; uniform float uScale;
+  uniform vec3 uCamPos;
+  uniform vec3 uLiqK, uHazeK; uniform float uHazeOn, uLensUnder;
   varying vec4 vC;
   void main(){
     vec4 vp = uView * vec4(aPos, 1.0);
     gl_Position = uProj * vp;
-    gl_PointSize = clamp(uScale * aSize / max(length(vp.xyz), 0.5), 1.0, 64.0);
-    vC = aCol;
+    float d = length(vp.xyz);
+    gl_PointSize = clamp(uScale * aSize / max(d, 0.5), 1.0, 64.0);
+    /* A mote is not a surface: it is added to whatever the frame already holds,
+       so the question asked of it is not "what colour does it look like" but
+       "how much of what it sends out survives the road to the lens". The
+       world's faces have asked that of themselves every frame; a particle asked
+       nothing at all, and a bubble let go two metres under Mirrorlake came back
+       at mean luminance 140 with 197 sampled pixels over 140 while the lakebed
+       behind it, at the same lens, reads 66..70 -- the same strange bright dot
+       the lakebed used to be, still floating there after the lakebed itself
+       learned the law.
+       The road is the one the world's faces walk. A lens sitting in a liquid
+       has the whole path inside that liquid, and the liquid's haze eats it. A
+       particle out in the air, seen from under the surface, is eaten by the
+       water between the surface and the lens -- measured along the ray, the
+       same way the way back up out of a lake is. A lens over the lake sees a
+       particle under it eaten by the water that particle has to climb through,
+       and again along the ray rather than straight up, because that is the road:
+       a bubble a metre under the surface, looked at along 20 degrees of slope,
+       is seen through three metres of lake. A mote in the air over a lake, seen
+       from the air, walks no water at all: the walk is 0, exp(0) is 1, and a dry
+       frame is bit for bit what it was. */
+    vec3 eye = aPos - uCamPos;
+    float climb = min((uHazeOn > 0.5 ? uLensUnder : aUnder) * d / max(abs(eye.y), 1e-4), d);
+    float walk = uHazeOn > 0.5 && aUnder > 0.0 ? d : climb;
+    vC = vec4(aCol.rgb * exp(-mix(uLiqK, uHazeK, uHazeOn) * walk), aCol.a);
   }`;
   const FS_PART = `
   precision mediump float;
@@ -448,7 +474,7 @@
       this.canvas = canvas;
       this.pWorld = prog(gl, VS_WORLD, FS_WORLD, ['aPos', 'aCol', 'aData', 'aUnder', 'aTop']);
       this.pSky = prog(gl, VS_SKY, FS_SKY, ['aCorner']);
-      this.pPart = prog(gl, VS_PART, FS_PART, ['aPos', 'aCol', 'aSize']);
+      this.pPart = prog(gl, VS_PART, FS_PART, ['aPos', 'aCol', 'aSize', 'aUnder']);
 
       this.skyBuf = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, this.skyBuf);
@@ -701,17 +727,43 @@
     /* ---- particles ---- */
     drawParticles(buf, count) {
       if (!count) return;
-      const gl = this.gl, P = this.pPart;
+      const gl = this.gl, P = this.pPart, e = this.env, u = P.u;
+      if (!u._done) {
+        u.uProj = gl.getUniformLocation(P.p, 'uProj'); u.uView = gl.getUniformLocation(P.p, 'uView');
+        u.uScale = gl.getUniformLocation(P.p, 'uScale'); u.uCamPos = gl.getUniformLocation(P.p, 'uCamPos');
+        u.uLiqK = gl.getUniformLocation(P.p, 'uLiqK'); u.uHazeK = gl.getUniformLocation(P.p, 'uHazeK');
+        u.uHazeOn = gl.getUniformLocation(P.p, 'uHazeOn');
+        u.uLensUnder = gl.getUniformLocation(P.p, 'uLensUnder');
+        u._done = 1;
+      }
       gl.useProgram(P.p);
-      gl.uniformMatrix4fv(gl.getUniformLocation(P.p, 'uProj'), false, this.proj);
-      gl.uniformMatrix4fv(gl.getUniformLocation(P.p, 'uView'), false, this.view);
-      gl.uniform1f(gl.getUniformLocation(P.p, 'uScale'), gl.drawingBufferHeight * 0.9);
+      gl.uniformMatrix4fv(u.uProj, false, this.proj);
+      gl.uniformMatrix4fv(u.uView, false, this.view);
+      gl.uniform1f(u.uScale, gl.drawingBufferHeight * 0.9);
+      /* The water a mote's light has to walk before it reaches the lens. Every
+         number here is the one the world's faces were drawn with a moment ago:
+         the same law, off the same block row, and a frame drawn in air hands
+         over nothing -- no haze, no depth under a surface, and the walk is 0.
+         The lens's own depth under the surface it sits in is asked of the
+         environment, which already knows it: `waterY` is the top of the column
+         the lens is inside, and the lens's height is the camera's. */
+      gl.uniform3fv(u.uLiqK, e.liqK || [0, 0, 0]);
+      gl.uniform3fv(u.uHazeK, e.hazeK || [0, 0, 0]);
+      gl.uniform1f(u.uHazeOn, e.hazeOn || 0);
+      gl.uniform1f(u.uLensUnder, e.inWater ? Math.max(0, (e.waterY || 0) - this.cam.y) : 0);
+      gl.uniform3fv(u.uCamPos, this.camPos || [0, 0, 0]);
       gl.bindBuffer(gl.ARRAY_BUFFER, buf.pos);
       gl.vertexAttribPointer(P.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(P.a.aPos);
       gl.bindBuffer(gl.ARRAY_BUFFER, buf.col);
       gl.vertexAttribPointer(P.a.aCol, 4, gl.UNSIGNED_BYTE, true, 0, 0);
+      gl.enableVertexAttribArray(P.a.aCol);
       gl.bindBuffer(gl.ARRAY_BUFFER, buf.size);
       gl.vertexAttribPointer(P.a.aSize, 1, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(P.a.aSize);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf.under);
+      gl.vertexAttribPointer(P.a.aUnder, 1, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(P.a.aUnder);
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false);
       gl.drawArrays(gl.POINTS, 0, count);
       gl.disable(gl.BLEND); gl.depthMask(true);

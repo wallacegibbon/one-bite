@@ -4374,6 +4374,137 @@ What was measured before any of this was fixed, over 180 frames of walking
     Math.abs(sDownUnder.bed.near.lum - sDownHigh.bed.near.lum) < 6,
     { under: sDownUnder && sDownUnder.bed.near, over: sDownOver && sDownOver.bed.near, high: sDownHigh && sDownHigh.bed.near });
 
+  /* A mote the world adds to the frame -- a bubble, an ember, a firefly -- is
+     not a surface. It is *added* to whatever the frame already holds, so the
+     water cannot colour it over: what the water does to a mote is eat part of
+     the light the mote sends out on its way to the lens. The world's faces have
+     asked that question since the lake learned its law; a particle asked
+     nothing at all, and a bubble let go 2 m under Mirrorlake came back at mean
+     luminance 140 with 197 sampled pixels over 140 while the lakebed behind it,
+     at the same lens, reads 66..70 -- the same strange bright dot the lakebed
+     used to be, still floating there after the lakebed itself had been fixed.
+     A mote now walks the same road: the water above it, measured along the ray
+     rather than straight up, and the water the lens itself sits in. */
+  const mote = await step('aMoteWalksTheSameWater', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player, P = g.particles;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, third: g.thirdPerson, time: g.time, mode: g.mode, lens: g._lens,
+      frame: g._camFrame, env: g.env, hover: g.hover, creatures: g.creatures, drops: g.drops,
+      camD: g.cam.d, parts: g.particles ? g.particles.n : 0 };
+    const back = (v) => {
+      p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch;
+      p.vx = was.vx; p.vy = was.vy; p.vz = was.vz; p.form = was.form;
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover; g.cam.d = was.camD;
+      g.creatures = was.creatures; g.drops = was.drops;
+      if (g.particles) g.particles.n = was.parts;
+      return v;
+    };
+    g.mode = 'play'; g.thirdPerson = false; g.hover = null; p.form = null;
+    g.creatures = []; g.drops = []; P.n = 0;
+    g.time = N.DAY_LEN * (13 / 24);
+    /* a lake with 4 m of water over its bed, the surface the same height for 12
+       blocks running north and water at 2 m under it all the way, so a bubble
+       hung under that surface can be looked at from straight above, along 20
+       degrees of slope, or from another lens standing in the same water */
+    let lake = null;
+    for (let z = 74; z < W.d - 14 && !lake; z++) for (let x = 46; x < W.w - 14 && !lake; x++) {
+      const s = W.liquidSurfaceAt(x, z);
+      if (s < 0) continue;
+      let ok = true;
+      for (let k = 1; k <= 12; k++) if (W.liquidSurfaceAt(x, z - k) !== s) { ok = false; break; }
+      for (let k = 0; k <= 10 && ok; k++) if (!W.liquidAt(x, s - 2, z - k)) ok = false;
+      if (!ok) continue;
+      let bed = -1;
+      for (let y = s - 1; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed < 0 || s - bed < 4) continue;
+      lake = { x: x + 0.5, z: z + 0.5, surf: s, bed };
+    }
+    if (!lake) return back({ error: 'no lake with 4 m of water and a 12 block fetch' });
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const A = new Uint8Array(w * h * 4), B = new Uint8Array(w * h * 4);
+    /* One mote, one lens, one frame with it and one without: the difference
+       between the two is the mote and nothing else, and the blend is additive,
+       so that difference is what the mote sends to the lens however bright or
+       dark the bed behind it happens to be. `law` off does not touch the world
+       at all -- it hands the particle system no world, so the mote is drawn as
+       though it stood in no water, over a frame that is byte for byte the one
+       the game would draw. */
+    const shot = (lens, mp, col, law) => {
+      const dx = mp[0] - lens[0], dy = mp[1] - lens[1], dz = mp[2] - lens[2];
+      p.x = lens[0]; p.z = lens[2]; p.y = lens[1] - (p.eyePos() - p.y);
+      p.vx = p.vy = p.vz = 0;
+      p.yaw = Math.atan2(dx, -dz); p.pitch = Math.atan2(dy, Math.hypot(dx, dz));
+      g.cam.d = 0;
+      const fr = g.shootCamera(p);
+      g._camFrame = fr; g.updateEnv();
+      const env = { inWater: g.env.inWater, under: g.env.inWater ? +(g.env.waterY - fr.y).toFixed(2) : 0 };
+      P.n = 0; g._camFrame = fr; g.render();
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, A);
+      P.n = 0; P.spawn(mp[0], mp[1], mp[2], 0, 0, 0, 5, col, 0.14, 0);
+      let real = null;
+      if (!law) { real = P.draw; P.draw = function (R2) { real.call(this, R2, null); }; }
+      g._camFrame = fr; g.render();
+      if (real) delete P.draw;
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, B);
+      let n = 0, maxAdd = 0, red = 0, blue = 0, chk = 0, full = 0;
+      for (let i = 0; i < B.length; i += 4) {
+        full += A[i] * 65536 + A[i + 1] * 256 + A[i + 2];
+        const d0 = B[i] - A[i], d1 = B[i + 1] - A[i + 1], d2 = B[i + 2] - A[i + 2];
+        chk += d0 * 65536 + d1 * 256 + d2;
+        const add = 0.3 * d0 + 0.59 * d1 + 0.11 * d2;
+        if (add <= 0) continue;
+        n++;
+        if (add > maxAdd) maxAdd = add;
+        if (d0 > red) red = d0;
+        if (d2 > blue) blue = d2;
+      }
+      return { n, maxAdd: +maxAdd.toFixed(1), red, blue, chk, full,
+        d: +Math.hypot(dx, dy, dz).toFixed(2), env };
+    };
+    const s = lake.surf, bub = [0.5, 0.85, 1], fly = [0.7, 1, 0.45];
+    const deep = [lake.x, s - 2.5, lake.z];            // a bubble hung 2.5 m under
+    const flat = [lake.x, s - 2, lake.z];              // and one at 2 m, level with a lens
+    const up = [lake.x, s + 1, lake.z];                // a splash 1 m over the skin
+    const rows = {};
+    rows.down = shot([lake.x, s + 3, lake.z], deep, bub, true);
+    rows.downNoLaw = shot([lake.x, s + 3, lake.z], deep, bub, false);
+    rows.along = shot([lake.x, s + 0.3, lake.z + 7.7], deep, bub, true);
+    rows.near = shot([lake.x, s - 2, lake.z - 2], flat, bub, true);
+    rows.far = shot([lake.x, s - 2, lake.z - 8], flat, bub, true);
+    rows.skinDeep = shot([lake.x, s - 3, lake.z - 2.1], up, bub, true);
+    rows.skinShallow = shot([lake.x, s - 0.3, lake.z - 4.5], up, bub, true);
+    rows.air = shot([lake.x - 4, s + 6, lake.z], [lake.x + 1, s + 6, lake.z], fly, true);
+    rows.airNoLaw = shot([lake.x - 4, s + 6, lake.z], [lake.x + 1, s + 6, lake.z], fly, false);
+    rows.sky = shot([lake.x, s + 2, lake.z], [lake.x + 2.6, s + 6.3, lake.z], fly, true);
+    rows.skyNoLaw = shot([lake.x, s + 2, lake.z], [lake.x + 2.6, s + 6.3, lake.z], fly, false);
+    return back({ lake, rows });
+  });
+  const mt = mote.rows || {};
+  check('the bubble is really under the lake, the lens really over it, and the frame really shows it',
+    !mote.error && mt.down && mt.down.env.inWater === 0 && mt.down.n > 60 && mt.down.maxAdd > 60, mt.down);
+  check('the lake eats the mote of light it is holding: the same bubble over the same frame, asked of no water, is three times its red',
+    mt.down && mt.downNoLaw && mt.down.full === mt.downNoLaw.full && mt.downNoLaw.red > 3 * mt.down.red,
+    { law: mt.down, noLaw: mt.downNoLaw });
+  check('and it eats the red of a mote first, while its blue walks on',
+    mt.down && mt.downNoLaw && mt.down.red < 0.35 * mt.downNoLaw.red && mt.down.blue > 0.75 * mt.downNoLaw.blue,
+    { red: [mt.down && mt.down.red, mt.downNoLaw && mt.downNoLaw.red],
+      blue: [mt.down && mt.down.blue, mt.downNoLaw && mt.downNoLaw.blue] });
+  check('the road is along the ray: the same bubble at the same distance, looked at along 20 degrees of slope, has walked 7 m of lake and keeps no red at all',
+    mt.along && mt.down && mt.along.red < 0.2 * mt.down.red && mt.along.maxAdd < 0.7 * mt.down.maxAdd,
+    { along: mt.along, down: mt.down });
+  check('the water the lens itself stands in eats a mote the same way: 8 m of lake leaves 2 of its red where 2 m leaves 42',
+    mt.near && mt.far && mt.near.env.inWater === 1 && mt.far.env.inWater === 1 && mt.far.red < 0.3 * mt.near.red,
+    { near: mt.near, far: mt.far });
+  check('a mote over the lake, seen from the bottom of the lake, is eaten by the water the lens stands in',
+    mt.skinDeep && mt.skinShallow && mt.skinDeep.red < 0.45 * mt.skinShallow.red,
+    { deep: mt.skinDeep, shallow: mt.skinShallow });
+  check('a mote in the air, seen from the air, walks no water: the frame is byte for byte what it was',
+    mt.air && mt.airNoLaw && mt.sky && mt.skyNoLaw &&
+    mt.air.chk === mt.airNoLaw.chk && mt.sky.chk === mt.skyNoLaw.chk,
+    { air: [mt.air && mt.air.chk, mt.airNoLaw && mt.airNoLaw.chk],
+      sky: [mt.sky && mt.sky.chk, mt.skyNoLaw && mt.skyNoLaw.chk] });
+
   /* A chunk is a box 16 wide, 16 deep and the whole height of the map, and it
      was thrown away as a ball 15 across centred at half that height. Its own
      corners are 26.5 out from that centre, so a chunk whose only piece on screen

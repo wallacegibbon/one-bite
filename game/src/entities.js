@@ -1990,6 +1990,19 @@
   }
 
   /* ============================ particles ============================ */
+  /* How far under the surface of its own water a mote sits, in metres: 0 when
+     the cell it is inside is not liquid. The renderer cannot answer this -- it
+     does not know where the water is -- and the shader cannot ask the world, so
+     the depth arrives as an attribute the way the static world's does. It is
+     measured at the moment of drawing rather than at spawn because a bubble
+     rises: the lake it has climbed out of is gone by the time the frame is
+     drawn, and a mote that has reached the air is seen through no water at all. */
+  function waterAbove(W, x, y, z) {
+    const xi = x | 0, yi = y | 0, zi = z | 0;
+    if (!W.liquidAt(xi, yi, zi)) return 0;
+    return Math.max(0, W.liquidTopAt(xi, yi, zi) - y);
+  }
+
   class Particles {
     constructor(gl, max) {
       this.gl = gl; this.max = max || 900; this.n = 0;
@@ -2003,9 +2016,11 @@
          (motes, dust, fireflies), the default is the old 1.2 for embers. */
       this.grav = new Float32Array(this.max);
       this.bPos = gl.createBuffer(); this.bCol = gl.createBuffer(); this.bSize = gl.createBuffer();
+      this.bUnder = gl.createBuffer();
       this.fBuf = new Float32Array(this.max * 3);
       this.sBuf = new Float32Array(this.max);
       this.cBuf = new Uint8Array(this.max * 4);
+      this.uBuf = new Float32Array(this.max);
     }
     spawn(x, y, z, vx, vy, vz, life, col, size, grav) {
       if (this.n >= this.max) return;
@@ -2037,21 +2052,23 @@
         this.vx[i] *= 1 - 0.6 * dt; this.vz[i] *= 1 - 0.6 * dt;
       }
     }
-    draw(R) {
+    draw(R, world) {
       if (!this.n) return;
       const gl = this.gl;
-      const f = this.fBuf, s = this.sBuf, c = this.cBuf;
+      const f = this.fBuf, s = this.sBuf, c = this.cBuf, und = this.uBuf;
       for (let i = 0; i < this.n; i++) {
         const a = Math.max(0, Math.min(1, this.life[i] / this.max_life[i]));
         f[i * 3] = this.px[i]; f[i * 3 + 1] = this.py[i]; f[i * 3 + 2] = this.pz[i];
         s[i] = this.size[i] * (0.5 + a * 0.5);
         c[i * 4] = this.col[i * 4]; c[i * 4 + 1] = this.col[i * 4 + 1];
         c[i * 4 + 2] = this.col[i * 4 + 2]; c[i * 4 + 3] = (a * 255) | 0;
+        und[i] = world ? waterAbove(world, this.px[i], this.py[i], this.pz[i]) : 0;
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, this.bPos); gl.bufferData(gl.ARRAY_BUFFER, f.subarray(0, this.n * 3), gl.DYNAMIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.bCol); gl.bufferData(gl.ARRAY_BUFFER, c.subarray(0, this.n * 4), gl.DYNAMIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.bSize); gl.bufferData(gl.ARRAY_BUFFER, s.subarray(0, this.n), gl.DYNAMIC_DRAW);
-      R.drawParticles({ pos: this.bPos, col: this.bCol, size: this.bSize }, this.n);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.bUnder); gl.bufferData(gl.ARRAY_BUFFER, und.subarray(0, this.n), gl.DYNAMIC_DRAW);
+      R.drawParticles({ pos: this.bPos, col: this.bCol, size: this.bSize, under: this.bUnder }, this.n);
     }
   }
 
