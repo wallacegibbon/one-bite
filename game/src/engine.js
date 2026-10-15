@@ -278,16 +278,29 @@
        up through the water over the surface it left, and that leg obeys the
        same law again: the red goes first, and the water puts its own colour
        into the ray as it travels. The distance is the water that surface has
-       above it -- the same number the leg down already used -- and it is asked
-       of the surface being looked at rather than of the lens, which is what
-       makes a lake the same water seen from either side of its skin. Under the
-       surface the lens is already inside the water, and the haze term above
-       carries the whole path, so the leg is not asked for twice.
+       above it, asked of the surface being looked at rather than of the lens,
+       which is what makes a lake the same water seen from either side of its
+       skin -- but it is measured **along the ray**, because that is the road
+       the light walks. A slab of water 4 m thick is 4 m of water looked at
+       straight down and 13 m of it looked at along 17 degrees of slope, and 13
+       m of lake leaves a bed no red at all to show: the bed across a lake from
+       a lens sitting at its surface line used to keep 11% of its red, because
+       the slab was counted straight up. The leg can never be longer than the
+       ray carrying it, so the ray's own length is the cap, and that cap is what
+       keeps a bed at the horizon from being veiled by a thousand metres of
+       lake. Under the surface the lens is already inside the water and the haze
+       above carries the whole path along the ray, so the leg is not asked for
+       twice -- which is also why the murk used to arrive the moment a lens went
+       under and leave the moment it came back to the surface line.
        A surface that lights itself is exempt from the sun's leg and not from
        this one: a lamp in the middle of a lake is not lit by the daylight
        coming down, but what it sends out still has to climb out. */
+    vEye = wp.xyz - uCamPos;
+    float vert = aUnder * 0.125 + max(0.0, uWaterY - wp.y);
+    float up = min(vert * d / max(abs(vEye.y), 1e-4), d);
     vec3 back = uInWater > 0.5 ? vec3(0.0)
-      : uLiqK * (aUnder * 0.125) + uWaterK * max(0.0, uWaterY - wp.y);
+      : (uLiqK * (aUnder * 0.125) + uWaterK * max(0.0, uWaterY - wp.y))
+        * (up / max(vert, 1e-4));
     vec3 surv = exp(-back);
     vCol.rgb = mix(vCol.rgb, uVeil, 1.0 - surv);
     /* The water's own face: which way it points, which side of it the lens is
@@ -298,7 +311,6 @@
        the water. A lens over the lake never has the surface in front of a
        surface it can see, and there the veil is carried by the surface under
        the water instead, where it was just applied. */
-    vEye = wp.xyz - uCamPos;
     vPan = vec3(aTop, uInWater, uInWater > 0.5 ? d : 0.0);
   }`;
   const FS_WORLD = `

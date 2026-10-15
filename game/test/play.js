@@ -1296,12 +1296,11 @@ const { sim } = require('./simwait');
      one straight down on it. Fresnel says the grazing lens has most of its view
      thrown back -- and at noon the brightest thing in the valley is the sky --
      while the steep one lets nearly all of it through to the bed, which is the
-     darkest thing there. Measured over the pixels the water covers: 112.9
-     against 86.3, and the grazing frame is the bluer of the two, 135.4 against
-     110.3, where the dry bed under it is 127.8. Take the surface's second pass
-     away -- the pass that adds what the face throws back and what the water
-     scatters into the ray on its way out -- and the pair inverts: 69.4 against
-     82.7, and 82.2 of blue against 104.8. */
+     darkest thing there. Measured over the pixels the water covers: 105.3
+     against 81.1, and the grazing frame is the bluer of the two, 133.1 against
+     107.4. The dry bed under the same two lenses is the other way round -- 171.6
+     against 178.7, blue 126.3 against 129.8 -- which is what a floor does and a
+     surface does not. */
   const mirror = await step('lakeMirrorsTheSky', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
@@ -4258,6 +4257,122 @@ What was measured before any of this was fixed, over 180 frames of walking
     faceDepth.over140 === 0 && faceDepth.maxLum < 120, faceDepth);
   check('and it does not light up in patches either: the 99.9th percentile of a bed pixel over its own ring is under 30',
     faceDepth.hi22 < 100 && faceDepth.p999 < 30, faceDepth);
+
+  /* The water between a lens and a lakebed is the water the light walks, and it
+     used to be counted straight up: a bed 3 m down was 3 m of water however the
+     lens looked at it. From straight above that is the answer. Looked at along 7
+     degrees of slope from a lens sitting at the surface line, that same bed 2 m
+     in front is 14 m of lake, and 14 m of lake leaves a bed no red at all to
+     show. The complaint was that the murk left the frame the moment the lens
+     reached the surface line and came back the moment it went under it, and that
+     is exactly what the vertical count does: the lens 5 cm under the surface
+     reads the whole path as water (the haze is asked along the ray), the lens 5
+     cm over reads it as the bed's own depth asked straight up. Measured on the
+     bed 2-5 m in front of the lens, 3-4 m down: luminance **69.8** with the lens
+     5 cm under the line, **81.3** at the line itself and **87.4** 5 cm over it,
+     and **88.6** 30 cm over -- the whole of the murk spent crossing 10 cm of
+     lens travel, and 62% more red left on the bed. Asked along the ray the same
+     three lenses read **69.8 / 69.8 / 76.9**, and the crossing costs nothing.
+     The leg is capped at the ray's own length, because a slab measured along a
+     grazing ray runs to infinity and a bed at the horizon is not veiled by a
+     thousand metres of lake. */
+  const slab = await step('aLakeVeilsItsBedAlongTheRay', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, third: g.thirdPerson, time: g.time, mode: g.mode, lens: g._lens,
+      frame: g._camFrame, env: g.env, hover: g.hover, creatures: g.creatures, drops: g.drops,
+      parts: g.particles ? g.particles.n : 0 };
+    const back = (v) => {
+      p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch;
+      p.vx = was.vx; p.vy = was.vy; p.vz = was.vz; p.form = was.form;
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.creatures = was.creatures; g.drops = was.drops;
+      if (g.particles) g.particles.n = was.parts;
+      return v;
+    };
+    g.mode = 'play'; g.thirdPerson = false; g.hover = null; p.form = null;
+    g.creatures = []; g.drops = []; if (g.particles) g.particles.n = 0;
+    g.time = N.DAY_LEN * (13 / 24);
+    /* a shallow shelf with a long fetch: the lake surface the same height for 20
+       blocks running north, so a ray that leaves the lens at 7 degrees below the
+       horizontal stays over water and over a bed for its whole length */
+    let shelf = null;
+    for (let z = 74; z < W.d - 24 && !shelf; z++) for (let x = 46; x < W.w - 24 && !shelf; x++) {
+      const s = W.liquidSurfaceAt(x, z);
+      if (s < 0) continue;
+      let same = true;
+      for (let k = 1; k <= 20; k++) if (W.liquidSurfaceAt(x, z - k) !== s) { same = false; break; }
+      if (!same) continue;
+      let bed = -1;
+      for (let y = s - 1; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed < 0 || s - bed < 3 || s - bed > 4) continue;
+      shelf = { x: x + 0.5, z: z + 0.5, surf: s, bed, depth: s - bed };
+    }
+    if (!shelf) return back({ error: 'no shallow shelf with a 20 block fetch' });
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const px = new Uint8Array(w * h * 4);
+    const shot = (d, pitch) => {
+      const eyeOff = p.eyePos() - p.y;
+      p.x = shelf.x; p.y = shelf.surf + d - eyeOff; p.z = shelf.z; p.vx = p.vy = p.vz = 0;
+      p.yaw = 0; p.pitch = pitch;
+      const fr = g.shootCamera(p);
+      g._camFrame = fr; g.updateEnv(); g.render();
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const at = (x, y) => ((h - 1 - y) * w + x) * 4;
+      const tanY = Math.tan(fr.fov * Math.PI / 360), tanX = tanY * g.R.aspect;
+      const F = g.R.fwd, Rt = g.R.right, U = g.R.up;
+      const B = { near: [0, 0, 0, 0], mid: [0, 0, 0, 0] };
+      for (let yy = 20; yy < h - 20; yy += 3) for (let xx = 20; xx < w - 20; xx += 3) {
+        const ndcX = (xx + 0.5) / w * 2 - 1, ndcY = 1 - (yy + 0.5) / h * 2;
+        const dx = F[0] + Rt[0] * ndcX * tanX + U[0] * ndcY * tanY;
+        const dy = F[1] + Rt[1] * ndcX * tanX + U[1] * ndcY * tanY;
+        const dz = F[2] + Rt[2] * ndcX * tanX + U[2] * ndcY * tanY;
+        const L = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        const hit = W.raycast(fr.x, fr.y, fr.z, dx / L, dy / L, dz / L, 30, true);
+        if (!hit) continue;
+        const ax = hit.x + hit.nx, ay = hit.y + hit.ny, az = hit.z + hit.nz;
+        if (!W.liquidAt(ax, ay, az)) continue;         // the face is not under water
+        if (W.liquidSurfaceAt(ax, az) < hit.y + 2) continue;   // nor 2 m of it
+        const bd = N.BLOCKS[hit.block];
+        if (!bd || bd.emis) continue;
+        const o = hit.t < 5 ? B.near : hit.t < 10 ? B.mid : null;
+        if (!o) continue;
+        const i = at(xx, yy);
+        o[0]++; o[1] += 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2];
+        o[2] += px[i + 2] - px[i]; o[3] += px[i];
+      }
+      const o = {};
+      for (const k in B) {
+        const v = B[k];
+        o[k] = v[0] ? { n: v[0], lum: +(v[1] / v[0]).toFixed(1), bmr: +(v[2] / v[0]).toFixed(1),
+          red: +(v[3] / v[0]).toFixed(1) } : { n: 0 };
+      }
+      return { d: +d.toFixed(2), pitch, lensInWater: g.env.inWater, bed: o };
+    };
+    const rows = [];
+    for (const pitch of [-0.12, -1.4])
+      for (const d of [-0.05, 0.0, 0.05, 0.30]) rows.push(shot(d, pitch));
+    return back({ shelf, rows });
+  });
+  const row = (pitch, d) => slab.rows.find(r => r.pitch === pitch && r.d === d);
+  const sUnder = row(-0.12, -0.05), sOver = row(-0.12, 0.0), sHigh = row(-0.12, 0.05), sAlong = row(-0.12, 0.30);
+  const sDownUnder = row(-1.4, -0.05), sDownOver = row(-1.4, 0.0), sDownHigh = row(-1.4, 0.05);
+  check('the shelf this asks about really is a bed under water, and the murk really is there',
+    !slab.error && sUnder && sUnder.bed.near.n > 2000 && sUnder.bed.near.bmr > 40 && sUnder.bed.near.lum > 40, slab);
+  check('the lens crossing the surface line costs the bed nothing: 5 cm under and 5 cm over are the same bed',
+    sUnder && sOver && Math.abs(sUnder.bed.near.lum - sOver.bed.near.lum) < 4 &&
+    Math.abs(sUnder.bed.near.bmr - sOver.bed.near.bmr) < 4, { under: sUnder && sUnder.bed.near, over: sOver && sOver.bed.near });
+  check('and it is still the same bed 10 cm up: the murk does not arrive or leave with the surface line',
+    sOver && sHigh && Math.abs(sUnder.bed.near.lum - sHigh.bed.near.lum) < 10 &&
+    Math.abs(sUnder.bed.near.bmr - sHigh.bed.near.bmr) < 8, { under: sUnder && sUnder.bed.near, high: sHigh && sHigh.bed.near });
+  check('a bed looked at along 7 degrees of slope has walked 14 m of lake: its red is gone',
+    sAlong && sAlong.bed.near.red < 35 && sAlong.bed.mid.red < 38, sAlong && sAlong.bed);
+  check('and looked at from straight above it keeps the depth it stands at, which is the old answer',
+    sDownUnder && sDownOver && sDownHigh &&
+    Math.abs(sDownUnder.bed.near.lum - sDownOver.bed.near.lum) < 4 &&
+    Math.abs(sDownUnder.bed.near.lum - sDownHigh.bed.near.lum) < 6,
+    { under: sDownUnder && sDownUnder.bed.near, over: sDownOver && sDownOver.bed.near, high: sDownHigh && sDownHigh.bed.near });
 
   /* A chunk is a box 16 wide, 16 deep and the whole height of the map, and it
      was thrown away as a ball 15 across centred at half that height. Its own
