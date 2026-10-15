@@ -6716,6 +6716,22 @@ What was measured before any of this was fixed, over 180 frames of walking
     bird.homeX = bird.x; bird.homeZ = bird.z; bird.flyY = top + 20;
     bird.state = 'wander'; bird.sleeping = false; bird.pause = 0; bird.vy = 0;
     bird.huntH = 2.6; bird.tilt = 0;
+    /* the two sines that move the height a flying body wants are its own beat and
+       its own hunt, both keyed on `t` and a `phase` dealt out at spawn: pinned so
+       the height it settles at is the law's, not the phase it happened to be born
+       with */
+    bird.phase = 0; bird.t = 0;
+    /* The errand is pinned for the length of the drop, and the body is held over
+       the same open patch while it settles. A body with nowhere to go hovers, and
+       a hovering body covers no ground: on an unchanged game this step read
+       **1.34**, **1.10** and **0.60** m of ground for the same 8.5 m of height,
+       because the unseeded errand pick sometimes sent the bird off across the
+       patch and sometimes left it beating its wings on the spot -- and the settle
+       loop measured the heights over whatever ground the bird happened to be over,
+       leaving the patch in up to 256 of its 600 frames. What is asked here is what
+       the height law does to a body that is going somewhere, so the
+       going-somewhere part is stated rather than hoped for. */
+    bird.pause = 30; bird.tx = sx + 11.5; bird.tz = sz + 0.5;
     p.x = 4; p.z = 4; p.y = W.h - 2; p.vital = 10;
     const flySpeed = bird.sp.flySpeed || bird.sp.speed || 3;
     const dt = 1 / 60;
@@ -6723,28 +6739,43 @@ What was measured before any of this was fixed, over 180 frames of walking
        law asks for is reached. How fast it went down, how much ground it covered
        on the way, how far its nose got round, and whether it was ever inside
        anything it cannot pass through. */
-    let maxRate = 0, lost = 0, ground = 0, inRock = 0, tiltMax = 0, frames = 0;
+    let maxRate = 0, down = 0, ground = 0, inRock = 0, tiltMax = 0, frames = 0;
     let px = bird.x, pz = bird.z, py = bird.y;
+    const y0 = bird.y;
     while (frames < 900 && bird.y - top > 5.5) {
       bird.update(dt, p, W, g);
       frames++;
       const v = Math.abs(bird.y - py) / dt;
       if (v > maxRate) maxRate = v;
       ground += Math.hypot(bird.x - px, bird.z - pz) / dt * dt;
-      if (bird.y < py) lost += py - bird.y;
+      down += Math.max(0, py - bird.y);
       tiltMax = Math.max(tiltMax, Math.abs(bird.tilt || 0));
       px = bird.x; pz = bird.z; py = bird.y;
       if (hard(Math.floor(bird.x), Math.floor(bird.y), Math.floor(bird.z))) inRock++;
     }
     const arrived = +(bird.y - top).toFixed(2);
-    const drop = { frames, lost: +lost.toFixed(1), ground: +ground.toFixed(1) };
+    /* the height actually given up, not the sum of every downward frame: a body
+       riding the bob of its own wings goes down, up and down again, and the sum
+       counted 16.5 m of downward motion for a body that came down 8.5 */
+    const lost = y0 - bird.y;
+    const drop = { frames, lost: +lost.toFixed(1), down: +down.toFixed(1), ground: +ground.toFixed(1) };
     /* and the height it settles at once the drop is over: the cap is not allowed
        to leave the body hanging 14 m above the floor it was asked for. Only the
        frames over the same open patch count -- past it, the height a bird crosses
        is the wood it flew into, which is a different question. */
+    /* let it settle before it is measured: the height it comes to is reached by
+       an ease, and the first seconds of that are still the drop being finished */
+    for (let i = 0; i < 300; i++) {
+      bird.pause = 30; bird.tx = bird.x; bird.tz = bird.z;
+      bird.update(dt, p, W, g);
+    }
     const hs = [];
     let left = 0;
-    for (let i = 0; i < 600; i++) {
+    /* one whole period of the hunt sine (2*pi/0.35 = 18 s of the body's clock), so
+       the median is the middle of the band the law deals out rather than wherever
+       a shorter window happened to fall in it */
+    for (let i = 0; i < 1080; i++) {
+      bird.pause = 30; bird.tx = bird.x; bird.tz = bird.z;   // held over the patch, see the pin above
       bird.update(dt, p, W, g);
       const bx = Math.floor(bird.x), bz = Math.floor(bird.z);
       if (!open(bx, bz)) { left++; continue; }
