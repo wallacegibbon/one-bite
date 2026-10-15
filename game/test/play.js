@@ -630,29 +630,45 @@ const { sim } = require('./simwait');
 
   // 10d. particles carry their own gravity: bubbles rise, motes hover, embers fall
   const part = await step('particleGravity', () => {
-    const g = window.game, P = g.particles;
+    const g = window.game, W = g.world, P = g.particles;
     const n0 = P.n;
     /* The pool swap-removes dead particles, so a leftover particle dying during
-       the two seconds below would drag the three test particles into other
-       slots and the indices would lie. Start from an empty pool: these three
-       live 5 s, so nothing dies and index === identity for the whole step. */
+       the two seconds below would drag the test particles into other slots and
+       the indices would lie. Start from an empty pool: three of these live 5 s,
+       so nothing dies and index === identity for the whole step -- and the one
+       that is meant to die, the bubble that reaches the surface, is spawned
+       last, where the slot it leaves is the one the pool shrinks away from. */
+    let deep = null;
+    for (let z = 40; z < W.d - 8 && !deep; z++) for (let x = 40; x < W.w - 8 && !deep; x++) {
+      const s = W.liquidSurfaceAt(x, z);
+      if (s < 0) continue;
+      let bed = -1;
+      for (let y = s - 1; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed >= 0 && s - bed >= 5) deep = { x: x + 0.5, z: z + 0.5, surf: s, bed };
+    }
+    if (!deep) { P.n = n0; return { error: 'no lake at least 5 m deep' }; }
     P.n = 0;
-    P.spawn(0, 40, 0, 0, 0.8, 0, 5, [1, 1, 1], 0.2, -0.5);   // bubble: buoyant
+    // a bubble only lives inside water, so the buoyant ones start in a lake
+    P.spawn(deep.x, deep.surf - 4, deep.z, 0, 0.8, 0, 5, [1, 1, 1], 0.2, -0.5);   // bubble: buoyant, 4 m down
     P.spawn(0, 40, 0, 0, 0.3, 0, 5, [1, 1, 1], 0.2, 0);      // mote / firefly: weightless
     P.spawn(0, 40, 0, 0, 0, 0, 5, [1, 1, 1], 0.2);           // ember: the default gravity
+    P.spawn(deep.x, deep.surf - 1, deep.z, 0, 0.8, 0, 5, [1, 1, 1], 0.2, -0.5);   // bubble: 1 m under the skin
     for (let i = 0; i < 20; i++) P.update(0.1, g.world);     // two seconds
     const out = {
-      live: P.n,
+      live: P.n, lake: deep,
       vy: [+P.vy[0].toFixed(2), +P.vy[1].toFixed(2), +P.vy[2].toFixed(2)],
-      dy: [+(P.py[0] - 40).toFixed(2), +(P.py[1] - 40).toFixed(2), +(P.py[2] - 40).toFixed(2)]
+      dy: [+(P.py[0] - (deep.surf - 4)).toFixed(2), +(P.py[1] - 40).toFixed(2), +(P.py[2] - 40).toFixed(2)],
+      under: +(deep.surf - P.py[0]).toFixed(2)
     };
     P.n = n0;                                               // leave the pool as we found it
     return out;
   });
-  check('the three test particles are the only ones live', part.live === 3, part);
+  check('the deep bubble, the mote and the ember are what is left after two seconds', part.live === 3, part);
   check('a bubble rises instead of sinking', part.vy[0] > 0.8 && part.dy[0] > 1, part);
   check('a mote hovers instead of sinking into the ground', Math.abs(part.vy[1]) < 0.31, part);
   check('an ember still falls', part.vy[2] < -2, part);
+  check('a bubble pops at the surface of the lake it was born in, instead of floating away through the open air',
+    part.live === 3 && part.under > 0.5, part);
 
   // 10e. dying ends the tick: the fall must not overwrite the respawn point
   const death = await step('deathEndsTheTick', () => {

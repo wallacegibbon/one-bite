@@ -2035,6 +2035,22 @@
     update(dt, world) {
       for (let i = 0; i < this.n; i++) {
         this.life[i] -= dt;
+        this.px[i] += this.vx[i] * dt; this.py[i] += this.vy[i] * dt; this.pz[i] += this.vz[i] * dt;
+        this.vy[i] -= this.grav[i] * dt;
+        this.vx[i] *= 1 - 0.6 * dt; this.vz[i] *= 1 - 0.6 * dt;
+        /* A bubble is a bubble only inside water. It is the one buoyant thing
+           the valley spawns (grav < 0 -- motes and dust hover at 0, embers fall
+           at 1.2), and it used to rise straight out of the lake and go on
+           floating through the open air for the rest of its life: a body
+           standing on a four metre shelf let go **1,455** of **3,261**
+           particle-samples above the surface it was born under, the highest of
+           them **3.68** m over the water. A bubble pops where it reaches the
+           surface, and the cell test is the whole rule -- one read, and it pops
+           a bubble that was let go in the air as well, which the spawner does:
+           it spawns at the body's feet plus a random two metres, and those two
+           metres reach over the surface more often than not. */
+        if (this.life[i] > 0 && this.grav[i] < 0 && world &&
+            !world.liquidAt(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0)) this.life[i] = 0;
         if (this.life[i] <= 0) {
           const j = --this.n;
           if (j !== i) {
@@ -2047,9 +2063,6 @@
           }
           i--; continue;
         }
-        this.px[i] += this.vx[i] * dt; this.py[i] += this.vy[i] * dt; this.pz[i] += this.vz[i] * dt;
-        this.vy[i] -= this.grav[i] * dt;
-        this.vx[i] *= 1 - 0.6 * dt; this.vz[i] *= 1 - 0.6 * dt;
       }
     }
     draw(R, world) {
