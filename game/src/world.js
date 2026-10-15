@@ -295,10 +295,12 @@
       }
       return n;
     }
-    /* One integer naming one block, used as a cache key. Mixed radix (x, z, y)
-       over the world bounds, so two different blocks can never share a key --
-       a decimal packing like x*10000 + y*100 + z collides as soon as an axis
-       passes 99, and the highlight box would stick to the old block. */
+    /* One integer naming one block. Mixed radix (x, z, y) over the world bounds,
+       so two different blocks can never share a key -- a decimal packing like
+       x*10000 + y*100 + z collides as soon as an axis passes 99. The highlight
+       box no longer needs one: it is built once around the origin and aimed at
+       the block through the model matrix. The tests still hold the name to the
+       rule, because anything that ever needs it should get one block back. */
     key(x, y, z) { return (x * this.d + z) * this.h + y; }
 
     /* ---- meshing ---- */
@@ -325,33 +327,59 @@
          water: the water's own faces, the micro boxes, and the faces that
          look out at air, glass or a plant. A face the mesher can see is under
          water hands the surface height in instead, because at a corner that
-         stands inside the solid next door this question answers "dry". */
-      const runs = new Map();
-      const run = (x, z) => {
-        // the offset keeps a column one step outside the map from sharing a key
-        // with one on the other side of it; both answer null anyway
-        const k = (x + 1) * (D + 2) + (z + 1);
-        let r = runs.get(k);
-        if (r === undefined) {
+         stands inside the solid next door this question answers "dry".
+         The runs are looked for up front rather than on demand -- over the
+         chunk's own columns plus a ring of one, which is as far as the
+         question ever reaches -- and kept in two small typed arrays instead of
+         a Map of objects. These are the same columns the lazy walk ended up
+         visiting anyway: every face vertex asks for its own column and the four
+         it shares a face with, so a chunk with terrain in it asks for the whole
+         ring. What the table gives back is a lookup with no hashing, no object
+         and no second chance at the 48-level walk, and, when the ring holds no
+         water at all, no question: the builders are handed no `under` at all.
+         Only 18 of the valley's 100 chunks hold water, and the 82 that do not
+         were paying five Map lookups for every one of their vertices to be told
+         nothing. Measured over all 100 chunks before: a build cost 4.11 ms on
+         average, 15.6 ms in the worst, and picking one fruit in that worst chunk
+         cost 21.8 ms of frame. */
+      const RW = this.cs + 3, RX = x0 - 1, RZ = z0 - 1;
+      const wTop = new Int16Array(RW * RW), wBot = new Int16Array(RW * RW);
+      wTop.fill(-1); wBot.fill(-1);
+      let wet = 0;
+      for (let z = RZ; z < RZ + RW; z++) {
+        if (z < 0 || z >= D) continue;
+        for (let x = RX; x < RX + RW; x++) {
+          if (x < 0 || x >= W) continue;
           let top = -1, bot = -1;
           for (let y = this.h - 1; y >= 0; y--) {
-            const bd = B[at(x, y, z)];
+            const bd = B[blocks[(y * D + z) * W + x]];
             if (bd && bd.liquid) { if (top < 0) top = y; }
             else if (top >= 0) { bot = y + 1; break; }
           }
-          r = top < 0 ? null : { top: top + 1, bot };
-          runs.set(k, r);
+          if (top >= 0) {
+            const k = (z - RZ) * RW + (x - RX);
+            wTop[k] = top + 1; wBot[k] = bot; wet++;
+          }
         }
-        return r;
-      };
-      const under = (x, y, z) => {
+      }
+      /* A vertex of this chunk's blocks stands on a column line between x0 and
+         x0+cs, and the question steps one column further out, which is exactly
+         the ring RW covers -- so the five columns are always inside the table,
+         and a step off its edge can only land on a column outside the map,
+         which answers dry. A micro box corner that is not on a column line, a
+         stem half a block across, has no column of its own: it answers dry here,
+         as it did when its fractional key missed the Map. */
+      const under = wet ? (x, y, z) => {
+        if ((x | 0) !== x || (z | 0) !== z) return 0;
+        const k = (z - RZ) * RW + (x - RX);
         let best = 0;
         for (let i = 0; i < 5; i++) {
-          const r = run(x + (i === 1 ? 1 : i === 2 ? -1 : 0), z + (i === 3 ? 1 : i === 4 ? -1 : 0));
-          if (r && y >= r.bot && y < r.top) { const d = r.top - y; if (d > best) best = d; }
+          const j = k + (i === 1 ? 1 : i === 2 ? -1 : 0) + (i === 3 ? RW : i === 4 ? -RW : 0);
+          const t = wTop[j];
+          if (t >= 0 && y >= wBot[j] && y < t) { const d = t - y; if (d > best) best = d; }
         }
         return best;
-      };
+      } : null;
       const op = new MB(under), em = new MB(under), wa = new MB(under), mi = new MB(under),
         miE = new MB(under), tr = new MB(under);
 
@@ -468,8 +496,14 @@
                  step, pillar and sunken wall in Mirrorlake lit up the colour of
                  dry sand -- a bright triangle at the foot of each one, brightest
                  exactly where the water is deepest. */
-              const wr = nbd && nbd.liquid ? run(nx, nz) : null;
-              tgt.quadAO(p, faceCol, sh, !!bd.emis, 0, wr ? wr.top : undefined);
+              let surf;
+              if (nbd && nbd.liquid) {
+                // the neighbour of a block of this chunk is always one of the
+                // columns the ring above walked, so this is a read, not a search
+                const t = wTop[(nz - RZ) * RW + (nx - RX)];
+                if (t >= 0) surf = t;
+              }
+              tgt.quadAO(p, faceCol, sh, !!bd.emis, 0, surf);
             }
           }
         }

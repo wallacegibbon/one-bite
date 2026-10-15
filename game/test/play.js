@@ -649,8 +649,10 @@ const { sim } = require('./simwait');
   check('a bear is not intimidated by a bear', intimidate.bearState !== 'flee', intimidate);
   check('the bear aura still scares another species', intimidate.frogState === 'flee', intimidate);
 
-  // 10c. the highlight box is cached by a key that names exactly one block
-  const hl = await step('highlightKey', () => {
+  // 10c. one integer still names exactly one block (the highlight box used to
+  // be cached by one; it is aimed by a model matrix now, and the name is left
+  // in place for anything that needs it)
+  const hl = await step('blockKeyIsUnique', () => {
     const W = window.game.world, k = (x, y, z) => W.key(x, y, z);
     const pair = [k(10, 1, 100), k(10, 2, 0)];      // the old decimal packing gave both 100200
     const seen = new Set(); let dup = null, n = 0;
@@ -7659,6 +7661,189 @@ What was measured before any of this was fixed, over 180 frames of walking
     mmPaint.shallowRed - mmPaint.deepRed >= 20 && mmPaint.deepBlue > mmPaint.deepRed, mmPaint);
   check('the land is still painted with the colour of what stands on it',
     mmPaint.dry > 10000 && mmPaint.dryWrong === 0, mmPaint);
+
+  /* ---- the mesher and the lake next door ----
+     A chunk's vertices carry how deep the water above them is, and the question
+     reaches a column past the chunk: a lakebed face standing on a chunk border
+     takes its depth from a column that lives in the next chunk over, and a
+     horizontal face hands in the surface of the block under it, which stands on
+     the corner's diagonal. So the table the mesher keeps has to cover the ring
+     as well as the chunk. Read the depth byte back off the meshes it uploads
+     and check every one of them against the lake, column by column, and show
+     that some of them could not have come from inside the chunk at all.
+     The same step holds a rebuild to the budget the game sets itself: the most
+     expensive chunk in the valley has to rebuild inside the 6 ms a frame gives
+     meshing, and inside half a millisecond per thousand vertices it uploads.
+     Measured before the ring table was built up front: 4.15 ms for a chunk on
+     average, 15.4 ms for the worst (17,064 vertices, 0.90 ms per thousand), and
+     22.5 ms for the two chunks one fruit picked in that chunk flags. After:
+     0.97 ms on average, 1.7 ms for the worst, 1.7 ms for that harvest. */
+  const meshWater = await step('theMesherKeepsTheLakeNextDoor', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R;
+    const B = N.BLOCKS;
+    /* the water in one column, read here rather than off the mesher's table:
+       the height of its surface and the lowest cell that water reaches */
+    const runs = new Map();
+    const col = (x, z) => {
+      const k = (x + 1) * (W.d + 2) + (z + 1);
+      let r = runs.get(k);
+      if (r === undefined) {
+        let top = -1, bot = -1;
+        for (let y = W.h - 1; y >= 0; y--) {
+          const bd = B[W.get(x, y, z)];
+          if (bd && bd.liquid) { if (top < 0) top = y; }
+          else if (top >= 0) { bot = y + 1; break; }
+        }
+        r = top < 0 ? null : { top: top + 1, bot };
+        runs.set(k, r);
+      }
+      return r;
+    };
+    const wetCi = [];
+    for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
+      let any = false;
+      for (let z = cz * W.cs; z < cz * W.cs + W.cs && !any; z++)
+        for (let x = cx * W.cs; x < cx * W.cs + W.cs && !any; x++) if (col(x, z)) any = true;
+      if (any) wetCi.push(cz * W.cx + cx);
+    }
+    const up0 = N.MeshBuilder.prototype.upload;
+    let cap = null;
+    N.MeshBuilder.prototype.upload = function (gl) { if (cap) cap.push({ pos: this.pos, dat: this.dat }); return up0.call(this, gl); };
+    let verts = 0, wet = 0, bad = 0, cross = 0, deep = 0;
+    const badEx = [];
+    for (const ci of wetCi) {
+      const x0 = (ci % W.cx) * W.cs, z0 = ((ci / W.cx) | 0) * W.cs;
+      cap = [];
+      W.buildChunk(R.gl, ci);
+      const got = cap; cap = null;
+      for (const m of got) {
+        const pos = m.pos, dat = m.dat;
+        for (let i = 0, v = 0; i < pos.length; i += 3, v++) {
+          const x = pos[i], y = pos[i + 1], z = pos[i + 2];
+          const d = dat[v * 4 + 2] / 8;
+          verts++;
+          if (d > 0) wet++;
+          if (d > deep) deep = d;
+          // the five columns the point question asks about this vertex ...
+          let point = 0, pointOwn = 0;
+          for (let q = 0; q < 5; q++) {
+            const qx = x + (q === 1 ? 1 : q === 2 ? -1 : 0), qz = z + (q === 3 ? 1 : q === 4 ? -1 : 0);
+            const r = col(qx, qz);
+            if (!r || y < r.bot || y >= r.top) continue;
+            const dd = r.top - y;
+            if (dd > point) point = dd;
+            if (qx >= x0 && qx < x0 + W.cs && qz >= z0 && qz < z0 + W.cs && dd > pointOwn) pointOwn = dd;
+          }
+          // ... and the nine a face may hand its own surface in from
+          const allowed = new Set([point]), allowedOwn = new Set([pointOwn]);
+          for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+            const r = col(x + dx, z + dz);
+            if (!r) continue;
+            allowed.add(Math.max(0, r.top - y));
+            if (x + dx >= x0 && x + dx < x0 + W.cs && z + dz >= z0 && z + dz < z0 + W.cs)
+              allowedOwn.add(Math.max(0, r.top - y));
+          }
+          if (!allowed.has(d)) { bad++; if (badEx.length < 3) badEx.push([x, y, z, d, point]); }
+          if (!allowedOwn.has(d)) cross++;
+        }
+      }
+    }
+    let worstMs = { ms: 0, verts: 0, ci: -1 }, worstPerK = { ms: 0, verts: 1, ci: -1 }, total = 0;
+    for (let ci = 0; ci < W.cx * W.cz; ci++) {
+      let ms = 1e9;
+      for (let k = 0; k < 2; k++) {
+        const t = performance.now(); W.buildChunk(R.gl, ci);
+        ms = Math.min(ms, performance.now() - t);
+      }
+      total += ms;
+      let n = 0; const m = W.chunks[ci];
+      if (m) for (const q of m) if (q) n += q.count;
+      if (ms > worstMs.ms) worstMs = { ms: +ms.toFixed(2), verts: n, ci };
+      if (ms / Math.max(1, n) > worstPerK.ms / worstPerK.verts) worstPerK = { ms: +ms.toFixed(2), verts: n, ci };
+    }
+    N.MeshBuilder.prototype.upload = up0;
+    return { chunks: wetCi.length, verts, wet, bad, badEx, cross, deep,
+      worstMs, worstPerK: +(worstPerK.ms / Math.max(1, worstPerK.verts) * 1000).toFixed(3),
+      worstPerKAt: worstPerK.ci, worstPerKN: worstPerK.verts,
+      meanMs: +(total / (W.cx * W.cz)).toFixed(2) };
+  });
+  check('every depth byte the mesher uploads is one the lake itself gives',
+    !meshWater.error && meshWater.bad === 0 && meshWater.wet > 5000, meshWater);
+  check('and some of them can only have come from a column in the next chunk over',
+    !meshWater.error && meshWater.cross > 20, meshWater);
+  check('the most expensive chunk in the valley rebuilds inside the budget a frame gives meshing',
+    !meshWater.error && meshWater.worstMs.ms < 6 && meshWater.worstPerK < 0.5, meshWater);
+
+  /* ---- the box round the block the crosshair is on ----
+     The twelve bars used to be rebuilt in world coordinates every frame and
+     thrown away again: 12 box calls, 432 vertices and 4,752 array pushes a
+     frame, and while the crosshair was moving three GL buffers deleted and
+     three made again with it. They are built once now, around the origin, and
+     the block they are aimed at rides in the model matrix -- which is how a
+     dropped fruit is already drawn. Walk the crosshair over six blocks and
+     count what that costs, then read back where the bars land: one mesh, aimed
+     six times, at the same twelve bars in the same world positions the old
+     build made. Measured before: 360 uploads and 4,320 box calls over 360
+     frames, and 0.035 ms of a 0.74 ms render pass. */
+  const hlBox = await step('theHighlightBoxIsOneMesh', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R;
+    let spot = null;
+    for (let z = 8; z < W.d - 8 && !spot; z++) for (let x = 8; x < W.w - 8 && !spot; x++)
+      for (let y = W.h - 2; y > 1 && !spot; y--)
+        if (W.get(x, y, z) && !W.get(x, y + 1, z)) spot = { x, y, z };
+    if (!spot) return { error: 'no block with air over it' };
+    const wasMode = g.mode, wasHover = g.hover;
+    g.mode = 'play';
+    g.hover = { x: spot.x, y: spot.y, z: spot.z };
+    for (let i = 0; i < 10; i++) g.render();          // warm: nothing else builds now
+    if (g._hl) { R.gl.deleteBuffer(g._hl.pos); R.gl.deleteBuffer(g._hl.col); R.gl.deleteBuffer(g._hl.dat); }
+    g._hl = null;
+    let uploads = 0, boxes = 0;
+    const up0 = N.MeshBuilder.prototype.upload, bx0 = N.MeshBuilder.prototype.box;
+    const cap = [];
+    N.MeshBuilder.prototype.upload = function (gl) {
+      uploads++;
+      const m = up0.call(this, gl);
+      const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+      for (let i = 0; i < this.pos.length; i += 3) for (let k = 0; k < 3; k++) {
+        const v = this.pos[i + k]; if (v < lo[k]) lo[k] = v; if (v > hi[k]) hi[k] = v;
+      }
+      cap.push({ mesh: m, n: this.n, lo, hi });
+      return m;
+    };
+    N.MeshBuilder.prototype.box = function () { boxes++; return bx0.apply(this, arguments); };
+    const dm0 = R.drawMesh, drawn = [];
+    R.drawMesh = function (mesh, model, o) {
+      if (g._hl && mesh === g._hl) drawn.push({ t: [model[12], model[13], model[14]], verts: mesh.count });
+      return dm0.call(this, mesh, model, o);
+    };
+    const aims = [];
+    for (let k = 0; k < 6; k++) {
+      const at = { x: spot.x + k, y: spot.y, z: spot.z };
+      g.hover = at; aims.push([at.x, at.y, at.z]);
+      g.render();
+    }
+    N.MeshBuilder.prototype.upload = up0;
+    N.MeshBuilder.prototype.box = bx0;
+    R.drawMesh = dm0;
+    g.mode = wasMode; g.hover = wasHover;
+    const built = cap.find(c => c.mesh === g._hl) || null;
+    if (!built) return { error: 'the box was never built', uploads, boxes, drawn: drawn.length };
+    let boxErr = 0, aimErr = 0;
+    for (let k = 0; k < 3; k++)
+      boxErr = Math.max(boxErr, Math.abs(built.lo[k] + 0.025), Math.abs(built.hi[k] - 1.025));
+    drawn.forEach((d, i) => {
+      for (let k = 0; k < 3; k++) aimErr = Math.max(aimErr, Math.abs(d.t[k] - aims[i][k]));
+    });
+    return { spot, aims: aims.length, uploads, boxes, drawn: drawn.length,
+      verts: built.n, boxErr: +boxErr.toFixed(6), aimErr: +aimErr.toFixed(6) };
+  });
+  check('walking the crosshair over six blocks builds one mesh, not six',
+    !hlBox.error && hlBox.uploads === 1 && hlBox.boxes === 12, hlBox);
+  check('and each frame aims that one mesh at the block the crosshair is on',
+    !hlBox.error && hlBox.drawn === 6 && hlBox.aimErr < 1e-6, hlBox);
+  check('the twelve bars are the twelve bars they were, at the same size',
+    !hlBox.error && hlBox.verts === 432 && hlBox.boxErr < 1e-6, hlBox);
 
   console.log(log.join('\n'));
   console.log(errs.length ? '--- ERRORS ---\n' + errs.slice(0, 8).join('\n') : '--- no errors ---');
