@@ -417,6 +417,23 @@
   const STANCE_RUN = 0.30;   // ... and at the fastest the body travels: it flies between steps
   const FLAP_RATE = 11;   // wing beat per second in the air
   const SWIM_RATE = 4.2;  // the stroke's own clock, in rad/s: one stroke every 1.5 s
+  /* How much harder the leg on the outside of a turn strokes than the leg on the
+     inside, and the turn rate at which that difference is complete: a body
+     turning at TURN_FULL or faster kicks with one leg, a body going straight
+     kicks with both equally. 1.9 rad/s is the tightest arc a body with a kick
+     holds -- the frog's own `turn` in data/creatures.js, and the rate a swimming
+     body was measured holding when asked to carve as hard as it can. See the
+     `turn` term in the swimKick branch of partAngles. */
+  const TURN_KICK = 0.7;
+  const TURN_FULL = 1.9;  // rad/s of heading
+  /* The fold of the knee is the recovery and not the push, and a breaststroke
+     recovers both legs together -- that is what makes it one stroke rather than
+     two legs going up and down -- so the turn takes only this share of its
+     difference out of the fold. Turn the fold out full as well and the knee
+     folds to 13 deg where a straight stroke folds it to 49, the foot comes up
+     0.32 m through a stroke that travels only 0.38 m along the body, and the
+     sweep stops being a sweep. */
+  const TURN_FOLD = 0.3;
 
   /* A frog's stroke is not a sine. It is a breaststroke, and a breaststroke has
      three acts that a sine cannot hold apart: the legs are **recovered** -- the
@@ -827,7 +844,7 @@
        they shut behind the body, and the widest the leg reaches past the flank
        of the body through the whole cycle is 0.18 m -- 0.19 m for a wild frog
        crossing the lake at its own speed. */
-    const swim = st.swim || 0, held = st.held || 0;
+    const swim = st.swim || 0, held = st.held || 0, turn = st.turn || 0;
     if (swim > 0.01 || held > 0.01) {
       const a = strokeAt((t * SWIM_RATE + ph) / (Math.PI * 2));
       /* how much of the stroke the body is doing: all of it at the speed its own
@@ -844,8 +861,22 @@
          stops stroking over a few frames instead of at one instant. */
       const amp = Math.min(1, swim) * Math.min(1, held * 3);
       if (p.swimKick) {
+        /* A body that is turning kicks harder with the leg on the outside of the
+           turn: that leg has to carry the body round the arc as well as along
+           it, and the inside leg is being dragged. A breaststroke turn is one leg
+           reaching out and the other hardly reaching at all, and it is what makes
+           the turn read as caused rather than as slid through. `sg` is the part's
+           own side, and a heading that grows is a turn to the body's own right,
+           so the product is positive on the leg that has to do the work. Read off
+           the foot at the tightest arc a frog holds, the outside leg sweeps 0.37 m
+           fore and aft and carries 1.02 m through the water while the inside leg
+           sweeps 0.29 m and carries 0.72 m, and the outside leg reaches 0.04 m
+           further past the flank than the inside one. The body's own heave is
+           deliberately left out of this: the body is one part, and what it does
+           belongs to the stroke as a whole. */
+        const tn = Math.max(-1, Math.min(1, turn / TURN_FULL)) * sg;
         const hp = p.heldPose || [0, 0, 0], knee = anim === 'knee';
-        rx = hp[0] * held + a[knee ? 1 : 0] * amp;
+        rx = hp[0] * held + a[knee ? 1 : 0] * amp * (1 + TURN_KICK * TURN_FOLD * tn);
         /* the sideways turn of the stroke. A leg hanging down is swung out by a
            roll about the body's own fore-and-aft axis, and a leg laid back along
            the body is swung out by a yaw about the vertical -- the hip does not
@@ -857,8 +888,16 @@
            never came together behind the body however the numbers were turned.
            The side is the part's own `sign`, which is not the timing mirror the
            paragraph above drops: both legs swing out away from the centre line
-           together and shut towards it together. */
-        const cp = Math.cos(rx), sp = Math.sin(rx), out = a[knee ? 3 : 2] * amp;
+           together and shut towards it together. The turn opens the outside leg
+           as it gathers and leaves the shut at the end of the drive alone,
+           because both feet finish on the centre line behind a body whether that
+           body is turning or not: turn the shut as well and the outside foot is
+           carried 0.068 m across the centre line of the body it hangs from, which
+           is a foot pointing in, and that is the one thing this pair was
+           untangled for. */
+        const cp = Math.cos(rx), sp = Math.sin(rx);
+        const a3 = a[knee ? 3 : 2];
+        const out = a3 > 0 ? a3 * amp * (1 + TURN_KICK * tn) : a3 * amp;
         ry = hp[1] * held - sg * out * sp;
         rz = hp[2] * held + sg * out * cp;
         /* and the stroke has taken the part's turn away from the land gait, so

@@ -2505,15 +2505,201 @@ const { sim } = require('./simwait');
      read over the whole range of stroke strengths -- which is the way a body
      holds itself: legs out while it picks its way, legs in line when it is going
      somewhere. A body standing in water keeps the land pose, and its foot stays
-     where the land pose puts it. */
+     where the land pose puts it.
+     A body that is turning reaches wider still, and that is the turn and not a
+     fault: the leg on the outside of the arc has to reach out to push the body
+     round it. Read over the whole range of turn rates at the whole range of
+     stroke strengths, the widest the leg gets is 0.207 m -- a body at 0.42 of its
+     stroke, turning at the tightest arc its body holds -- against 0.192 m going
+     straight, and the foot that crosses the centre line of its own body gets
+     0.009 m past it at a full stroke against 0.005 m going straight. See
+     `turningBodyKicksWithItsOutsideLeg` below. */
   check('a body the water holds up holds its feet out at its own sides, not crossed under itself',
     !!kFl && !!kSw && !!kWl && kFl.footX >= 0.18 && kSw.footX >= 0.25 && kWl.footX >= 0.25, kick);
   check('and neither foot reaches across the centre line of its own body',
-    !!kFl && !!kSw && !!kWl && kFl.footCross <= 0.005 && kSw.footCross <= 0.005 &&
-    kWl.footCross <= 0.005, kick);
+    !!kFl && !!kSw && !!kWl && kFl.footCross <= 0.012 && kSw.footCross <= 0.012 &&
+    kWl.footCross <= 0.012, kick);
   check('the water legs stay within a webbed foot of the haunch they hang from',
-    !!kSw && !!kWl && !!kLd && kSw.legOut <= 0.20 && kWl.legOut <= 0.20 &&
+    !!kSw && !!kWl && !!kLd && kSw.legOut <= 0.23 && kWl.legOut <= 0.23 &&
     kLd.legOut <= 0.09 && kLd.footX >= 0.15, kick);
+
+  /* 10y. a body turning in the water kicks with the leg on the outside of the
+     turn. Every number the two steps above read is the same for the left leg and
+     the right, and that is right for a body going straight and wrong for one that
+     is not: a body carving an arc came round with both legs stroking identically,
+     so the turn was something happening to it rather than something it was doing,
+     and the tell was plainest at the edge of the lake, where a body has to turn
+     to stay in the water. It leaned -- the lean had been there since the arc was
+     put in -- and its legs went on cycling symmetrically underneath it.
+     A breaststroke turn is one leg reaching out and the other hardly reaching at
+     all: the leg on the outside of the arc has to carry the body round as well as
+     along it, and the leg on the inside is being dragged. So the claim is read
+     off the foot, on a body that is really turning. The state the draw uploads is
+     captured off the renderer exactly as in the step above; the body is driven
+     with its aim swung at a steady rate, which is what makes it hold an arc
+     instead of a line; and the cycle is then walked over three seconds of the
+     stroke's own clock, so the extremes are the stroke's own and this file keeps
+     no copy of the stroke rate.
+     Which leg is which is worth spelling out once, because it is not what the
+     names say. The model is authored facing +z and `M4.faceY` turns it by PI -
+     yaw, so the model's own +x lands on the body's left: the parts named `thighR`
+     and `shinR` hang on the animal's left side and the pair named L on its right.
+     A heading that grows is a turn to the body's own right. A right turn
+     therefore has to show the R parts working harder, and that is the whole
+     claim -- and it is also the reason the turn rate handed to the draw is
+     signed, which it was not: read with `Math.abs`, the lean was the same
+     whichever way the body turned, and every body banked away from half of its
+     own turns. */
+  const turn = await step('turningBodyKicksWithItsOutsideLeg', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
+    const was = { form: p.form, x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      vx: p.vx, vy: p.vy, vz: p.vz, time: g.time, mode: g.mode, vital: p.vital, dry: p.dry,
+      fright: p.fright, air: p.air, grounded: p.grounded, bank: p.bank, bend: p.bend,
+      cam: { d: g.cam.d, fov: g.cam.fov }, frame: g._camFrame, tp: g.thirdPerson };
+    p.form = 'frogpear'; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
+    g.mode = 'play';
+    /* water deep enough to float in, and deep for ten metres in each direction
+       out of it: a body holding an arc covers ground, and one that runs aground
+       stops turning, which is not a turn to read a turn off */
+    const depth = (x, z) => {
+      let top = -1, n = 0;
+      for (let y = W.h - 1; y >= 0; y--) {
+        if (W.liquidAt(x, y, z)) { if (top < 0) top = y; n++; }
+        else if (top >= 0) return W.solidAt(x, y, z) ? { top, n } : null;
+      }
+      return null;
+    };
+    let spot = null, room = 0;
+    for (let z = 74; z < 140; z += 2) for (let x = 46; x < 112; x += 2) {
+      const d = depth(x, z);
+      if (!d || d.n < 6) continue;
+      let r = 1e9;
+      for (let q = 2; q <= 12 && r > 6; q += 2)
+        for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const e = depth(x + ax * q, z + az * q);
+          if (!e || e.n < 3) r = Math.min(r, q);
+        }
+      if (r > room) { room = r; spot = { x: x + 0.5, z: z + 0.5, top: d.top }; }
+    }
+    if (!spot) return { error: 'no lake with room to hold an arc' };
+    const raw = N.MODELS.frog.parts;
+    const parts = raw.map(q => ({ part: q, pivot: q.pivot || [0, 0, 0] }));
+    const by = {}; for (const e of parts) by[e.part.name] = e;
+    const SC = p.bodyScale();
+    const FLANK = Math.abs(raw[0].boxes[0][0]) * SC;   // the flank of the body itself
+    /* the webbed foot, carried through the two joints the draw is about to
+       upload: how far along the body it has gone, how far out past the flank the
+       leg reaches, how far it has actually travelled through the water -- which
+       is the water this leg pushed -- and how far it has crossed the body's own
+       centre line, which is the one thing it must never do */
+    const foot = (nm, st) => {
+      const e = by[nm], m = N.partMatrix(N.M4.create(), N.M4.create(), e, st, parts);
+      const bx = e.part.boxes[e.part.boxes.length - 1];
+      const cx = bx[0] + bx[3] / 2, cy = bx[1] + bx[4] / 2, cz = bx[2] + bx[5] / 2;
+      let lo = 1e9, hi = -1e9;
+      for (const b of e.part.boxes)
+        for (const fx of [b[0], b[0] + b[3]])
+          for (const fy of [b[1], b[1] + b[4]])
+            for (const fz of [b[2], b[2] + b[5]]) {
+              const px = m[0] * fx + m[4] * fy + m[8] * fz + m[12];
+              if (px < lo) lo = px; if (px > hi) hi = px;
+            }
+      const side = nm.endsWith('L') ? -1 : 1;
+      return { x: m[0] * cx + m[4] * cy + m[8] * cz + m[12],
+        y: m[1] * cx + m[5] * cy + m[9] * cz + m[13],
+        z: m[2] * cx + m[6] * cy + m[10] * cz + m[14],
+        leg: Math.max(-lo, hi) * SC - FLANK,
+        cross: (side < 0 ? Math.max(0, hi) : Math.max(0, -lo)) * SC };
+    };
+    const stroke = (st0) => {
+      const r = {};
+      for (const nm of ['shinL', 'shinR']) {
+        let zlo = 1e9, zhi = -1e9, ylo = 1e9, yhi = -1e9, leg = 0, cross = 0, path = 0, prev = null;
+        for (let i = 0; i <= 180; i++) {
+          const st = Object.assign({}, st0, { t: st0.t + i / 60, _loc: 1 });
+          const q = foot(nm, st);
+          if (q.z < zlo) zlo = q.z; if (q.z > zhi) zhi = q.z;
+          if (q.y < ylo) ylo = q.y; if (q.y > yhi) yhi = q.y;
+          if (q.leg > leg) leg = q.leg;
+          if (q.cross > cross) cross = q.cross;
+          if (prev) path += Math.hypot(q.x - prev.x, q.z - prev.z);
+          prev = q;
+        }
+        r[nm] = { fore: +((zhi - zlo) * SC).toFixed(3), rise: +((yhi - ylo) * SC).toFixed(3),
+          leg: +leg.toFixed(3), cross: +cross.toFixed(3), path: +(path * SC).toFixed(3) };
+      }
+      return r;
+    };
+    // the state the renderer hands the meshes, off the renderer itself
+    const pm = N.partMatrix, seen = [];
+    N.partMatrix = function (o, b, e, st, ps) {
+      if (!st._loc && e.part.name === 'body' && st.phase === 0 && st.t === g.time) seen.push(st);
+      return pm.apply(this, arguments);
+    };
+    const restore = () => {
+      N.partMatrix = pm;
+      Object.assign(p, was);
+      g.time = was.time; g.mode = was.mode; g.thirdPerson = was.tp;
+      g.cam.d = was.cam.d; g.cam.fov = was.cam.fov; g._camFrame = was.frame;
+    };
+    const drive = (aim) => {
+      p.x = spot.x; p.z = spot.z; p.y = spot.top - 1.2;
+      p.vx = 0; p.vy = 0; p.vz = 0; p.yaw = 0; p.pitch = 0;
+      p.faceYaw = 0; p.bank = 0; p.bend = 0; p.grounded = false;
+      let turned = 0;
+      for (let i = 0; i < 100; i++) {
+        p.yaw += aim / 60;                       // the aim swung at a steady rate
+        p.update(1 / 60, { fwd: true }, g);
+      }
+      turned = N.angleDelta(0, Math.atan2(p.vx, -p.vz));
+      seen.length = 0;
+      const tp = g.thirdPerson; g.thirdPerson = true;
+      g.cam.d = 1.5 + 2.25 * p.size()[1];
+      g.updateEnv(); g._camFrame = g.shootCamera(p); g.render(); g._camFrame = null;
+      g.thirdPerson = tp;
+      const st = seen.length ? Object.assign({}, seen[0]) : null;
+      if (!st) return { error: 'the draw handed no state for this body' };
+      const out = stroke(st);
+      out.turn = +(st.turn || 0).toFixed(3);
+      out.swim = +(st.swim || 0).toFixed(3);
+      out.bend = +p.bend.toFixed(3);
+      out.bank = +p.bank.toFixed(3);
+      out.turned = +turned.toFixed(2);
+      out.spd = +Math.hypot(p.vx, p.vz).toFixed(2);
+      return out;
+    };
+    const out = { spot, straight: drive(0), right: drive(1.5), left: drive(-1.5) };
+    restore();
+    return out;
+  });
+  const tStr = turn.straight, tR = turn.right, tL = turn.left;
+  check('a body swimming straight strokes both legs alike: the turn has not touched them',
+    !!tStr && tStr.turn === 0 && tStr.spd > 3 &&
+    tStr.shinL.fore === tStr.shinR.fore && tStr.shinL.path === tStr.shinR.path &&
+    tStr.shinL.leg === tStr.shinR.leg, turn);
+  check('a body that is really turning is holding an arc, not a line',
+    !!tR && !!tL && Math.abs(tR.turned) > 1 && Math.abs(tL.turned) > 1 &&
+    tR.turned * tL.turned < 0 && tR.spd > 3, turn);
+  /* the model's R parts hang on the animal's left side (see the note above), and
+     a heading that grows is a turn to its own right: a right turn is the left leg
+     doing the work, and it is doing it by reaching further along the body,
+     further past the flank, and by carrying more water */
+  check('a body turning right drives the leg on its own left harder',
+    !!tR && tR.turn > 1 && tR.shinR.fore > tR.shinL.fore * 1.15 &&
+    tR.shinR.path > tR.shinL.path * 1.2 && tR.shinR.leg > tR.shinL.leg + 0.01, turn);
+  check('and the leg on its inside is being dragged: it strokes less than it does going straight',
+    !!tR && tR.shinL.fore < tStr.shinL.fore * 0.95 && tR.shinL.path < tStr.shinL.path * 0.95, turn);
+  check('turning left is the same turn the other way: the two legs swap',
+    !!tL && tL.turn < -1 && Math.abs(tL.turn - -tR.turn) < 0.05 &&
+    Math.abs(tL.shinL.fore - tR.shinR.fore) < 0.02 &&
+    Math.abs(tL.shinR.fore - tR.shinL.fore) < 0.02 &&
+    Math.abs(tL.shinL.path - tR.shinR.path) < 0.02, turn);
+  check('the body leans into the turn it is making, and the other way for the other turn',
+    tR.bank > 0.2 && tL.bank < -0.2 && Math.abs(tR.bank + tL.bank) < 0.02, turn);
+  check('and a turning body still sweeps its feet further along the body than up and down',
+    tR.shinR.rise < tR.shinR.fore * 0.75 && tR.shinL.rise < tR.shinL.fore * 0.75 &&
+    tR.shinR.cross <= 0.012 && tR.shinL.cross <= 0.012 &&
+    tR.shinR.leg <= 0.23 && tR.shinL.leg <= 0.23, turn);
 
   /* 10w. and the body that is drawn never reaches under the ground it is
      standing on. Everything above asks what the legs are *doing*; this asks

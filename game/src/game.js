@@ -1183,7 +1183,9 @@
           flap: c.flap === undefined ? 1 : c.flap,
           // only a body the data gives a swim speed to: a bear wading still walks
           swim: strokeOf(c.held, c.speed, c.sp.swimSpeed),
-          held: c.held || 0
+          held: c.held || 0,
+          // signed rad/s of heading: the outside leg of a turn does the work
+          turn: c.bend || 0
         };
         const wopt = bodyWater(c, this.env.liqK);
         for (const e of parts) {
@@ -1236,7 +1238,9 @@
              valley whose hold is eased, so a stroke comes in over a few frames
              and goes out the same way instead of in one. */
           swim: p.formDef.swim ? strokeOf(p.held, Math.hypot(p.vx, p.vz), p.cruise) : 0,
-          held: p.held || 0
+          held: p.held || 0,
+          // signed rad/s of heading: the outside leg of a turn does the work
+          turn: p.bend || 0
         };
         const wopt = bodyWater(p, this.env.liqK);
         for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), wopt);

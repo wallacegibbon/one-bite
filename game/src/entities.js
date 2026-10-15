@@ -19,6 +19,11 @@
      it is about how much of the turn the body shows, and at these speeds a real
      wing shows atan(sideways / 9.8). */
   const LEAN_G = 9.8;
+  /* A heading read twice a frame off a body crawling through water and bumping
+     its banks jitters by a degree or two, and a lean built on that jitter would
+     have the body weaving its shoulders while it swam dead straight. Below this
+     many rad/s of heading there is no turn at all. */
+  const BEND_DEAD = 0.12;   // rad/s
 
   /* How far under the surface the water holds a body it is holding up, measured
      to the **crown** of that body and not to its feet. One number for every such
@@ -97,6 +102,9 @@
       this.yaw = 0; this.pitch = 0;
       // what the body actually looks like: facing and bank are eased, never snapped
       this.faceYaw = 0; this.bank = 0;
+      // and the signed rate that lean comes from, in rad/s of heading: a
+      // swimming body kicks its outside leg with it (see `turn` in partAngles)
+      this.bend = 0;
       /* and the third angle: how much the body is pointing up or down along the
          path it is taking. Nose down positive, because that is the angle rotX
          takes. Only a body the air or the water is holding up has one -- feet
@@ -464,9 +472,16 @@
          degrees leans a few degrees, and a body at the tightest arc its data
          allows leans the full 0.45. */
       const hd1 = spd > 0.05 ? Math.atan2(this.vx, -this.vz) : hd0;
-      const bendRate = spd > 0.3 ? Math.abs(N.angleDelta(hd0, hd1)) / Math.max(dt, 0.001) : 0;
+      /* The turn rate is signed, and it has to be: the lean is the sideways push
+         the arc needs, and a body turning left pushes the other way. Reading it
+         with `Math.abs` banked every body the same way whichever way it turned —
+         a body leaning out of its own turn for half of them. `bend` is that
+         signed rate, in rad/s of heading, and it is also what a swimming body
+         kicks with: see `turn` in `partAngles`. */
+      const bend = spd > 0.3 ? N.angleDelta(hd0, hd1) / Math.max(dt, 0.001) : 0;
+      this.bend = Math.abs(bend) < BEND_DEAD ? 0 : bend;
       const lean = (fly || this.inWater)
-        ? Math.max(-0.45, Math.min(0.45, Math.atan(bendRate * spd / LEAN_G)))
+        ? Math.max(-0.45, Math.min(0.45, Math.atan(bend * spd / LEAN_G)))
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
@@ -1018,6 +1033,9 @@
       this.inWater = false;
       // and the fifth: a body in the air or in the water turns by tilting
       this.bank = 0;
+      // and the signed rate that tilt comes from, which is also what a swimming
+      // body kicks its outside leg with (see `turn` in partAngles)
+      this.bend = 0;
       // and the sixth: the water is holding this body up, not the ground under it
       this.held = 0;
       // and the seventh: the same body points along the path it is taking
@@ -1564,9 +1582,10 @@
          crossing the valley with its yaw swinging through ninety degrees and the
          body dead level was the tell, and it is the one body the player spends
          the most time watching. */
-      const bendRate = spd > 0.3 ? Math.abs(N.angleDelta(yaw0, this.yaw)) / Math.max(dt, 0.001) : 0;
+      const bend = spd > 0.3 ? N.angleDelta(yaw0, this.yaw) / Math.max(dt, 0.001) : 0;
+      this.bend = Math.abs(bend) < BEND_DEAD ? 0 : bend;   // signed: see Player.update
       const lean = (this.isFlyer() && this.state !== 'roost') || inWater
-        ? Math.max(-0.45, Math.min(0.45, Math.atan(bendRate * spd / LEAN_G)))
+        ? Math.max(-0.45, Math.min(0.45, Math.atan(bend * spd / LEAN_G)))
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
