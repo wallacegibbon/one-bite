@@ -46,6 +46,10 @@
       id: 'frog', cn: '雨蛙', en: 'Mirrorlake Frog', model: 'frog', scale: 0.13,
       habitat: ['mirrorlake', 'glowglade', 'starfall'], active: 'both',
       locomotion: 'amphibian', speed: 1.8, swimSpeed: 4.6, turn: 1.9, hop: { up: 6.0, period: 0.9 }, alert: 12, herd: 12,
+      /* how far under the level the water floats it a resting body of this kind
+         hangs: a frog built for the lake does not lie under the surface film. The
+         body worn from this animal's fruit is held at the same depth. */
+      hover: 1.6,
       fruit: 'frogpear',
       attitude: { self: 'calm', default: 'ignore', owl: 'flee', bear: 'ignore' },
       dex: '雨后整片湖岸一起叫，声音能压过钟塔。它们不喝水——它们靠皮肤喝。',

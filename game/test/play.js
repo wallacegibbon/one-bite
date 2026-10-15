@@ -1279,14 +1279,19 @@ const { sim } = require('./simwait');
        sand's identity is in its red; the lake's law eats red nine times faster
        than it eats blue. Over the pixels the water covers, the mean of each
        channel in the wet frame against the same channel in the dry one: at this
-       lens the red falls to 0.216 of what it is dry and the blue keeps 0.807. A
-       tint painted over the frame would take the same fraction off every
+       lens the red falls to 0.17 of what it is dry, the green to 0.45 and the
+       blue keeps 0.711. A tint painted over the frame would take the same
+       fraction off every
        channel, and the lake does not -- that is the difference between water and
        shade. The old test asked the other question, how much of the bed's own
-       spread survives, and the answer turned out to mean nothing: the surface
-       puts as much variation into the picture -- its own reflection, its own
-       in-scattering -- as the bed loses, so at a lens 5 m over a 3 m shelf the
-       wet frame is 2.7 times as varied as the dry bed under it. */
+       spread survives the surface, and it meant nothing at the time: the lake
+       was an aquarium, the surface put as much variation into the picture -- its
+       own reflection, its own in-scattering -- as the water took out, and at a
+       lens 5 m over a 3 m shelf the wet frame was 2.7 times as varied as the dry
+       bed under it. Ask the same question with the row eating at the rate it
+       eats now and it is the question that decides whether a lake hides its
+       floor: that is `aLakeHidesItsBedFromItsBank`, and it is measured against
+       the same bed with nothing the water does left in the frame. */
     let rW = 0, rD = 0, bW = 0, bD = 0;
     for (const i of over) { rW += wet[i]; rD += dry[i]; bW += wet[i + 2]; bD += dry[i + 2]; }
     const redRatio = +(rW / rD).toFixed(3), blueRatio = +(bW / bD).toFixed(3);
@@ -1312,9 +1317,9 @@ const { sim } = require('./simwait');
      one straight down on it. Fresnel says the grazing lens has most of its view
      thrown back -- and at noon the brightest thing in the valley is the sky --
      while the steep one lets nearly all of it through to the bed, which is the
-     darkest thing there. Measured over the pixels the water covers: 105.3
-     against 81.1, and the grazing frame is the bluer of the two, 133.1 against
-     107.4. The dry bed under the same two lenses is the other way round -- 171.6
+     darkest thing there. Measured over the pixels the water covers: 94 against
+     59.8, and the grazing frame is the bluer of the two, 125.7 against 93. The
+     dry bed under the same two lenses is the other way round -- 171.6
      against 178.7, blue 126.3 against 129.8 -- which is what a floor does and a
      surface does not. */
   const mirror = await step('lakeMirrorsTheSky', () => {
@@ -1400,7 +1405,8 @@ const { sim } = require('./simwait');
     !mirror.error && mirror.graze.lum > mirror.steep.lum + 10, mirror);
   check('and the grazing frame is the bluer of the two, which is the sky coming back and not the bed showing through',
     mirror.graze && mirror.steep && mirror.graze.blue > mirror.steep.blue + 10 &&
-    mirror.graze.blue > mirror.graze.dryBlue, mirror);
+    mirror.graze.blue > mirror.graze.dryBlue - 8 &&
+    mirror.graze.red < mirror.graze.dryRed * 0.5, mirror);
 
   /* 10n. the body faces the way it walks. Models are authored facing +Z (the
      human's eyes and nose sit at +Z, its hair at -Z) while a heading of `yaw`
@@ -3762,9 +3768,9 @@ What was measured before any of this was fixed, over 180 frames of walking
     wetBody.tilt.inWater === true && wetBody.tilt.headWater === false, wetBody);
   /* How much the water changes the half of the body under the surface is no
      longer a number the surface itself carries. The water is a law now, and at
-     the metre of lake this shelf has the red of a leg is eaten 42%, the green
-     15%, the blue 6%, and the water adds 6% of its own colour over the top: the
-     leg still reads as a leg, under water. The flat 0.72 sheet shifted those
+     the metre of lake this shelf has the red of a leg is eaten 75%, the green
+     33%, the blue 14%, and the water adds 6% of its own colour over the top:
+     the leg still reads as a leg, under water. The flat 0.72 sheet shifted those
      pixels six times as far and made the body look like a body behind blue
      glass. So the wet half is measured against the dry half of the same body in
      the same frame: the water has to move every pixel of it, and move it
@@ -4049,12 +4055,13 @@ What was measured before any of this was fixed, over 180 frames of walking
        in it. "Blue over red" on its own can be met by painting the lake blue;
        this pair can only be met by the water doing what water does to light,
        because the same shot without it is dry sand again.
-       10. the same patch deeper down. Blue over red runs out of room here: the
-       frame is mixing towards the colour the water scatters back into the ray,
-       and that colour is itself 66 bluer than red, so once the bed's own colour
-       has been eaten the difference stops growing. What keeps going as the bed
-       goes deeper is which of the bed's colours is left: the red goes first and
-       the blue outlives it. That is the difference between a depth and a tint. */
+       10. the same patch deeper down. The red has nowhere left to go at three
+       metres of this lake: 15 of it is left, and the water's own red is 15.3, so
+       the ladder is carried by the other two. The blue keeps 95 of the 135 a dry
+       bed shows at three metres and 73.5 at six, and the light as a whole falls
+       from 57.4 to 45.5. That the bed's colours go one after another -- red
+       first, blue last -- and that they keep going as the bed goes deeper under a
+       lens that has not moved, is the difference between a depth and a tint. */
     const armDown = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true);
     const armDry = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true, true);
     const armDeep = shot(shallow.x, shallow.top + 1 - 0.25, shallow.z, 0, -1.5, true);
@@ -4112,20 +4119,22 @@ What was measured before any of this was fixed, over 180 frames of walking
   /* The floor a metre and a half in front of the lens, measured where the lens
      is looking rather than over the whole frame: the haze cannot reach a bed
      that close, so this is the absorption term's own ground. Two metres of water
-     over sand reads (34,117,116) -- the teal-green of a bed whose red was eaten
-     on the way down -- and the same lens with nothing the water does left in the
+     over sand reads (15,72,95) -- the teal of a bed whose red is already the
+     water's own red -- and the same lens with nothing the water does left in the
      frame reads (204,188,135): the colour of a lakebed that has never been under
-     water, and 95 luminance brighter. */
+     water, and 130 luminance brighter. */
   check('the lakebed at arm\'s length, two metres down, is the colour of water and not of dry sand',
     lakebedView.arm && lakebedView.armDown && lakebedView.armDown.near.blueMinusRed > 5 &&
     lakebedView.armDown.near.meanLum < 160, lakebedView);
   check('and it is the water eating the red that does it: switch it off and the same patch is dry sand again',
     lakebedView.armDry && lakebedView.armDry.near.blueMinusRed < -40 && lakebedView.armDry.near.red > 150 &&
     lakebedView.armDry.near.meanLum - lakebedView.armDown.near.meanLum > 25, lakebedView);
-  check('the same patch keeps losing its red as the bed goes deeper while its blue holds: it is a depth, not a tint',
-    lakebedView.armDeep && lakebedView.armDeep.near.red < lakebedView.armDown.near.red * 0.6 &&
-    lakebedView.armDeep.near.blue > lakebedView.armDown.near.blue * 0.6 &&
-    lakebedView.armDeep.near.meanLum < lakebedView.armDown.near.meanLum - 20, lakebedView);
+  check('the same patch keeps being eaten as the bed goes deeper, and what is left of the bed is its blue: it is a depth, not a tint',
+    lakebedView.armDeep && lakebedView.armDown && lakebedView.armDry &&
+    lakebedView.armDown.near.red < lakebedView.armDry.near.red * 0.15 &&
+    lakebedView.armDown.near.blue > lakebedView.armDry.near.blue * 0.6 &&
+    lakebedView.armDeep.near.blue < lakebedView.armDown.near.blue - 15 &&
+    lakebedView.armDeep.near.meanLum < lakebedView.armDown.near.meanLum - 8, lakebedView);
 
   /* How far under the water a surface is belongs to the surface, not to the
      point its shading is read at. The mesher asked the world "how deep is this
@@ -4389,6 +4398,115 @@ What was measured before any of this was fixed, over 180 frames of walking
     Math.abs(sDownUnder.bed.near.lum - sDownOver.bed.near.lum) < 4 &&
     Math.abs(sDownUnder.bed.near.lum - sDownHigh.bed.near.lum) < 6,
     { under: sDownUnder && sDownUnder.bed.near, over: sDownOver && sDownOver.bed.near, high: sDownHigh && sDownHigh.bed.near });
+
+  /* A lake is not an aquarium. The report was that the bottom of Mirrorlake was
+     far too easy to see from its bank: at the absorption the block row carried
+     -- 0.16 per metre for the green the eye reads brightest, which is mountain-
+     tarn water -- a lens 40 cm over the surface picked out the blocks of a bed 6
+     m down: mean 62.2 with 11.2 of spread in the bed itself and 3.23 of it left
+     through the water. A lake with something living in it is not that clear. The
+     row now eats 2.55 times faster, which puts this lake's own visibility near
+     2.5 m, and the same bed keeps 0.045 of its spread: the water, not the bed.
+     The spread across the patch is what the eye reads as relief -- a bed is
+     blocks and water is not -- so it is measured against the same bed with
+     nothing the water does left in the frame, which is the only way to ask how
+     much of the bed survives without asking how bumpy that particular bed is.
+     What the eye reads as colour is the mean, and the deep patch has come to
+     within a luminance of the colour the water itself scatters back into the ray
+     (48.5 against the water's 49.7) while the bed 4 m down still stands 3 above
+     it. The ratio between the three colours is the one this row has always had:
+     that ratio is why the floor is teal and not grey. Only how fast the whole
+     thing happens was the part that was wrong. */
+  const clarity = await step('aLakeHidesItsBedFromItsBank', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, form: p.form,
+      third: g.thirdPerson, time: g.time, mode: g.mode, env: g.env, frame: g._camFrame,
+      lens: g._lens, herd: g.creatures, drops: g.drops };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch, form: was.form });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g.env = was.env;
+      g._camFrame = was.frame; g._lens = was.lens; g.creatures = was.herd; g.drops = was.drops;
+      return r;
+    };
+    g.mode = 'play'; g.thirdPerson = false; p.form = null;
+    g.time = N.DAY_LEN * (13 / 24);
+    g.creatures = []; g.drops = [];
+    // one column of each depth, flat water over it for 5x5 so the patch is a bed
+    // and not the far shore of the column next to it
+    const cols = {};
+    for (let z = 60; z < W.d - 20; z++) for (let x = 60; x < W.w - 20; x++) {
+      let top = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { top = y; break; }
+      if (top < 0) continue;
+      let bed = -1;
+      for (let y = top; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed < 0) continue;
+      const depth = top + 1 - bed;
+      if (depth < 2 || depth > 9 || cols[depth]) continue;
+      let ok = true;
+      for (let dx = -2; dx <= 2 && ok; dx++) for (let dz = -2; dz <= 2 && ok; dz++)
+        if (W.liquidSurfaceAt(x + dx, z + dz) !== top + 1) ok = false;
+      if (!ok) continue;
+      cols[depth] = { x: x + 0.5, z: z + 0.5, surf: top + 1, bed, depth };
+    }
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const px = new Uint8Array(w * h * 4);
+    const grab = (col, dry) => {
+      const eyeOff = p.eyePos() - p.y;
+      p.x = col.x; p.y = col.surf + 0.4 - eyeOff; p.z = col.z;
+      p.vx = p.vy = p.vz = 0; p.yaw = 0; p.pitch = -1.45;
+      // the dry shot is the control: the same lens with nothing the water does
+      // left anywhere in the frame, which is the bed as the spread it has itself
+      const ueWas = g.updateEnv, wetMesh = [];
+      if (dry) {
+        g.updateEnv = function () {
+          ueWas.call(g);
+          g.env.liqK = [0, 0, 0]; g.env.hazeK = [0, 0, 0]; g.env.hazeOn = 0;
+          g.env.inWater = 0; g.env.veil = [0, 0, 0];
+        };
+        for (let ci = 0; ci < W.chunks.length; ci++) {
+          const m = W.chunks[ci];
+          if (m && m[2]) { wetMesh.push([ci, m[2].count]); m[2].count = 0; }
+        }
+      }
+      g._camFrame = g.shootCamera(p); g.updateEnv(); g.render();
+      if (dry) {
+        g.updateEnv = ueWas;
+        for (const [ci, c] of wetMesh) W.chunks[ci][2].count = c;
+      }
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const cx = Math.floor(w / 2), cy = Math.floor(h / 2), R = 45;
+      let n = 0, sum = 0; const lums = [];
+      for (let y = cy - R; y < cy + R; y++) for (let x = cx - R; x < cx + R; x++) {
+        const i = (y * w + x) * 4;
+        const L = 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2];
+        n++; sum += L; lums.push(L);
+      }
+      const mean = sum / n;
+      let v = 0; for (const L of lums) v += (L - mean) * (L - mean);
+      g._camFrame = null;
+      return { mean: +mean.toFixed(1), sd: +Math.sqrt(v / n).toFixed(2) };
+    };
+    const rows = {};
+    for (const d of [3, 4, 6]) if (cols[d]) {
+      const dry = grab(cols[d], true), wet = grab(cols[d], false);
+      rows['d' + d] = { depth: d, dryMean: dry.mean, drySd: dry.sd, mean: wet.mean, sd: wet.sd,
+        keep: +(wet.sd / Math.max(0.01, dry.sd)).toFixed(3) };
+    }
+    // the colour the water itself scatters back into a ray, in the same
+    // luminance the patches are measured in
+    const veil = g.env.veil || [0, 0, 0];
+    const veilLum = +(0.3 * veil[0] * 255 + 0.59 * veil[1] * 255 + 0.11 * veil[2] * 255).toFixed(1);
+    return back({ K: W.liquidAbsorb(), veilLum, rows });
+  });
+  check('the bed 6 m down has merged into the water: a twentieth of its own relief survives, and its brightness is the water itself',
+    !!clarity.rows.d6 && clarity.rows.d6.drySd > 5 && clarity.rows.d6.keep < 0.1 &&
+    Math.abs(clarity.rows.d6.mean - clarity.veilLum) < 3, clarity);
+  check('while the bed 4 m down is still a bed: it keeps three tenths of its relief and stands over the colour of the water itself',
+    !!clarity.rows.d4 && clarity.rows.d4.drySd > 5 && clarity.rows.d4.keep > 0.2 &&
+    clarity.rows.d4.mean > clarity.veilLum + 2, clarity);
+  check('and the deeper the bed, the less of it survives the way up: the share of its relief the water leaves falls by an order of magnitude',
+    !!clarity.rows.d4 && !!clarity.rows.d6 && clarity.rows.d6.keep * 4 < clarity.rows.d4.keep, clarity);
 
   /* A mote the world adds to the frame -- a bubble, an ember, a firefly -- is
      not a surface. It is *added* to whatever the frame already holds, so the
@@ -5464,7 +5582,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const yPrev = new Map();
     for (const c of owls) yPrev.set(c, c.y);
     const n = Math.round(40 * 60);
-    const spread = [], bands = [];
+    const spread = [], bands = [], depths = [];
     let sameLine = 0, wet = 0, inside = 0, aboveSum = 0, aboveN = 0;
     let headIn = 0, crown = 0, jam = 0, crownIn = 0, flown = 0;
     const headHits = [], insideHits = [];
@@ -5490,6 +5608,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (wt < 0 || c.y > wt + 1) continue;
         const d = wt + 1 - c.y;
         ys.push(d);
+        depths.push(d);
         const e = each.get(c);
         if (d < e.lo) e.lo = d; if (d > e.hi) e.hi = d;
       }
@@ -5543,8 +5662,20 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     spread.sort((a, b) => a - b);
     bands.sort((a, b) => a - b);
+    depths.sort((a, b) => a - b);
+    // how deep the flock actually hangs in the water: the middle of the whole
+    // window, and the share of the samples that are within a metre of the
+    // surface film -- the number the report "the frogs sit too near the top of
+    // the water" is about
+    let nearFilm = 0;
+    for (const d of depths) if (d < 1) nearFilm++;
     const out = { seconds: 40, frogs: frogs.length, owls: owls.length, wetFrames: wet, inside,
       insideHits,
+      depthSamples: depths.length,
+      depthMedian: +(depths[depths.length >> 1] || 0).toFixed(2),
+      depthLow: +(depths[Math.floor(depths.length * 0.05)] || 0).toFixed(2),
+      depthHigh: +(depths[Math.floor(depths.length * 0.95)] || 0).toFixed(2),
+      nearFilmPct: Math.round(nearFilm / Math.max(1, depths.length) * 100),
       sameLinePct: Math.round(sameLine / Math.max(1, wet) * 100),
       spreadMedian: +(spread[spread.length >> 1] || 0).toFixed(2),
       spreadMax: +(spread[spread.length - 1] || 0).toFixed(2),
@@ -5617,6 +5748,14 @@ What was measured before any of this was fixed, over 180 frames of walking
     !flock.error && flock.spreadMedian > 1 && flock.spreadMax > 2, flock);
   check('and at any one instant they are spread over several layers of it',
     !flock.error && flock.bandMedian >= 4, flock);
+  /* The depth itself is the animal's own, not the water's: 30 cm under the film
+     is where a body that has to come up for air hangs, and a frog's record says
+     1.6 m. Before that, over ten minutes of a running world, the twelve spent
+     46% of their samples within a metre of the surface film at a mean of 1.47 m
+     down -- a sheet of frogs under the skin of the lake, which is the report
+     "the frogs sit too near the top of the water". */
+  check('and they hang in the body of the lake instead of under its surface film: the middle of the flock is over 1.5 m down and under a tenth of the samples are within a metre of the surface',
+    !flock.error && flock.depthMedian > 1.5 && flock.nearFilmPct < 10, flock);
   check('a bird carries its whole body through the air, feet to head',
     !flock.error && flock.headInPct === 0, flock);
   check('it flies above the crowns it crosses, not wedged under them',
@@ -5897,7 +6036,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         wFlips: wF,
         span: +(Math.max(...tail) - Math.min(...tail)).toFixed(4), rev };
     };
-    const out = { wt, bed };
+    const out = { wt, bed, hover: N.CREATURE_BY_ID[N.FRUIT_BY_ID.frogpear.creature].hover };
     place('frogpear', bed + 3, lake); out.tall = +p.size()[1].toFixed(3); out.mid = glide(10, {}); // let go of mid-water
     place('frogpear', wt + 0.6, lake); out.surf = glide(10, {});        // let go of at the surface
     place('frogpear', bed + 0.0001, lake); out.fromBed = glide(12, {}); // put on the bottom, left
@@ -5945,27 +6084,31 @@ What was measured before any of this was fixed, over 180 frames of walking
     return out;
   });
   /* The level the water holds a body at is a height, not a cell: the top face of
-     the topmost water block, less the height of that body, less the 30 cm its
-     back hangs under the surface. The float level used to be taken off the index
+     the topmost water block, less the height of that body, less the depth a body
+     of that kind hangs at. The float level used to be taken off the index
      of that block, which set every body the water holds a full block under the
      surface -- the wild frogs of Mirrorlake hover 30 cm down and 3 m down, and at
      (64.5,92.5) they were 1.3 m down and 4 m down, and the body you wear with
-     them. And the 30 cm used to be measured to the **feet**, which for a body
+     them. And that depth used to be measured to the **feet**, which for a body
      half a metre tall left its head 20 cm out of the water: seen from the bank a
      floating frog was a cork with four legs under it, and the eyes of the body
      you wear -- 0.42 m up from its own feet -- sat 12 cm *above* the surface, so
      the animal built for the lake looked at the shore and never once into it.
-     Measured to the crown, the whole body hangs in: at (72.5,85.5) a frogpear let
-     go of mid-water holds 14.2 against a surface of 15 and a bed top at 8 -- feet
-     80 cm down, back 30 cm down, eyes 38 cm down -- and the valley's own frog in
-     that same column holds 14.27 at the top of its dip and 8.13 at the bottom of
-     it. The depth is the body's own height plus that 30 cm, so a bigger water
-     animal hangs deeper by exactly its own size and no new number is needed. */
+     Measured to the crown, the whole body hangs in. The depth itself is the
+     animal's, not the water's: 30 cm is what a body that has nothing to say -- a
+     human, anything that has to come up for air -- hangs at, and the frog's own
+     record says 1.6 m, because an animal built for a lake does not lie under the
+     surface film. At (64.5,92.5), a surface of 15 and a bed top at 8, a frogpear
+     let go of mid-water holds 12.9 -- feet 2.1 m down, back 1.6 m down, eyes 1.68
+     m down -- and the valley's own frog in that same column holds 12.86 at the top
+     of its dip and 8.13 at the bottom of it, which is the same animal hanging at
+     the same depth. The body's own height still sets part of it, so a bigger
+     water animal hangs deeper by exactly its own size and no new number is needed. */
   check('a body that breathes water and stops moving floats, it does not settle on the bottom',
     !buoy.error && buoy.mid.g === 0 && buoy.mid.y > buoy.bed + 1 && buoy.mid.headW === 1, buoy);
   check('and it hangs under the surface instead of floating on it: its own height down, plus ' +
-        'the 30 cm its back sits under the top face of the water, and its eyes are in the water',
-    !buoy.error && Math.abs(buoy.mid.y - (buoy.wt + 1 - buoy.tall - 0.3)) < 0.05 &&
+        'the depth its own record says a body of that kind hangs at, and its eyes are in the water',
+    !buoy.error && Math.abs(buoy.mid.y - (buoy.wt + 1 - buoy.tall - buoy.hover)) < 0.05 &&
     buoy.mid.headW === 1 && buoy.mid.eye < -0.2, buoy);
   check('and it comes to rest there: the height does not swing and it never changes its mind',
     !buoy.error && buoy.mid.span < 0.01 && buoy.mid.rev === 0 && buoy.mid.spd < 0.01, buoy);

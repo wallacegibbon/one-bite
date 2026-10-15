@@ -44,8 +44,14 @@
   const FLOAT_UNDER = 0.3;
   /* The level the water holds a body at: the surface of the column it is in, less
      the height of that body, less the 30 cm its crown hangs under the surface.
-     A height, not a cell -- see `liquidSurfaceAt` in world.js. */
-  function floatLevel(wSurf, tall) { return wSurf - tall - FLOAT_UNDER; }
+     A height, not a cell -- see `liquidSurfaceAt` in world.js.
+     The last term is the animal's own, not the water's. A body built for the lake
+     does not lie under the surface film: it hangs at a depth of its kind and
+     comes up when it wants the sky, and `hover` on the animal's record says how
+     far under that floating level a body of that kind rests. A body with nothing
+     to say -- a human, or any body that has to come up for air -- keeps the 30 cm
+     its back hangs under the surface, which is what it has always kept. */
+  function floatLevel(wSurf, tall, hover) { return wSurf - tall - (hover === undefined ? FLOAT_UNDER : hover); }
   /* The ceiling of the water's hold is the surface itself, less a hair. Whether a
      body is in the water at all is decided by its feet being under the surface
      (`inWater`, far above), so a body allowed to come level with the surface
@@ -156,6 +162,16 @@
        the human body takes it from the form def above. */
     bodyScale() {
       return this.form ? N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature].scale : HUMAN.scale;
+    }
+    /* How far under the level the water floats a body of this shape the water
+       holds this body when nobody is swimming it. The animal's own record says
+       it, so the body you wear and the animal walking the shore are the same
+       animal and hang at the same depth; a body with nothing to say keeps the
+       30 cm its back hangs under the surface film. */
+    hoverDepth() {
+      if (!this.form) return FLOAT_UNDER;
+      const c = N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature];
+      return c && c.hover !== undefined ? c.hover : FLOAT_UNDER;
     }
     /* How hard this body is asking for a stride, 0..1. The draw sizes the swing
        by this and `walkGait` sizes the stride by it, and they have to be the same
@@ -546,8 +562,8 @@
            frog let go of in mid-water sank at a terminal 0.89 m/s, landed on the
            lakebed 3 m below, was reported standing on the bottom, and stopped
            there -- a water animal that stops moving sank. A body built for water
-           is a body the water holds up: the wild frogs of the valley float just
-           under the surface and never touch the bottom of the deep part, and the
+           is a body the water holds up: the wild frogs of the valley hang at a
+           depth of their own and never touch the bottom of the deep part, and the
            body you wear was the only water-breathing body in the valley that
            went down. So the pull is the water's now: a body the water is holding
            is pushed back toward the level it holds it at, harder the further
@@ -562,9 +578,11 @@
            the bottom, and that is what it costs to wear a body that was not
            built for the lake. */
         const push = speed * 1.5;
-        // the level the water holds a body at is a height, not a cell, and it is
-        // the body's own height plus the 30 cm its back hangs under the surface
-        if (heldUp && !inp.sneak) this.vy += (floatLevel(wSurf, this.size()[1]) - this.y) * 2.2 * dt;
+        // the level the water holds a body at is a height, not a cell: the body's
+        // own height, the depth a body of that animal's kind rests at under the
+        // level it floats at, and for a body whose animal has no such number the
+        // 30 cm its back hangs under the surface
+        if (heldUp && !inp.sneak) this.vy += (floatLevel(wSurf, this.size()[1], this.hoverDepth()) - this.y) * 2.2 * dt;
         else this.vy -= 5.2 * dt * 0.55;
         this.vy += (inp.jump ? push : 0) * dt;
         if (inp.sneak) this.vy -= push * 0.6 * dt;
@@ -1021,7 +1039,7 @@
          is: measured over ten minutes of the world running, all twelve frogs
          sat at a mean depth of 0.30 m, every one of them. */
       this.huntH = 2.6 + Math.random() * 3.4;      // metres above the ground it flies over
-      this.diveTo = 0.5 + Math.random() * 3.0;     // how far under the surface this frog goes
+      this.diveTo = 1.5 + Math.random() * 2.5;     // how deep this frog hangs, m under the surface
       this.diveRate = 0.05 + Math.random() * 0.10; // and how fast that cycle runs, rad/s
       // the vertical velocity, and the same three signals the player carries, for
       // the same reason. It has to be a number: a body that is born on land and
@@ -1744,8 +1762,13 @@
              sinks now and then and comes back up to breathe, on a cycle of its
              own -- which is what twelve frogs on one lake look like when they
              are alive: a spread of depths that changes, not a line. The cycle
-             is squared so a body spends most of its time shallow and dips less
-             often than it rises; the surface is the ceiling and the bottom is
+             runs to the power 0.4 rather than squared, because squared is this
+             animal turned upside down: a frog hangs at a depth and comes up for
+             air now and then, it does not lie under the surface film and dive
+             occasionally. Squared, the twelve frogs of Mirrorlake spent 46% of a
+             ten minute watch within a metre of the surface film at a mean of
+             1.47 m down, which is the report that the frogs sit too near the
+             top of the water. The surface is the ceiling and the bottom is
              the floor, so in a column too shallow to swim in the frog simply
              stands, and in the deep part one frog can be hanging just under the
              surface while another is deep down and coming up. The depth is closed
@@ -1756,11 +1779,14 @@
              came up 0.47 m in its very first frame -- 28 m/s, faster than a
              falling bear -- every frame after it slower than the one before. */
           const cyc = 0.5 + 0.5 * Math.sin(this.t * this.diveRate + this.phase);
-          /* the shallowest a frog holds is the level the water holds the body you
-             wear at -- its own height down, plus the 30 cm its back hangs under
-             the surface -- and it is measured off the surface, not off the top
-             block of the water (`wt + 1` and `wSurf` are the same height) */
-          const target = Math.max(gyH + 0.05, floatLevel(wSurf, this.tall) - this.diveTo * cyc * cyc);
+          /* the shallowest a frog goes is the level the water holds a resting
+             body at -- its own height down, plus the depth its own record says a
+             body of its kind hangs at -- and it is measured off the surface, not
+             off the top block of the water (`wt + 1` and `wSurf` are the same
+             height). The depth comes off the same animal record the body you wear
+             reads, so the herd and the body you wear are the same animal and hang
+             in the same water the same way. */
+          const target = Math.max(gyH + 0.05, floatLevel(wSurf, this.tall, this.sp.hover) - this.diveTo * Math.pow(cyc, 0.4));
           const rate = sp.swimSpeed || sp.speed || 1.5;
           const want = target - this.y;
           const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;

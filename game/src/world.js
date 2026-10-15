@@ -54,8 +54,24 @@
               flat over every face of the surface, and only when the lens was
               above the water line. At two metres of water the three disagreed by
               48 luminance, which is the whole of "the lake is a different water
-              seen from the top than from the bottom". */
-           fogK: [0.55, 0.16, 0.06] });
+              seen from the top than from the bottom".
+              How fast these numbers eat is a decision about how clear this lake
+              is, and it was made twice. The first pass put in clear-water
+              numbers -- 0.16 per metre for the green the eye reads brightest --
+              which is a mountain tarn, and the frame showed the bottom of a
+              lake 6 m down as a set of blocks you could count, mean luminance
+              62 with 3.2 of spread across the patch against the water's own 49.
+              The report said the lakebed was far too easy to see from outside
+              the water, and a lake with something living in it does not look
+              like that. Green at 0.4 per metre puts this lake's own visibility
+              near 2.5 m, and the same bed 6 m down comes back at 48.5 with 0.5
+              of spread, which is the water and not the bed; a bed 3 m down keeps
+              2.8 of its spread where it kept 5.8, and a bed a metre down is
+              still the sand you are standing on. The ratio between the colours
+              is the one this row has always had, because that ratio is why the
+              floor is teal and not grey -- only how fast the whole thing happens
+              was the part that was wrong. */
+           fogK: [1.40, 0.40, 0.15] });
   def(6, { cn: '树干', c: [0.38, 0.27, 0.17], ct: [0.46, 0.34, 0.21] });
   def(7, { cn: '树叶', c: [0.20, 0.40, 0.18], soft: 1 });
   def(8, { cn: '针叶', c: [0.14, 0.30, 0.20], soft: 1 });
