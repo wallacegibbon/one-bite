@@ -12,6 +12,25 @@
   // body is gone), which moved frog pear and bruin fig down one block each.
   const SAVE_KEY = 'frutaria.save.v3';
 
+  /* A save is data the browser hands back forever, not data the game is holding
+     in memory: it can be the shape some other build wrote, a value a browser put
+     down wrong, or something a person typed into the console. Everything in it
+     lands in a slot the game indexes into, and none of the ways that goes wrong
+     are polite: a position that is a string never lands and the body is nowhere
+     at all, a clock that is a string stops the day, a queue holding a null throws
+     inside update() every frame and freezes the valley with nothing on screen to
+     say so, and a body wearing a fruit the valley no longer has throws on the
+     getter every frame reads. So the save is read through four questions -- is it
+     an object, is it a number, is it a list, is this a row of four numbers -- and
+     what cannot be answered is left at its default instead of being carried in.
+     These guard shapes, not values: a number a player typed for themselves is
+     their own business, and the game has no reason to police it. */
+  const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const num = (v, d) => Number.isFinite(v) ? v : d;
+  const list = v => Array.isArray(v) ? v : [];
+  const rows = v => list(v).filter(plain);
+  const cell = v => Array.isArray(v) && v.length === 4 && v.every(n => Number.isFinite(n));
+
   /* A fruit / plant / pit has no name of its own in the interface: it is read
      off the record in data/fruits.js, which carries a cn/en pair. */
   function itemName(id) { return N.disp(FRU[id] || PLANT[id] || { cn: id, en: id }); }
@@ -407,11 +426,10 @@
        partial save may hold only the trees, and then stashes[0] would be a tree
        while every "the town" lookup still expects the cellar. */
     mergeStashes(saved) {
-      const list = Array.isArray(saved) ? saved : [];
-      const savedCellar = list.find(s => s && s.id === 'cellar');
-      const cellar = savedCellar || this.makeCellar();
+      const kept = rows(saved).filter(s => s.id);
+      const cellar = kept.find(s => s.id === 'cellar') || this.makeCellar();
       cellar.kind = 'cellar';
-      return [cellar].concat(list.filter(s => s && s.id && s.id !== 'cellar'));
+      return [cellar].concat(kept.filter(s => s.id !== 'cellar'));
     }
 
     /* ------------------------- backpack ------------------------- */
@@ -1371,16 +1389,18 @@
     /* ------------------------- save ------------------------- */
     hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
     clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* nothing to clear */ } }
-    // what the start screen quotes back, without loading anything
+    /* What the start screen quotes back, without loading anything. A save that is
+       not an object is not offered back at all: the screen would otherwise promise
+       "walk back to where you left off" over a valley it cannot give. */
     saveInfo() {
       try {
         const s = JSON.parse(localStorage.getItem(SAVE_KEY));
-        if (!s) return null;
+        if (!plain(s)) return null;
         return {
-          day: s.day || 1,
-          hour: Math.floor(((s.time || 0) / DAY_LEN * 24) % 24),
-          items: (s.inv || []).length,
-          trees: (s.stashes || []).filter(x => x && x.kind === 'tree').length
+          day: num(s.day, 1),
+          hour: Math.floor((num(s.time, 0) / DAY_LEN * 24) % 24),
+          items: list(s.inv).length,
+          trees: rows(s.stashes).filter(x => x.kind === 'tree').length
         };
       } catch (e) { return null; }
     }
@@ -1413,29 +1433,52 @@
     load() {
       let s;
       try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { s = null; }
-      if (!s) return false;
+      if (!plain(s)) return false;
       // identity: keep the saved id (the world's memory is keyed on it), never a name we invented
-      this.id = s.id || this.id; this.name = s.name || '';
-      this.time = s.time; this.day = s.day;
-      this.inv = s.inv || [];
+      this.id = typeof s.id === 'string' ? s.id : this.id;
+      this.name = typeof s.name === 'string' ? s.name : '';
+      this.time = num(s.time, this.time); this.day = num(s.day, this.day);
+      this.inv = rows(s.inv);
       this.stashes = this.mergeStashes(s.stashes);
-      this.seen = s.seen || {}; this.dexFruit = s.dex || {}; this.stats = s.stats || this.stats;
-      for (const d of (s.diffs || [])) this.world.set(d[0], d[1], d[2], d[3]);
-      this.diffs = s.diffs || [];
-      this.regrow = s.regrow || [];
-      this.growQueue = s.growQueue || [];      // a planted pit must still be growing after a reload
-      this.drops = s.drops || [];              // fruit scattered on death stays recoverable
-      this.buffs = s.buffs || {};
-      this.posts = s.posts || []; this._owlUnlocked = !!s.owl;
-      const p = this.player;
-      Object.assign(p, { x: s.p.x, y: s.p.y, z: s.p.z, yaw: s.p.yaw, pitch: s.p.pitch,
-        vital: s.p.vital, form: s.p.form, formT: s.p.formT,
-        formMax: s.p.formMax || (s.p.formT || 1), dry: s.p.dry || 0 });
+      this.seen = plain(s.seen) ? s.seen : {};
+      this.dexFruit = plain(s.dex) ? s.dex : {};
+      this.stats = plain(s.stats) ? s.stats : this.stats;
+      /* A diff row is four numbers and a place inside the valley: anything else
+         either plants a block at the wrong cell (a null passes a `>= 0` test and
+         lands at cell 0) or names a block the block table has no colour for, and
+         the mesher then throws over the chunk it was written into. Only the rows
+         that were applied are kept, so a save cannot go on writing what the game
+         refused. */
+      const kept = [];
+      for (const d of list(s.diffs)) {
+        if (!cell(d) || !this.world.inside(d[0], d[1], d[2]) || !N.BLOCKS[d[3]]) continue;
+        const c = [d[0] | 0, d[1] | 0, d[2] | 0, d[3] | 0];
+        this.world.set(c[0], c[1], c[2], c[3]);
+        kept.push(c);
+      }
+      this.diffs = kept;
+      this.regrow = rows(s.regrow);
+      this.growQueue = rows(s.growQueue);      // a planted pit must still be growing after a reload
+      this.drops = rows(s.drops);              // fruit scattered on death stays recoverable
+      this.buffs = plain(s.buffs) ? s.buffs : {};
+      this.posts = rows(s.posts); this._owlUnlocked = !!s.owl;
+      const p = this.player, sp = plain(s.p) ? s.p : {};
+      Object.assign(p, { x: num(sp.x, p.x), y: num(sp.y, p.y), z: num(sp.z, p.z),
+        yaw: num(sp.yaw, p.yaw), pitch: num(sp.pitch, p.pitch),
+        vital: num(sp.vital, p.vital),
+        // a body wearing a fruit the valley no longer has wakes up as itself: the
+        // day, the pack, the cellar and the codex all come back, which is the part
+        // a player would actually miss, and the getter every frame reads is safe
+        form: FRU[sp.form] ? sp.form : null, formT: num(sp.formT, p.formT),
+        formMax: num(sp.formMax, 0) || num(sp.formT, 0) || 1, dry: num(sp.dry, 0) });
       // the block diffs are applied above, so a cellar tree may have grown into
       // the spot the save was written at: the body it restores has to fit again
       p.unstick();
-      for (const q of s.quests || []) { const qq = this.quests.find(x => x.id === q[0]); if (qq) qq.done = q[1]; }
-      Object.assign(this.upg, s.upg || {});
+      for (const q of list(s.quests)) {
+        if (!Array.isArray(q)) continue;
+        const qq = this.quests.find(x => x.id === q[0]); if (qq) qq.done = !!q[1];
+      }
+      if (plain(s.upg)) Object.assign(this.upg, s.upg);
       // read off the restored quests, so it has to come after them
       this.epithetSeen = this.epithet();
       this.lastHour = this.hour;               // a loaded clock must not read as a new day

@@ -244,5 +244,92 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
   check('a save without a cellar entry still has the town cellar', legacy.stashes[0] === 'cellar/cellar', legacy);
   check('the trees from that save are kept', legacy.stashes.indexOf('tree1/tree') > 0, legacy);
 
+  /* ---------- 4. a save the game did not write ----------
+     localStorage hands back whatever is in it, whenever the page asks: the shape
+     some other build wrote, a value a browser put down wrong, something typed
+     into the console. Reading any of it used to end in one of four ways, none of
+     them polite: a body whose coordinates are a string is nowhere at all and
+     never lands; a clock that is a string stops the day; a queue holding a null
+     throws inside update() every frame, which freezes the valley with nothing on
+     screen to say so; and a body wearing a fruit the valley no longer has throws
+     on the getter every frame reads -- which is the upgrade path, not a fantasy,
+     since this project has cut two species out of the roster and the save key has
+     not moved since the second cut. Each case is read by the same `load()` the
+     Continue button calls, then run for a second of the world's own time. */
+  const P_OK = { x: 136, y: 25, z: 134, yaw: 3.14, pitch: 0, vital: 5, form: null, formT: 0 };
+  const JUNK = [
+    ['no body at all',          { p: {} }],
+    ['a body made of words',    { p: { x: 'a', y: 'b', z: 'c', yaw: 0, pitch: 0, vital: 'x', form: null, formT: 1 } }],
+    ['a clock made of words',   { time: 'abc', day: 'x', p: P_OK }],
+    ['a queue holding a null',  { growQueue: [null], p: P_OK }],
+    ['a queue holding a row',   { drops: [[1, 2, 3]], p: P_OK }],
+    ['a pack that is a word',   { inv: 'nope', p: P_OK }],
+    ['a body from a gone fruit', { p: Object.assign({}, P_OK, { form: 'deerberry' }) }],
+    ['rows that are not rows',  { diffs: [[null, 2, 3, 4], [999, 999, 999, 5], [136, 30, 134, 999], [136, 26, 134, 6]], p: P_OK }]
+  ];
+  const errsBefore = errs.length;
+  /* The three fake rows name three cells. Reading what stands in them first is
+     what makes the check about the save rather than about the map: the old code
+     wrote a null coordinate straight into cell (0,2,3) -- `null >= 0` is true --
+     and a block id the table has no row for came back out of the Uint8Array as
+     231, a block with no colour and no face. */
+  const cellsBefore = await page.evaluate(() => {
+    const W = window.game.world;
+    return { corner: W.get(0, 2, 3), over: W.get(136, 30, 134), at: W.get(136, 26, 134) };
+  });
+  const junk = [];
+  for (const [name, payload] of JUNK) {
+    const r = await page.evaluate((s) => {
+      const k = window.FRUTARIA.SAVE_KEY;
+      localStorage.setItem(k, JSON.stringify(s));
+      return { offered: window.game.saveInfo() !== null, loaded: window.game.load() };
+    }, payload);
+    const ran = await sim(page, 1.0);
+    junk.push(Object.assign({ name, frames: ran.fps }, r, await page.evaluate(() => {
+      const g = window.game, p = g.player, W = g.world;
+      const fin = v => typeof v === 'number' && isFinite(v);
+      return {
+        time: fin(g.time) ? +g.time.toFixed(1) : String(g.time),
+        day: fin(g.day) ? g.day : String(g.day),
+        hour: fin(g.hour) ? +g.hour.toFixed(1) : String(g.hour),
+        pos: [p.x, p.y, p.z].map(v => fin(v) ? +v.toFixed(2) : String(v)),
+        vital: fin(p.vital) ? +p.vital.toFixed(1) : String(p.vital),
+        form: p.form === null ? 'human' : String(p.form),
+        inv: Array.isArray(g.inv) ? g.inv.length : typeof g.inv,
+        queues: [g.growQueue, g.drops, g.posts, g.regrow].map(q => Array.isArray(q) ? q.length : typeof q),
+        diffs: g.diffs.length
+      };
+    })));
+  }
+  log.push('junkSaves: ' + JSON.stringify(junk));
+  check('a save the game did not write throws nothing', errs.length === errsBefore, errs.slice(errsBefore, errsBefore + 3));
+  check('and leaves a body that is somewhere, with a clock that still moves',
+    junk.every(j => j.pos.every(v => typeof v === 'number') && typeof j.time === 'number' &&
+      typeof j.hour === 'number' && typeof j.day === 'number' && typeof j.vital === 'number'), junk);
+  check('and queues the update loop can walk', junk.every(j => j.queues.every(n => typeof n === 'number')), junk);
+  check('and every one of them is still running a second later', junk.every(j => j.loaded === true && j.frames > 5), junk);
+  const gone = junk.find(j => j.name === 'a body from a gone fruit');
+  check('a body wearing a fruit the valley no longer has wakes up as itself',
+    !!gone && gone.form === 'human' && gone.loaded === true, gone);
+  const rows2 = junk.find(j => j.name === 'rows that are not rows');
+  const planted = await page.evaluate(() => {
+    const g = window.game;
+    return { at: g.world.get(136, 26, 134), over: g.world.get(136, 30, 134), corner: g.world.get(0, 2, 3),
+      far: g.world.get(999, 999, 999), kept: g.diffs.length };
+  });
+  check('the one real row in the junk lands and the three fakes do not',
+    !!rows2 && planted.at === 6 && planted.over === cellsBefore.over &&
+    planted.corner === cellsBefore.corner && planted.kept === 1, { cellsBefore, planted });
+  const notOffered = await step('notOffered', () => {
+    const k = window.FRUTARIA.SAVE_KEY, out = {};
+    for (const [name, text] of [['null', 'null'], ['an array', '[]'], ['a word', '"hello"'], ['truncated', '{"day":3,"p":{"x":80,']]) {
+      localStorage.setItem(k, text);
+      out[name] = { info: window.game.saveInfo(), loaded: window.game.load() };
+    }
+    return out;
+  });
+  check('a save that is not an object is quoted back as nothing and loads as nothing',
+    Object.keys(notOffered).every(k => notOffered[k].info === null && notOffered[k].loaded === false), notOffered);
+
   await finish();
 })();
