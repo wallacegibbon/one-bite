@@ -981,14 +981,21 @@ const { sim } = require('./simwait');
       return -1;
     };
     let spot = null;
+    /* The clearing has to be dry. `ground()` asks for a solid block and the floor
+       of a lake is solid, so once the lake was widened and deepened the search
+       found what it had always been asked for -- a sandy shelf flat for 20 columns
+       -- 11 m under water, and the gait it then measured was a frog hopping on the
+       bed of Mirrorlake. The first dry answer is (123,22,99). */
     for (let x = 24; x < 150 && !spot; x += 3) for (let z = 24; z < 150 && !spot; z += 3) {
       const gy = ground(x, z);
       if (gy < 0 || top(x, z) !== gy) continue;                       // nothing standing on it
+      if (g.world.liquidSurfaceAt(x, z) >= 0) continue;               // the floor of a lake is not a clearing
       if (ground(x + 1, z) !== gy || ground(x - 1, z) !== gy ||
           ground(x, z + 1) !== gy || ground(x, z - 1) !== gy) continue;   // not the edge of a roof
       let open = true;
       for (let k = 1; k <= 20 && open; k++) {
         if (top(x, z - k) !== gy) { open = false; break; }
+        if (g.world.liquidSurfaceAt(x, z - k) >= 0) { open = false; break; }
         for (let h = 1; h <= 3; h++) if (g.world.solidAt(x, gy + h, z - k)) { open = false; break; }
       }
       if (open) spot = { x: x + 0.5, y: gy + 1, z: z + 0.5 };
@@ -1373,23 +1380,28 @@ const { sim } = require('./simwait');
      one straight down on it. Fresnel says the grazing lens has most of its view
      thrown back -- and at noon the brightest thing in the valley is the sky --
      while the steep one lets nearly all of it through to the bed, which is the
-     darkest thing there. Measured over the pixels the water covers: 94 against
-     59.8, and the grazing frame is the bluer of the two, 125.7 against 93. The
-     dry bed under the same two lenses is the other way round -- 171.6
-     against 178.7, blue 126.3 against 129.8 -- which is what a floor does and a
-     surface does not. */
+     darkest thing there. Measured over the pixels the water covers: 101.2
+     against 77.7, and the grazing frame is the bluer of the two, 125.3 against
+     93. The dry bed under the same two lenses hardly cares which way the lens
+     points -- 169.7 against 166.9, blue 126.2 against 121.2 -- which is what a
+     floor does and a surface does not. */
   const mirror = await step('lakeMirrorsTheSky', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
       form: p.form, tp: g.thirdPerson, time: g.time, mode: g.mode, frame: g._camFrame,
       herd: g.creatures, drops: g.drops, lens: g._lens };
     /* the shelf has to have open water ahead of it: the grazing lens looks along
-       the lake, and a lens looking into the far shore measures the shore */
+       the lake, and a lens looking into the far shore measures the shore.
+       And the film has to be the lake's own surface. The keep's island is a slab
+       that starts at y6, so under its rim the water is a 2 m pocket with the wall
+       standing on top of it, and a lens 30 cm above that pocket is inside the
+       wall: the search used to land on (78,93) and both frames came back from
+       inside stone. With the surface asked for at y14 the shelf is (46,113). */
     let col = null;
     for (let z = 74; z < 140 && !col; z++) for (let x = 46; x < 112; x++) {
       let top = -1;
       for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { top = y; break; }
-      if (top < 0) continue;
+      if (top < 0 || top !== N.WORLD.sea) continue;
       let bed = -1;
       for (let y = top; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
       if (bed >= 0 && top + 1 - bed === 3 && W.liquidSurfaceAt(x, z - 15) >= 0) {
@@ -1576,12 +1588,18 @@ const { sim } = require('./simwait');
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl;
     const p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
-      hover: g.hover, mode: g.mode, frame: g._camFrame, tp: g.thirdPerson };
+      hover: g.hover, mode: g.mode, frame: g._camFrame, tp: g.thirdPerson,
+      time: g.time, night: g.night };
     let spot = null;
+    /* A clearing is ground, not foliage. The search asked for the topmost solid
+       block and a crown is solid, so when the tree line moved it landed on the
+       top of a tree at (20,34,39): the lamp behind the pane was lit from in front
+       by the crown it was standing in, and the frame through the glass was 37
+       brighter than the frame without it, not 40. */
     for (let x = 20; x < W.w - 12 && !spot; x++) for (let z = 20; z < W.d - 12 && !spot; z++) {
       let gy = -1;
       for (let y = W.h - 1; y >= 1; y--) if (W.solidAt(x, y, z)) { gy = y; break; }
-      if (gy < 1) continue;
+      if (gy < 1 || N.TREE_BLOCK[W.get(x, gy, z)]) continue;
       let open = true;
       for (let dx = -3; dx <= 3 && open; dx++) for (let dz = -3; dz <= 3 && open; dz++)
         for (let h = 1; h <= 4; h++) if (W.solidAt(x + dx, gy + h, z + dz)) { open = false; break; }
@@ -1620,6 +1638,16 @@ const { sim } = require('./simwait');
       return { r: +(r / n).toFixed(1), g: +(gg / n).toFixed(1), b: +(b / n).toFixed(1),
         lum: +((r / n) * 0.3 + (gg / n) * 0.59 + (b / n) * 0.11).toFixed(1) };
     };
+    /* The hour is set rather than inherited. A glowstone has to be the brightest
+       thing in the frame for the frame to say anything about the pane in front of
+       it, and in daylight the valley is: the first clearing the search finds now
+       that the tree line has moved is (20,24,121), open ground on the west side,
+       and there, at whatever hour the suite happened to leave the valley in, the
+       lamp through the glass read 157.5 against 126.2 for the same pane with
+       nothing behind it -- 31 of a difference where this asks for 40, because the
+       sun on the far bank was doing most of the lighting. At
+       22:00 the lamp is the only thing carrying light through the pane. */
+    g.time = N.DAY_LEN * (22 / 24); g.updateEnv();
     remesh();
     const through = sample();                         // the lamp, seen through the pane
     for (const [x, y, z] of lamp) W.set(x, y, z, 0);
@@ -1632,6 +1660,7 @@ const { sim } = require('./simwait');
     restore(); remesh();
     p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
     p.form = was.form; g.hover = was.hover; g.mode = was.mode; g.thirdPerson = was.tp; g._camFrame = was.frame;
+    g.time = was.time; g.night = was.night;
     return { spot, through, empty, solid,
       showsThrough: +(through.lum - empty.lum).toFixed(1),
       differsFromSolid: +Math.abs(through.lum - solid.lum).toFixed(1),
@@ -2265,9 +2294,19 @@ const { sim } = require('./simwait');
     };
     /* a column deep enough to float in and to stand in: four blocks of water
        over a bed that is solid. And the shallows of the same lake: one block of
-       water over a bed, which is water enough to wet a body and not water
-       enough to hold one up. */
-    let lake = null;
+       water under the same surface, which is water enough to wet a body and not
+       water enough to hold one up.
+       These are looked for together, and over the lake's own disc rather than a
+       box guessed at here, because the reading needs three places at once: the
+       deep water a body swims and digs down in, a bank of dry level ground six
+       metres west of it for the lens to stand on, and a wedge of one-block
+       shallows inside the water that lens can actually see. Widening the lake
+       moved its whole ring of shallows a dozen metres further out, and a lens
+       set six metres west of the first deep column in a fixed box was standing
+       in the middle of the water with nothing shallow anywhere in front of it.
+       So the three are searched for as one, and of the triples that hold, the
+       one with the shallows nearest in front of the lens is taken. */
+    const M = N.ZONE_BY_ID.mirrorlake;
     const depth = (x, z) => {
       let top = -1, n = 0;
       for (let y = W.h - 1; y >= 0; y--) {
@@ -2276,11 +2315,61 @@ const { sim } = require('./simwait');
       }
       return null;
     };
-    for (let x = 56; x < 112 && !lake; x++) for (let z = 88; z < 136 && !lake; z++) {
-      const d = depth(x, z);
-      if (d && d.n >= 4) lake = { x: x + 0.5, z: z + 0.5, top: d.top, n: d.n };
-    }
-    if (!lake) { restore(); return { error: 'no lake column four blocks deep' }; }
+    const gyAt = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z)) return y; return -1; };
+    // dry, level ground: a body can stand on it and a lens can be held above it
+    const bankAt = (x, z) => {
+      const gy = gyAt(x, z);
+      if (gy < 14) return null;
+      if (W.liquidAt(x, gy + 1, z) || W.solidAt(x, gy + 1, z) || W.solidAt(x, gy + 2, z)) return null;
+      for (let k = 1; k <= 4; k++) if (gyAt(x, z - k) !== gy) return null;
+      return gy;
+    };
+    /* the lens the draw will use: a body of the human's height standing on that
+       bank and looking due east, read third person, so the camera sits CAMD
+       behind it on the body's own level and the frame covers HALF degrees above
+       and below the axis it looks along. */
+    const CAMD = 1.5 + 2.25 * 1.8, EYE = 0.68 * 1.8, HALF = 76 / 2;
+    const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1], [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]];
+    const deepAt = (x, z) => { const d = depth(Math.floor(x), Math.floor(z)); return !!d && d.n >= 3; };
+    let lake = null, shore = null, wade = null, goal = null, wq = 1e9, wang = 0;
+    for (let z = M.cz - M.r - 2; z <= M.cz + M.r + 2; z++)
+      for (let x = M.cx - M.r - 2; x <= M.cx + M.r + 2; x++) {
+        const d = depth(x, z);
+        if (!d || d.n < 4) continue;
+        const gy = bankAt(x - 6, z);
+        if (gy === null) continue;
+        let leg = null;
+        for (const [ax, az] of DIRS) {
+          for (const r of [16, 14, 12]) {
+            let ok = true;
+            for (let s = 1; s <= r && ok; s += 0.5)
+              if (!deepAt(x + 0.5 + ax * s, z + 0.5 + az * s)) ok = false;
+            if (ok) { leg = { x: x + 0.5 + ax * r, z: z + 0.5 + az * r, r }; break; }
+          }
+          if (leg) break;
+        }
+        if (!leg) continue;
+        // the wedge: one block of water under the lake's own surface, in front
+        // of that bank, and low enough on the lens axis for the draw to take it
+        const sx = x - 6 + 0.5, sz = z + 0.5, lensX = sx - CAMD, lensY = gy + 1.01 + EYE;
+        for (let wx = Math.round(sx) + 2; wx <= M.cx + M.r + 2; wx++)
+          for (let wz = Math.round(sz) - 10; wz <= Math.round(sz) + 10; wz++) {
+            const dx = wx + 0.5 - sx, dz = wz + 0.5 - sz;
+            if (dx < 2 || Math.abs(dz) > dx * 0.6) continue;
+            const dd = depth(wx, wz);
+            if (!dd || dd.n !== 1 || dd.top !== d.top) continue;
+            const q = Math.hypot(dx, dz);
+            if (q >= wq) continue;
+            const ang = Math.atan((lensY - dd.top) / Math.hypot(wx + 0.5 - lensX, dz)) * 180 / Math.PI;
+            if (ang > HALF - 8) continue;
+            wq = q; wang = ang;
+            lake = { x: x + 0.5, z: z + 0.5, top: d.top, n: d.n };
+            shore = { x: sx, z: sz, gy };
+            wade = { x: wx + 0.5, z: wz + 0.5, top: dd.top, n: dd.n };
+            goal = leg;
+          }
+      }
+    if (!lake) { restore(); return { error: 'no deep water, dry bank and shallow wedge together at the lake' }; }
     let dry = null;
     for (let x = 56; x < 112 && !dry; x++) for (let z = 60; z < 140 && !dry; z++) {
       let gy = -1;
@@ -2465,31 +2554,17 @@ const { sim } = require('./simwait');
     out.hop = run(dry, dry.y + 0.01, [[0.5, { jump: true }], [0.35, {}]]);
     /* and a wild body crossing the lake: the one a person watches. Its phase is
        set to a mark so its state can be picked out of the frame, and the lens
-       stands on the shore a few metres off so the draw takes it at all. */
+       stands on the bank the triple search put on the far side of the deep water
+       so the draw takes it at all. */
     const wf = g.creatures.find(c => c.sp.id === 'frog');
     if (wf) {
       const wasWF = { x: wf.x, y: wf.y, z: wf.z, yaw: wf.yaw, speed: wf.speed, phase: wf.phase,
         tx: wf.tx, tz: wf.tz, pause: wf.pause, state: wf.state, alarm: wf.alarm, sleeping: wf.sleeping };
       wf.phase = 7.77;
       const mark = s => s.phase === 7.77;
-      const shore = { x: lake.x - 6, z: lake.z };
-      let gy = dry.y;
-      for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(Math.round(shore.x), y, Math.round(shore.z))) { gy = y; break; }
-      p.form = null; p.x = shore.x; p.z = shore.z; p.y = gy + 1.01; p.vx = p.vy = p.vz = 0;
+      p.form = null; p.x = shore.x; p.z = shore.z; p.y = shore.gy + 1.01; p.vx = p.vy = p.vz = 0;
       p.inWater = false; p.held = 0; p.airAmt = 0; p.grounded = true; p.yaw = Math.PI / 2; p.faceYaw = p.yaw;
-      // the shallows that lens is looking down: one block of water over a bed,
-      // in front of it and inside its view
-      let wade = null, wq = 1e9;
-      for (let x = Math.round(shore.x) + 2; x <= lake.x + 12; x++)
-        for (let z = Math.round(shore.z) - 8; z <= Math.round(shore.z) + 8; z++) {
-          const dx = x + 0.5 - shore.x, dz = z + 0.5 - shore.z;
-          if (Math.abs(dz) > dx * 0.6) continue;
-          const d = depth(x, z);
-          if (!d || d.n !== 1) continue;
-          const q = Math.hypot(dx, dz);
-          if (q < wq) { wq = q; wade = { x: x + 0.5, z: z + 0.5, top: d.top, n: d.n }; }
-        }
-      out.wade = wade; out.wadeGap = +wq.toFixed(2);
+      out.wade = wade; out.wadeGap = +wq.toFixed(2); out.wadeAngle = +wang.toFixed(1);
       /* the leg has to be a leg. The body used to be pointed 20 m across the
          lake with the wander timer at zero, which let the creature pick itself a
          fresh errand half way over: often enough it picked the shore, ran
@@ -2498,19 +2573,7 @@ const { sim } = require('./simwait');
          not have. So the errand is fixed for the whole leg: a stretch of the
          same deep water 12 to 16 m off, with deep water all the way out to it,
          and the timer stopped so nothing re-picks it. */
-      const deepAt = (x, z) => { const d = depth(Math.floor(x), Math.floor(z)); return !!d && d.n >= 3; };
-      let goal = null;
-      for (const [ax, az] of [[1, 0], [0, 1], [-1, 0], [0, -1],
-                              [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]]) {
-        for (const r of [12, 14, 16, 8, 6]) {
-          let ok = true;
-          for (let s = 1; s <= r && ok; s += 0.5)
-            if (!deepAt(lake.x + ax * s, lake.z + az * s)) ok = false;
-          if (ok) { goal = { x: lake.x + ax * r, z: lake.z + az * r, r }; break; }
-        }
-        if (goal) break;
-      }
-      out.wildGoal = goal ? goal.r : 'no deep water within 16 m';
+      out.wildGoal = goal.r;
       const send = (secs) => {
         wf.x = lake.x; wf.z = lake.z; wf.y = lake.top - 1.2; wf.state = 'wander'; wf.sleeping = false;
         wf.tx = goal.x; wf.tz = goal.z; wf.pause = 9999; wf.alarm = 0;
@@ -4243,16 +4306,22 @@ What was measured before any of this was fixed, over 180 frames of walking
      point under the water above it", which is a question about a column of
      water, and a corner of a submerged face can stand inside the solid next
      door, where no column of water reaches down to it: the answer comes back
-     "dry" and the corner is lit the colour of a beach. 644 of the 5,366 faces
+     "dry" and the corner is lit the colour of a beach. 852 of the 7,525 faces
      this mesher puts against water had at least one corner answered that way --
-     1,619 corners, the worst of them at (74, 5, 95) with the lake's surface 6 m
-     above it. In the frame they were the strange bright dots on the lakebed: a
-     lens just above the surface of Mirrorlake, looking down, sees 70,980 pixels
-     of bed through at least three metres of water, and 137 of them used to come
-     back warmer than blue, 35 of them brighter than 140, and the brightest 176
-     against a bed whose own average is 60. Asked of the face -- the water the
-     face stands against, and its own height -- every corner is answered and
-     every one of those 137 is gone. */
+     1,981 corners, the worst a corner at (74, 4, 95) standing inside the solid
+     with the lake's surface at 6, two metres over its head. In the frame they
+     are the strange bright dots on the lakebed: a lens just above the surface of
+     Mirrorlake, looking down, sees 5,337 pixels of level bed under at least two
+     metres of water, and in the frame the old question leaves on the GPU 12 of
+     them come back warmer than blue, 7 brighter than 140, the brightest 162
+     against a bed whose own average is 55. Asked of the face -- the water the
+     face stands against and its own height -- every corner is answered and every
+     one of those dots is gone: the same 5,337 pixels, brightest 60, no patch of
+     the bed standing more than 5 over the bed around it.
+     Only the pixels 2-4 m down go wrong, and that is the point of reading the
+     frame twice: the deeper bands were answered correctly by the old question
+     too, so they come back identical, and a check that could not tell the two
+     frames apart would be counting pixels rather than looking at them. */
   const faceDepth = await step('lakebedFacesWearTheirDepth', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
@@ -4305,10 +4374,6 @@ What was measured before any of this was fixed, over 180 frames of walking
       MB.quadAO = qWas;
       return { quads, badQuads, badCorners, worst };
     };
-    const mesh = measure(false);
-    const meshBroken = measure(true);
-    // and the world is left with the geometry it came in with
-    for (let ci = 0; ci < W.chunks.length; ci++) W.buildChunk(gl, ci);
 
     // a stretch of lake at least seven metres deep, searched for, not assumed
     let deep = null;
@@ -4320,70 +4385,211 @@ What was measured before any of this was fixed, over 180 frames of walking
       for (let y = top; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
       if (bed >= 0 && top + 1 - bed >= 7) deep = { x: x + 0.5, z: z + 0.5, top, bed };
     }
-    if (!deep) return back({ error: 'no stretch of the lake seven metres deep', mesh, meshBroken });
+    if (!deep) return back({ error: 'no stretch of the lake seven metres deep' });
 
-    /* The frame, read one pixel at a time: for each one, what the world says
-       stands in front of the lens, and whether that is a bed under at least
-       three metres of water. Only those pixels are counted, because only those
-       are the ones the water owes an answer to. A pixel is then judged against
-       its own ring 12 px away -- a dot is a dot because it is brighter than the
-       bed around it, not because it is bright -- and against the colour: nothing
-       under three metres of water should ever come back with more red than blue.
-       Emissive blocks are left out of the count: a lamp under water is allowed
-       to be warm, and it is not what this is about. */
     const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
     p.x = deep.x; p.y = deep.top + 1.05 - (p.eyePos() - p.y); p.z = deep.z;
     p.yaw = 2.4; p.pitch = -0.5; p.vx = p.vy = p.vz = 0;
     const frame = g.shootCamera(p);
-    g._camFrame = frame; g.updateEnv(); g.render();
-    const px = new Uint8Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
-    const at = (x, y) => ((h - 1 - y) * w + x) * 4;
-    const lum = (x, y) => { const i = at(x, y); return 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]; };
     const tanY = Math.tan(frame.fov * Math.PI / 360), tanX = tanY * g.R.aspect;
     const F = g.R.fwd, Rt = g.R.right, U = g.R.up;
-    const cons = [];
-    let warm = 0, over140 = 0, maxLum = 0;
-    for (let yy = 24; yy < h - 24; yy += 2) for (let xx = 24; xx < w - 24; xx += 2) {
+    /* What stands in front of one pixel of the lens: a level stretch of bed with
+       at least two metres of water over the top of it, and nothing self-lit
+       standing in the water above it -- a lamp jellyfish, or a frog pear hung up
+       in the sunken tower -- is allowed to be bright and is not what this is
+       about. Only
+       faces that look straight up are asked: the wall of the basin has its four
+       corners at two depths at once and is looked at along itself, which is the
+       next step's question and not this one's. */
+    const bed = (xx, yy) => {
       const ndcX = (xx + 0.5) / w * 2 - 1, ndcY = 1 - (yy + 0.5) / h * 2;
       const dx = F[0] + Rt[0] * ndcX * tanX + U[0] * ndcY * tanY;
       const dy = F[1] + Rt[1] * ndcX * tanX + U[1] * ndcY * tanY;
       const dz = F[2] + Rt[2] * ndcX * tanX + U[2] * ndcY * tanY;
       const L = Math.sqrt(dx * dx + dy * dy + dz * dz);
       const hit = W.raycast(frame.x, frame.y, frame.z, dx / L, dy / L, dz / L, 24, true);
-      if (!hit) continue;
-      const ax = hit.x + hit.nx, ay = hit.y + hit.ny, az = hit.z + hit.nz;
-      if (!W.liquidAt(ax, ay, az)) continue;
-      if (W.liquidSurfaceAt(ax, az) < hit.y + 4) continue;
-      const bd = N.BLOCKS[hit.block];
-      if (!bd || bd.emis) continue;
-      const l = lum(xx, yy);
-      cons.push(l - (lum(xx - 12, yy) + lum(xx + 12, yy) + lum(xx, yy - 12) + lum(xx, yy + 12)) / 4);
-      if (l > maxLum) maxLum = l;
-      if (l > 140) over140++;
-      const i = at(xx, yy);
-      if (px[i] > px[i + 2]) warm++;
-    }
-    cons.sort((a, b) => a - b);
+      if (!hit || hit.ny !== 1) return null;
+      if (!W.liquidAt(hit.x, hit.y + 1, hit.z)) return null;
+      const surf = W.liquidSurfaceAt(hit.x, hit.z);
+      if (surf < hit.y + 2) return null;
+      const bl = N.BLOCKS[hit.block];
+      if (!bl || bl.emis) return null;
+      for (let y = hit.y + 1; y < surf; y++) {
+        const b = W.get(hit.x, y, hit.z);
+        if (b && N.BLOCKS[b] && N.BLOCKS[b].emis) return null;
+      }
+      return { block: hit.block, depth: surf - hit.y };
+    };
+    /* Read the frame, and sort the pixels of bed it shows by how much water lies
+       over them. A pixel is only judged against its own ring 12 px away -- a dot
+       is a dot because it is brighter than the bed around it, not because it is
+       bright -- and the ring has to be the same bed: 12 px away a ray can leave
+       the water, land on the shore, or cross onto another material, and all three
+       have their own brightness. */
+    const BANDS = [[2, 4], [4, 7], [7, 99]];
+    const readBed = () => {
+      g._camFrame = frame; g.updateEnv(); g.render();
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const at = (x, y) => ((h - 1 - y) * w + x) * 4;
+      const lum = (x, y) => { const i = at(x, y); return 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]; };
+      const rows = BANDS.map(() => []);
+      for (let yy = 24; yy < h - 24; yy += 2) for (let xx = 24; xx < w - 24; xx += 2) {
+        const c = bed(xx, yy);
+        if (!c) continue;
+        const r = bed(xx - 12, yy), l = bed(xx + 12, yy), u = bed(xx, yy - 12), d = bed(xx, yy + 12);
+        if (!r || !l || !u || !d) continue;
+        if (r.block !== c.block || l.block !== c.block || u.block !== c.block || d.block !== c.block) continue;
+        const i = at(xx, yy);
+        rows[BANDS.findIndex(b => c.depth >= b[0] && c.depth < b[1])].push({
+          lum: lum(xx, yy),
+          con: lum(xx, yy) - (lum(xx - 12, yy) + lum(xx + 12, yy) + lum(xx, yy - 12) + lum(xx, yy + 12)) / 4,
+          warm: px[i] > px[i + 2]
+        });
+      }
+      return { lens: [+frame.x.toFixed(1), +frame.y.toFixed(1), +frame.z.toFixed(1)],
+        st: rows.map((rs, b) => {
+          const cs = rs.map(x => x.con).sort((x, y) => x - y);
+          const ls = rs.map(x => x.lum).sort((x, y) => x - y);
+          const mean = a => +(a.reduce((s, v) => s + v, 0) / Math.max(1, a.length)).toFixed(1);
+          return { band: BANDS[b][0] + '-' + BANDS[b][1] + ' m', n: rs.length,
+            meanLum: mean(rs.map(x => x.lum)), maxLum: Math.round(ls[ls.length - 1] || 0),
+            over140: rs.filter(x => x.lum > 140).length, warm: rs.filter(x => x.warm).length,
+            hi22: cs.filter(v => v > 22).length,
+            p999: cs.length ? +cs[Math.min(cs.length - 1, Math.floor(cs.length * 0.999))].toFixed(1) : 0,
+            maxCon: cs.length ? +cs[cs.length - 1].toFixed(1) : 0 };
+        }) };
+    };
+    /* Three frames, in the order the bug happened in: the geometry the world puts
+       up, the geometry the old question leaves on it, and the geometry put back
+       afterwards -- which is what says this step is not walking out with broken
+       faces on the GPU for the steps that follow. */
+    const mesh = measure(false);
+    const good = readBed();
+    const meshBroken = measure(true);
+    const broken = readBed();
+    for (let ci = 0; ci < W.chunks.length; ci++) W.buildChunk(gl, ci);
+    const goodAgain = readBed();
     g._camFrame = null;
-    return back({ deep, mesh, meshBroken, n: cons.length,
-      hi22: cons.filter(v => v > 22).length, hi40: cons.filter(v => v > 40).length,
-      warm, over140, maxLum: Math.round(maxLum),
-      p999: cons.length ? +cons[Math.min(cons.length - 1, Math.floor(cons.length * 0.999))].toFixed(1) : 0,
-      maxCon: cons.length ? +cons[cons.length - 1].toFixed(1) : 0 });
+    return back({ deep, mesh, meshBroken, good, broken, goodAgain });
   });
   check('every face the mesher puts against water wears that water at every one of its corners',
     faceDepth.mesh && faceDepth.mesh.quads > 5000 && faceDepth.mesh.badQuads === 0 &&
     faceDepth.mesh.badCorners === 0, faceDepth.mesh);
-  check('and the point question this used to ask really does answer "dry" at 644 of those faces, 1,619 corners over',
+  check('and the point question this used to ask really does answer "dry" at 852 of those faces, 1,981 corners over',
     faceDepth.meshBroken && faceDepth.meshBroken.quads === faceDepth.mesh.quads &&
     faceDepth.meshBroken.badQuads > 500 && faceDepth.meshBroken.badCorners > 1500, faceDepth.meshBroken);
-  check('a lakebed seen through three metres of water is never warmer than it is blue',
-    faceDepth.n > 40000 && faceDepth.warm === 0, faceDepth);
-  check('nor brighter than that much water lets through: no pixel of the bed over 120, none over 140',
-    faceDepth.over140 === 0 && faceDepth.maxLum < 120, faceDepth);
+  const allBands = (r, f) => !!r && !!r.st && r.st.length === 3 && r.st.every(b => b.n > 800 && f(b));
+  check('a level lakebed under two metres of water or more is never warmer than it is blue, and never over 140',
+    allBands(faceDepth.good, b => b.warm === 0 && b.over140 === 0), faceDepth.good);
+  check('nor brighter than that much water lets through: no pixel of the bed over 120',
+    allBands(faceDepth.good, b => b.maxLum < 120), faceDepth.good);
   check('and it does not light up in patches either: the 99.9th percentile of a bed pixel over its own ring is under 30',
-    faceDepth.hi22 < 100 && faceDepth.p999 < 30, faceDepth);
+    allBands(faceDepth.good, b => b.hi22 < 100 && b.p999 < 30), faceDepth.good);
+  check('the deeper the water lying over the bed, the less of the bed comes back: 2-4 m reads 55.4, 7 m and deeper 51.0',
+    faceDepth.good && faceDepth.good.st[0].n > 800 && faceDepth.good.st[2].n > 800 &&
+    faceDepth.good.st[0].meanLum - faceDepth.good.st[2].meanLum > 2, faceDepth.good);
+  check('and the frame the old question left on the GPU really does show it: the 2-4 m band comes back at 162 with 12 warm pixels and 44 dots',
+    faceDepth.broken && faceDepth.broken.st[0].maxLum > 120 && faceDepth.broken.st[0].over140 > 0 &&
+    faceDepth.broken.st[0].warm > 0 && faceDepth.broken.st[0].hi22 > 20 && faceDepth.broken.st[0].p999 > 30,
+    faceDepth.broken);
+  check('and the lakebed is put back the way it was: the frame rebuilt after the broken one reads pixel for pixel as it did before',
+    JSON.stringify(faceDepth.goodAgain) === JSON.stringify(faceDepth.good), faceDepth);
+
+  /* The lakebed grows kelp again, and a stalk of it is a plant, not a lamp. It
+     states no light of its own, and it stands in the water, so it wears the
+     water the way the bed under it does -- which the mesher could not do for
+     anything micro, because the corners of a micro box are not on a column line
+     and the depth question answered "dry" for every one of them. It also used
+     to state `emis: 1`, copied from the glowcap ring on the next line of the
+     block table, and that never showed either because no kelp was ever placed.
+     Read the frame three ways: whole, with the emissive micro mesh taken out,
+     and with the ordinary one taken out. A lake frame at noon has no self-lit
+     block in it -- the jellyfish lamps are bodies and are drawn elsewhere -- so
+     the first pair has to be the same frame, and the kelp is in the frame, so
+     the second pair has not be. */
+  const kelpFrame = await step('theKelpInTheLakeIsNotALamp', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
+      vx: p.vx, vy: p.vy, vz: p.vz, form: p.form, third: g.thirdPerson, time: g.time,
+      mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
+      creatures: g.creatures, drops: g.drops };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.creatures = was.creatures; g.drops = was.drops;
+      return r;
+    };
+    let stalks = 0, wet = 0;
+    for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) for (let y = 0; y < W.h; y++) {
+      if (W.get(x, y, z) !== 75) continue;
+      stalks++;
+      if (W.liquidAt(x, y + 1, z)) wet++;
+    }
+    g.mode = 'play'; g.thirdPerson = false; g.hover = null; p.form = null;
+    g.creatures = []; g.drops = []; if (g.particles) g.particles.n = 0;
+    g.time = N.DAY_LEN * (13 / 24);
+    let deep = null;
+    for (let z = 74; z < 140 && !deep; z++) for (let x = 46; x < 112 && !deep; x++) {
+      let top = -1;
+      for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) { top = y; break; }
+      if (top < 0) continue;
+      let bed = -1;
+      for (let y = top; y >= 0; y--) if (W.solidAt(x, y, z)) { bed = y; break; }
+      if (bed >= 0 && top + 1 - bed >= 7) deep = { x: x + 0.5, z: z + 0.5, top, bed };
+    }
+    if (!deep) return back({ error: 'no stretch of the lake seven metres deep' });
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    p.x = deep.x; p.y = deep.top + 1.05 - (p.eyePos() - p.y); p.z = deep.z;
+    // straight down: at 28 degrees of pitch the frame still reaches the shore,
+    // and the shore of this lake wears frog pears on its bushes, which are
+    // self-lit and belong to a different question
+    p.yaw = 2.4; p.pitch = -1.5; p.vx = p.vy = p.vz = 0;
+    const frame = g.shootCamera(p);
+    const grab = () => {
+      g._camFrame = frame; g.updateEnv(); g.render();
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return px;
+    };
+    const lum = (a, i) => 0.3 * a[i] + 0.59 * a[i + 1] + 0.11 * a[i + 2];
+    const diff = (a, b) => {
+      let n = 0, max = 0;
+      for (let i = 0; i < a.length; i += 4) {
+        const d = Math.abs(lum(a, i) - lum(b, i));
+        if (d > 4) n++;
+        if (d > max) max = d;
+      }
+      return { changed: n, max: +max.toFixed(1) };
+    };
+    const without = (slot) => {
+      const saved = [];
+      for (let ci = 0; ci < W.chunks.length; ci++) {
+        const m = W.chunks[ci];
+        if (m && m[slot]) { saved.push([ci, m[slot]]); m[slot] = null; }
+      }
+      const f = grab();
+      for (const [ci, m] of saved) W.chunks[ci][slot] = m;
+      return { d: diff(grab(), f), chunks: saved.length };
+    };
+    const all = grab();
+    const noEmis = without(4);       // the emissive micro mesh: where the kelp used to be
+    const noMicro = without(3);      // the ordinary one: where it is now
+    return back({ stalks, wet, emis: N.BLOCKS[75].emis ? 1 : 0, deep,
+      lens: [+frame.x.toFixed(1), +frame.y.toFixed(1), +frame.z.toFixed(1)],
+      noEmis, noMicro, all: diff(all, all) });
+  });
+  check('the lakebed grows kelp again, and every stalk of it stands under the water',
+    !kelpFrame.error && kelpFrame.stalks > 20 && kelpFrame.wet === kelpFrame.stalks, kelpFrame);
+  check('and a stalk of it states no light of its own',
+    !kelpFrame.error && kelpFrame.emis === 0, kelpFrame);
+  check('a lake frame at noon holds no self-lit block: taking the emissive mesh out takes nothing out of the frame',
+    !kelpFrame.error && kelpFrame.noEmis.d.changed === 0 && kelpFrame.noEmis.d.max < 2, kelpFrame);
+  check('and the kelp is in that frame, so that answer is not vacuous: taking the micro mesh out takes the stalks out',
+    !kelpFrame.error && kelpFrame.noMicro.d.changed > 200, kelpFrame);
+
 
   /* The water between a lens and a lakebed is the water the light walks, and it
      used to be counted straight up: a bed 3 m down was 3 m of water however the
@@ -5076,10 +5282,12 @@ What was measured before any of this was fixed, over 180 frames of walking
      a periscope; and an owl that let go of the climb key beat its wings at full
      stroke while it fell at its glide speed.
      The spots to measure at are the ones with nothing in the way, and the world
-     has to be searched for them: Mirrorlake has a dry island in the middle, so
-     the widest stretch of open water is only about 7 m across, and a body
-     swimming in a straight line runs into a bank inside a second. Two tricks get
-     round that. A body whose aim is held a quarter turn off its own course
+     has to be searched for them: Mirrorlake is two basins round a dry island, so
+     the widest disc of water at least 4 m deep is about 16 m across, and the
+     search asks for a disc of radius 6 -- 16 sample points round it, every one of
+     them 4 m deep or more -- and takes the first that holds. A body swimming in a
+     straight line still runs into a bank inside a couple of seconds. Two tricks
+     get round that. A body whose aim is held a quarter turn off its own course
      carves a circle and stays where it is, so the lake it needs is the lake it
      already has -- and the radius it holds is its speed over its turn rate,
      which is a second measurement for free. And every heading number is guarded
@@ -5296,32 +5504,48 @@ What was measured before any of this was fixed, over 180 frames of walking
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
       pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
       dry: p.dry, fright: p.fright, grounded: p.grounded };
-    const run = (form, at, keys, secs) => {
+    const run = (form, at, keys, secs, afterBottom) => {
       p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
       p.x = at.x; p.z = at.z; p.y = at.y;
       p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
       /* the attitude of a body that is *actually* going that way, not of the
          frame the leg happens to end on: the fastest descent and the fastest
-         climb the leg reaches, with the body's nose as it showed at that moment */
+         climb the leg reaches, with the body's nose as it showed at that moment.
+         Read while the body is travelling and not while it stands: the frame a
+         body lands on has already had its nose taken back to level by the ground
+         under its feet, and the landing is often the fastest frame of the fall.
+         A leg may also run on after the body reaches the bottom -- see below. */
       let down = null, up = null, gr = 0;
       const n = Math.round(secs * 60);
-      for (let i = 0; i < n; i++) {
+      let end = afterBottom ? 12 * 60 : n, landed = false;
+      for (let i = 0; i < end; i++) {
         p.yaw = 0;
-        g.input = keys(); g.particles.n = 0; g.hover = null;
+        g.input = keys(p); g.particles.n = 0; g.hover = null;
         p.update(1 / 60, g.input, g);
         if (p.grounded) gr++;
-        if (p.vy < -0.3 && (!down || p.vy < down.vy)) {
+        /* A body asked to go down is measured until it has stood on the bottom
+           for the leg's own length. The lake is deeper than it was -- 9 m of
+           water at the column this reads, 7 before -- and a body sinking at
+           2.08 m/s while it swims at 4 reaches the bed when the bed says so, not
+           after a fixed time: with the leg ending 2.5 s in, the widened lake put
+           the body still coming down at the last frame, standing on the bottom
+           in 3% of them. */
+        if (afterBottom && !landed && p.grounded) { landed = true; end = i + n; }
+        if (p.vy < -0.3 && !p.grounded && (!down || p.vy < down.vy)) {
           down = { vy: +p.vy.toFixed(2), tilt: +(p.tilt || 0).toFixed(3), y: +p.y.toFixed(2) };
         }
-        if (p.vy > 0.3 && (!up || p.vy > up.vy)) {
+        if (p.vy > 0.3 && !p.grounded && (!up || p.vy > up.vy)) {
           up = { vy: +p.vy.toFixed(2), tilt: +(p.tilt || 0).toFixed(3), y: +p.y.toFixed(2) };
         }
       }
       return { tilt: +(p.tilt || 0).toFixed(3), vy: +p.vy.toFixed(2), y: +p.y.toFixed(2),
-        g: p.grounded ? 1 : 0, grPct: Math.round(gr / n * 100), down, up };
+        g: p.grounded ? 1 : 0, grPct: Math.round(gr / end * 100), frames: end, down, up };
     };
+    /* The dive keeps its stroke while it is coming down and gives it up when it
+       is on the bottom: the leg is asking the body to go down, and a body on the
+       bottom that is still swimming forward walks off the place it reached. */
     const sink = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.5 },
-      () => ({ fwd: true, jump: false, sneak: true, sprint: false }), 2.5);
+      p => ({ fwd: !p.grounded, jump: false, sneak: true, sprint: false }), 2.5, true);
     const rise = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 3.0 },
       () => ({ fwd: true, jump: true, sneak: false, sprint: false }), 1.2);
     const climb = run('owlberry', { x: sky.x, z: sky.z, y: sky.y },
@@ -6466,7 +6690,13 @@ What was measured before any of this was fixed, over 180 frames of walking
     out.diveLet = glide(8, {});                                         // ...and the key came off
     place('frogpear', bed + 3, lake); out.up = glide(4, { jump: true });
     place(null, bed + 3, lake); out.human = glide(10, {});
-    place(null, wt + 0.6, lake); out.humanSurf = glide(10, {});
+    /* the same body let go of at the surface has to be given the time its own
+       column asks for: a body that breathes air comes down at 0.82 m/s here, and
+       the lake is 9 m deep at this column where it was 7, so a window fixed at
+       ten seconds ended with the body still on its way down, 39 cm above the
+       bottom it was meant to be resting on. */
+    place(null, wt + 0.6, lake);
+    out.humanSurf = glide(Math.max(10, Math.ceil((wt + 1 - bed) * 1.5)), {});
     place('frogpear', shelf.top + 0.0001, shelf); out.frogShelf = glide(3, {});
     place(null, shelf.top + 0.0001, shelf); out.humanShelf = glide(3, {});
     /* the valley's own frog, in the same column, as the other half of the claim:
@@ -6731,7 +6961,19 @@ What was measured before any of this was fixed, over 180 frames of walking
        floors are all within two rows of one height and whose 16 blocks over them
        hold nothing a body cannot pass through. The bird is put in the middle of
        it and the window closes when it reaches the height the law asks for, so
-       what is measured is the drop and not the wood it may later fly into. */
+       what is measured is the drop and not the wood it may later fly into.
+       The strip the errand flies down belongs to that patch. The body is sent
+       11.5 m east of the middle, and a floor that rises under it on the way is a
+       floor it is asked to climb -- the height law holds a hunting body over
+       whatever is under it -- so it never reaches the height this window waits
+       for, and the settle loop then measures a bird standing outside the patch.
+       Widening the lake shuffles the tree line (the planter keeps a wider ring
+       off the water) and the first patch the scan finds moved from (108,24,28)
+       to (108,24,26): flat for 6 m each way, then y33 at x=118, and the step read
+       900 frames and 1 m given up for a body asked to fall 8.5. The floors are
+       now held within two rows of the middle's height over the whole strip, which
+       is what this comment has always said they were; the patch that answers is
+       (122,23,86). */
     const open = (x, z) => {
       if (W.liquidSurfaceAt(x, z) >= 0) return false;      // over water the film is the floor
       const t = N.groundY(W, x, z, W.h - 1);
@@ -6743,11 +6985,13 @@ What was measured before any of this was fixed, over 180 frames of walking
     for (let z = 20; z < W.d - 20 && sx < 0; z += 2) {
       for (let x = 20; x < W.w - 20; x += 2) {
         if (!open(x, z)) continue;
+        const t = N.groundY(W, x, z, W.h - 1);
+        const same = (xx, zz) => open(xx, zz) && Math.abs(N.groundY(W, xx, zz, W.h - 1) - t) <= 2;
         let all = true;
         for (let dz = -6; dz <= 6 && all; dz += 2)
-          for (let dx = -6; dx <= 6; dx += 2) if (!open(x + dx, z + dz)) { all = false; break; }
+          for (let dx = -6; dx <= 12; dx += 2) if (!same(x + dx, z + dz)) { all = false; break; }
         if (!all) continue;
-        sx = x; sz = z; top = N.groundY(W, x, z, W.h - 1); break;
+        sx = x; sz = z; top = t; break;
       }
     }
     if (sx < 0) return { error: 'no open sky to let a bird down through' };
@@ -6832,6 +7076,11 @@ What was measured before any of this was fixed, over 180 frames of walking
     Object.assign(bird, keep);
     Object.assign(p, keepP);
     g.time = keepT.time; g.night = keepT.night;
+    /* A step reports, it does not throw: with too few frames measured the percentiles
+       below are not numbers at all, and the whole suite died on a `toFixed` of
+       undefined rather than saying what it had found. */
+    if (hs.length < 200) return { error: 'the body left the open patch before its height could be measured',
+      n: hs.length, left, spot: [sx, top, sz], arrived, drop };
     return { flySpeed, maxRate: +maxRate.toFixed(2), tiltMax: +tiltMax.toFixed(2),
       drop, arrived, glide: +(ground / Math.max(0.001, lost)).toFixed(2), inRock,
       n: hs.length, left, low: +hs[0].toFixed(2), median: +hs[hs.length >> 1].toFixed(2),
@@ -7485,7 +7734,23 @@ What was measured before any of this was fixed, over 180 frames of walking
   const wall = await step('aBodyWalkedIntoABankStandsOnItsFeet', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
     /* The bank is built, not hunted: one shelf, one riser, the same place and
-       the same height for every body and every run. */
+       the same height for every body and every run. What is hunted is the shelf
+       it is built on, and two things are asked of it, both read over the ground
+       a body can reach in this step rather than over a shape invented for the
+       search: level -- the longest run here walks 1.5 s at a top speed of 5 m/s,
+       which is 13 cells towards the bank and 7 across it -- and clear of
+       everything solid along the way it walks. A crown is not a wall the
+       movement code refuses, but a body set down inside one, or walked into one,
+       is a body whose box overlaps a block it cannot pass, and the widest body
+       measured here (the bear's 1.4 m box) covers three cells across. The search
+       used to ask for a 13x13 level square and nothing at all about the cells
+       the body walks through: widening the lake moved the shoreline terrace, and
+       with it the only 13x13 in the valley (over the whole map 0 columns pass a
+       13x13 now, 13 pass this footprint -- 16 passed it before the lake was
+       widened, so the search is not fitted to the new map either). The shelf it
+       then found had a tree standing in the row the bank is built in: the bear
+       was stopped by three metres of crown before the metre of bank it was
+       meant to climb, and gained 0. */
     let spot = null;
     for (let z = 12; z < W.d - 12 && !spot; z++)
       for (let x = 12; x < W.w - 12 && !spot; x++) {
@@ -7493,18 +7758,14 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (gy <= 8 || gy >= 24) continue;
         if (N.waterTop(W, x, z, W.h - 1) >= 0) continue;
         let flat = true;
-        for (let dz = -6; dz <= 6 && flat; dz++) for (let dx = -6; dx <= 6; dx++)
+        for (let dz = -6; dz <= 6 && flat; dz++) for (let dx = -3; dx <= 3; dx++)
           if (N.terrainY(W, x + dx, z + dz, W.h - 1) !== gy) { flat = false; break; }
-        if (!flat || N.terrainY(W, x, z - 2, W.h - 1) !== gy) continue;
-        /* room for the tallest body to stand and for the bank to be built: the
-           same reading the animals' own movement uses, where a trunk or a crown
-           or a fruit hanging in the air is not a wall */
-        const rockAt = (bx, by, bz) => W.solidAt(bx, by, bz) && !N.TREE_BLOCK[W.get(bx, by, bz)];
-        let room = true;
-        for (let dz = -6; dz <= 6 && room; dz++) for (let dx = -3; dx <= 3; dx++)
+        if (!flat) continue;
+        let clear = true;
+        for (let dz = -6; dz <= 2 && clear; dz++) for (let dx = -2; dx <= 2; dx++)
           for (let dy = 0; dy <= 2; dy++)
-            if (rockAt(x + dx, gy + dy, z + dz)) { room = false; break; }
-        if (!room) continue;
+            if (W.solidAt(x + dx, gy + dy, z + dz)) { clear = false; break; }
+        if (!clear) continue;
         spot = { x: x + 0.5, z: z + 0.5, gy, bx: x, bz: z - 2, block: W.get(x, gy - 1, z - 2) };
       }
     if (!spot) return { error: 'no flat shelf' };
@@ -7523,7 +7784,13 @@ What was measured before any of this was fixed, over 180 frames of walking
     const run = (form, secs) => {
       p.form = form; p.formT = 9999; p.formMax = 9999;
       p.x = spot.x; p.z = spot.z + 1.2;
-      p.y = N.groundY(W, Math.floor(spot.x), Math.floor(spot.z + 1.2), spot.gy + 6) + 0.0005;
+      /* Feet on the shelf, not on the highest thing in the column: `groundY`
+         answers "the top of the highest solid block", and a crown is solid, so
+         over a shelf with a tree standing in it it put the body down on the
+         leaves seven metres up, inside its own crown, and the step's own guard
+         sent every body away. The shelf is level at gy over every cell a body
+         can stand in here, so gy is the surface under its feet. */
+      p.y = spot.gy + 0.0005;
       p.vx = p.vy = p.vz = 0; p.pitch = 0;
       const yw = Math.atan2(spot.bx - p.x, -(spot.bz - p.z)); p.faceYaw = yw; p.yaw = yw;
       p.inWater = false; p.held = 0; p.air = 999; p.vital = 10; p.grounded = true;
@@ -7668,15 +7935,16 @@ What was measured before any of this was fixed, over 180 frames of walking
      scan asked for the highest **solid** block, and water is not solid -- the
      block row says so, and everything else in the game believes it -- so the
      scan walked down through the whole lake and stopped at the lakebed. Every
-     one of the valley's **2,029** wet columns was painted with the colour of its
+     one of the valley's **2,970** wet columns was painted with the colour of its
      own floor (Mirrorlake's sand and mud: 112/104/74, 148/137/98), the lake read
      as a dry pit in the middle of the green, and the water palette the same
      function holds was never reached by a single pixel. The depth run was wrong
      the same way: it counted **up** from wherever the scan had stopped, which
      asks the sky how much water is above the lake and always answers one.
-     Measured over the whole map: **0** of 2,029 wet columns painted as water
-     before, **1,890** after (the other **139** have something solid standing
-     over the water -- the sunken tower, the keep, a tree -- and show that).
+     Measured over the whole map: **0** of 2,970 wet columns painted as water
+     before, **2,816** after. The other **133** have something solid standing
+     over the water -- the sunken tower, the keep, a tree -- and **21** more sit
+     under a POI dot, which is painted over the base and is warm by itself.
      The land is the control: a dry column is painted with the colour of the
      block on top of it, and the shading scales all three channels by one number,
      so the order between red and blue cannot change -- **0** dry columns may
@@ -7748,21 +8016,41 @@ What was measured before any of this was fixed, over 180 frames of walking
      as well as the chunk. Read the depth byte back off the meshes it uploads
      and check every one of them against the lake, column by column, and show
      that some of them could not have come from inside the chunk at all.
+     The audit asks the column a vertex stands **in**, not the one it is drawn
+     on, and that is not the same question for every vertex: a block corner sits
+     on a column line, but the corner of a micro box -- the kelp the lakebed now
+     grows, a berry hanging in a tower window -- sits inside one, at a fractional
+     x, z and height. The mesher used to hand those corners no water at all,
+     which cost nothing while nothing micro stood in it and costs the lake its
+     bed the day the kelp starts growing: 10,656 micro corners over the 24 wet
+     chunks, 5,328 of them under the surface, and every one of them lit by full
+     noon. The depth is uploaded in 1/8 m steps taken by truncation, which is
+     exact for a block corner and not for a stem standing at y+0.2, so the audit
+     truncates the same way it does.
      The same step holds a rebuild to the budget the game sets itself: the most
      expensive chunk in the valley has to rebuild inside the 6 ms a frame gives
      meshing, and inside half a millisecond per thousand vertices it uploads.
      Measured before the ring table was built up front: 4.15 ms for a chunk on
      average, 15.4 ms for the worst (17,064 vertices, 0.90 ms per thousand), and
      22.5 ms for the two chunks one fruit picked in that chunk flags. After:
-     0.97 ms on average, 1.7 ms for the worst, 1.7 ms for that harvest. */
+     about 1.05 ms on average. The worst chunk is deliberately not claimed here:
+     four runs of this same sweep named four different chunks and read
+     1.8 ms, 1.9 ms, 2.1 ms and 4.8 ms for them, which is why the clock below is a generous
+     backstop of 12 ms rather than a measured ceiling. */
   const meshWater = await step('theMesherKeepsTheLakeNextDoor', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R;
     const B = N.BLOCKS;
     /* the water in one column, read here rather than off the mesher's table:
-       the height of its surface and the lowest cell that water reaches */
+       the height of its surface and the lowest cell that water reaches. The key
+       is the two numbers themselves and not a packing of them: the vertices read
+       back here include the corners of micro boxes -- the kelp the lakebed now
+       grows -- and those do not stand on column lines, so a decimal packing like
+       (x+1)*(d+2)+(z+1) lets one such corner answer on behalf of a whole column
+       asked for earlier. That is how 756 vertices of level lakebed came to be
+       reported as wearing a depth no column of the lake gives. */
     const runs = new Map();
     const col = (x, z) => {
-      const k = (x + 1) * (W.d + 2) + (z + 1);
+      const k = x + ',' + z;
       let r = runs.get(k);
       if (r === undefined) {
         let top = -1, bot = -1;
@@ -7786,7 +8074,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const up0 = N.MeshBuilder.prototype.upload;
     let cap = null;
     N.MeshBuilder.prototype.upload = function (gl) { if (cap) cap.push({ pos: this.pos, dat: this.dat }); return up0.call(this, gl); };
-    let verts = 0, wet = 0, bad = 0, cross = 0, deep = 0;
+    let verts = 0, wet = 0, bad = 0, cross = 0, deep = 0, micro = 0, microWet = 0;
     const badEx = [];
     for (const ci of wetCi) {
       const x0 = (ci % W.cx) * W.cs, z0 = ((ci / W.cx) | 0) * W.cs;
@@ -7801,24 +8089,39 @@ What was measured before any of this was fixed, over 180 frames of walking
           verts++;
           if (d > 0) wet++;
           if (d > deep) deep = d;
+          /* The column this vertex stands in. A block corner sits on a column
+             line and asks the one it is drawn on; the corner of a micro box --
+             the kelp the lakebed now grows, a berry hanging in a tower window --
+             sits **inside** one, and the column it is inside is the one that
+             answers for it. */
+          const bx = x | 0, bz = z | 0;
+          if (bx !== x || bz !== z) { micro++; if (d > 0) microWet++; }
+          /* The depth is uploaded in 1/8 m steps, and the step is taken by
+             truncation. For a block corner that is exact -- a corner stands on a
+             column line and a whole number of blocks of water sit over it. A
+             micro box corner is not at a whole height (a stem 0.9 m tall stands
+             at y+0.2 and y+1.1), so the answer is not a whole number and the
+             upload rounds it down; the audit has to round the same way or it
+             reads an exact answer as a wrong one. */
+          const q = (m) => Math.min(255, (Math.max(0, m) * 8) | 0) / 8;
           // the five columns the point question asks about this vertex ...
           let point = 0, pointOwn = 0;
-          for (let q = 0; q < 5; q++) {
-            const qx = x + (q === 1 ? 1 : q === 2 ? -1 : 0), qz = z + (q === 3 ? 1 : q === 4 ? -1 : 0);
+          for (let q2 = 0; q2 < 5; q2++) {
+            const qx = bx + (q2 === 1 ? 1 : q2 === 2 ? -1 : 0), qz = bz + (q2 === 3 ? 1 : q2 === 4 ? -1 : 0);
             const r = col(qx, qz);
             if (!r || y < r.bot || y >= r.top) continue;
-            const dd = r.top - y;
+            const dd = q(r.top - y);
             if (dd > point) point = dd;
             if (qx >= x0 && qx < x0 + W.cs && qz >= z0 && qz < z0 + W.cs && dd > pointOwn) pointOwn = dd;
           }
           // ... and the nine a face may hand its own surface in from
           const allowed = new Set([point]), allowedOwn = new Set([pointOwn]);
           for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
-            const r = col(x + dx, z + dz);
+            const r = col(bx + dx, bz + dz);
             if (!r) continue;
-            allowed.add(Math.max(0, r.top - y));
-            if (x + dx >= x0 && x + dx < x0 + W.cs && z + dz >= z0 && z + dz < z0 + W.cs)
-              allowedOwn.add(Math.max(0, r.top - y));
+            allowed.add(q(r.top - y));
+            if (bx + dx >= x0 && bx + dx < x0 + W.cs && bz + dz >= z0 && bz + dz < z0 + W.cs)
+              allowedOwn.add(q(r.top - y));
           }
           if (!allowed.has(d)) { bad++; if (badEx.length < 3) badEx.push([x, y, z, d, point]); }
           if (!allowedOwn.has(d)) cross++;
@@ -7854,7 +8157,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     Map.prototype.get = mapGet;
     N.MeshBuilder.prototype.upload = up0;
-    return { chunks: wetCi.length, verts, wet, bad, badEx, cross, deep,
+    return { chunks: wetCi.length, verts, wet, bad, badEx, cross, deep, micro, microWet,
       sweepVerts: best.nv, sweepMs: +best.total.toFixed(1),
       meanMs: +(best.total / (W.cx * W.cz)).toFixed(2),
       worstMs: { ms: +best.worst.ms.toFixed(2), ci: best.worst.ci },
@@ -7869,6 +8172,8 @@ What was measured before any of this was fixed, over 180 frames of walking
     !meshWater.error && meshWater.getsPerK < 100 && meshWater.mapGets < 200000, meshWater);
   check('and the whole valley rebuilds inside the budget a frame gives meshing',
     !meshWater.error && meshWater.worstMs.ms < 12 && meshWater.perK < 1, meshWater);
+  check('and the corners that stand inside a column -- kelp, a berry in a window -- ask the column they stand in and wear it',
+    !meshWater.error && meshWater.micro > 5000 && meshWater.microWet > 3000, meshWater);
 
   /* ---- the box round the block the crosshair is on ----
      The twelve bars used to be rebuilt in world coordinates every frame and

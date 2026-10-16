@@ -50,11 +50,14 @@
     },
     {
       id: 'mirrorlake', cn: '镜湖', en: 'Mirrorlake', kind: 'circle',
-      cx: 78, cz: 106, r: 34,
+      cx: 78, cz: 106, r: 38,
       danger: 3,
       // the sunken tower: worldgen builds it here, and the lamp jellyfish field
       // sits on its outline (data/creatures.js asks for it by name)
       tower: [66, 118],
+      // the ring of sunken huts on the lakebed, the frogs' place (POI frogshall
+      // sits in the middle of it); worldgen builds them at absolute heights
+      huts: [[90, 120], [96, 116], [94, 124], [88, 126]],
       desc: '湖底有一座沉塔。水面平静得像玻璃；一到雨后，整片湖岸一起叫。'
     },
     {

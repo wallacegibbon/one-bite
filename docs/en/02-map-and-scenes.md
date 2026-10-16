@@ -48,7 +48,7 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
 | `batcave` | Echo Hollow | 回声丘 | circle r13 | (28,30) | 2 | The hill hollowed into three layers of tunnel, and nothing living at the bottom of them |
 | `deepgrove` | The Deep Grove | 深鹿林 | circle r18 | (104,32) | 3 | Silver trees; every deer path in the valley folds into this one |
 | `mountains` | Ashscale Ridge | 北岭·鹰喙峰 | circle r26 | (142,18) | 3 | The bear's slope, wind blowing snow sideways |
-| `mirrorlake` | Mirrorlake | 镜湖 | circle r34 | (78,106) | 3 | A sunken tower and a few sunken huts on the lakebed; the tower is lit from inside by jellyfish |
+| `mirrorlake` | Mirrorlake | 镜湖 | circle r38 | (78,106) | 3 | A sunken tower and a few sunken huts on the lakebed; the tower is lit from inside by jellyfish |
 | `starfall` | Starfall Keep | 星坠堡 | circle r12 | (78,106) | 1 | The school on the island: four towers and a bell, a greenhouse in the cellar |
 | `lanternrow` | Lanternrow | 灯笼镇 | rect | (116,114)–(154,152) | 0 | Where the main cellar stands |
 | `orchard` | The Old Orchard | 果园遗迹 | circle r15 | (24,104) | 2 | The ancestral ground of every fruit tree: broken walls, old burrows, the oldest tree |
@@ -80,11 +80,11 @@ The valley is not a floor, it is four:
 | **Cloudspire** | isle surfaces 29–40; what stands on them up to 47 | 6 isles, the old beams | Owl (fly 5.2), or the stepping isles + Leaper |
 | **Canopy** | 20–31 over the town, to 47 where the forest stands on the northern slopes | Crowns, the bell tower's roof (42), the top of the Deep Grove (35) | Jump + Leaper |
 | **Ground** | 20–29 in the town and the orchard (mean 22) | Forest, town, keep, orchard | Walking |
-| **Underwater** | 0–14; the water itself is y5..14 | Mirrorlake, sunken tower, sunken huts | Only the frog (skin breathing) |
+| **Underwater** | 0–14; the water itself is y4..14 | Mirrorlake, sunken tower, sunken huts | Only the frog (skin breathing) |
 
 **These numbers are measured off the generated world, not remembered** (seed 20261008): the topmost solid block per column, plants excluded for the ground rows and leaves counted for the canopy. `node-smoke.js` prints all of it and fails if the chapter's numbers stop matching. The table used to say Canopy 20–28 and Ground 15–24; measured, the town's crowns top out at 31 and the forest's at **47**, because the trees there stand on the northern slopes rather than on the valley floor. And the isles sit **inside** Whisperwood's rectangle — beamisle (40,20), highroost (96,12), stepping3 (20,62) — so a zone query over Whisperwood answers with sky: its leaves run 20..47.
 
-**Mirrorlake depth**: surface y14, and the lakebed is a slope rather than a floor — the water stands anywhere from **1 to 10 blocks** deep (measured over all 1,856 water columns inside the circle: 44% of them are 4 blocks or less, the deepest at (79,92) where the water runs y5..y14). A human holds breath for 18 seconds, exactly enough to reach the tower windows and come back up, not enough to pick a fruit off the sill. That is the whole argument for "become the frog first": in this water exactly one animal breathes for you.
+**Mirrorlake depth**: surface y14, and the lakebed is a slope rather than a floor — the water stands anywhere from **1 to 11 blocks** deep (measured over all 2,970 water columns: 27% of them are 4 blocks or less, **53% are 8 or more**, the deepest at (72,83) where the water runs y4..y14; the bed cannot go below y3, so 11 is the deepest column this world can carve). A human holds breath for 18 seconds, exactly enough to reach the tower windows and come back up, not enough to pick a fruit off the sill. That is the whole argument for "become the frog first": in this water exactly one animal breathes for you.
 
 **The ridge is not on that ladder.** Ashscale's own surface is **y23–36** (mean 30, measured over the zone's columns), and its cold starts at y26 — 88% of the ridge's columns are already cold — and reaches its full bite at y36, which is the top of it: 258 columns stand at or above that line, and the 25 bruin figs hang at **y29..37**, one block above the ground they grow on, most of them at 37. A human can cross the ridge and come back with a fig if it hurries; a bear body simply is not cold.
 
@@ -126,7 +126,7 @@ Three layers of tunnel, about 120 blocks long. The id is still `batcave`, and th
 
 ### 5.5 Mirrorlake
 
-Radius 34, deepest at the centre.
+Radius 38, deepest at the centre at 11 blocks, with **62** stalks of kelp on the shelves of the bed -- every one of them under the water, and lit by the lake it stands in rather than by itself. The sunken tower and the huts are built at absolute heights, so generation fills each footprint up to its floor first — without that the huts hang in the water.
 
 - **Sunken Tower** (66,118): a 7×7 shell from **y6 to y15** with a spire at **y16/y17**, so the top of the ruin stands three blocks **above** the water line — drowned to the shoulders, not under it. Windows on all four faces at **y7/y10/y13**, and the **frog pear** hangs on the sills one block under two of them (**y9/y12**). Picking it requires breathing underwater.
 - **Frogshall** (92,120): y9, a ring of sunken huts. The frogs' place; after rain their chorus drowns the bell.

@@ -48,7 +48,7 @@
            a column with water in it shows, so the scan has to stop at it -- and
            it used to stop only at a **solid** block, which water is not: the
            scan walked straight down through the whole lake and stopped at the
-           lakebed, so every one of the valley's **2,029** wet columns was
+           lakebed, so every one of the valley's **2,970** wet columns was
            painted with the colour of its own floor (the sand and mud of
            Mirrorlake, 112/104/74 and 148/137/98) and the water palette below it
            was never reached at all. Cloud, fruit, reeds and the glowcap ring

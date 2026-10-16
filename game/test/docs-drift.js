@@ -26,7 +26,7 @@ const DRIFTS = [
   ['02-map-and-scenes.md', '| `cellar` | Main Cellar | (136,134) | 20 |', '| `cellar` | Main Cellar | (136,134) | 21 |', 'POI y'],
   ['02-map-and-scenes.md', '| `beamisle` | (40,20) | 11 | 37 |', '| `beamisle` | (40,20) | 11 | 36 |', 'isle top'],
   ['02-map-and-scenes.md', '| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 4 |', '| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 3 |', 'zone danger'],
-  ['02-map-and-scenes.md', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r34 | (78,106) |', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r30 | (78,106) |', 'zone radius'],
+  ['02-map-and-scenes.md', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r38 | (78,106) |', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r30 | (78,106) |', 'zone radius'],
   ['03-characters-and-creatures.md', '| `thorn` | 刺刺菇 | Thorncap |', '| `thorn` | 刺刺菇 | Thorny Cap |', 'plant name coverage'],
   ['05-backpack-and-storage.md', 'press F to use', 'press Q to use', 'unbound key claim'],
   // each phrase in the docs-sync `cut` list gets its own injection, so deleting

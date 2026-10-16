@@ -131,7 +131,19 @@
     PLANT_BLOCK[id] = p.id; PLANT_BLOCK_REV[p.id] = id;
   });
 
-  def(75, { cn: '水草', solid: false, opaque: false, emis: 1, c: [0.3, 0.75, 0.55], micro: [[0.4, 0.0, 0.4, 0.2, 0.9, 0.2], [0.25, 0.2, 0.5, 0.16, 0.5, 0.16]] });
+  /* Kelp is a plant, not a lamp: it takes the light that comes down through the
+     lake and gives back what is left of it, which is the whole reason the bed it
+     stands on reads teal. It used to state `emis: 1` -- copied from the glowcap
+     ring on the line below -- and nothing ever showed, because the kelp that
+     would have drawn it was never placed. With the lakebed growing it again, 62
+     stalks lit themselves in full daylight: in a noon frame taken from a metre
+     above the surface of Mirrorlake, taking the emissive mesh out of it took 574
+     pixels with it and taking the ordinary micro mesh out took none; put back
+     into the ordinary mesh, the same two switches read 0 and 574 -- the stalks
+     are still in the frame, and it is the lake that lights them. The glowcap
+     ring and the glowcap itself glow because that is what they are; this is
+     grass under water. */
+  def(75, { cn: '水草', solid: false, opaque: false, c: [0.3, 0.75, 0.55], micro: [[0.4, 0.0, 0.4, 0.2, 0.9, 0.2], [0.25, 0.2, 0.5, 0.16, 0.5, 0.16]] });
   def(76, { cn: '荧光菇环', solid: false, opaque: false, emis: 1, c: [0.6, 1.0, 0.7], micro: [[0.44, 0.0, 0.44, 0.14, 0.4, 0.14], [0.2, 0.38, 0.2, 0.6, 0.26, 0.6]] });
   def(77, { cn: '窖树核心', solid: false, opaque: false, emis: 1, c: [1.0, 0.85, 0.45], micro: [[0.3, 0.1, 0.3, 0.4, 0.5, 0.4]] });
   def(78, { cn: '果窖箱', store: true, c: [0.44, 0.31, 0.19], ct: [0.66, 0.48, 0.24] });
@@ -366,12 +378,15 @@
          x0+cs, and the question steps one column further out, which is exactly
          the ring RW covers -- so the five columns are always inside the table,
          and a step off its edge can only land on a column outside the map,
-         which answers dry. A micro box corner that is not on a column line, a
-         stem half a block across, has no column of its own: it answers dry here,
-         as it did when its fractional key missed the Map. */
+         which answers dry. A micro box corner is not on a column line at all:
+         a stem half a block across stands **inside** one, so the column it
+         stands in answers, and the four round it are the same four. It used to
+         answer dry -- which cost nothing while nothing micro stood in water,
+         and costs the lake its whole bed the day the kelp starts growing: 62
+         stalks came back lit by full noon, because the one vertex question the
+         lake answers skipped every one of their corners. */
       const under = wet ? (x, y, z) => {
-        if ((x | 0) !== x || (z | 0) !== z) return 0;
-        const k = (z - RZ) * RW + (x - RX);
+        const k = ((z | 0) - RZ) * RW + ((x | 0) - RX);
         let best = 0;
         for (let i = 0; i < 5; i++) {
           const j = k + (i === 1 ? 1 : i === 2 ? -1 : 0) + (i === 3 ? RW : i === 4 ? -RW : 0);
@@ -491,7 +506,7 @@
                  of the point the depth is measured at. A corner of a submerged
                  face can sit inside the solid next door, where no water column
                  reaches down to it, and the point question then answers "dry":
-                 644 of the 5,366 faces this mesher puts against water had at
+                 852 of the 7,528 faces this mesher puts against water had at
                  least one corner handed no depth at all, and the base of every
                  step, pillar and sunken wall in Mirrorlake lit up the colour of
                  dry sand -- a bright triangle at the foot of each one, brightest

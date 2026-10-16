@@ -51,11 +51,18 @@
     // Echo Hollow
     const dh = dist(x, z, HILL.x, HILL.z);
     if (dh < HILL.r) h += Math.pow(1 - dh / HILL.r, 1.4) * 8;
-    // Mirrorlake (bowl shaped: shallow at the shore, deep in the middle)
+    /* Mirrorlake (bowl shaped: shallow at the shore, deep in the middle).
+       18 carved a puddle: 2,029 water columns, mean depth 5.5, and 41% of them
+       4 or shallower -- more shelf than lake. 22 gives 2,970 columns, mean 7.4,
+       53% at 8 or deeper. It is also as deep as this world can go: the surface
+       is y14 and terrainH never returns below y3, so 11 is the deepest column
+       possible and the bottom of the basin comes out flat. The shoreline term
+       is what keeps the widened circle out of the whisperwood: at r38 not one
+       wet cell lands in the forest band, at r40 seventeen do. */
     const dl = dist(x, z, LAKE.x, LAKE.z);
     if (dl < LAKE.r) {
       const t = Math.min(1, (1 - dl / LAKE.r) * 1.9);
-      h -= 18 * Math.pow(t, 0.6);
+      h -= 22 * Math.pow(t, 0.6);
       if (dl > LAKE.r - 5) h += (dl - (LAKE.r - 5)) * 0.6;   // raise the shoreline slightly
     }
     // the island at the lake centre
@@ -347,10 +354,34 @@
   }
 
   /* ---------------- lakebed: sunken tower / the sunken huts ---------------- */
+  /* These are built at absolute heights, so they need ground under them, and
+     the lakebed shelves down to the y3 floor terrainH refuses to go below.
+     Measured with the lake as it was: the tower's floor (y6) sat on ground y5,
+     but the huts' floors (y7) sat on ground y4/y5/y6/y6 -- three of the four
+     had a floor with nothing under it, hanging 1-2 blocks in the water.
+     Deepening the lake put y3 under all five: the tower would have hung 2
+     blocks and every hut 3. Fill the footprint up to the base, and cap it with
+     the sand the lakebed is made of, so a plinth does not read as a different
+     material from the bed it rises out of. */
+  function plinth(x0, z0, x1, z1, baseY) {
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+      /* Not gy(): gy scans the whole column from the top of the world down and
+         stops at the first solid block it finds, which over the tower's north
+         columns is the roof of Starfall Keep at y33-36, not the lakebed at y3.
+         Look only below the base, and let the def table skip water the way the
+         terrain fill does. */
+      let g = -1;
+      for (let y = baseY - 1; y >= 0; y--) { const d = D[get(x, y, z)]; if (d && d.solid) { g = y; break; } }
+      if (g >= baseY - 1) continue;
+      for (let y = g + 1; y < baseY; y++) set(x, y, z, 2);
+      set(x, baseY - 1, z, 4);
+    }
+  }
   function lakebed() {
     // sunken tower -- the landmark lives in the zone data, because the lamp
     // jellyfish field is defined as its outline and spawns from there
     const [tx, tz] = MIRROR.tower;
+    plinth(tx - 3, tz - 3, tx + 3, tz + 3, 6);
     box(tx - 3, 6, tz - 3, tx + 3, 15, tz + 3, 12, true);
     for (let y = 7; y <= 14; y += 3) { set(tx - 3, y, tz, 21); set(tx + 3, y, tz, 21); set(tx, y, tz - 3, 21); set(tx, y, tz + 3, 21); }
     set(tx, 16, tz, 12); set(tx, 17, tz, 12);
@@ -363,16 +394,22 @@
       set(tx + dx, 12, tz + dz, N.FRUIT_BLOCK_REV['frogpear']);
     }
     // sunken huts: a ring of them on the lakebed, now the frogs' place
-    for (const [hx, hz] of [[90, 120], [96, 116], [94, 124], [88, 126]]) {
+    for (const [hx, hz] of MIRROR.huts) {
+      plinth(hx - 2, hz - 2, hx + 2, hz + 2, 7);
       box(hx - 2, 7, hz - 2, hx + 2, 10, hz + 2, 3, true);
       set(hx, 11, hz, 22); set(hx - 2, 9, hz, 21);
     }
-    // kelp
+    // kelp. The bed of a lake is covered by water, so asking for the cell above
+    // to be empty asked for something that never happens: this placed none at
+    // all, in every world, since the day it was written. Ask for the water --
+    // and ask for it all the way up: the topmost water cell of the lake is y14,
+    // and a stalk standing in it takes the surface sheet's whole block out with
+    // it, which leaves a one-metre hole in the lake and a bright wall round it.
     for (let i = 0; i < 260; i++) {
       const a = rnd() * 6.28, r = rnd() * LAKE.r;
       const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
       const y = gy(x, z);
-      if (y < SEA && y > 4 && get(x, y, z) && !get(x, y + 1, z)) set(x, y + 1, z, 75);
+      if (y + 1 < SEA && y > 4 && get(x, y, z) && get(x, y + 1, z) === 5) set(x, y + 1, z, 75);
     }
     // frogpear bushes in the reeds all round the shore
     for (let i = 0; i < 30; i++) {

@@ -233,7 +233,7 @@ for (const p of F.POIS) console.log('POI', p.cn, 'topY=', topAt(p.x, p.z));
   console.log('层 北岭', JSON.stringify(ridge), '云顶岛面', F.SKY_ISLES.map(i => i.top).join('/'));
   const bad = [];
   // what docs 02 s4 claims, in the same words the chapter uses
-  if (wlo !== 5 || whi !== 14) bad.push(`water y${wlo}..${whi}, the chapter says 5..14`);
+  if (wlo !== 4 || whi !== 14) bad.push(`water y${wlo}..${whi}, the chapter says 4..14`);
   if (canopyTown > 35) bad.push(`town canopy tops at ${canopyTown}, the chapter says 20-35`);
   if (canopyFloor < 45 || canopyFloor > 48) bad.push(`valley canopy tops at ${canopyFloor}, the chapter says 47`);
   if (ridge.lo < 22 || ridge.hi > 37) bad.push(`ridge surface y${ridge.lo}..${ridge.hi}, the chapter says 23-36`);
@@ -270,6 +270,82 @@ console.log('水方块', water);
     .map(([x, y, z, b, what]) => `${what} (${x},${y},${z}) wants ${b} got ${w.get(x, y, z)}`);
   console.log('沉塔窗/窗台', want.length, '格', wrong.length ? '!! ' + wrong.join('; ') : 'OK');
   if (wrong.length) process.exitCode = 1;
+}
+
+/* Mirrorlake is the valley's only body of water, and nothing in the build could
+   see its shape: the zone asked for a circle of r34 and the terrain carved it 18
+   deep, which measured as 2,029 water columns with a mean depth of 5.5 and 41%
+   of them 4 or shallower -- a puddle you can wade across, in the middle of a
+   wood. It is r38 carved 22 deep now: 2,969 columns, mean 7.4, 53% of it at 8 or
+   deeper, deepest 11 (the surface is y14 and terrainH never returns below y3, so
+   11 is the deepest column this world can hold). The other half of the question
+   is what it must not become. The widened circle still has to leave the
+   whisperwood, the town, the orchard and the keep island dry. And the sunken
+   tower and the sunken huts are built at absolute heights, so every one of them
+   needs ground under its floor: with the lake as it was three of the four huts
+   hung 1-2 blocks above the bed, and deepening the lake without filling them in
+   first would have hung all five 2-3 blocks. */
+{
+  const SEA = F.WORLD.sea, WW = F.WORLD.w, WH = F.WORLD.h, WD = F.WORLD.d;
+  const solidUnder = (x, z, from) => {
+    for (let y = from; y >= 0; y--) { const d = F.BLOCKS[w.get(x, y, z)]; if (d && d.solid) return y; }
+    return -1;
+  };
+  const wet = new Uint8Array(WW * WD);
+  let cols = 0, sum = 0, deepest = 0, deep8 = 0, minBed = 99;
+  for (let z = 0; z < WD; z++) for (let x = 0; x < WW; x++) {
+    let top = -1;
+    for (let y = WH - 1; y > 0; y--) if (w.get(x, y, z) === 5) { top = y; break; }
+    if (top < 0) continue;
+    const bed = solidUnder(x, z, top - 1);
+    if (bed < 0 || top - bed <= 0) continue;
+    wet[z * WW + x] = 1; cols++; sum += top - bed;
+    deepest = Math.max(deepest, top - bed);
+    if (top - bed >= 8) deep8++;
+    minBed = Math.min(minBed, bed);
+  }
+  const wetIn = (test) => {
+    let n = 0;
+    for (let z = 0; z < WD; z++) for (let x = 0; x < WW; x++) if (test(x, z) && wet[z * WW + x]) n++;
+    return n;
+  };
+  const wood = F.ZONE_BY_ID.whisperwood, town = F.ZONE_BY_ID.lanternrow;
+  const orch = F.ZONE_BY_ID.orchard, keep = F.ZONE_BY_ID.starfall, M = F.ZONE_BY_ID.mirrorlake;
+  const bad = [];
+  if (cols < 2700 || cols > 3300) bad.push(`${cols} water columns, want 2700-3300 (r34 carved 2,029)`);
+  if (sum / cols < 6.5) bad.push(`mean depth ${(sum / cols).toFixed(2)}, want 6.5 or more (r34 was 5.51)`);
+  if (deepest < 11) bad.push(`deepest column ${deepest}, want 11 (y14 surface over the y3 floor)`);
+  if (deep8 / cols < 0.45) bad.push(`${(deep8 / cols * 100).toFixed(0)}% of it 8 or deeper, want 45% or more (r34 was 31%)`);
+  if (minBed < 3) bad.push(`a lakebed column reaches y${minBed}, below the y3 floor terrainH stops at`);
+  const inWood = wetIn((x, z) => x >= wood.x0 && x <= wood.x1 && z >= wood.z0 && z <= wood.z1);
+  if (inWood) bad.push(`${inWood} wet cells inside the whisperwood`);
+  const inTown = wetIn((x, z) => x >= town.x0 && x <= town.x1 && z >= town.z0 && z <= town.z1);
+  if (inTown) bad.push(`${inTown} wet cells inside Lanternrow`);
+  const inOrch = wetIn((x, z) => Math.hypot(x - orch.cx, z - orch.cz) <= orch.r);
+  if (inOrch) bad.push(`${inOrch} wet cells inside the orchard`);
+  const inKeep = wetIn((x, z) => Math.hypot(x - keep.cx, z - keep.cz) <= 12);
+  if (inKeep) bad.push(`${inKeep} wet cells on the keep island`);
+  const [tx, tz] = M.tower;
+  const rests = (x0, z0, x1, z1, floorY, what) => {
+    let n = 0;
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (solidUnder(x, z, floorY - 1) < floorY - 1) n++;
+    if (n) bad.push(`${what}: ${n} of ${(x1 - x0 + 1) * (z1 - z0 + 1)} floor cells have nothing under them`);
+  };
+  rests(tx - 3, tz - 3, tx + 3, tz + 3, 6, 'sunken tower');
+  for (const [hx, hz] of M.huts) rests(hx - 2, hz - 2, hx + 2, hz + 2, 7, `sunken hut (${hx},${hz})`);
+  let kelp = 0, kelpBad = 0;
+  for (let y = 1; y <= SEA; y++) for (let z = 0; z < WD; z++) for (let x = 0; x < WW; x++) {
+    if (w.get(x, y, z) !== 75) continue;
+    kelp++;
+    const d = F.BLOCKS[w.get(x, y - 1, z)];
+    if (!d || !d.solid) kelpBad++;
+  }
+  if (!kelp) bad.push('the lake grows no kelp at all: the bed of a lake is under water, so asking the cell above it to be empty never matches');
+  if (kelpBad) bad.push(`${kelpBad} of ${kelp} kelp not standing on the lakebed`);
+  console.log('镜湖', cols, '柱 均深', (sum / cols).toFixed(2),
+    '最深', deepest, '深 8+', (deep8 / cols * 100).toFixed(0) + '%',
+    '水草', kelp, bad.length ? '!! ' + bad.join('; ') : 'OK');
+  if (bad.length) process.exitCode = 1;
 }
 
 /* A roof has to point up, and it has to keep the rain out. The roofs were
