@@ -99,7 +99,7 @@ node game/test/upgrade.js      # backpack upgrades and slot maths
 node game/test/input.js        # real key events: walk / jump / fly / time / Grey Veil border / camera comfort
 node game/test/lang.js         # language switch: no raw key on screen, save file identical across languages
 
-node game/test/shots.js g      # 23 screenshots → .shots/ (zones, transformation, UI, identity, one panel per language)
+node game/test/shots.js g      # 24 screenshots → .shots/ (zones, transformation, UI, identity, one panel per language, dusk)
 node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # single shot, for eyeballing
 node game/test/heightmap.js    # ASCII dump of the terrain heightmap, for eyeballing
 node game/test/meshbench.js    # what a chunk costs to build; a measurement, not a test

@@ -1870,7 +1870,7 @@ const { sim } = require('./simwait');
       { name: 'town', x: 136.5, z: 128.5, yaw: 1.5708, pitch: 0.6 },
       { name: 'lake', x: 78.5, z: 118.5, yaw: 0, pitch: 0.5 }
     ];
-    const look = (v, hour) => {
+    const look = (v, hour, stride = 2) => {
       p.form = null; p.vx = p.vy = p.vz = 0; p.x = v.x; p.z = v.z;
       p.y = N.terrainY(W, Math.floor(v.x), Math.floor(v.z), 60) + 1.62;
       p.yaw = v.yaw; p.pitch = v.pitch;
@@ -1894,9 +1894,9 @@ const { sim } = require('./simwait');
       // a histogram, not a sorted array: the darkest slice of the geometry is
       // what is wanted, and 256 bins is the whole range of a byte
       const hist = new Int32Array(256);
-      for (let Y = 0; Y < h; Y += 2) {
+      for (let Y = 0; Y < h; Y += stride) {
         const gy = h - 1 - Y, ndcY = 1 - (Y + 0.5) / h * 2;
-        for (let X = 0; X < w; X += 2) {
+        for (let X = 0; X < w; X += stride) {
           const ndcX = (X + 0.5) / w * 2 - 1;
           let dx = R.fwd[0] + R.right[0] * ndcX * tanX + R.up[0] * ndcY * tanY;
           let dy = R.fwd[1] + R.right[1] * ndcX * tanX + R.up[1] * ndcY * tanY;
@@ -1918,31 +1918,77 @@ const { sim } = require('./simwait');
          frame with one in it is still down there with it. */
       let gmin = 0, want = Math.max(1, Math.floor(geoN * 0.01)), seen = 0;
       for (let v = 0; v < 256; v++) { seen += hist[v]; if (seen >= want) { gmin = v; break; } }
+      /* A hole cut in the sky is an **area**, so the frame is measured twice: the
+         darkest slice of the geometry says how deep it goes, and the share of the
+         whole frame that is geometry under luminance 24 says how much of it there
+         is. At 18:00 the first of those was 0.21 of the sky and the second was
+         38.4% of the frame -- a mass, not a pixel. */
+      let mass = 0; for (let b = 0; b < 24; b++) mass += hist[b];
+      const sky = ss / Math.max(1, sn);
       g._camFrame = null;
-      return { skyMean: +(ss / Math.max(1, sn)).toFixed(1), geoMin: gmin,
+      return { skyMean: +sky.toFixed(1), geoMin: gmin, ratio: +(gmin / Math.max(1e-6, sky)).toFixed(2),
+        massPct: +(mass / tot * 100).toFixed(1),
         blackPct: +(black / tot * 100).toFixed(1) };
     };
     const out = {};
     for (const v of views) out[v.name] = { night: look(v, 0), day: look(v, 13) };
+    /* Dusk, and a set of lenses aimed at the horizon, where a bright sky sits
+       behind a dark mass -- the four above look up or down, which is what the
+       midnight half of this step wanted. The clock calls 17:30, 18:00, 18:30 and
+       06:00 night (night > 0.55), and at those hours the sky is at its brightest
+       of the whole day -- `dusk` peaks as the sun crosses the horizon -- while
+       the sun's light on the ground is down to 43%, 22%, 8% and 22%. The gate the
+       sky's light on the ground used had the sun's height in it and had not
+       opened yet: 38.4% of the town frame, 30.4% of the grove, 38.4% of the ridge
+       and 2.6% of the lake was geometry under luminance 24 against a sky of
+       61..75, and the darkest 1% of that geometry was 0.21..0.31 of the sky.
+       Sampled every fourth pixel: these are sixteen more frames, and the step
+       already draws eight. */
+    const duskViews = [
+      { name: 'townlevel', x: 136.5, z: 128.5, yaw: 1.5708, pitch: -0.05 },
+      { name: 'grove', x: 104.5, z: 32.5, yaw: 1.5708, pitch: 0.1 },
+      { name: 'ridge', x: 142.5, z: 20.5, yaw: 3.0, pitch: 0.25 },
+      { name: 'lake', x: 78.5, z: 118.5, yaw: 0, pitch: 0.5 }
+    ];
+    const dusk = {};
+    for (const v of duskViews) {
+      dusk[v.name] = {};
+      for (const hr of [17.5, 18, 18.5, 6]) dusk[v.name][hr] = look(v, hr, 4);
+    }
     const amb = {};
-    for (const hr of [13, 18, 20, 0]) {
+    for (const hr of [13, 16, 18, 20, 0]) {
       g.time = N.DAY_LEN * (hr / 24); g.updateEnv();
       amb[hr] = g.env.ambient.map(x => +x.toFixed(4));
     }
     g._camFrame = null; g.render();
     p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
     p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
-    return { views: out, amb, worstBlack: Math.max(...views.map(v => out[v.name].night.blackPct)),
+    const duskCells = Object.keys(dusk).flatMap(k => Object.keys(dusk[k]).map(hr => dusk[k][hr]));
+    return { views: out, amb, dusk,
+      duskMass: Math.max(...duskCells.map(c => c.massPct)),
+      duskRatio: Math.min(...duskCells.map(c => c.ratio)),
+      worstBlack: Math.max(...views.map(v => out[v.name].night.blackPct)),
       worstRatio: Math.min(...views.map(v => out[v.name].night.geoMin / out[v.name].night.skyMean)) };
   });
-  check('the light of the sky on the ground is zero while the sun is up',
-    nightfall.amb[13].every(x => x === 0) && nightfall.amb[18].every(x => x === 0), nightfall.amb);
+  check('the light of the sky on the ground is zero while the sun still lights the ground',
+    nightfall.amb[13].every(x => x === 0) && nightfall.amb[16].every(x => x === 0), nightfall.amb);
+  check('and it is there at 18:00, the hour the clock calls night, in the dusk sky\'s own warm',
+    nightfall.amb[18][0] > 0.1 && nightfall.amb[18][0] > nightfall.amb[18][2], nightfall.amb);
   check('and it is there once the sun is properly down, and it is the blue of the sky',
     nightfall.amb[0][2] > 0.03 && nightfall.amb[0][2] > nightfall.amb[0][0], nightfall.amb);
   check('a night frame holds no black mass: nothing in it is below luminance 12',
     nightfall.worstBlack === 0, nightfall.views);
   check('the darkest surface at night is not below the sky it sits against',
     nightfall.worstRatio >= 0.6, nightfall.views);
+  /* The mass check is under 1% of the frame, not zero: the four lenses measured
+     38.4, 30.4, 38.4 and 2.6 before the gate was asked of the sun's light on the
+     ground, and 0 after it, and a viewport that is a different shape from the one
+     these were read at should not be allowed to fail the run over a handful of
+     pixels. */
+  check('a dusk frame holds no black mass either: under 1% of it is geometry under luminance 24',
+    nightfall.duskMass < 1, nightfall.dusk);
+  check('and the darkest surface at dusk is not below the dusk sky it sits against',
+    nightfall.duskRatio >= 0.5, nightfall.dusk);
   check('and in daylight the same lenses still have nothing black in them',
     Object.keys(nightfall.views).every(k => nightfall.views[k].day.blackPct === 0 && nightfall.views[k].day.geoMin > 30),
     nightfall.views);

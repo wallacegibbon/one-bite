@@ -25,6 +25,11 @@ const SHOTS = [
   // ask for time=620 here, which is 11:30 in the morning: a shot called "night"
   // that showed noon.)
   ['night', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe time=385'],
+  // 315 s is 18:00: the hour the clock calls night (night 0.78) while the sky is
+  // at its brightest of the whole day. The ground has to keep the dusk's own
+  // light rather than turn into a cut-out against it -- see the uAmb note in
+  // docs/en/07 s3.2
+  ['dusk', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe time=315'],
   // the same town, the same hour, an owl's eyes: nightVision is the only change
   ['nightowl', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe form=owlberry time=385'],
   // the three bodies you can wear, seen from behind: the gait and the pose come

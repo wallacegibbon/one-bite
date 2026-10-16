@@ -99,7 +99,7 @@ node game/test/upgrade.js      # 背包升级与果格数学
 node game/test/input.js        # 真实按键：走/跳/飞/时间/灰雾墙边界/镜头舒适度
 node game/test/lang.js         # 语言切换：屏幕上没有裸 key，存档文件在两种语言下逐字节相同
 
-node game/test/shots.js g      # 23 张截图 → .shots/（区域、变形、UI、身份、每种语言各一张面板）
+node game/test/shots.js g      # 24 张截图 → .shots/（区域、变形、UI、身份、每种语言各一张面板、黄昏）
 node game/test/shot.js out.png "pos=136,26,132 cellar=1"   # 单张，肉眼检查
 node game/test/heightmap.js    # 地形高度图 ASCII 输出，肉眼检查
 node game/test/meshbench.js    # 一个区块的网格化开销；是测量，不是测试

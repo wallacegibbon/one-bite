@@ -334,12 +334,30 @@
          17.3..21.3; the same four frames at 13:00 have 0% below 12.
          The term is **added**, not multiplied, because that is the shape the
          problem has: it lifts a dark surface by most of its own value and a
-         bright one by hardly anything. The gate is the one the sky shader already
-         uses for the stars -- the sun has to be properly down, not merely low --
-         so dusk, which has light of its own, is left alone. */
-      const down = Math.max(0, Math.min(1, -el / 0.2));
+         bright one by hardly anything.
+         The gate is asked of the sun's light on the ground -- `day` -- and not of
+         how far the sun's disc has sunk. The gate this used opens at el = 0 and
+         closes at el = -0.2, which on this clock is 18:00 and 18:46; but the
+         sun's light on the ground is down to 22% at 18:00 and gone at 18:32, and
+         the sky is at its **brightest** across those hours, because `dusk` peaks
+         as the sun crosses the horizon and pushes it to 0.95/0.52/0.30. So
+         through the whole of dusk the ground was lit by a fraction of the sun's
+         light and by none of the sky's, and the HUD calls 18:00 night (night
+         0.78 > 0.55): the game named it night while drawing the blackest ground
+         it has. Measured at 18:00 on four lenses aimed at the horizon, the share
+         of the frame that is geometry below luminance 24 against a sky of 61..75
+         was town 38.4%, grove 30.4%, ridge 38.4%, lake 2.6%, and the darkest 1%
+         of that geometry was 0.21..0.31 of the sky's mean. Asked of `1 - day`
+         instead, all four hold 0% and the ratio is 0.62..0.80. The two ends of
+         the clock do not move: `day` is 1 from 08:00 to 16:00, where the term was
+         and stays zero, and it is 0 from 18:32 to 05:28, where the term is the
+         0.42 the heart of the night has always had; what changes is the hour on
+         either side of dusk and dawn. A stronger ceiling was tried and refused:
+         at 0.60 the darkest 1% at midnight rises to 0.97..1.11 of the sky and the
+         night flattens into a grey. */
+      const gone = 1 - day;
       const skyLight = mix(zenith, horizon, 0.5);
-      const ambK = down * down * (3 - 2 * down) * 0.42;
+      const ambK = gone * gone * (3 - 2 * gone) * 0.42;
       // the Grey Veil
       const W = this.world, p = this.player;
       const edge = Math.min(p.x, p.z, W.w - p.x, W.d - p.z);
