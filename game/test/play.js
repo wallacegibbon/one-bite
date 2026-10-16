@@ -43,20 +43,34 @@ const { sim } = require('./simwait');
     g.player.x = found.x + 0.5; g.player.y = found.y - 1; g.player.z = found.z + 0.5;
     const ci = ((found.z >> 4) * g.world.cx) + (found.x >> 4);
     window.__ci = ci; window.__meshBefore = g.world.chunks[ci];
+    window.__picked = 40;
     g.harvest(found.x, found.y, found.z, 40);
     window.__flagged = g.world.dirty[ci];
     return { at: found, inv: g.inv.map(i => i.id), used: g.used(), cap: g.cap() };
   });
 
-  // 1b. regrow: force the regrow timer to 0; the fruit block should grow back
+  /* 1b. regrow: a picked fruiting site queues a regrowth that carries the block
+     it just lost and the delay the fruit's own rarity states -- times the 0.8..1.2
+     sowing jitter the queue adds -- and when that delay runs out the block is back
+     in the same cell and the queue entry is spent. Nothing used to ask any of it:
+     these two steps printed `restored: true` and a delay measured off a timer that
+     had already been forced to 0.05, and no check looked at either. */
   const rg = await step('regrowQueued', () => {
-    const g = window.game;
+    const g = window.game, N = window.FRUTARIA;
     const r = g.regrow[g.regrow.length - 1];
     if (!r) return 'no regrow entry';
+    const fid = N.FRUIT_BLOCK[r.b], fruit = N.FRUIT_BY_ID[fid], rar = N.RARITY[fruit.rarity];
     window.__rg = [r.x, r.y, r.z, r.b];
+    const out = { at: [r.x, r.y, r.z], block: r.b, picked: window.__picked, cellNow: g.world.get(r.x, r.y, r.z),
+      queueLen: g.regrow.length, fruit: fid, rarity: fruit.rarity,
+      wantDays: rar.regrow, queuedDays: +(r.t / N.DAY_LEN).toFixed(3) };
     r.t = 0.05;
-    return { at: [r.x, r.y, r.z], block: r.b, daysUntilRegrow: +(r.t / 420).toFixed(3), blockNow: g.world.get(r.x, r.y, r.z) };
+    return out;
   });
+  check('a pick queues one regrowth, carrying the block the cell lost',
+    rg.queueLen === 1 && rg.block === rg.picked && rg.cellNow === 0, rg);
+  check('and it carries the delay that fruit rarity states, within the sowing jitter',
+    rg.queuedDays >= rg.wantDays * 0.8 && rg.queuedDays <= rg.wantDays * 1.2, rg);
   await sim(page, 0.3);
   // 1a. a block edit must reach the rendered geometry, not only the voxel array
   const mesh = await step('meshFollowsEdits', () => {
@@ -67,10 +81,13 @@ const { sim } = require('./simwait');
   check('the flagged chunk is re-meshed within a few frames', mesh.remeshed, mesh);
   check('no chunk is left flagged', mesh.anyDirtyLeft === false, mesh);
 
-  await step('regrown', () => {
+  const rgd = await step('regrown', () => {
     const g = window.game, [x, y, z, b] = window.__rg || [0, 0, 0, 0];
     return { blockAfter: g.world.get(x, y, z), expect: b, restored: g.world.get(x, y, z) === b, queueLen: g.regrow.length };
   });
+  check('when the delay runs out the block is back in the cell it was picked from',
+    rgd.restored && rgd.blockAfter === rgd.expect, rgd);
+  check('and the queue entry is spent rather than left to fire again', rgd.queueLen === 0, rgd);
 
   // 2. capacity: fill the backpack and verify rarity slot costs
   await step('capacity', () => {
@@ -113,14 +130,50 @@ const { sim } = require('./simwait');
   check('a body that breathes water is not clamped down to eighteen seconds', air.frog > 100, air);
   check('no body carries an extra breath bonus', air.owl === 18 && air.ceiling === undefined, air);
 
-  // 4. flight after transforming: hold up for 1.5 seconds
+  /* 4. flight after transforming: hold the climb key for 1.5 s of the game's own
+     loop. Writing `game.input.jump` here does not survive one frame: the loop
+     re-reads the key state at the top of every frame while the game is in play
+     mode (main.js `setKeys()`), which is how this stage came to report
+     `y0 23 / y1 23, grounded true` for the whole life of the suite -- the key was
+     never held, and the stage the loop chain names "fly" never left the ground. */
   const flyY = await step('fly', () => {
-    const g = window.game;
-    g.input.jump = true;
-    return { y0: +g.player.y.toFixed(2) };
+    const g = window.game, p = g.player, W = g.world, N = window.FRUTARIA;
+    /* the climb has to be measured in the open: the body is standing in the
+       crown of the tree the picked owlberry grew on, and a worn body is refused
+       by leaves -- it rose 1.3 m and stopped, its speed zeroed by the needles one
+       metre over its feet, while the same crown is no wall at all to the owl
+       animal it was carved from (TODO 2, the crown question). */
+    const top = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)]) return y; return -1; };
+    let spot = null;
+    for (let r = 0; r < 60 && !spot; r++)
+      for (let dx = -r; dx <= r && !spot; dx++)
+        for (let dz = -r; dz <= r && !spot; dz++) {
+          const cx = Math.floor(p.x) + dx, cz = Math.floor(p.z) + dz, y = top(cx, cz);
+          if (y < 1) continue;
+          let open = true;
+          for (let h = 1; h <= 12; h++) if (W.solidAt(cx, y + h, cz)) { open = false; break; }
+          if (open) spot = { x: cx + 0.5, y: y + 1.0005, z: cz + 0.5 };
+        }
+    if (!spot) return { error: 'no column with 12 m of air above it near the player' };
+    p.x = spot.x; p.y = spot.y; p.z = spot.z; p.vx = p.vy = p.vz = 0;
+    return { y0: +p.y.toFixed(2), form: p.form, fly: !!p.formDef.fly, grounded: p.grounded,
+      spot, airRate: p.formDef.fly };
   });
-  await sim(page, 1.5);
-  await step('flyAfter', () => { window.game.input.jump = false; return { y1: +window.game.player.y.toFixed(2), grounded: window.game.player.grounded }; });
+  await page.keyboard.down(' ');
+  await sim(page, 0.5);
+  await step('flyHalf', () => ({ y: +window.game.player.y.toFixed(2), vy: +window.game.player.vy.toFixed(2) }));
+  await sim(page, 1.0);
+  const flyAfter = await step('flyAfter', () => {
+    const p = window.game.player;
+    return { y1: +p.y.toFixed(2), grounded: p.grounded, vy: +p.vy.toFixed(2) };
+  });
+  await page.keyboard.up(' ');
+  check('the body worn after eating the owlberry is a body built for the air',
+    flyY.fly === true && flyY.grounded === true, flyY);
+  check('holding the climb key through the loop the game runs lifts it off the ground',
+    flyAfter.y1 > flyY.y0 + 2 && flyAfter.grounded === false, flyAfter);
+  check('and it is still climbing, at a rate its own body allows and no faster',
+    flyAfter.vy > 1 && flyAfter.vy <= flyY.airRate * 0.75 + 0.01, flyAfter);
 
   // 5. revert
   await step('revert', () => {
