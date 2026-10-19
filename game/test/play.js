@@ -25,8 +25,11 @@ const { sim } = require('./simwait');
   await sim(page, 0.5);
 
   const log = [];
-  const step = async (name, fn) => {
-    const r = await page.evaluate(fn);
+  /* `args` are handed to the step the way page.evaluate hands them on: a step
+     that needs to know what an earlier step measured takes it as a plain value
+     instead of going out and measuring the world all over again. */
+  const step = async (name, fn, ...args) => {
+    const r = await page.evaluate(fn, ...args);
     log.push(name + ': ' + JSON.stringify(r));
     return r;
   };
@@ -8628,7 +8631,13 @@ What was measured before any of this was fixed, over 180 frames of walking
       [2, -1, [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]]
     ];
     const FACE_S = [1.00, 0.42, 0.78, 0.66, 0.88, 0.58];
-    const SLOT = [0, 1, 2, 0, 2, 3];           // the six vertices of one quad
+    const SLOT = [3, 2, 1, 3, 1, 0];           // the six vertices of one quad
+    /* box() walks each face's four points backwards, because walked forwards
+       the triangle they make faces into the box and the culler throws the whole
+       near side of the body away (see the comment over box in engine.js). So
+       the vertices reach the mesh in the reverse of the order the face is
+       declared in, and the shade that goes with each one is the shade declared
+       for that other corner. */
     const lo = (b, i) => b[i], hi = (b, i) => b[i] + b[3 + i];
     const up0 = N.MeshBuilder.prototype.upload, cap = [];
     N.MeshBuilder.prototype.upload = function (gl) {
@@ -8725,6 +8734,430 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('a lamp is self-lit and takes no crease', crease.jellyErr === 0, crease.jellyErr);
   check('the crease is on the joints and not smeared over the body',
     crease.creasedFaces > crease.faces * 0.1 && crease.creasedFaces < crease.faces * 0.6, crease);
+
+  /* Three bodies carry a colour nobody can ever see. A box that sits entirely
+     inside another box of the same part costs six faces and zero pixels, and a
+     part moves as one piece, so no pose can ever dig it out: the owl's pale
+     belly and the bear's grizzled saddle were both written into the model and
+     both buried in the box they hang from. The question is asked twice -- once
+     of the geometry, which is cheap and exact, and once of the frame, which is
+     the only thing that can say a marking arrived. The frame question is asked
+     by taking the box away: the pixels that go with it are exactly what that box
+     was worth, and a box with no pixels to its name is six faces spent on
+     nothing. Hue fingerprints were tried first and refuse to work here: a
+     grizzly saddle and the brown under it are the same hue at two lights, and
+     the only thing the renderer does to a colour is scale it. */
+  const marks = await step('aMarkingTheModelStatesReachesTheFrame', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player, gl = g.R.gl, W = g.world;
+    const was = { list: g.creatures, tp: g.thirdPerson, hover: g.hover, mode: g.mode, time: g.time,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady, frame: g._camFrame,
+      px: p.x, py: p.y, pz: p.z, yaw: p.yaw, pitch: p.pitch, form: p.form,
+      faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt };
+    /* (a) buried in its own part: every corner of A inside B, B a box of the
+       same part. Boxes of different parts are not counted -- a part turns, so a
+       box that starts behind another can swing out into the light. */
+    const buried = [];
+    for (const id of ['human', 'owl', 'frog', 'bear']) {
+      for (const pt of N.MODELS[id].parts) {
+        const bs = pt.boxes || [];
+        for (const a of bs) {
+          for (const b of bs) {
+            if (a === b) continue;
+            const inB = (k) => a[k] >= b[k] - 1e-6 && a[k] + a[3 + k] <= b[k] + b[3 + k] + 1e-6;
+            if (inB(0) && inB(1) && inB(2)) { buried.push({ id, part: pt.name, box: a }); break; }
+          }
+        }
+      }
+    }
+    /* (b) a clearing with open air on the side the lens comes from, and one body
+       at a time in it, so that a changed pixel can only be the box in question. */
+    const floorAt = (x, z) => { for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)]) return y; return 0; };
+    let spot = null;
+    for (let x = 30; x < 140 && !spot; x += 2) for (let z = 30; z < 140 && !spot; z += 2) {
+      const gy = floorAt(x, z); if (gy < 3) continue;
+      let open = true;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
+        for (let k = 1; k <= 8 && open; k++) {
+          const xx = x + dx * k, zz = z + dz * k;
+          if (!W.solidAt(xx, gy, zz) || W.solidAt(xx, gy + 1, zz) || W.solidAt(xx, gy + 2, zz) ||
+              W.solidAt(xx, gy + 3, zz) || W.liquidAt(xx, gy + 1, zz)) open = false;
+        }
+      if (open) spot = { x: x + 0.5, y: gy + 1, z: z + 0.5 };
+    }
+    if (!spot) return { error: 'no clearing', buried };
+    const Wd = gl.drawingBufferWidth, Hd = gl.drawingBufferHeight;
+    /* render() eats the camera frame it is handed -- it nulls it, so that the next
+       frame's environment cannot be built off a stale lens -- so the shot is
+       caught from shootCamera itself rather than read back off the game. */
+    const shoot = () => { const f = g.shootCamera(p); g._camFrame = f; g.render(); return f; };
+    const grab = () => { const b = new Uint8Array(Wd * Hd * 4); gl.readPixels(0, 0, Wd, Hd, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+    const owl = g.creatures.find(c => c.sp.id === 'owl');
+    const bear = g.creatures.find(c => c.sp.id === 'bear');
+    if (!owl || !bear) return { error: 'no owl and no bear in the valley', buried };
+    /* (c) which side of a box the lens has to stand on. A marking owns pixels
+       only on the side it stands out, and which side that is comes out of the
+       model: each of the six faces of the box is sampled on a grid and counted by
+       how much of it no other box of the same body reaches past. The face with
+       the largest open area is the side the marking is written on. Nothing is
+       measured from one angle, because a back that rises -- a grizzly's shoulder
+       hump -- is buried on every side and escapes only upward: every box is looked
+       at twice, once from the side its own best face points at and once from over
+       it, and the worth of the box is the better of the two readings. */
+    const escapeOf = (id, partName, i) => {
+      const parts = N.MODELS[id].parts;
+      const a = parts.find(q => q.name === partName).boxes[i];
+      const other = [];
+      for (const pt of parts) for (const b of (pt.boxes || [])) if (b !== a) other.push(b);
+      const G = 8, open = [0, 0, 0, 0, 0, 0];        // nx px ny py nz pz
+      for (let d = 0; d < 6; d++) {
+        const k = d >> 1, hi = d & 1, u = (k + 1) % 3, v = (k + 2) % 3;
+        const plane = hi ? a[k] + a[3 + k] : a[k];
+        let free = 0;
+        for (let j = 0; j < G; j++) for (let m = 0; m < G; m++) {
+          const su = a[u] + a[3 + u] * (j + 0.5) / G, sv = a[v] + a[3 + v] * (m + 0.5) / G;
+          let hid = false;
+          for (const b of other) {
+            // b hides this sample only if it reaches the face and covers the point
+            if (hi ? b[k] + b[3 + k] < plane - 1e-6 : b[k] > plane + 1e-6) continue;
+            if (su >= b[u] && su <= b[u] + b[3 + u] && sv >= b[v] && sv <= b[v] + b[3 + v]) { hid = true; break; }
+          }
+          if (!hid) free++;
+        }
+        open[d] = free / (G * G) * a[3 + u] * a[3 + v];
+      }
+      const DIR = ['nx', 'px', 'ny', 'py', 'nz', 'pz'];
+      /* The lens stands west of the body and looks east. A model is authored
+         facing +Z and M4.faceY turns it by rotY(PI - yaw), which carries local +Z
+         onto world (sin yaw, 0, -cos yaw) and local +X onto world
+         (-cos yaw, 0, -sin yaw) -- so the yaw that brings a chosen local face
+         round to meet a lens standing at -x is one of four quarter turns, and it
+         is the same four for a body worn by the player, whose own facing is
+         turned the same way. */
+      const YAW = { px: 0, nx: Math.PI, pz: -Math.PI / 2, nz: Math.PI / 2 };
+      let hs = 0;
+      for (const k of [0, 1, 4, 5]) if (open[k] > open[hs]) hs = k;
+      const up = open[3] > open[hs] * 1.3;       // read from over the body, not along it
+      return { yaw: YAW[DIR[hs]], up, dir: DIR[up ? 3 : hs],
+        out: +open[up ? 3 : hs].toFixed(3) };
+    };
+    const bodies = { owl, bear };
+    const DIST = { owl: 1.1, bear: 2.0 };
+    const eyeH = (p.eyePos ? (p.eyePos() - p.y) : 1.55);
+    const pose = (a, yaw) => {
+      a.x = spot.x; a.y = spot.y; a.z = spot.z; a.yaw = yaw;
+      a.vx = a.vy = a.vz = 0; a.sleeping = false; a.state = 'wander'; a.pause = 0;
+      a.tilt = 0; a.bank = 0; a.crouch = 0; a.airAmt = 0; a.squash = 0; a.moveAmt = 0;
+    };
+    /* The shot is pinned, not inherited. Every count below is a count of pixels,
+       and two things about the shot belong to whatever step ran before this one
+       rather than to the body in front of the lens: the damped distance and fov
+       (camReady=false makes shootCamera snap to the wanted shot on the first
+       frame instead of easing there from wherever the last step left it) and
+       p.headWater, which the player update sets and which takes 12 degrees off
+       fov() -- a frame 14% smaller, and a collar worth 500 pixels measured as
+       worth 333. The step never runs the player update, so nothing else would
+       ever clear it. */
+    const lens = (id, v) => {
+      p.headWater = false; g.camReady = false;
+      if (id === 'human') {
+        /* The person is the body the player wears. The third-person lens hangs
+           off the player's aim, so it is the player's *facing* that has to turn
+           and the aim that stays: faceYaw is what the draw rotates the model by,
+           and with the aim fixed at PI/2 the lens stands west of the body and
+           looks east, exactly as it does for an animal. */
+        g.creatures = []; g.thirdPerson = true; p.form = null;
+        p.x = spot.x; p.z = spot.z; p.y = spot.y; p.vx = p.vy = p.vz = 0;
+        p.yaw = Math.PI / 2; p.faceYaw = v.yaw; p.bank = 0; p.tilt = 0;
+        p.pitch = v.up ? -0.8 : 0; p.vital = 10; p.fright = 0;
+      } else {
+        const a = bodies[id];
+        pose(a, v.yaw);
+        g.creatures = [a]; g.thirdPerson = false; p.form = null; g.camReady = true;
+        const h = N.FRUIT_BY_ID[N.CREATURE_BY_ID[id].fruit].form.size[1], d = DIST[id];
+        const eye = Math.max(0.12, h * (v.up ? 2.2 : 0.55));
+        p.x = spot.x - d; p.z = spot.z; p.y = spot.y + eye - eyeH;
+        p.vx = p.vy = p.vz = 0; p.yaw = Math.PI / 2;
+        p.pitch = v.up ? -Math.atan2(eye - h * 0.6, d) : 0;
+      }
+      g.updateEnv();
+    };
+    /* How much of the frame one box owns: the box goes, the frame is drawn again,
+       and every pixel that moved is worth that box. The mesh is rebuilt from the
+       model's own arrays, so the answer comes out of the model and not out of a
+       copy kept for the test. */
+    const owns = (id, partName, boxIndex, v) => {
+      const pt = N.MODELS[id].parts.find(q => q.name === partName);
+      const box = pt.boxes[boxIndex];
+      const ao = (pt.boxAO || [])[boxIndex];
+      lens(id, v);
+      let f = null;
+      for (let k = 0; k < 60; k++) f = shoot();            // the damped distance/fov settle
+      const A = grab();
+      pt.boxes.splice(boxIndex, 1); if (pt.boxAO) pt.boxAO.splice(boxIndex, 1);
+      g.creatureMeshes[id] = null; g.ensureModel(id);
+      for (let k = 0; k < 4; k++) shoot();
+      const B = grab();
+      pt.boxes.splice(boxIndex, 0, box); if (pt.boxAO) pt.boxAO.splice(boxIndex, 0, ao);
+      g.creatureMeshes[id] = null; g.ensureModel(id);
+      let sum = 0;
+      const changed = [];
+      for (let i = 0; i < Wd * Hd; i++) {
+        const d = Math.abs(A[i * 4] - B[i * 4]) + Math.abs(A[i * 4 + 1] - B[i * 4 + 1]) + Math.abs(A[i * 4 + 2] - B[i * 4 + 2]);
+        if (d > 6) changed.push(i * 4);
+      }
+      const n = changed.length;
+      for (const j of changed) sum += Math.abs(A[j] - B[j]) + Math.abs(A[j + 1] - B[j + 1]) + Math.abs(A[j + 2] - B[j + 2]);
+      const shot = f;                       // the shot these pixels came off, so a
+      return { px: n, luma: +(sum / (3 * Wd * Hd)).toFixed(3),   // count means what it says
+        d: shot && +shot.d.toFixed(2), fov: shot && Math.round(shot.fov),
+        mid: n ? [changed[n >> 1] / 4 % Wd | 0, changed[n >> 1] / 4 / Wd | 0] : null };
+    };
+    const both = (id, partName, i) => {
+      const v = escapeOf(id, partName, i);
+      const side = owns(id, partName, i, { yaw: v.yaw, up: false });
+      const above = owns(id, partName, i, { yaw: v.yaw, up: true });
+      const best = above.px > side.px ? above : side;
+      return { dir: v.dir, out: v.out, side: side.px, above: above.px,
+        px: best.px, luma: best.luma, mid: best.mid, d: best.d, fov: best.fov };
+    };
+    const idx = (id, partName, col) => N.MODELS[id].parts.find(q => q.name === partName).boxes.findIndex(b => b[6] === col);
+    g.time = 420 * 0.42; g.mode = 'play'; g.hover = null;
+    const row = {};
+    row.owlBelly = both('owl', 'body', idx('owl', 'body', '#c6b594'));
+    row.owlBody = both('owl', 'body', 0);
+    row.owlBreast = both('owl', 'body', idx('owl', 'body', '#d8c9a8'));
+    row.bearSaddle = both('bear', 'body', idx('bear', 'body', '#8a8272'));
+    row.bearBody = both('bear', 'body', 0);
+    row.bearHump = both('bear', 'body', idx('bear', 'body', '#5f574e'));
+    row.humanCollar = both('human', 'torso', idx('human', 'torso', '#7a4a3a'));
+    row.humanSkull = both('human', 'head', 0);
+    row.humanCoat = both('human', 'torso', 0);
+    g.creatures = was.list; g.thirdPerson = was.tp; g.hover = was.hover; g.mode = was.mode;
+    g._camFrame = was.frame; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+    p.x = was.px; p.y = was.py; p.z = was.pz; p.yaw = was.yaw; p.pitch = was.pitch; p.form = was.form;
+    p.faceYaw = was.faceYaw; p.bank = was.bank; p.tilt = was.tilt;
+    g.time = 420 * 0.42; g.updateEnv();
+    return { spot, buried, row };
+  });
+  /* The step measures one box at a time, so the two rows it cannot lie about are
+     the trunks themselves: if taking a body's own trunk box away moves a tenth of
+     the frame, the measure sees the body, and a marking worth a thousandth of the
+     frame is worth something. The bounds below are cut from what the same run
+     measures, never from what the boxes are sized. */
+  const mr = marks.row || {};
+  check('no box of a body is buried inside a box of the same part', marks.buried && marks.buried.length === 0, marks.buried);
+  check('the measure is not vacuous: an owl\'s own trunk owns a twentieth of the frame', mr.owlBody && mr.owlBody.px > 5000, mr.owlBody);
+  check('the owl\'s pale belly owns pixels of its own', mr.owlBelly && mr.owlBelly.px > 900, mr.owlBelly);
+  check('the belly is worth a fifth of the breast plate it hangs under',
+    mr.owlBelly && mr.owlBreast && mr.owlBelly.px > mr.owlBreast.px * 0.15, marks);
+  check('the measure is not vacuous: a bear\'s own trunk owns a twentieth of the frame', mr.bearBody && mr.bearBody.px > 12000, mr.bearBody);
+  check('the bear\'s grizzled saddle owns pixels of its own', mr.bearSaddle && mr.bearSaddle.px > 3000, mr.bearSaddle);
+  check('the saddle is worth half the shoulder it rises under',
+    mr.bearSaddle && mr.bearHump && mr.bearSaddle.px > mr.bearHump.px * 0.5, marks);
+  check('the person is drawn, and the coat owns pixels', mr.humanCoat && mr.humanCoat.px > 300, mr.humanCoat);
+  check('the person\'s collar owns pixels of its own', mr.humanCollar && mr.humanCollar.px > 300, mr.humanCollar);
+  /* The side reading, not the better of the two: a ruff is a ring round a neck,
+     so what it is worth seen along the body is what a collar is for. Seen along
+     the body it owns 238 pixels of frame now and owned 73 with the faces wound
+     inward, when the lens was looking at the inside of the far side of a body
+     rather than at the neck standing in front of it. */
+  check('the ruff shows from the side, which is where a collar has to show',
+    mr.humanCollar && mr.humanCollar.side > 150, mr.humanCollar);
+  check('the collar is worth the head it wraps',
+    mr.humanCollar && mr.humanSkull && mr.humanCollar.px > mr.humanSkull.px * 0.3, marks);
+  /* A pixel count only means something if the shot it was counted off is the shot
+     the game really films with: the person from 5.55 m at 84 degrees
+     (1.5 + 2.25 * 1.8, +8 for the third-person lens), an animal from the player's
+     own eye at 76. If these drift, every bound below drifts with them. */
+  check('each row was counted off the shot the game films that body with',
+    mr.owlBody && mr.owlBody.fov === 76 && mr.bearBody && mr.bearBody.fov === 76 &&
+    mr.humanCollar && mr.humanCollar.fov === 84 && mr.humanCollar.d > 5.4 && mr.humanCollar.d < 5.7,
+    { owl: mr.owlBody, bear: mr.bearBody, human: mr.humanCollar });
+
+  /* A body has to hide what stands behind it. What the inside-out winding cost
+     here was not a missing triangle: it was the depth of the surface. The near
+     side of every box was never drawn, so what the lens saw of a body was the
+     inside of its far side -- a surface the whole width of the body behind the
+     flank you were standing in front of, and everything standing inside that
+     width showed through the animal in front of it.
+     Measured here, with two bodies of the same size one behind the other and the
+     lens 2 m in front: the far one stands 0.12 m down the near one's own depth,
+     which is inside it, and no surface of either is at the same distance as
+     another. Taking the far one away moves 1332 pixels of the 60509 it owns when
+     it stands alone -- it is nearly all behind the body in front, as it should
+     be. (Two bodies the same size have the same silhouette, so this step does
+     not by itself catch the winding: it moves from 0.022 kept to 0.041 and stays
+     inside its bounds. The winding is caught where it is exact -- the triangle
+     table in node-smoke, the corner coordinates of the crease step, and the flank
+     reading two steps below, which reads the wrong end of the body outright.)
+     The gap is stated from the model's own depth rather than from a constant,
+     because the claim only means something while the far body really does stand
+     between the near flank and the far one. */
+  const occl = await step('aBodyBetweenTheLensAndAnotherBodyIsTheBodyThatIsSeen', (spot) => {
+    const g = window.game, N = window.FRUTARIA, p = g.player, gl = g.R.gl;
+    if (!spot) return { error: 'the marking step found no clearing' };
+    const was = { list: g.creatures, tp: g.thirdPerson, hover: g.hover, mode: g.mode, time: g.time,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady, frame: g._camFrame,
+      px: p.x, py: p.y, pz: p.z, yaw: p.yaw, pitch: p.pitch, form: p.form };
+    const Wd = gl.drawingBufferWidth, Hd = gl.drawingBufferHeight;
+    const shoot = () => { g._camFrame = g.shootCamera(p); g.render(); };
+    const grab = () => { const b = new Uint8Array(Wd * Hd * 4); gl.readPixels(0, 0, Wd, Hd, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+    const shot = () => { for (let k = 0; k < 60; k++) shoot(); return grab(); };
+    // every pixel that moved between two frames belongs to what one frame had and the other had not
+    const moved = (A, B) => {
+      let n = 0;
+      for (let i = 0; i < Wd * Hd; i++)
+        if (Math.abs(A[i * 4] - B[i * 4]) + Math.abs(A[i * 4 + 1] - B[i * 4 + 1]) +
+            Math.abs(A[i * 4 + 2] - B[i * 4 + 2]) > 6) n++;
+      return n;
+    };
+    const bear = g.creatures.find(c => c.sp.id === 'bear');
+    const tall = N.FRUIT_BY_ID[N.CREATURE_BY_ID.bear.fruit].form.size[1];
+    if (!bear) return { error: 'no bear in the valley' };
+    /* a second body of the same kind, and a copy that keeps the class: a creature
+       answers questions about itself (`isFlyer`, `legged`) that a plain object
+       copy of it cannot answer. The draw takes its mesh from the model cache by
+       species, so two bodies of one species draw the same boxes at two different
+       sets of matrices, which is exactly what is being asked. */
+    const twin = Object.assign(Object.create(Object.getPrototypeOf(bear)), bear);
+    const pose = (a, x) => {
+      a.x = x; a.y = spot.y; a.z = spot.z; a.yaw = Math.PI / 2;
+      a.vx = a.vy = a.vz = 0; a.sleeping = false; a.state = 'wander'; a.pause = 0;
+      a.tilt = 0; a.bank = 0; a.crouch = 0; a.airAmt = 0; a.squash = 0; a.moveAmt = 0;
+    };
+    /* how far a body reaches along the axis the lens looks down, read off the
+       model at the scale the animal is drawn at, not off a constant kept here */
+    const sc = N.CREATURE_BY_ID.bear.scale;
+    let lo = 1e9, hi = -1e9;
+    for (const pt of N.MODELS.bear.parts) for (const b of pt.boxes) {
+      lo = Math.min(lo, b[0] * sc); hi = Math.max(hi, (b[0] + b[3]) * sc);
+    }
+    const depth = hi - lo;
+    const gap = depth * 0.125;
+    const lens = (dist) => {
+      const eyeH = (p.eyePos ? (p.eyePos() - p.y) : 1.55);
+      g.thirdPerson = false; p.form = null;
+      /* the shot is pinned, not inherited: the player's fov() drops 12 degrees
+         while their head is under water, and that is a field some other step
+         leaves behind -- and a smaller frame is a different pixel count */
+      p.headWater = false; g.camReady = false;
+      p.x = spot.x - dist; p.z = spot.z; p.y = spot.y + tall * 0.5 - eyeH;
+      p.vx = p.vy = p.vz = 0; p.yaw = Math.PI / 2; p.pitch = 0; g.updateEnv();
+    };
+    g.time = 420 * 0.42; g.mode = 'play'; g.hover = null;
+    lens(2.0);
+    pose(bear, spot.x); pose(twin, spot.x + gap);
+    g.creatures = [bear, twin];
+    const both = shot();
+    g.creatures = [bear]; for (let k = 0; k < 4; k++) shoot();
+    const behind = moved(both, grab());
+    g.creatures = [twin]; pose(twin, spot.x); for (let k = 0; k < 4; k++) shoot();
+    const only = shot();
+    g.creatures = []; for (let k = 0; k < 4; k++) shoot();
+    const open = moved(only, grab());
+    g.creatures = was.list; g.thirdPerson = was.tp; g.hover = was.hover; g.mode = was.mode;
+    g._camFrame = was.frame; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+    p.x = was.px; p.y = was.py; p.z = was.pz; p.yaw = was.yaw; p.pitch = was.pitch; p.form = was.form;
+    g.time = 420 * 0.42; g.updateEnv();
+    return { depth: +depth.toFixed(3), gap: +gap.toFixed(3),
+      inside: gap + depth * 0.5 < depth,      // the far body's front is inside the near one
+      behind, open, kept: +(behind / open).toFixed(3) };
+  }, marks.spot);
+  check('the far body really does stand inside the depth of the near one',
+    !occl.error && occl.inside && occl.gap > 0.05 && occl.gap < occl.depth * 0.5, occl);
+  check('the measure is not vacuous: a bear in the open owns its share of the frame',
+    occl.open > 20000, occl);
+  check('a bear standing between the lens and another bear hides the one behind it',
+    occl.behind < occl.open * 0.45, occl);
+  check('the bear behind is not simply gone: what escapes round the one in front is a bear',
+    occl.behind > 400, occl);
+
+  /* Which end of a body the lens stands at has to be written into the frame, and
+     the only thing in this renderer that writes it is the face constant. There is
+     no light direction, no normal and no sun term anywhere in the shaders: what
+     reaches the lens is the vertex colour times the shade byte times the daylight
+     times the water, plus the sky's own light. So a face carries its constant and
+     nothing else, and box() gives the two ends of a box 0.58 and 0.88.
+     The body is turned to face the lens and the lens stands on that axis, 2 m
+     out: from one end the middle of the frame is the trunk's rear face (0.58),
+     from the other its front face (0.88) -- the legs straddle the sight line and
+     the head sits above it, so it is the same box and the same colour either way.
+     The quotient that has to come back is 0.88/0.58 with the sky's light added to
+     both, which is what puts the measured reading at 1.25 rather than 1.52.
+     Wound inward neither reading is the end it was aimed at: the near flank is
+     culled, and what fills the centre of the frame is the inside of the far wall
+     -- the pale saddle's front wall at one end (it stands 2.4 cm outside the trunk
+     it marks) and the trunk's own rear wall at the other. Two different colours at
+     two different constants, and the quotient tips below 1 -- 0.802 measured, with
+     the two readings swapped, which is how this step catches the winding. */
+  const flank = await step('theFlankTurnedToTheLensIsTheFlankThatIsLit', (spot) => {
+    const g = window.game, N = window.FRUTARIA, p = g.player, gl = g.R.gl;
+    if (!spot) return { error: 'the marking step found no clearing' };
+    const was = { list: g.creatures, tp: g.thirdPerson, hover: g.hover, mode: g.mode, time: g.time,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady, frame: g._camFrame,
+      px: p.x, py: p.y, pz: p.z, yaw: p.yaw, pitch: p.pitch, form: p.form };
+    const Wd = gl.drawingBufferWidth, Hd = gl.drawingBufferHeight;
+    const bear = g.creatures.find(c => c.sp.id === 'bear');
+    const tall = N.FRUIT_BY_ID[N.CREATURE_BY_ID.bear.fruit].form.size[1];
+    if (!bear) return { error: 'no bear in the valley' };
+    const pose = () => {
+      bear.x = spot.x; bear.y = spot.y; bear.z = spot.z; bear.yaw = Math.PI / 2;
+      bear.vx = bear.vy = bear.vz = 0; bear.sleeping = false; bear.state = 'wander'; bear.pause = 0;
+      bear.tilt = 0; bear.bank = 0; bear.crouch = 0; bear.airAmt = 0; bear.squash = 0; bear.moveAmt = 0;
+    };
+    const lens = (fromX) => {
+      const eyeH = (p.eyePos ? (p.eyePos() - p.y) : 1.55);
+      g.thirdPerson = false; p.form = null;
+      /* the shot is pinned, not inherited -- see the same note in the step above:
+         this step reads one patch of 15x15 pixels, and a 12 degree fov left over
+         from another step is that patch sitting somewhere else on the body */
+      p.headWater = false; g.camReady = false;
+      p.x = spot.x + fromX * 2.0; p.z = spot.z; p.y = spot.y + tall * 0.5 - eyeH;
+      p.vx = p.vy = p.vz = 0; p.yaw = fromX > 0 ? -Math.PI / 2 : Math.PI / 2; p.pitch = 0;
+      g.updateEnv();
+    };
+    /* the middle of the frame: where the lens points, a hand's breadth of
+       surface, far from every edge of the body and from every crease */
+    const centre = (b, half) => {
+      const cx = Wd >> 1, cy = Hd >> 1;
+      let n = 0, sr = 0, sg = 0, sb = 0, sl = 0;
+      const tones = new Set();
+      for (let dy = -half; dy <= half; dy++) for (let dx = -half; dx <= half; dx++) {
+        const o = (((cy + dy) * Wd) + (cx + dx)) * 4;
+        sr += b[o]; sg += b[o + 1]; sb += b[o + 2];
+        sl += 0.2126 * b[o] + 0.7152 * b[o + 1] + 0.0722 * b[o + 2];
+        tones.add((b[o] >> 3) + ',' + (b[o + 1] >> 3) + ',' + (b[o + 2] >> 3));
+        n++;
+      }
+      return { rgb: [Math.round(sr / n), Math.round(sg / n), Math.round(sb / n)],
+        luma: +(sl / n).toFixed(1), tones: tones.size };
+    };
+    const look = (fromX) => {
+      lens(fromX);
+      for (let k = 0; k < 60; k++) { g._camFrame = g.shootCamera(p); g.render(); }
+      const b = new Uint8Array(Wd * Hd * 4);
+      gl.readPixels(0, 0, Wd, Hd, gl.RGBA, gl.UNSIGNED_BYTE, b);
+      return centre(b, 7);
+    };
+    g.time = 420 * 0.42; g.mode = 'play'; g.hover = null;
+    g.creatures = [bear]; pose();
+    const left = look(-1);          // the rear end of the body: constant 0.58
+    const right = look(1);         // the front end of the same body: constant 0.88
+    g.creatures = was.list; g.thirdPerson = was.tp; g.hover = was.hover; g.mode = was.mode;
+    g._camFrame = was.frame; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+    p.x = was.px; p.y = was.py; p.z = was.pz; p.yaw = was.yaw; p.pitch = was.pitch; p.form = was.form;
+    g.time = 420 * 0.42; g.updateEnv();
+    return { left, right, ratio: +(right.luma / left.luma).toFixed(3) };
+  }, marks.spot);
+  const share = (c) => c.rgb.map((v) => v / c.luma);
+  check('each reading is one face and not an edge: the middle of the frame is flat colour',
+    !flank.error && flank.left.tones <= 3 && flank.right.tones <= 3, flank);
+  check('both readings are the same colour at two strengths, not two different surfaces',
+    !flank.error && [0, 1, 2].every((i) => Math.abs(share(flank.left)[i] - share(flank.right)[i]) <= 0.03),
+    { left: flank.left, right: flank.right, shareL: share(flank.left), shareR: share(flank.right) });
+  check('the flank whose face constant is the brighter of the two reads brighter',
+    !flank.error && flank.ratio > 1.06 && flank.ratio < 1.5, flank);
+
 
   /* A save is the only thing standing between a day of walking and nothing at
      all. The step that used to cover it read one field back -- the id -- and the

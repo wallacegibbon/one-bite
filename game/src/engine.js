@@ -141,16 +141,30 @@
        which is how a creature model carries the crease where one part of it
        meets another. The BOX_FACE table in models.js has to agree with the
        order used here; box() keeps the face constants, the caller only says how
-       open each corner is. */
+       open each corner is.
+       The four points of each face below are listed the way a face is named --
+       starting at one corner and walking round -- and that walk runs the wrong
+       way for the culler: the normal of the triangle it makes points *into* the
+       box. The world's own face table (world.js FACES) walks the other way and
+       is correct; box() is the one place in the renderer that got this backwards,
+       and back-face culling is on for every draw of a body and of a micro block.
+       So the near side of every creature and every fruit was thrown away before
+       it reached the lens, and what was drawn instead was the inside of the far
+       side: a body showed its ceiling as its floor and its far flank as its near
+       one, the two darkest face constants standing in for the two brightest.
+       The list is walked backwards here, once, which turns every normal
+       outward. The caller still declares its corners in the order written
+       below, so the crease table and the checks keep that order. */
     box(x, y, z, w, h, d, c, emis, ao) {
       const g = ao === undefined ? 1 : ao;
       const crease = typeof g !== 'number';
       const x1 = x + w, y1 = y + h, z1 = z + d;
       const face = (fi, s, p) => {
-        if (!crease) this.quad(p, c, s * g, emis);
+        const q = [p[9], p[10], p[11], p[6], p[7], p[8], p[3], p[4], p[5], p[0], p[1], p[2]];
+        if (!crease) this.quad(q, c, s * g, emis);
         else {
           const o = fi * 4;
-          this.quadAO(p, c, [s * g[o], s * g[o + 1], s * g[o + 2], s * g[o + 3]], emis);
+          this.quadAO(q, c, [s * g[o + 3], s * g[o + 2], s * g[o + 1], s * g[o]], emis);
         }
       };
       // +Y

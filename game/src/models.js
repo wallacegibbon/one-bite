@@ -48,7 +48,16 @@
           [-1.2, 4.6, -0.85, 2.4, 2.4, 1.7, '#4a5a78'],           // chest
           [-1.4, 6.95, -0.8, 2.8, 0.35, 1.6, '#41506c'],          // shoulder line
           [-1.25, 4.35, -0.9, 2.5, 0.4, 1.8, '#5a4030'],          // belt
-          [-0.7, 7.2, -0.55, 1.4, 0.4, 1.1, '#7a4a3a'],           // collar
+          /* the collar is a ruff: it has to stand outside the head it wraps and
+             outside the shoulder line it sits on, or it is drawn and never once
+             reaches a frame -- enclosed by another box, it is hidden behind the
+             near face of that one. Widening it is also what separates a head from
+             a body at the neck, which is the joint this model had no shading or
+             colour at: the head is half the body, and its own colour is one luma
+             step from the coat. It is the widest thing the person wears, so it is
+             the model's reach: 0.40 m against the 0.41 m the collision box
+             allows (docs/en/04 s4). */
+          [-1.6, 7.1, -1.5, 3.2, 0.6, 3.0, '#7a4a3a'],           // collar, round the neck
           [-1.25, 5.4, 0.85, 0.45, 1.2, 0.12, '#6a5138']          // satchel strap
         ] },
         { name: 'head', parent: 'torso', pivot: [0, 7.2, 0], anim: 'nod', boxes: [
@@ -137,7 +146,15 @@
         { name: 'body', anim: 'bob', pivot: [0, 0.95, 0.1], fly: [1.25, 0, 0], boxes: [
           [-1.1, 0.9, -1.0, 2.2, 2.15, 2.0, '#8a7256'],
           [-0.85, 1.05, 0.86, 1.7, 1.75, 0.3, '#d8c9a8'],         // breast
-          [-0.9, 0.95, -0.7, 1.8, 0.45, 1.5, '#c6b594'],          // belly
+          /* the pale belly, showing where an owl perched upright shows it: below
+             the breast plate and between the legs. It used to sit wholly inside
+             the trunk box -- six faces built, not one pixel drawn. Moving it out
+             sideways buys nothing either, because the folded primaries hang down
+             the flanks and cover it there, so it comes out at the front: it stands
+             12 mm proud of the trunk and the breast plate overhangs it by 4 mm,
+             which is how the front of a perched owl is built -- a plate of feather
+             over a rounded belly. */
+          [-0.8, 0.6, 0.95, 1.6, 0.5, 0.17, '#c6b594'],           // belly, under the breast
           [-0.55, 2.75, -0.9, 1.1, 0.35, 1.6, '#7a6248']          // mantle
         ] },
         { name: 'head', parent: 'body', pivot: [0, 3.0, 0], anim: 'nod', fly: [-1.16, 0, 0], boxes: [
@@ -273,7 +290,14 @@
       parts: [
         { name: 'body', anim: 'bob', boxes: [
           [-1.6, 2.4, -2.4, 3.2, 3.0, 4.4, '#6a6258'],
-          [-1.4, 2.6, -2.2, 2.8, 1.2, 4.0, '#8a8272'],
+          /* the grizzly saddle: the pale cape over the shoulders and along the
+             back. It used to be a shell one unit larger than the trunk in every
+             direction, which buried the trunk's own flank (six faces drawn for
+             the brown body, and a shell of pale hiding them all). Now it stands
+             0.1 past the flank and above the topline, and stops short of the
+             hips: a grizzly's pale ends at the shoulders and the brown body
+             shows again along the hindquarter. */
+          [-1.7, 4.4, -1.3, 3.4, 1.1, 3.2, '#8a8272'],
           [-1.3, 5.3, -0.8, 2.6, 0.6, 3.0, '#5f574e']             // shoulder hump
         ] },
         { name: 'head', parent: 'body', pivot: [0, 4.6, 1.4], anim: 'nod', boxes: [

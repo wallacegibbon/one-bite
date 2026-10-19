@@ -71,6 +71,82 @@ const extents = (modelId, sc) => {
   console.log('模型/碰撞盒', bodies.length, '个身体', bad ? '!! ' + bad + ' 个穿模' : 'OK');
   if (bad) process.exitCode = 1;
 }
+/* Back-face culling is on for every draw the renderer makes (engine.js: the
+   culler is enabled once, and only the selection highlight ever turns it off),
+   and nothing in the game calls frontFace, so GL's own rule stands: a triangle
+   is front-facing when its three vertices run counter-clockwise seen from the
+   side its normal points at -- which is the side the cross product of two of
+   its edges points at. A face wound the other way round is not drawn at all,
+   and what reaches the lens instead is whatever lies behind it.
+   This was not a subtle loss. MeshBuilder.box() walked each face's four points
+   in the order they read as a face -- and made normals that pointed into the
+   box. Every creature body and every micro block in the game was turned inside
+   out: the near side of a body was thrown away before it reached the lens, and
+   the lens was shown the inside of the far walls instead, with the constant of
+   the far face standing in for the near one. Measured then: a box standing 0.4 m
+   in front of a bear's body, wholly inside the body's own silhouette, still
+   moved 7394 pixels of a 640x480 frame when it was deleted, and drawn on its own
+   it covered 23515 -- pixels that were a body's colour, but the inside of it.
+   Nothing downstream could tell the difference, because the inside of a body is
+   still the colour of that body.
+   So the winding is read here in pure data, where it costs nothing: the normal
+   of both triangles of all six faces of a box the size of a bear's trunk has to
+   point away from that box's own centre, and so does every triangle of every
+   body in the game as the model builder really builds them. */
+{
+  /* The two triangles of a face are the six vertices as they are emitted: the
+     builder fans a face out as v0,v1,v2 then v0,v2,v3, so the second triangle
+     sits in emitted slots 3,4,5 -- not in the corners 0,2,3 of the fan. */
+  const TRI = [[0, 1, 2], [3, 4, 5]];
+  const bad = [];
+  let c = [0, 0, 0];
+  /* the signed volume the three vertices sweep against the box centre: positive
+     when the run of the three is the way round the outward normal points */
+  const side = (p, o, f, t) => {
+    const at = (k) => o + ((f * 6 + t[k]) * 3);
+    const ax = p[at(1)] - p[at(0)], ay = p[at(1) + 1] - p[at(0) + 1], az = p[at(1) + 2] - p[at(0) + 2];
+    const bx = p[at(2)] - p[at(0)], by = p[at(2) + 1] - p[at(0) + 1], bz = p[at(2) + 2] - p[at(0) + 2];
+    const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+    let d = 0;
+    for (let k = 0; k < 3; k++)
+      d += [nx, ny, nz][k] * ((p[at(0) + k] + p[at(1) + k] + p[at(2) + k]) / 3 - c[k]);
+    return d;
+  };
+  let tris = 0;
+  const mb = new F.MeshBuilder();
+  const B = [-1.6, 2.4, -2.4, 3.2, 3.0, 4.4];
+  c = [B[0] + B[3] / 2, B[1] + B[4] / 2, B[2] + B[5] / 2];
+  mb.box(B[0], B[1], B[2], B[3], B[4], B[5], [0.42, 0.38, 0.35], false);
+  if (mb.n !== 36) bad.push(`${mb.n} vertices for one box, expected 36`);
+  for (let f = 0; f < 6; f++) for (const t of TRI) {
+    const d = side(mb.pos, 0, f, t);
+    tris++;
+    if (!(d > 0)) bad.push(`face ${f} triangle ${t.join('')} points into the box (${d.toFixed(2)})`);
+  }
+  /* the same rule read off the bodies as the model builder really builds them,
+     crease shades and all */
+  for (const id of ['human', 'owl', 'frog', 'bear', 'jelly']) {
+    let outward = 0, mine = 0;
+    for (const part of F.MODELS[id].parts) {
+      const m = new F.MeshBuilder();
+      const ao = part.boxAO || [];
+      for (let i = 0; i < part.boxes.length; i++) {
+        const b = part.boxes[i];
+        m.box(b[0], b[1], b[2], b[3], b[4], b[5], [0.5, 0.5, 0.5], false, ao[i] || 1);
+        c = [b[0] + b[3] / 2, b[1] + b[4] / 2, b[2] + b[5] / 2];
+        const o = i * 36 * 3;        // three floats a vertex, 36 vertices a box
+        for (let f = 0; f < 6; f++) for (const t of TRI) {
+          mine++;
+          if (side(m.pos, o, f, t) > 0) outward++;
+        }
+      }
+    }
+    tris += mine;
+    if (outward !== mine) bad.push(`${id}: ${mine - outward} of ${mine} triangles wound inwards`);
+  }
+  console.log('绕序/背面剔除', bad.length ? '!! ' + bad.join(', ') : `OK 法线全部朝外，共查 ${tris} 个三角形`);
+  if (bad.length) process.exitCode = 1;
+}
 
 /* The lamp jellyfish has no fruit, so there is no collision box for the gate
    above to measure it against -- it is the only model in the game nobody
