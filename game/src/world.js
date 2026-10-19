@@ -564,6 +564,21 @@
   N.WATER = WATER;
   N.BLOCK_ID = BLOCK_ID;
   N.TREE_BLOCK = TREE_BLOCK;
+  /* Which blocks a body built for the air does not stop against: the material
+     the mesher already calls `soft` -- leaves, needles, silver leaves, dark
+     leaves, willow. (Cloud is soft too and is not solid at all, so it never
+     comes up here.) This is deliberately NOT TREE_BLOCK, which answers another
+     question: which blocks are not the surface of the valley. A trunk (6) is not
+     soft, so it stays a wall and a roof to the body the player wears, and a body
+     on foot still climbs a tree and stands on the crown it grew. The gates the
+     animals themselves are moved through ask a wider question than this table
+     does -- `airCell` in src/entities.js lets a flying animal through the whole
+     of TREE_BLOCK, trunk included -- so a wild bird crosses a trunk that would
+     stop the body worn from that same bird. That asymmetry is recorded as open
+     work and is not repeated here: this table is the material, not the animal. */
+  const FOLIAGE = {};
+  for (let id = 0; id < B.length; id++) if (B[id] && B[id].soft && B[id].solid) FOLIAGE[id] = 1;
+  N.FOLIAGE = FOLIAGE;
   N.FRUIT_BLOCK = FRUIT_BLOCK; N.FRUIT_BLOCK_REV = FRUIT_BLOCK_REV;
   N.PLANT_BLOCK = PLANT_BLOCK; N.PLANT_BLOCK_REV = PLANT_BLOCK_REV;
   N.World = World;

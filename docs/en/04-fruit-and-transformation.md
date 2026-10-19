@@ -87,7 +87,7 @@ sit here looking implemented while nothing reads it.
 | `jump` | jump force multiplier | frog 1.3 / bear 0.9 | live |
 | `hop {up,kick,period}` | the body does not walk on land, it hops: the auto-hop's fraction of its own jump, the fraction of land speed the launch throws it at, and the seconds its feet stay down between hops | only the frog: a 1.4 m arc about every second, and the same ground speed a human gets | live |
 | `swim` | underwater movement multiplier; a body with no such field gets 0.62 | frog 1.1 — a frog body is barely quicker in the lake than on the shore, because it is a small body and the water is thick; a human body moves at 0.62 of its land speed there | live |
-| `fly` | flight thrust (0 = cannot fly) | only the owl, 5.2 | live |
+| `fly` | flight thrust (0 = cannot fly); it is also the record that excuses this body from foliage, because a body with wings has to be able to climb up through a crown, while a body without them keeps every wall it had (03 §3) | only the owl, 5.2 | live |
 | `flySpeed` | the speed a body with wings holds in level flight, m/s — not derived from walking speed | only the owl, 7.0: an owl is a fast animal wearing a slow body, and this number is the owl's own | live |
 | `glide` | unpowered gliding: the fall speed cap, as a fraction of normal | owl 0.35 — let go of the key and the owl stops hanging in the air: it comes down at a third of the speed you do, keeping the ground speed it had | live |
 | `breatheAir:false` | breathe underwater | only the frog | live |

@@ -229,11 +229,29 @@
       const x0 = Math.floor(x - hw), x1 = Math.floor(x + hw);
       const y0 = Math.floor(y + 0.001), y1 = Math.floor(y + s[1] - 0.001);
       const z0 = Math.floor(z - hw), z1 = Math.floor(z + hw);
+      const thr = this.throughFoliage();
       for (let yy = y0; yy <= y1; yy++)
         for (let zz = z0; zz <= z1; zz++)
           for (let xx = x0; xx <= x1; xx++)
-            if (this.world.solidAt(xx, yy, zz)) return true;
+            if (this.stopsAt(xx, yy, zz, thr)) return true;
       return false;
+    }
+    /* Foliage is neither a wall nor a roof to a body built for the air
+       (docs/en/03 s3). The owl animal has always had that -- every gate it is
+       asked through exempts the blocks a tree is made of -- and the body worn
+       from that same animal did not: standing in a crown with the climb key
+       held, it rose 2.3 m in the first 1.5 s and then did not move again for
+       the next 1.5 s, its speed zeroed by needles it could not get past, while
+       the animal it is carved from leaves the same crown without slowing.
+       A trunk is not foliage: it stays a wall and a roof to both. And nothing
+       here touches a body on foot, which still climbs a tree and stands on the
+       crown it grew -- `throughFoliage` asks the body what it is built for, not
+       whether it happens to be off the ground, so a worn body cannot perch: it
+       settles onto the floor under the crown, exactly as a bird at rest does. */
+    throughFoliage() { return !!this.formDef.fly; }
+    stopsAt(x, y, z, thr) {
+      if (!this.world.solidAt(x, y, z)) return false;
+      return !(thr && N.FOLIAGE[this.world.get(x, y, z)]);
     }
     /* move along one axis; returns whether it hit a wall */
     axis(a, amt) {
@@ -286,7 +304,8 @@
       const s = this.size(), hw = s[0] / 2;
       const x0 = Math.floor(x - hw), x1 = Math.floor(x + hw);
       const z0 = Math.floor(z - hw), z1 = Math.floor(z + hw);
-      for (let zz = z0; zz <= z1; zz++) for (let xx = x0; xx <= x1; xx++) if (this.world.solidAt(xx, y, zz)) return true;
+      const thr = this.throughFoliage();
+      for (let zz = z0; zz <= z1; zz++) for (let xx = x0; xx <= x1; xx++) if (this.stopsAt(xx, y, zz, thr)) return true;
       return false;
     }
     /* A body change, or a tree growing where you were standing, can leave you

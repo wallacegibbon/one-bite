@@ -6509,6 +6509,103 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('a flying body rises through a crown: leaves are not a roof',
     !throughLeaves.error && throughLeaves.rose >= 0 && throughLeaves.rose < 12, throughLeaves);
 
+  /* 11i2b. And the body worn from that animal is the one that had to be told.
+     `hits()` and `colAt()` -- the two gates a worn body goes through -- used to
+     ask `solidAt` and nothing else, so the crown that is no wall at all to the
+     owl was a wall and a roof to the body wearing the owl: standing under it
+     with the climb key held, that body rose 2.3 m in the first 1.5 s and then
+     did not move again for the next 1.5 s, its speed zeroed by needles it could
+     not get past, while the animal it is carved from left the same crown without
+     slowing. Foliage is now asked by material (`N.FOLIAGE`, the `soft` flag the
+     mesher has always carried) and the body by what it is built for
+     (`formDef.fly`), so a trunk stays a wall to both, and a body on foot still
+     climbs a tree and stands on the crown it grew. Measured with direct update
+     calls: the clock is the test's own, and the page's loop is not asked to hold
+     a key it re-reads every frame. */
+  const worn = await step('aWornBodyInTheAirIsNotStoppedByFoliage', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA, P = g.player;
+    const was = { x: P.x, y: P.y, z: P.z, yaw: P.yaw, form: P.form, vx: P.vx, vy: P.vy, vz: P.vz, grounded: P.grounded };
+    const fol = (x, y, z) => !!N.FOLIAGE[W.get(x, y, z)];
+    const groundOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)]) return y; return -1; };
+    const topOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z)) return y; return -1; };
+    const run = (secs, inp) => { for (let i = 0; i < Math.round(secs * 60); i++) P.update(1 / 60, inp || {}, g); };
+    const put = (x, y, z) => { P.x = x; P.y = y; P.z = z; P.vx = P.vy = P.vz = 0; P.grounded = false; };
+    /* one tree: a trunk with foliage over it and the ground right under it */
+    let tree = null;
+    for (let z = 20; z < W.d - 20 && !tree; z++) for (let x = 20; x < W.w - 20 && !tree; x++)
+      for (let y = 4; y < 30; y++) {
+        if (W.get(x, y, z) !== 6) continue;
+        if (groundOf(x, z) !== y - 1) continue;
+        let f = 0;
+        for (let h = 1; h <= 10; h++) if (fol(x, y + h, z)) f++;
+        if (f >= 3) tree = { x, y, z, gr: y - 1 };
+        break;
+      }
+    /* and open ground under that crown: a column within three of the trunk with
+       nothing solid for two metres over the feet and foliage at least two blocks
+       thick above that */
+    let spot = null;
+    for (let dz = -3; dz <= 3 && !spot; dz++) for (let dx = -3; dx <= 3 && !spot; dx++) {
+      const cx = tree.x + dx, cz = tree.z + dz, gr = groundOf(cx, cz);
+      if (gr < 2) continue;
+      let first = 0, f = 0;
+      for (let h = 1; h <= 9; h++) {
+        if (fol(cx, gr + h, cz)) { if (!first) first = h; f++; }
+        else if (W.solidAt(cx, gr + h, cz)) { first = -h; break; }
+      }
+      if (first > 1 && f >= 2) spot = { x: cx, z: cz, gr, ceilingAt: first, fol: f };
+    }
+    const climb = (form) => {
+      P.form = form; put(spot.x + 0.5, spot.gr + 1.0005, spot.z + 0.5);
+      const y0 = P.y;
+      run(1.5, { jump: true });
+      const r15 = +(P.y - y0).toFixed(2);
+      run(1.5, { jump: true });
+      return { y0: +y0.toFixed(2), rise15: r15, rise30: +(P.y - y0).toFixed(2), vy: +P.vy.toFixed(2) };
+    };
+    const air = climb('owlberry'), walker = climb(null);
+    /* what a body at rest makes of a crown, and what a body on foot makes of it */
+    let col = null;
+    for (let z = 20; z < W.d - 20 && !col; z++) for (let x = 20; x < W.w - 20 && !col; x++) {
+      const t = topOf(x, z);
+      if (t < 10 || !fol(x, t, z)) continue;
+      const gr = groundOf(x, z);
+      if (gr < 2 || t - gr > 6 || t - gr < 3) continue;
+      col = { x, z, top: t, gr };
+    }
+    const drop = (form) => {
+      P.form = form; put(col.x + 0.5, col.top + 3, col.z + 0.5);
+      run(4); run(3);
+      return { rest: +P.y.toFixed(2), grounded: P.grounded };
+    };
+    const rest_air = drop('owlberry'), rest_foot = drop(null);
+    /* and the wall a tree is allowed to keep */
+    const into = (form) => {
+      P.form = form;
+      const cx = tree.x + 2, cz = tree.z;
+      put(cx + 0.5, groundOf(cx, cz) + 1.0005, cz + 0.5);
+      P.yaw = -Math.PI / 2;                 // facing the trunk, down -x
+      run(1.5, { fwd: true });
+      return { x: +P.x.toFixed(2), face: tree.x + 1, grounded: P.grounded };
+    };
+    const wall_foot = into(null), wall_air = into('owlberry');
+    Object.assign(P, was);
+    return { tree, spot, air, walker, col, rest_air, rest_foot, wall_foot, wall_air };
+  });
+  check('a tree with open ground under its crown was found to measure on',
+    worn.spot !== null && worn.col !== null, worn);
+  check('a body built for the air climbs out through the crown it is standing under',
+    worn.air.rise30 > 5 && worn.air.vy > 1, worn.air);
+  check('and it ends above the underside of that crown, which is the foliage it walked through',
+    worn.air.y0 + worn.air.rise30 > worn.spot.gr + worn.spot.ceilingAt + 2, worn);
+  check('a body on foot is still stopped by that same crown', worn.walker.rise30 < 1.5, worn.walker);
+  check('a body built for the air settles onto the floor under a crown, and cannot perch in it',
+    worn.rest_air.grounded && Math.abs(worn.rest_air.rest - (worn.col.gr + 1)) < 0.05, worn.rest_air);
+  check('a body on foot still stands on the crown itself',
+    worn.rest_foot.grounded && Math.abs(worn.rest_foot.rest - (worn.col.top + 1)) < 0.05, worn.rest_foot);
+  check('a trunk is still a wall to a body built for the air',
+    worn.wall_air.x > worn.wall_air.face && worn.wall_air.x < worn.wall_air.face + 0.5, worn.wall_air);
+
   /* 11i3. Falling asleep is not a pass through the roof. The flock step asks what
      a bird does while it is abroad; this asks what it does while it is not. A
      bird at rest was held to no ceiling at all -- the exemption was written to
