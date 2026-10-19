@@ -6342,12 +6342,15 @@ What was measured before any of this was fixed, over 180 frames of walking
         const [ox, oy, oz] = cell(c);
         // wedged: a block the body cannot rise through, directly over its head
         if (hard(ox, oy + 1, oz)) jam++;
-        /* how long this bird went without moving its height at all. A body whose
-           height is being decided by a roof it is not allowed through stops
-           answering anything else: it keeps flying, and it stays at one height
-           for as long as the roof lasts. */
+        /* how long this bird went without moving its height at all -- and only
+           while it is flying. A body standing on a branch holds one height
+           because that is what standing is: counting those frames made this
+           measure report a bird for sitting still, and it read 10 seconds of
+           roosting in one run of the valley and 3 seconds in the next with
+           nothing whatever changed about the flight. */
         const e2 = each.get(c);
-        e2.hold = Math.abs(c.y - yPrev.get(c)) < 0.01 ? e2.hold + 1 : 0;
+        const flying = !c.grounded && c.speed > 0.5;
+        e2.hold = flying && Math.abs(c.y - yPrev.get(c)) < 0.01 ? e2.hold + 1 : 0;
         if (e2.hold > e2.holdMax) e2.holdMax = e2.hold;
         yPrev.set(c, c.y);
         owlPath.set(c, owlPath.get(c) + Math.hypot(c.x - px, c.z - pz));
@@ -6748,6 +6751,124 @@ What was measured before any of this was fixed, over 180 frames of walking
     trunkLaw.inRock === 0, trunkLaw);
   check('refused by the tree they keep flying, going round it rather than freezing at it',
     trunkLaw.path > 12 && trunkLaw.gone > 200, trunkLaw);
+
+  /* 11i2d. The same animal, asked about its height instead of its sideways. The
+     step above asks where a flying body may be put sideways; this asks where it
+     may be put tall. The law that takes a flyer's new height asked only about the
+     cell under its feet, while the sideways gate a few lines above it asks about
+     the whole span of the body (`floor(y)` up to `floor(y + tall)`). A trunk
+     standing on a step is the shape that falls through that difference: the climb
+     is capped by `roofY`, and `roofY` deliberately does not count a trunk as a
+     roof -- a body built for the air is meant to be able to come down through a
+     crown -- so the only law left between a climbing bird and the underside of an
+     overhanging trunk was the one that was asking about feet. That is not a rare
+     shape either: the valley holds **11** cells of trunk with open air straight
+     under them. A rig (one column, one trunk block set two cells above its floor,
+     one flyer held over that column with its flight height four cells up, 240
+     frames, the same bird state every time) reads the change: the body used to
+     rise to **2.00 m** above that floor with its **head inside the wood for 234
+     of the 240 frames** and up to **0.70 m** of it through the block, its feet in
+     open air the whole while; it now stops at **1.29 m**, which is the room left
+     between that floor and the underside of the block once the body's own height
+     is taken off it, and it touches nothing. Below, the rig is inside the suite,
+     and the body is held over the column by the rig rather than left to itself:
+     one unpinned run found the bird going sideways round the trunk instead (path
+     11.5 m, only 10 of its 240 frames over the column), which leaves the question
+     never asked. Holding the position is what makes the read about height. */
+  const ledgeLaw = await step('aFlyerEasedUpUnderAnOverhangingTrunkKeepsItsWholeBodyOutOfTheWood', () => {
+    const g = window.game, W = g.world, P = g.player;
+    const TRUNK = 6;                       // solid, in TREE_BLOCK, not foliage
+    const airAt = (x, y, z) => !W.solidAt(x, y, z) && !W.liquidAt(x, y, z);
+    const floorOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z)) return y; return -1; };
+    /* The first column of ground with room over it, taken in a fixed order: seven
+       cells of clear air above its floor, and clear air all round the height the
+       block goes at, so the only wood near this body is the one put there on
+       purpose. The scan is deliberately blind to where the creatures happen to be
+       -- the valley is seeded and the flock is not, and a column picked by the
+       birds' positions would move between runs. */
+    let col = null;
+    for (let z = 30; z < W.d - 30 && !col; z++) for (let x = 30; x < W.w - 30 && !col; x++) {
+      const gy = floorOf(x, z);
+      if (gy < 8 || gy > W.h - 9) continue;
+      let open = true;
+      for (let k = gy + 1; k <= gy + 7 && open; k++) if (!airAt(x, k, z)) open = false;
+      for (let dx = -1; dx <= 1 && open; dx++) for (let dz = -1; dz <= 1 && open; dz++) {
+        if (!dx && !dz) continue;
+        for (let k = gy + 1; k <= gy + 4 && open; k++) if (!airAt(x + dx, k, z + dz)) open = false;
+      }
+      if (open) col = { x, z, gy };
+    }
+    if (!col) return { error: 'no column with seven cells of clear air over its floor' };
+    const { x, z, gy } = col, beam = gy + 2;
+    /* a body short enough that the room between that floor and the block is a
+       room it could stand in at all: otherwise the premise is a pass, not a stop */
+    const flyers = g.creatures.filter((c) => c.isFlyer());
+    const fit = flyers.filter((c) => c.tall > 0.2 && c.tall <= 1);
+    if (!fit.length) return { error: 'no flyer short enough to fit under the beam', flyers: flyers.length };
+    const bird = fit[0], tall = bird.tall;
+    const was = { x: P.x, y: P.y, z: P.z, form: P.form, vital: P.vital, time: g.time };
+    const snap = {};
+    for (const k of ['x', 'y', 'z', 'yaw', 'vx', 'vy', 'vz', 't', 'phase', 'gait', 'speed', 'held',
+      'state', 'pause', 'tx', 'tz', 'sleeping', 'flyY', 'climbTo', 'climbRate', 'homeX', 'homeZ']) snap[k] = bird[k];
+    const beamWas = W.get(x, beam, z);
+    W.set(x, beam, z, TRUNK);
+    g.time = 420 * 21 / 24; g.updateEnv();
+    Object.assign(bird, { x: x + 0.5, y: gy + 1, z: z + 0.5, yaw: 0, vx: 0, vy: 0, vz: 0,
+      t: 0, phase: 0, gait: 0, speed: 2, held: 0, state: 'wander', sleeping: false, pause: 0,
+      tx: x + 0.5, tz: z + 0.5, flyY: gy + 4, climbTo: null, homeX: x + 0.5, homeZ: z + 0.5 });
+    const rec = { frames: 0, beamWood: 0, airborne: 0, stays: 0, inside: 0, headIn: 0,
+      deep: 0, maxAbove: -1e9, minAbove: 1e9, path: 0 };
+    for (let i = 0; i < 240; i++) {
+      const px = bird.x, pz = bird.z;
+      bird.x = x + 0.5; bird.z = z + 0.5;      // the rig holds the body over the column
+      bird.tx = x + 0.5; bird.tz = z + 0.5; bird.pause = 0;
+      bird.update(1 / 60, P, W, g);
+      rec.frames++;
+      rec.path += Math.hypot(bird.x - px, bird.z - pz);
+      if (W.get(x, beam, z) === TRUNK) rec.beamWood++;
+      const bx = Math.floor(bird.x), bz = Math.floor(bird.z), by = Math.floor(bird.y);
+      if (bx === x && bz === z) rec.stays++;
+      const above = bird.y - gy;
+      if (above > 0.2) rec.airborne++;
+      if (above > rec.maxAbove) rec.maxAbove = above;
+      if (above < rec.minAbove) rec.minAbove = above;
+      /* the cells this body stands in, feet cell to head cell: the same question
+         the sideways gate asks of a step, put to the height instead */
+      let hit = -1;
+      for (let k = by; k <= Math.floor(bird.y + tall); k++) if (W.solidAt(bx, k, bz)) { hit = k; break; }
+      if (hit >= 0) {
+        rec.inside++;
+        if (hit > by) rec.headIn++;
+        const through = (bird.y + tall) - hit;
+        if (through > rec.deep) rec.deep = through;
+      }
+    }
+    const out = { col: [x, gy, z], beam, beamWas, tall: +tall.toFixed(2), frames: rec.frames,
+      beamWood: rec.beamWood, airborne: rec.airborne, stays: rec.stays, inside: rec.inside,
+      headIn: rec.headIn, deep: +rec.deep.toFixed(2), path: +rec.path.toFixed(2),
+      maxAbove: +rec.maxAbove.toFixed(2), minAbove: +rec.minAbove.toFixed(2),
+      limit: +(2 - tall).toFixed(2), flyers: flyers.length };
+    W.set(x, beam, z, beamWas);
+    Object.assign(bird, snap);
+    Object.assign(P, was); g.time = was.time; g.updateEnv();
+    return out;
+  });
+  check('a column of ground with open air over it, and a body short enough to fit under a beam set over it, were found to measure on',
+    !ledgeLaw.error && ledgeLaw.beamWas === 0, ledgeLaw);
+  check('the block stayed the wood it was set as, so "never inside it" is not paid for by the wood going away',
+    ledgeLaw.beamWood === ledgeLaw.frames, ledgeLaw);
+  check('the body was held up by air the whole while, so this is the flight law being asked and not a landing',
+    ledgeLaw.airborne === ledgeLaw.frames, ledgeLaw);
+  check('it did climb: the body came up off its floor to the room the beam leaves, so "never inside it" is not paid for by a bird that never went up',
+    ledgeLaw.maxAbove >= 1, ledgeLaw);
+  check('and it spent every frame over that column, which is the only place the question can be asked',
+    ledgeLaw.stays === ledgeLaw.frames, ledgeLaw);
+  check('a flying body is not let inside wood with any part of itself',
+    ledgeLaw.inside === 0 && ledgeLaw.deep === 0, ledgeLaw);
+  check('in particular its head: the guard used to ask only about the cell under the feet, and the feet were in open air every frame',
+    ledgeLaw.headIn === 0, ledgeLaw);
+  check('and the height it is allowed is the room the wood leaves it: floor to underside, less its own height',
+    ledgeLaw.maxAbove <= ledgeLaw.limit + 0.02, ledgeLaw);
 
 
   /* 11i3. Falling asleep is not a pass through the roof. The flock step asks what
@@ -9157,6 +9278,289 @@ What was measured before any of this was fixed, over 180 frames of walking
     { left: flank.left, right: flank.right, shareL: share(flank.left), shareR: share(flank.right) });
   check('the flank whose face constant is the brighter of the two reads brighter',
     !flank.error && flank.ratio > 1.06 && flank.ratio < 1.5, flank);
+
+
+  /* A joint the frame shows side by side has to be two colours, not one colour
+     at two strengths. The renderer multiplies a surface's colour by scalars and
+     by nothing else (vCol = aCol.rgb * aData.x * lit * dayLight + uAmb: the face
+     constant, the crease byte, the daylight, all of them single numbers), so two
+     boxes painted with colours of the same ratios come out of the frame the same
+     colour whenever the two scalars happen to even out -- and a leg meeting a
+     body at a crease is exactly the place where they do. The only thing that can
+     tell such a joint apart is a difference in the colour *ratios*, which is the
+     palette and nothing else. So the palette is measured at the joints, in the
+     frame, with the parts told apart by an id buffer: every box of one part is
+     repainted a marker colour of its own, and a pixel belongs to the part whose
+     marker ray it sits on. Multiplication cannot move a colour off its own ray,
+     so an ordinary frame is an id buffer. A seam is a pair of neighbouring
+     pixels the id buffer puts on two different parts, and the read that matters
+     is the share each channel holds in its own pixel's luminance: a scalar
+     multiplication leaves every share alone, so a difference in shares is a
+     difference of colour and cannot have come from the light. */
+  const joint = await step('aJointTheLensSeesIsTwoColoursNotOneColourTwice', (spot) => {
+    const g = window.game, N = window.FRUTARIA, p = g.player, gl = g.R.gl;
+    const lum = (b, i) => 0.2126 * b[i] + 0.7152 * b[i + 1] + 0.0722 * b[i + 2];
+    /* twelve markers, well separated: a body of n parts is painted the first n
+       of them, and the separation of the set is asked of the frame below rather
+       than trusted. They are written out rather than generated because the whole
+       point of the id buffer is that the same marker means the same part in every
+       run of this step. */
+    const MARKS = ['#aa5fa5', '#26f927', '#1f35f8', '#f8341f', '#aeb722', '#25b7ae',
+      '#7eb67e', '#7a22dd', '#e11e75', '#d37256', '#5774d2', '#6edf38'];
+    const was = { list: g.creatures, tp: g.thirdPerson, hover: g.hover, mode: g.mode, time: g.time,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady, frame: g._camFrame,
+      px: p.x, py: p.y, pz: p.z, yaw: p.yaw, pitch: p.pitch, form: p.form, hw: p.headWater,
+      faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital };
+    /* the animals have to be found before anything is taken out of the world:
+       a body is filmed one at a time, with the rest of the valley's creatures
+       put away, so that a changed pixel can only be this body's */
+    const animals = {};
+    for (const id of ['owl', 'frog', 'bear']) animals[id] = g.creatures.find((c) => c.sp.id === id) || null;
+    if (!animals.owl || !animals.frog || !animals.bear) return { error: 'no owl, frog and bear in the valley' };
+    const Wd = gl.drawingBufferWidth, Hd = gl.drawingBufferHeight;
+    const shoot = () => { const f = g.shootCamera(p); g._camFrame = f; g.render(); return f; };
+    const grab = () => { const b = new Uint8Array(Wd * Hd * 4); gl.readPixels(0, 0, Wd, Hd, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+    /* the lens stands due west of the body and looks east; the body is turned to
+       the bearing that puts the asked-for side under it */
+    const SIDEYAW = { left: Math.PI, right: 0, face: -Math.PI / 2, back: Math.PI / 2 };
+    const DIST = { owl: 1.1, bear: 2.0, frog: 0.8 };     // the distance the game films that body at
+    const shots = [];
+    g.time = 420 * 0.42; g.mode = 'play'; g.hover = null; p.vital = 10; p.fright = 0;
+    for (const id of ['owl', 'frog', 'bear', 'human']) {
+      const an = id === 'human' ? null : animals[id];
+      const tall = id === 'human' ? 1.8 : N.FRUIT_BY_ID[N.CREATURE_BY_ID[id].fruit].form.size[1];
+      for (const side of ['left', 'right', 'face', 'back']) {
+        const yaw = SIDEYAW[side];
+        p.form = null;
+        const eyeH = p.eyePos() - p.y;
+        if (an) {
+          an.x = spot.x; an.y = spot.y; an.z = spot.z; an.yaw = yaw;
+          an.vx = an.vy = an.vz = 0; an.sleeping = false; an.state = 'wander'; an.pause = 0;
+          an.tilt = 0; an.bank = 0; an.crouch = 0; an.airAmt = 0; an.squash = 0; an.moveAmt = 0;
+          /* the draw clocks a body off the world's clock plus the body's own
+             phase (game.js: t = this.time + c.phase) and that phase is dealt out
+             at random when the valley is built. Pin it: the seam between a folded
+             wing and a trunk is a near-tangency in the silhouette, and two runs of
+             a step that does not pin it measured 98 pixels of that joint and then
+             4 pixels of it, with nothing changed in between. */
+          an.phase = 0; an.t = 0; an.gait = 0; an.speed = 0;
+          g.creatures = [an]; g.thirdPerson = false;
+          /* the heading is pinned as surely as the position is: the lens stands
+             west and looks east, and a yaw left over from the step before this
+             one films the empty air on the far side of the body */
+          p.x = spot.x - DIST[id]; p.z = spot.z; p.y = spot.y + Math.max(0.12, tall * 0.55) - eyeH;
+          p.yaw = Math.PI / 2;
+        } else {
+          g.creatures = []; g.thirdPerson = true;
+          p.x = spot.x; p.z = spot.z; p.y = spot.y;
+          p.yaw = Math.PI / 2; p.faceYaw = yaw; p.bank = 0; p.tilt = 0;
+        }
+        p.vx = p.vy = p.vz = 0; p.pitch = 0;
+        p.headWater = false; g.camReady = false;   // the shot is pinned, not inherited
+        g.updateEnv();
+        let f = null;
+        for (let k = 0; k < 60; k++) f = shoot();
+        const F = grab();
+        const F2 = grab();                 // nothing changed: how stable is the frame at all
+        /* the body's own pixels, measured by taking the body away */
+        const saved = g.creatureMeshes[id]; g.creatureMeshes[id] = [];
+        for (let k = 0; k < 4; k++) shoot();
+        const M = grab();
+        g.creatureMeshes[id] = saved;
+        /* the id buffer, and the model put back as it was found */
+        const parts = N.MODELS[id].parts;
+        const hex = MARKS.slice(0, parts.length);
+        const dir = hex.map((h) => {
+          const v = [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+          const L = Math.hypot(v[0], v[1], v[2]);
+          return [v[0] / L, v[1] / L, v[2] / L];
+        });
+        let sep = 180;                     // how far apart the markers are, in degrees
+        for (let a = 0; a < dir.length; a++) for (let b = a + 1; b < dir.length; b++)
+          sep = Math.min(sep, Math.acos(Math.max(-1, Math.min(1,
+            dir[a][0] * dir[b][0] + dir[a][1] * dir[b][1] + dir[a][2] * dir[b][2]))) * 180 / Math.PI);
+        const keep = parts.map((pt) => (pt.boxes || []).map((bx) => bx[6]));
+        parts.forEach((pt, pi) => (pt.boxes || []).forEach((bx) => { bx[6] = hex[pi]; }));
+        g.creatureMeshes[id] = null; g.ensureModel(id);
+        for (let k = 0; k < 4; k++) shoot();
+        const I = grab();
+        parts.forEach((pt, pi) => (pt.boxes || []).forEach((bx, bi) => { bx[6] = keep[pi][bi]; }));
+        g.creatureMeshes[id] = null; g.ensureModel(id);
+        for (let k = 0; k < 2; k++) shoot();
+        let drift = 0;
+        for (let o = 0; o < Wd * Hd; o++) {
+          const i = o * 4;
+          if (Math.max(Math.abs(F[i] - F2[i]), Math.abs(F[i + 1] - F2[i + 1]), Math.abs(F[i + 2] - F2[i + 2])) > 6) drift++;
+        }
+        const idm = new Int16Array(Wd * Hd).fill(-1);
+        const mask = new Uint8Array(Wd * Hd);
+        let nMask = 0, nId = 0;
+        for (let o = 0; o < Wd * Hd; o++) {
+          const i = o * 4;
+          if (Math.max(Math.abs(F[i] - M[i]), Math.abs(F[i + 1] - M[i + 1]), Math.abs(F[i + 2] - M[i + 2])) > 24) { mask[o] = 1; nMask++; }
+          /* A pixel is this part's if its colour sits on this part's marker ray,
+             and if it belongs to the body. Both halves are needed: the valley's
+             own greens are themselves multiples of some marker, so the ray test
+             alone paints grass leaves as a frog's thigh; and the difference test
+             alone cannot say which part a body pixel belongs to. */
+          if (!mask[o]) continue;
+          const r2 = I[i] * I[i] + I[i + 1] * I[i + 1] + I[i + 2] * I[i + 2];
+          let q1 = 1e9, q2 = 1e9, bi = -1;
+          for (let j = 0; j < dir.length; j++) {
+            const d = I[i] * dir[j][0] + I[i + 1] * dir[j][1] + I[i + 2] * dir[j][2];
+            const e = Math.sqrt(Math.max(0, r2 - d * d));     // off-ray distance, in levels
+            if (e < q1) { q2 = q1; q1 = e; bi = j; } else if (e < q2) q2 = e;
+          }
+          // a pixel on no marker's ray, or on two of them, is not this part's
+          if (q1 < 3 && q2 - q1 > 3) idm[o] = bi;
+          if (idm[o] >= 0) nId++;
+        }
+        const name = (j) => parts[j].name;
+        /* seams: neighbouring pixels the id buffer puts on two different parts */
+        const pair = new Map();
+        for (let y = 0; y < Hd; y++) for (let x = 0; x < Wd; x++) {
+          const o = y * Wd + x, a = idm[o];
+          if (a < 0) continue;
+          for (const q of [o + 1, o + Wd]) {
+            if (q === o + 1 && x + 1 >= Wd) continue;
+            if (q >= Wd * Hd) continue;
+            const b = idm[q];
+            if (b < 0 || b === a) continue;
+            const k = a < b ? a + '|' + b : b + '|' + a;
+            const i1 = o * 4, i2 = q * 4;
+            const L1 = lum(F, i1), L2 = lum(F, i2);
+            /* the share each channel holds in its own pixel: scale-invariant, so
+               it is the palette and not the light being compared here */
+            const ds = Math.max(
+              Math.abs(F[i1] / (L1 || 1) - F[i2] / (L2 || 1)),
+              Math.abs(F[i1 + 1] / (L1 || 1) - F[i2 + 1] / (L2 || 1)),
+              Math.abs(F[i1 + 2] / (L1 || 1) - F[i2 + 2] / (L2 || 1)));
+            let r = pair.get(k);
+            if (!r) { r = { a: name(a), b: name(b), n: 0, dL: 0, lo: 1e9, ds: 0, over: 0, same: 0,
+              c1: [0, 0, 0], c2: [0, 0, 0] }; pair.set(k, r); }
+            r.n++; r.dL += Math.abs(L1 - L2); r.ds += ds;
+            if (ds > 0.04) r.over++;                            // two colours, not two strengths
+            if (F[i1] === F[i2] && F[i1 + 1] === F[i2 + 1] && F[i1 + 2] === F[i2 + 2]) r.same++;
+            r.lo = Math.min(r.lo, Math.abs(L1 - L2));
+            r.c1[0] += F[i1]; r.c1[1] += F[i1 + 1]; r.c1[2] += F[i1 + 2];
+            r.c2[0] += F[i2]; r.c2[1] += F[i2 + 1]; r.c2[2] += F[i2 + 2];
+          }
+        }
+        /* flatness inside the body, and the exact colours it is made of */
+        let pairs = 0, flat = 0, sameRGB = 0;
+        const rgbN = new Map();
+        for (let y = 0; y < Hd; y++) for (let x = 0; x < Wd; x++) {
+          const o = y * Wd + x; if (idm[o] < 0) continue;
+          const i = o * 4;
+          const rk = (F[i] << 16) | (F[i + 1] << 8) | F[i + 2];
+          rgbN.set(rk, (rgbN.get(rk) || 0) + 1);
+          for (const q of [o + 1, o + Wd]) {
+            if (q === o + 1 && x + 1 >= Wd) continue;
+            if (q >= Wd * Hd || idm[q] < 0) continue;
+            pairs++;
+            if (F[i] === F[q * 4] && F[i + 1] === F[q * 4 + 1] && F[i + 2] === F[q * 4 + 2]) sameRGB++;
+            if (Math.abs(lum(F, i) - lum(F, q * 4)) < 0.5) flat++;
+          }
+        }
+        let topRGB = 0, longRunH = 0;
+        for (const v of rgbN.values()) if (v > topRGB) topRGB = v;
+        for (let y = 0; y < Hd; y++) {
+          let run = 0, prev = -1;
+          for (let x = 0; x < Wd; x++) {
+            const o = y * Wd + x;
+            if (idm[o] < 0) { run = 0; prev = -1; continue; }
+            const i = o * 4, rk = (F[i] << 16) | (F[i + 1] << 8) | F[i + 2];
+            run = (rk === prev) ? run + 1 : 1; prev = rk;
+            if (run > longRunH) longRunH = run;
+          }
+        }
+        shots.push({ id, side, shot: { d: f && +f.d.toFixed(2), fov: f && Math.round(f.fov) },
+          parts: parts.length, sep: +sep.toFixed(1), bodyPx: nMask, cover: +(100 * nId / (nMask || 1)).toFixed(1),
+          drift, pctFlat: +(100 * flat / (pairs || 1)).toFixed(1), pctSame: +(100 * sameRGB / (pairs || 1)).toFixed(1),
+          tones: rgbN.size, topRGBShare: +(100 * topRGB / (nId || 1)).toFixed(1), longRunH,
+          seams: [...pair.values()].filter((r) => r.n >= 2).map((r) => ({ a: r.a, b: r.b, n: r.n,
+            dL: +(r.dL / r.n).toFixed(1), lo: +r.lo.toFixed(1), ds: +(r.ds / r.n).toFixed(3),
+            pctShare: Math.round(100 * r.over / r.n), pctSame: Math.round(100 * r.same / r.n),
+            c1: r.c1.map((v) => Math.round(v / r.n)), c2: r.c2.map((v) => Math.round(v / r.n)) }))
+            .sort((u, v) => u.dL - v.dL) });
+      }
+    }
+    g.creatures = was.list; g.thirdPerson = was.tp; g.hover = was.hover; g.mode = was.mode;
+    g._camFrame = was.frame; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+    p.x = was.px; p.y = was.py; p.z = was.pz; p.yaw = was.yaw; p.pitch = was.pitch; p.form = was.form;
+    p.headWater = was.hw; p.faceYaw = was.faceYaw; p.bank = was.bank; p.tilt = was.tilt;
+    p.vital = was.vital; g.time = 420 * 0.42; g.updateEnv();
+    return { spot, shots };
+  }, marks.spot);
+  /* one row per joint: the same joint at every bearing the body was filmed from,
+     pooled, because a joint is worth what it is worth in the frame and not at one
+     angle. Prefixes, because a body's two sides are separate parts: wingL and
+     wingR are one joint of the body. */
+  const JOINTS = [
+    ['owl', 'body', 'wing'], ['frog', 'body', 'thigh'], ['frog', 'body', 'head'],
+    ['bear', 'body', 'leg'], ['bear', 'body', 'head'], ['bear', 'leg', 'shin']
+  ];
+  /* the frog's head to its thigh was measured too, and it is not claimed here:
+     at these four bearings the two never stand against each other in the frame
+     at all -- the thigh is behind the body and the head is over it -- so there
+     is no seam there for a palette to be worth anything in. */
+  const pool = (id, x, y, minN) => {
+    let n = 0, ds = 0, dL = 0, share = 0, same = 0, worst = 1e9;
+    for (const s of (joint.shots || [])) {
+      if (s.id !== id) continue;
+      for (const r of s.seams) {
+        if (!((r.a.startsWith(x) && r.b.startsWith(y)) || (r.b.startsWith(x) && r.a.startsWith(y)))) continue;
+        if (r.n < (minN || 0)) continue;
+        n += r.n; ds += r.ds * r.n; dL += r.dL * r.n; share += r.pctShare * r.n; same += r.pctSame * r.n;
+        worst = Math.min(worst, r.lo);
+      }
+    }
+    return { joint: id + ' ' + x + '/' + y, n, dL: n ? +(dL / n).toFixed(1) : null,
+      lo: n === 0 ? null : +worst.toFixed(1), ds: n ? +(ds / n).toFixed(3) : null,
+      pctShare: n ? Math.round(share / n) : null, pctSame: n ? Math.round(same / n) : null };
+  };
+  const rows = JOINTS.map((j) => pool(j[0], j[1], j[2]));
+  check('the frame is stable enough to be measured: two reads of one shot are the same pixels',
+    !joint.error && joint.shots.every((s) => s.drift === 0),
+    joint.error || joint.shots.map((s) => [s.id, s.side, s.drift]));
+  check('the id buffer knows which part drew a pixel: over nine tenths of an animal told apart,',
+    // the person excepted: at the shot the game films them with they are about
+    // 1500 pixels wide, and twelve markers 17 degrees apart cannot tell 12 parts
+    // apart over so few pixels -- which is why nothing below is claimed of them
+    !joint.error && joint.shots.filter((s) => s.id !== 'human').every((s) => s.cover > 90) &&
+      joint.shots.filter((s) => s.id === 'human').every((s) => s.cover > 70),
+    joint.error || joint.shots.map((s) => [s.id, s.side, s.cover, s.sep, s.parts]));
+  check('the markers are far enough apart that a face constant cannot move one onto another',
+    !joint.error && joint.shots.every((s) => s.sep > 15),
+    joint.error || joint.shots.map((s) => [s.id, s.sep]));
+  check('and the joints are there to be read: each is worth its weight of frame',
+    rows.every((r) => r.n >= 40), rows);
+  check('a joint the lens sees is two colours, not one colour at two strengths:',
+    // the share of seam pixels whose two sides hold colour in different
+    // proportions -- 0% meant the light could not tell the parts apart by colour
+    rows.every((r) => r.pctShare >= 80), rows);
+  check('and the colour difference is worth a name: not a shade of the same colour',
+    rows.every((r) => r.ds >= 0.05), rows);
+  check('so a joint is no longer two pixels of one colour standing side by side',
+    // 31% of the frog's body-to-thigh seam used to be the very same colour on
+    // both sides of the line; a joint you cannot see because it is one colour is
+    // not a joint the frame has
+    rows.every((r) => r.pctSame <= 5), rows);
+  /* the frog is the body this is asked of because it was the flattest one the
+     frame showed: over a third of its pixels used to be one colour, the same
+     green on the trunk and on the leg meeting it. Pooled over the four bearings
+     the game films it at that share measured 35.7% before the palette moved and
+     30.8% after. The longest unbroken run of one colour across the body did not
+     move at all (192, 192, 226 and 174 pixels, before and after alike) and is
+     not claimed: a run that long is one box's own back, and repainting two
+     boxes differently cannot break a run lying inside a single box. */
+  const frogTop = (joint.shots || []).filter((s) => s.id === 'frog').map((s) => s.topRGBShare);
+  check('and the flatness of the body reads the same way: one colour used to cover',
+    // a third of a frog was one colour; the mean of the four bearings is what is
+    // asked here, because one bearing of a pinned body is worth less than four
+    !joint.error && frogTop.length === 4 &&
+      frogTop.reduce((a, b) => a + b, 0) / frogTop.length < 33,
+    joint.error || { mean: +(frogTop.reduce((a, b) => a + b, 0) / (frogTop.length || 1)).toFixed(1), frogTop });
 
 
   /* A save is the only thing standing between a day of walking and nothing at

@@ -1796,14 +1796,26 @@
            rest at 46.99 -- which is inside the needle it was being kept out of,
            for as long as it stayed there. */
         if (Math.abs(target - this.y) < 0.01) this.y = target;
-        /* The height is only taken if the place it lands in is empty. The floor
-           rule keeps a flying body above what is under it and says nothing about
-           what is over it, and the step gate above only ever asks about sideways:
-           a body eased up into a ledge, or down into the shoulder of a hill, is a
-           body inside one -- measured, 55483 of 216000 frames. A body that was
-           already somewhere it should not be keeps its move, so a bird put down
-           inside a crown can still work its way out. */
-        if (airCell(world, this.x, yWas, this.z) && !airCell(world, this.x, this.y, this.z)) this.y = yWas;
+        /* The height is only taken if the place it lands in is empty, and the
+           place it lands in is the room its whole body takes up, feet to head --
+           the same question the step gate above asks of a sideways move. Asked
+           of the feet cell alone, which is what it was, a body eased up under a
+           beam keeps its feet in air and puts its head through the beam: the
+           ceiling law above answers through `roofY`, and `roofY` does not count a
+           trunk as a roof at all, so a bird climbing under a trunk that stands on
+           a step climbs into the wood. The valley holds 11 cells of trunk with
+           open air straight under them, and one bird driven at a trunk in
+           `game/test/play.js` was caught with its head through one of them for 51
+           of its 240 frames, up to 0.69 m of its body inside the block, while its
+           feet stayed in air the whole time. A body that was already somewhere it
+           should not be keeps its move, so a bird put down inside a crown can
+           still work its way out. */
+        const spanClear = (yy) => {
+          for (let k = Math.floor(yy); k <= Math.floor(yy + this.tall); k++)
+            if (!airCell(world, this.x, k, this.z)) return false;
+          return true;
+        };
+        if (spanClear(yWas) && !spanClear(this.y)) this.y = yWas;
         /* Whether this body is standing on something or being held up by air is
            read off the surface **under its own feet**, not off the column read
            from above it: a crown growing one block over a bird's head is not

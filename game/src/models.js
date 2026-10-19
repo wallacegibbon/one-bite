@@ -90,7 +90,16 @@
              the hips are the part that rides the stride (see `bob`), and a leg
              carved only up to the hinge shows a slit of sky between them at the
              top of every rise. Same colour, so all it changes is that there is
-             never a gap. */
+             never a gap. Measured at that joint the frame holds a colour
+             difference of 0.003 to 0.009, which is the intention: hip and thigh
+             are one pair of trousers, and the joints of this body that the frame
+             does show already hold 0.10 to 0.79 of a colour difference (coat
+             against trousers 0.50, satchel against coat 0.79, bare skin against
+             the coat 0.21), so nothing of this palette was moved -- and at the
+             shot the game films a person with, 5.55 m at 84 degrees, the body is
+             only 2100 to 2700 pixels, too few for twelve markers to tell twelve
+             parts apart over, which is why the joint step asks its claims of the
+             animals and not of the person. */
           air: [-0.55, 0, 0], boxes: [[-1.0, 2.4, -0.6, 0.8, 1.7, 1.2, '#39414d']] },
         { name: 'shinL', parent: 'thighL', pivot: [-0.62, 2.45, 0], anim: 'knee', sign: 1, stands: 1,
           air: [0.95, 0, 0], boxes: [
@@ -171,15 +180,27 @@
           [-1.12, 4.3, -0.35, 0.46, 0.4, 0.62, '#6a5540'],        // ear tufts
           [0.66, 4.3, -0.35, 0.46, 0.4, 0.62, '#6a5540']
         ] },
+        /* the coverts are the trunk's brown at the trunk's own ratios, so a
+           folded wing used to be one colour at two strengths: across the 189
+           pixels of that joint the frame showed, the colour difference measured
+           0.008 (a channel's share of its own pixel's light, which no scalar
+           multiplication can move) and 0% of the seam read as two colours. A
+           greyer coverts (#75604a -> #6e6352) takes the difference to 0.090 and
+           the whole seam to two colours -- and the primaries, which were always a
+           brown of their own and lie along the coverts rather than along the
+           trunk, then read as well (0.109 to 0.112 across 62 pixels of
+           primaries-to-wing seam). The tail keeps its colour: trunk against tail
+           is 112 pixels of seam standing 12.9 levels of brightness apart, and
+           that is the one joint of this body claimed in neither direction. */
         { name: 'wingL', parent: 'body', pivot: [-1.05, 2.75, -0.1], anim: 'flap', sign: -1,
-          air: [0, 0, -1.32], boxes: [[-1.5, 1.5, -0.8, 0.45, 1.35, 1.55, '#75604a']] },
+          air: [0, 0, -1.32], boxes: [[-1.5, 1.5, -0.8, 0.45, 1.35, 1.55, '#6e6352']] },
         { name: 'foreL', parent: 'wingL', pivot: [-1.27, 1.55, -0.1], anim: 'fold', sign: -1,
           air: [0, 0, -0.95], boxes: [
             [-1.45, 0.5, -1.3, 0.42, 1.1, 1.95, '#5f4c38'],       // primaries
             [-1.45, 0.42, 0.62, 0.42, 0.5, 0.72, '#54432f']       // leading edge
           ] },
         { name: 'wingR', parent: 'body', pivot: [1.05, 2.75, -0.1], anim: 'flap', sign: 1,
-          air: [0, 0, 1.32], boxes: [[1.05, 1.5, -0.8, 0.45, 1.35, 1.55, '#75604a']] },
+          air: [0, 0, 1.32], boxes: [[1.05, 1.5, -0.8, 0.45, 1.35, 1.55, '#6e6352']] },
         { name: 'foreR', parent: 'wingR', pivot: [1.27, 1.55, -0.1], anim: 'fold', sign: 1,
           air: [0, 0, 0.95], boxes: [
             [1.03, 0.5, -1.3, 0.42, 1.1, 1.95, '#5f4c38'],
@@ -235,8 +256,19 @@
           [-1.32, 1.5, -0.3, 0.16, 0.7, 1.3, '#4e7a3c'],          // flank
           [1.16, 1.5, -0.3, 0.16, 0.7, 1.3, '#4e7a3c']
         ] },
+        /* the skull was the trunk's green and the thigh muscle was the trunk's
+           green, which is two joints the frame could not see: 171 pixels of
+           body-to-head seam holding a colour difference of 0.085 with only 23% of
+           them reading as two colours, and 57 pixels of body-to-thigh at 0.014
+           with 7% of them the very same colour on both sides of the line. The
+           skull moves blue (#6a9a52 -> #68965c) and the muscle moves yellow-green
+           (#5f8f4a -> #6d8a4a): the differences become 0.146 and 0.118, both seams
+           are two colours end to end, and no pixel of either is one colour twice.
+           And the commonest single colour in a frog's frame used to cover 35.7% of
+           its pixels pooled over the four bearings the game films it at, now
+           30.8%. */
         { name: 'head', parent: 'body', pivot: [0, 1.9, 1.15], anim: 'nod', boxes: [
-          [-1.25, 1.3, 1.15, 2.5, 1.4, 1.05, '#6a9a52'],
+          [-1.25, 1.3, 1.15, 2.5, 1.4, 1.05, '#68965c'],
           [-1.05, 1.36, 2.16, 2.1, 0.26, 0.14, '#39592b'],        // mouth line
           [-1.2, 2.5, 1.3, 0.85, 0.8, 0.85, '#e8e0a0'],          // eyes, on top, at the corners
           [0.35, 2.5, 1.3, 0.85, 0.8, 0.85, '#e8e0a0'],
@@ -260,7 +292,7 @@
           ] },
         { name: 'thighL', parent: 'body', pivot: [-1.35, 1.75, -0.75], anim: 'walk', sign: -1, stride: 0, stands: 1,
           air: [0.55, 0, 0.12], crouch: [-0.5, 0, 0.12], swimKick: 1, heldPose: [0, 0, -0.1], boxes: [
-            [-1.95, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']         // the muscle
+            [-1.95, 0.9, -1.4, 1.05, 1.2, 2.0, '#6d8a4a']         // the muscle, no longer the trunk's own green
           ] },
         { name: 'shinL', parent: 'thighL', pivot: [-1.42, 1.0, -1.35], anim: 'knee', sign: -1, stride: 0, stands: 1, bend: -1,
           air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, -0.1], boxes: [
@@ -269,7 +301,7 @@
           ] },
         { name: 'thighR', parent: 'body', pivot: [1.35, 1.75, -0.75], anim: 'walk', sign: 1, stride: 0, stands: 1,
           air: [0.55, 0, -0.12], crouch: [-0.5, 0, -0.12], swimKick: 1, heldPose: [0, 0, 0.1], boxes: [
-            [0.9, 0.9, -1.4, 1.05, 1.2, 2.0, '#5f8f4a']
+            [0.9, 0.9, -1.4, 1.05, 1.2, 2.0, '#6d8a4a']
           ] },
         { name: 'shinR', parent: 'thighR', pivot: [1.42, 1.0, -1.35], anim: 'knee', sign: 1, stride: 0, stands: 1, bend: -1,
           air: [1.4, 0, 0], crouch: [-0.95, 0, 0], swimKick: 1, heldPose: [1, 0, 0.1], boxes: [
@@ -300,8 +332,19 @@
           [-1.7, 4.4, -1.3, 3.4, 1.1, 3.2, '#8a8272'],
           [-1.3, 5.3, -0.8, 2.6, 0.6, 3.0, '#5f574e']             // shoulder hump
         ] },
+        /* three of this body's joints were one colour at two strengths, because
+           skull, haunch and paw were all the trunk's grey-brown at other strengths:
+           across the frame the joints measured 189, 197 and 496 pixels of seam
+           holding colour differences of 0.016, 0.019 and 0.010 -- a channel's share
+           of its own pixel's light, which no scalar multiplication can move -- and
+           0%, 1% and 0% of those pixels read as two colours. The skull (#7a7266 ->
+           #786a58), the haunch (#5a5248 -> #5e5344) and the paw (#4c453d ->
+           #474441) each move along a different ratio now: 0.070, 0.079 and 0.133,
+           with 100%, 98% and 96% of the seam reading as two colours. The ears keep
+           the colour they always had: ear against skull was never one of the joints
+           in question, and the two were never the same colour to begin with. */
         { name: 'head', parent: 'body', pivot: [0, 4.6, 1.4], anim: 'nod', boxes: [
-          [-1.15, 4.2, 1.1, 2.3, 1.9, 1.6, '#7a7266'],
+          [-1.15, 4.2, 1.1, 2.3, 1.9, 1.6, '#786a58'],
           [-0.6, 4.25, 2.6, 1.2, 0.95, 0.55, '#a89a86'],          // muzzle
           [-0.28, 4.9, 3.1, 0.56, 0.4, 0.15, '#2a2420'],          // nose
           [-1.1, 5.95, 1.3, 0.6, 0.45, 0.5, '#5a5248'],           // ears
@@ -310,21 +353,21 @@
           [0.4, 5.4, 2.62, 0.4, 0.4, 0.24, '#1a1410']
         ] },
         { name: 'legFL', parent: 'body', pivot: [-1.45, 3.0, 1.6], anim: 'walk', stands: 1, sign: 1,
-          boxes: [[-2.0, 1.0, 0.9, 1.1, 2.0, 1.4, '#5a5248']] },
+          boxes: [[-2.0, 1.0, 0.9, 1.1, 2.0, 1.4, '#5e5344']] },
         { name: 'shinFL', parent: 'legFL', pivot: [-1.45, 1.0, 1.6], anim: 'knee', sign: 1, bend: -1,
-          boxes: [[-2.0, 0, 0.85, 1.1, 1.0, 1.55, '#4c453d']] },
+          boxes: [[-2.0, 0, 0.85, 1.1, 1.0, 1.55, '#474441']] },
         { name: 'legFR', parent: 'body', pivot: [1.45, 3.0, 1.6], anim: 'walk', stands: 1, sign: -1,
-          boxes: [[0.9, 1.0, 0.9, 1.1, 2.0, 1.4, '#5a5248']] },
+          boxes: [[0.9, 1.0, 0.9, 1.1, 2.0, 1.4, '#5e5344']] },
         { name: 'shinFR', parent: 'legFR', pivot: [1.45, 1.0, 1.6], anim: 'knee', sign: -1, bend: -1,
-          boxes: [[0.9, 0, 0.85, 1.1, 1.0, 1.55, '#4c453d']] },
+          boxes: [[0.9, 0, 0.85, 1.1, 1.0, 1.55, '#474441']] },
         { name: 'legBL', parent: 'body', pivot: [-1.45, 3.0, -1.6], anim: 'walk', stands: 1, sign: -1,
-          boxes: [[-2.0, 1.0, -2.3, 1.1, 2.0, 1.4, '#5a5248']] },
+          boxes: [[-2.0, 1.0, -2.3, 1.1, 2.0, 1.4, '#5e5344']] },
         { name: 'shinBL', parent: 'legBL', pivot: [-1.45, 1.0, -1.6], anim: 'knee', sign: -1, bend: 1,
-          boxes: [[-2.0, 0, -2.4, 1.1, 1.0, 1.55, '#4c453d']] },
+          boxes: [[-2.0, 0, -2.4, 1.1, 1.0, 1.55, '#474441']] },
         { name: 'legBR', parent: 'body', pivot: [1.45, 3.0, -1.6], anim: 'walk', stands: 1, sign: 1,
-          boxes: [[0.9, 1.0, -2.3, 1.1, 2.0, 1.4, '#5a5248']] },
+          boxes: [[0.9, 1.0, -2.3, 1.1, 2.0, 1.4, '#5e5344']] },
         { name: 'shinBR', parent: 'legBR', pivot: [1.45, 1.0, -1.6], anim: 'knee', sign: 1, bend: 1,
-          boxes: [[0.9, 0, -2.4, 1.1, 1.0, 1.55, '#4c453d']] }
+          boxes: [[0.9, 0, -2.4, 1.1, 1.0, 1.55, '#474441']] }
       ]
     },
 
