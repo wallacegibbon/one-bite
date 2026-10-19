@@ -6606,6 +6606,140 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('a trunk is still a wall to a body built for the air',
     worn.wall_air.x > worn.wall_air.face && worn.wall_air.x < worn.wall_air.face + 0.5, worn.wall_air);
 
+  /* 11i2c. The animal that flies of its own accord is refused by the same trunk.
+     The other half of the same law: `airCell` -- the one question a body held up
+     by air keeps answering, sideways and up -- used to exempt `N.TREE_BLOCK`,
+     which is the list of blocks a tree is made of *including the trunk*, so wood
+     was air to a bird. Measured over ten minutes of the valley running, 350 of
+     the 216,000 frames of six owls had an owl's own cell occupied by a trunk, and
+     it was not passing through: it sat there, frame after frame at (30,38,16) at
+     y38.7 with its vertical speed at zero, a bird hovering inside solid wood.
+     The gate now asks the material table (`N.FOLIAGE`), which is what the body
+     worn from that same animal has asked since `9f90d7a`. A seeded A/B -- six
+     owls, 300 s each, the same valley, the same starting birds, the same random
+     stream -- reads the whole change: frames inside wood **26 -> 0**, path
+     **3728.7 -> 3728.2 m**, climb and descent **1114.7/1114.5 -> 1113.8/1113.6**,
+     frames inside rock **0 -> 0**, and the height band each bird keeps identical
+     to 0.1 m. The flight is the same flight; only the wood is missing from it.
+     Below, the birds are not left to wander into wood by chance: six of them are
+     each stood three metres off a free-standing trunk and aimed at the middle of
+     it for four seconds, from four sides of it. That is what makes the first
+     check mean something -- the premise that they were driven at the wood is
+     asserted in the same step (how close each one got), so "0 frames inside it"
+     cannot be paid for by a flock that never got there.
+     The animals on foot still ask the wider list and this step does not pretend
+     otherwise: measured, a bear entered a trunk in 0 of its 72,000 frames, and
+     the walk gate answers "what is the ground under this column", which for a
+     tree column is the ground under the tree. */
+  const trunkLaw = await step('aWildAnimalIsNotLetThroughATreeTrunk', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA, P = g.player;
+    const fol = (x, y, z) => !!N.FOLIAGE[W.get(x, y, z)];
+    // solid, and not foliage: the blocks that are wood and bone to a body
+    const wood = (x, y, z) => W.solidAt(x, y, z) && !!N.TREE_BLOCK[W.get(x, y, z)] && !fol(x, y, z);
+    const rock = (x, y, z) => W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)];
+    const airAt = (x, y, z) => !W.solidAt(x, y, z) && !W.liquidAt(x, y, z);
+    const SIDE = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    const groundOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (rock(x, y, z)) return y; return -1; };
+    /* free-standing trunks: a trunk standing on the ground, at least three blocks
+       of wood in a row, with its own ring of air round it at trunk height, and a
+       straight approach -- clear air for a body at 1.5 m and at 3 m out on one of
+       the four sides. The whisperwood plants trees shoulder to shoulder, so the
+       approaches are what is scarce here, not the trunks: this picks the side
+       that has room rather than pretending the wood is an orchard. The trunks
+       chosen are kept apart so the birds are aimed at different trees. */
+    const free = (x, y, z) => { for (let h = 0; h <= 2; h++) if (!airAt(x, y + h, z)) return false; return true; };
+    const trees = [];
+    for (let z = 26; z < W.d - 26 && trees.length < 6; z++) for (let x = 28; x < W.w - 28 && trees.length < 6; x++)
+      for (let y = 8; y < 34; y++) {
+        if (!wood(x, y, z) || groundOf(x, z) !== y - 1) continue;
+        let run = 0; while (wood(x, y + run, z)) run++;
+        if (run < 3) continue;
+        if (trees.some(t => Math.abs(t.x - x) + Math.abs(t.z - z) < 8)) continue;
+        let ring = true;
+        for (let dx = -1; dx <= 1 && ring; dx++) for (let dz = -1; dz <= 1; dz++) {
+          if (dx === 0 && dz === 0) continue;
+          if (!free(x + dx, y, z + dz)) { ring = false; break; }
+        }
+        if (!ring) continue;
+        const sides = SIDE.filter(([sx, sz]) => free(x + sx * 2, y, z + sz * 2) && free(x + sx * 3, y, z + sz * 3));
+        if (sides.length) trees.push({ x, y, z, run, sx: sides[0][0], sz: sides[0][1] });
+        break;
+      }
+    const fly = g.creatures.filter(c => c.isFlyer());
+    if (trees.length < 4 || fly.length < 4) return { error: 'not enough free trunks and flyers', trees: trees.length, flyers: fly.length };
+    const was = { x: P.x, y: P.y, z: P.z, form: P.form, vital: P.vital, time: g.time };
+    const snap = fly.map(c => ({ x: c.x, y: c.y, z: c.z, yaw: c.yaw, vx: c.vx, vy: c.vy, vz: c.vz, t: c.t,
+      speed: c.speed, held: c.held, state: c.state, pause: c.pause, tx: c.tx, tz: c.tz,
+      sleep: c.sleeping, homeX: c.homeX, homeZ: c.homeZ, flyY: c.flyY, climbTo: c.climbTo, climbRate: c.climbRate }));
+    P.form = null; P.vital = 10; P.x = 4; P.y = W.h - 2; P.z = 4;
+    g.time = 420 * 21 / 24; g.updateEnv();
+    const birds = [];
+    for (let i = 0; i < trees.length; i++) {
+      const t = trees[i], c = fly[i], [sx, sz] = [t.sx, t.sz];
+      Object.assign(c, { x: t.x + 0.5 + sx * 3, y: t.y + 1.4, z: t.z + 0.5 + sz * 3,
+        vx: 0, vy: 0, vz: 0, state: 'wander', sleeping: false, pause: 0,
+        tx: t.x + 0.5, tz: t.z + 0.5 });
+      birds.push({ t, c, insideWood: 0, overColumn: 0, inRock: 0, path: 0, closest: 1e9, gone: 0 });
+    }
+    for (let i = 0; i < 240; i++)
+      for (const b of birds) {
+        const { c, t } = b;
+        const px = c.x, pz = c.z;
+        c.tx = t.x + 0.5; c.tz = t.z + 0.5; c.pause = 0;
+        c.update(1 / 60, P, W, g);
+        b.path += Math.hypot(c.x - px, c.z - pz);
+        const bx = Math.floor(c.x), by = Math.floor(c.y), bz = Math.floor(c.z);
+        let wIn = false, rIn = false;
+        for (let k = by; k <= Math.floor(c.y + 0.7); k++) {
+          if (wood(bx, k, bz)) wIn = true;
+          if (rock(bx, k, bz) || W.liquidAt(bx, k, bz)) rIn = true;
+        }
+        if (wIn) b.insideWood++;
+        // in the trunk's column at ANY height: over the top of a tree is the same
+        // column, and that is a bird above a tree, not a bird inside one
+        if (bx === t.x && bz === t.z) b.overColumn++;
+        if (rIn) b.inRock++;
+        /* how close this body came to wood of any kind, not only to the trunk it
+           was aimed at: the whisperwood plants trees shoulder to shoulder, and a
+           bird aimed at one of them is flying past the trunks of the others. What
+           the premise has to establish is that these bodies were driven up
+           against wood, so the read is the nearest wood column, 3x3 round the
+           feet. Refused at a face a body sits ~0.7 from the middle of the column
+           it is pressed against; inside it, it sits within 0.71. */
+        let cd = 9;
+        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++)
+          if (wood(bx + dx, by, bz + dz)) cd = Math.min(cd, Math.hypot(c.x - (bx + dx + 0.5), c.z - (bz + dz + 0.5)));
+        if (cd < b.closest) b.closest = cd;
+        if (Math.abs(c.x - (t.x + 0.5)) > 1.2 || Math.abs(c.z - (t.z + 0.5)) > 1.2) b.gone++;
+      }
+    const rep = birds.map(b => ({ at: [b.t.x, b.t.y, b.t.z], run: b.t.run, side: [b.t.sx, b.t.sz],
+      insideWood: b.insideWood,
+      overColumn: b.overColumn, inRock: b.inRock, path: +b.path.toFixed(2),
+      closest: +b.closest.toFixed(2), gone: b.gone }));
+    const out = { trees: trees.length, birds: rep,
+      insideWood: rep.reduce((s, r) => s + r.insideWood, 0),
+      overColumn: rep.reduce((s, r) => s + r.overColumn, 0),
+      inRock: rep.reduce((s, r) => s + r.inRock, 0),
+      path: +rep.reduce((s, r) => s + r.path, 0).toFixed(1),
+      pressed: rep.filter(r => r.closest < 1.4).length,
+      gone: rep.reduce((s, r) => s + r.gone, 0),
+      closest: rep.map(r => r.closest) };
+    fly.forEach((c, i) => Object.assign(c, snap[i]));
+    Object.assign(P, was); g.time = was.time; g.updateEnv();
+    return out;
+  });
+  check('four free-standing trunks and four flyers were found to aim at',
+    !trunkLaw.error, trunkLaw);
+  check('the birds were driven at the wood: they came up against it, so "0 frames inside" is not paid for by a flock that never got there',
+    trunkLaw.pressed >= 3, trunkLaw);
+  check('a flying animal is not let inside a trunk: the wood is not air to it',
+    trunkLaw.insideWood === 0, trunkLaw);
+  check('and none of them ended up inside rock or water',
+    trunkLaw.inRock === 0, trunkLaw);
+  check('refused by the tree they keep flying, going round it rather than freezing at it',
+    trunkLaw.path > 12 && trunkLaw.gone > 200, trunkLaw);
+
+
   /* 11i3. Falling asleep is not a pass through the roof. The flock step asks what
      a bird does while it is abroad; this asks what it does while it is not. A
      bird at rest was held to no ceiling at all -- the exemption was written to

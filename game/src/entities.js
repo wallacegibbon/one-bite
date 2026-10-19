@@ -916,11 +916,25 @@
      refused sideways into the leaves and refused up through them, and what it is
      left with is the height the roof hands it. Measured over forty seconds of a
      night: one of six owls flew 114 m at one height it could not leave, and the
-     flock had a crown over its head in 6-30% of its frames. */
+     flock had a crown over its head in 6-30% of its frames.
+     The exemption is the material table (`N.FOLIAGE` in src/world.js -- the
+     blocks the block table calls soft), NOT `N.TREE_BLOCK`. It used to be
+     TREE_BLOCK, which also covers the trunk and bone, and that made wood air to
+     a bird: measured over ten minutes of the valley running, 350 of the 216,000
+     frames of six owls (0.16%) had an owl's own cell occupied by a trunk -- not
+     passing through but parked there, frame after frame at (30,38,16) at y38.7
+     with vy 0, a bird hovering inside solid wood. And the body worn from that
+     same bird was stopped by the very same trunk (see `Player.stopsAt` above):
+     two bodies made of one animal disagreed about whether a tree is air.
+     The animals on foot still ask the wider table, and that is recorded rather
+     than quietly half-changed here: measured, a bear entered a trunk in 0 of its
+     72,000 frames, and making the walk gate refuse wood is not a one-word edit
+     because `riser` answers "the ground under this column", which for a tree
+     column is the ground under the tree. */
   function airCell(w, x, y, z) {
     const bx = x | 0, by = y | 0, bz = z | 0;
     if (w.liquidAt(bx, by, bz)) return false;
-    return !w.solidAt(bx, by, bz) || !!N.TREE_BLOCK[w.get(bx, by, bz)];
+    return !w.solidAt(bx, by, bz) || !!N.FOLIAGE[w.get(bx, by, bz)];
   }
   /* The lowest thing a body could put its head through in the column it stands
      in: the underside of a roof, the beam of a room, the glass of a tower. The
