@@ -1623,10 +1623,17 @@ const { sim } = require('./simwait');
   check('the model rotation carries +Z onto the heading',
     facing.unit && facing.unit.every(u => Math.abs(u.dx) < 1e-3 && Math.abs(u.dz) < 1e-3), facing.unit);
   check('the clearing is clear on all four sides', facing.spot !== undefined, facing);
-  check('from behind, every heading shows the back of the head', facing.away && facing.away.every(v => v.lum < 55), facing);
-  check('turned round, every heading shows a face', facing.toward && facing.toward.every(v => v.lum > 65), facing);
+  check('from behind, every heading shows the back of the head', facing.away && facing.away.every(v => v.lum < 45), facing);
+  // A joint is lit as well as drawn (see docs 07), and a face is a stack of thin
+  // plates hugging a skull, so a face now measures darker than it used to: hair
+  // reads 30 and skin 61-66 (before the crease: hair 34, skin 69-78). The bounds
+  // are cut off those numbers, not off each other - hair sits 15 below the line
+  // at 45, skin sits at least 16 above it, and the front/back gap is 31 against
+  // a bound of 20: what must not survive a change is the difference between the
+  // two sides of the same head, which is the whole of what this step measures.
+  check('turned round, every heading shows a face', facing.toward && facing.toward.every(v => v.lum > 45), facing);
   check('the two are the same body seen from two sides, not an empty frame',
-    facing.away && facing.away.every((v, i) => facing.toward[i].lum - v.lum > 25), facing);
+    facing.away && facing.away.every((v, i) => facing.toward[i].lum - v.lum > 20), facing);
 
   /* 10o. glass is glass. The block table has always said glass is 34% opaque
      and the mesher put every glass face in the opaque mesh, so nothing ever
@@ -8593,6 +8600,131 @@ What was measured before any of this was fixed, over 180 frames of walking
     meshAcct.pick && meshAcct.pick.delta === 0 && meshAcct.pick.replaced && meshAcct.pick.rebuilt > 0 &&
     !meshAcct.pick.left && meshAcct.pick.back, meshAcct.pick);
 
+
+  /* A body is boxes that touch: 49.1% of the owl's box corners stand against
+     another box, 49.0% of a frog's. Every part used to be lit with one flat
+     value per face, so a leg meeting a body was a notch in the outline and
+     nothing else -- measured over the pixels of a frog seen from 0.7 m, 93.2%
+     of the neighbouring pairs inside the animal were exactly the same colour,
+     and the frog's leg and body are the same green to begin with. The crease is
+     read off the model's own boxes (models.js); this reads the shade bytes back
+     out of the meshes as they are uploaded and asks, face by face and corner by
+     corner, whether the shade now varies where a part meets another part and
+     stays whole where nothing touches it. The corner coordinates are checked
+     too: a shade value that landed on the wrong corner would pass a count of
+     distinct values and still be nonsense. */
+  const crease = await step('aBodyCarriesTheCreaseWhereItsPartsMeet', () => {
+    const g = window.game, N = window.FRUTARIA, R = g.R;
+    // the six faces of a box in the order MeshBuilder.box() draws them, with the
+    // constants it applies and the corner order it lists them in: models.js
+    // shades from the same shape, and if the two ever disagree the checks below
+    // land on the wrong corner and the coordinate count catches it
+    const BOX_FACE = [
+      [1, 1, [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]]],
+      [1, -1, [[0, 0, 1], [1, 0, 1], [1, 0, 0], [0, 0, 0]]],
+      [0, 1, [[1, 0, 0], [1, 0, 1], [1, 1, 1], [1, 1, 0]]],
+      [0, -1, [[0, 0, 1], [0, 0, 0], [0, 1, 0], [0, 1, 1]]],
+      [2, 1, [[1, 0, 1], [0, 0, 1], [0, 1, 1], [1, 1, 1]]],
+      [2, -1, [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]]
+    ];
+    const FACE_S = [1.00, 0.42, 0.78, 0.66, 0.88, 0.58];
+    const SLOT = [0, 1, 2, 0, 2, 3];           // the six vertices of one quad
+    const lo = (b, i) => b[i], hi = (b, i) => b[i] + b[3 + i];
+    const up0 = N.MeshBuilder.prototype.upload, cap = [];
+    N.MeshBuilder.prototype.upload = function (gl) {
+      cap.push({ pos: this.pos, dat: this.dat });
+      return up0.call(this, gl);
+    };
+    const built = {};
+    for (const id of ['human', 'owl', 'frog', 'bear', 'jelly']) {
+      const old = g.creatureMeshes[id];
+      cap.length = 0;
+      delete g.creatureMeshes[id];
+      g.ensureModel(id);
+      built[id] = cap.slice();
+      if (old && old !== g.creatureMeshes[id])
+        for (const e of old) { R.gl.deleteBuffer(e.mesh.pos); R.gl.deleteBuffer(e.mesh.col); R.gl.deleteBuffer(e.mesh.dat); }
+    }
+    N.MeshBuilder.prototype.upload = up0;
+
+    let posErr = 0, faces = 0, creasedFaces = 0, worstRatio = 1, jellyErr = 0;
+    const tones = {};
+    /* the shade at each of one face's four corners, as a share of the face
+       constant: the mesh of a part is built box by box, six vertices a face in
+       the order the face's four corners are listed, so the corner a vertex
+       stands on is read off its position as well as its place in the list */
+    const at = (id, part, bi, fi) => {
+      const parts = N.MODELS[id].parts, pi = parts.findIndex(p => p.name === part);
+      const mesh = built[id][pi], b = parts[pi].boxes[bi];
+      const ax = BOX_FACE[fi][0], end = BOX_FACE[fi][1], out = [];
+      for (let s = 0; s < 6; s++) {
+        const v = (bi * 6 + fi) * 6 + s;      // s runs over the six vertices
+        const m = BOX_FACE[fi][2][SLOT[s]];   // SLOT says which corner each one is
+        for (let k = 0; k < 3; k++) {
+          const want = (k === ax) ? (end > 0 ? hi(b, k) : lo(b, k)) : (m[k] ? hi(b, k) : lo(b, k));
+          if (Math.abs(mesh.pos[v * 3 + k] - want) > 1e-4) posErr++;
+        }
+        out.push(+(mesh.dat[v * 4] / 255 / FACE_S[fi]).toFixed(3));
+      }
+      return out;
+    };
+    const spread = (f) => Math.max(...f) - Math.min(...f);
+    for (const id of ['human', 'owl', 'frog', 'bear']) {
+      tones[id] = new Set();
+      for (const m of built[id]) for (let v = 0; v < m.dat.length; v += 4) tones[id].add(m.dat[v]);
+      for (const p of N.MODELS[id].parts) {
+        for (let bi = 0; bi < p.boxes.length; bi++) for (let fi = 0; fi < 6; fi++) {
+          const f = at(id, p.name, bi, fi);
+          faces++;
+          if (spread(f) > 0.02) creasedFaces++;
+          worstRatio = Math.min(worstRatio, Math.min(...f));
+        }
+      }
+    }
+    for (const p of N.MODELS.jelly.parts) {
+      for (let bi = 0; bi < p.boxes.length; bi++) for (let fi = 0; fi < 6; fi++)
+        if (at('jelly', p.name, bi, fi).some(x => Math.abs(x - 1) > 0.01)) jellyErr++;
+    }
+    let shinCrease = 0;
+    for (let fi = 0; fi < 6; fi++) {
+      const f = at('bear', 'shinFL', 0, fi);
+      if (spread(f) > 0.02 || Math.min(...f) < 0.99) shinCrease++;
+    }
+    const out = { faces, creasedFaces, posErr, jellyErr, shinCrease,
+      worstRatio: +worstRatio.toFixed(3), tones: Object.keys(tones).reduce((o, k) => (o[k] = tones[k].size, o), {}) };
+    for (const [k, v] of Object.entries({
+      frogLeg: ['frog', 'legFL', 0, 4], frogToe: ['frog', 'legFL', 1, 4],
+      thighTop: ['human', 'thighL', 0, 2], shoulder: ['human', 'torso', 0, 2],
+      skullTop: ['human', 'head', 0, 0], wingFold: ['owl', 'foreL', 0, 2],
+      wingOuter: ['owl', 'wingL', 0, 3], bearHead: ['bear', 'head', 0, 2]
+    })) out[k] = at(...v);
+    return out;
+  });
+  const isSpread = (f) => !!f && Math.max(...f) - Math.min(...f) > 0.02;
+  const isWhole = (f) => !!f && Math.max(...f) - Math.min(...f) < 0.01 && Math.min(...f) > 0.99;
+  check('a corner of a body mesh stands where the box says it does', crease.posErr === 0, crease.posErr);
+  check('a frog leg is darker where it meets the body than where it hangs free',
+    isSpread(crease.frogLeg), crease.frogLeg);
+  check('the toes of a foot touch nothing and keep the whole face', isWhole(crease.frogToe), crease.frogToe);
+  check('a trouser is shaded under the hip it turns on', isSpread(crease.thighTop), crease.thighTop);
+  check('a coat is shaded under the shoulder line', isSpread(crease.shoulder), crease.shoulder);
+  check('the top of a head is shaded all over under its hair',
+    !!crease.skullTop && Math.max(...crease.skullTop) - Math.min(...crease.skullTop) < 0.01 &&
+    Math.min(...crease.skullTop) < 0.9, crease.skullTop);
+  check('a wing is shaded where it lies along the body', isSpread(crease.wingFold), crease.wingFold);
+  check('the outside of a folded wing keeps its whole shade', isWhole(crease.wingOuter), crease.wingOuter);
+  check('a bear head is shaded where it sits on the body', isSpread(crease.bearHead), crease.bearHead);
+  check('a leg the same width from hip to foot shows no crease', crease.shinCrease === 0, crease.shinCrease);
+  /* the deepest a corner can be closed: one side fully, the other all but
+     half, the diagonal fully -- 5/6 of the crease, so 1 - 0.35*5/6 = 0.71 of
+     the face it stands on, less what the shade byte rounds away */
+  check('no corner of a body goes below 0.70 of the face it stands on',
+    crease.worstRatio > 0.70, crease.worstRatio);
+  check('a body is no longer lit by six flat values',
+    crease.tones && crease.tones.frog > 12 && crease.tones.owl > 12 && crease.tones.bear > 6, crease.tones);
+  check('a lamp is self-lit and takes no crease', crease.jellyErr === 0, crease.jellyErr);
+  check('the crease is on the joints and not smeared over the body',
+    crease.creasedFaces > crease.faces * 0.1 && crease.creasedFaces < crease.faces * 0.6, crease);
 
   /* A save is the only thing standing between a day of walking and nothing at
      all. The step that used to cover it read one field back -- the id -- and the

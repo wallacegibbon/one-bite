@@ -436,11 +436,106 @@
   }
 
   /* ---------------- build meshes ---------------- */
+  /* The crease where one part of a model meets another.
+     A model is boxes that touch, and until now every part was built with
+     `ao = 1`: each of its faces carried one flat face constant and nothing
+     else. Measured over the pixels of one frog seen from 0.7 m, 93.2% of the
+     neighbouring pixel pairs inside the animal were the same colour, and a leg
+     meeting the body was a notch in the outline and nothing more -- the frog's
+     leg and body are the same green to start with. A creature is read by its
+     joints, so the joints have to be lit.
+     The voxel world already does this for terrain (see AO_L in world.js): a
+     corner of a face is darkened by the blocks beside it. The same question is
+     asked here of the model's own boxes, continuously -- there is no grid to
+     look up. For one corner of one face: is there another box with volume
+     beyond the plane of this face that reaches past the corner along one axis
+     of the face while covering the corner along the other (side 1), the same
+     along the other axis (side 2), and reaches past along both (corner)? Each
+     of the three is taken from the nearest such box, graded by how far it is:
+     a box touching the corner counts for everything, one a model-box away
+     counts for nothing. Then the same clamp the terrain uses: with occlusion on
+     both sides the corner one is not counted too.
+     A box flush with the face has no volume beyond its plane, so it gets no
+     say: that is what keeps a body built out of coplanar boxes -- the frog's
+     four back plates, the person's chest and shoulder line -- from growing a
+     dark grid across itself. It is also what makes the answer read as a joint
+     and not as dirt: only an inset or an overhang closes a corner.
+     The depth is capped well short of the terrain's, because the reason a face
+     is dark in the voxel world -- it is in a crevice, under something, and sees
+     no sky -- is not true of a knee. */
+  const CREASE_DEPTH = 0.35;     // how far a closed corner goes, of the face shade
+  const CREASE_REACH = 0.25;     // in shares of the model's own typical box
+  const EPS = 1e-4;              // model units: a hairline is not a joint
+  /* The six faces of a box in the order and the corner order MeshBuilder.box()
+     uses them, so a crease value lands on the corner it was measured at:
+     [axis, which end of it, the four corners as [ix,iy,iz] 0/1 multipliers].
+     box() brings its own face constants; only the order is shared. */
+  const BOX_FACE = [
+    [1, 1, [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]]],
+    [1, -1, [[0, 0, 1], [1, 0, 1], [1, 0, 0], [0, 0, 0]]],
+    [0, 1, [[1, 0, 0], [1, 0, 1], [1, 1, 1], [1, 1, 0]]],
+    [0, -1, [[0, 0, 1], [0, 0, 0], [0, 1, 0], [0, 1, 1]]],
+    [2, 1, [[1, 0, 1], [0, 0, 1], [0, 1, 1], [1, 1, 1]]],
+    [2, -1, [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]]
+  ];
+  function boxAO(b, others, R) {
+    const out = new Array(24).fill(1);
+    const lo = (x, i) => x[i], hi = (x, i) => x[i] + x[3 + i];
+    for (let fi = 0; fi < 6; fi++) {
+      const ax = BOX_FACE[fi][0], end = BOX_FACE[fi][1];
+      const a1 = ax === 0 ? 1 : 0, a2 = ax === 2 ? 1 : 2;
+      const plane = end > 0 ? hi(b, ax) : lo(b, ax);
+      for (let k = 0; k < 4; k++) {
+        const m = BOX_FACE[fi][2][k];
+        const c = [0, 0, 0];
+        c[ax] = plane;
+        for (const a of [a1, a2]) c[a] = m[a] ? hi(b, a) : lo(b, a);
+        const s1 = m[a1] ? 1 : -1, s2 = m[a2] ? 1 : -1;
+        let o1 = 0, o2 = 0, oc = 0;
+        for (const q of others) {
+          if (q === b) continue;
+          /* volume beyond the plane of this face; a box flush with it has none */
+          if ((end > 0 ? hi(q, ax) - plane : plane - lo(q, ax)) <= EPS) continue;
+          const r1 = s1 > 0 ? hi(q, a1) - c[a1] : c[a1] - lo(q, a1);
+          const r2 = s2 > 0 ? hi(q, a2) - c[a2] : c[a2] - lo(q, a2);
+          const span1 = lo(q, a1) < c[a1] - EPS && hi(q, a1) > c[a1] + EPS;
+          const span2 = lo(q, a2) < c[a2] - EPS && hi(q, a2) > c[a2] + EPS;
+          const dx = Math.max(lo(q, 0) - c[0], 0, c[0] - hi(q, 0));
+          const dy = Math.max(lo(q, 1) - c[1], 0, c[1] - hi(q, 1));
+          const dz = Math.max(lo(q, 2) - c[2], 0, c[2] - hi(q, 2));
+          const w = 1 - Math.min(1, Math.hypot(dx, dy, dz) / R);
+          if (w <= 0) continue;
+          if (r1 > EPS && span2) o1 = Math.max(o1, w);
+          if (r2 > EPS && span1) o2 = Math.max(o2, w);
+          if (r1 > EPS && r2 > EPS) oc = Math.max(oc, w);
+        }
+        if (o1 > 0.5 && o2 > 0.5) oc = 0;
+        out[fi * 4 + k] = 1 - ((o1 + o2 + oc) / 3) * CREASE_DEPTH;
+      }
+    }
+    return out;
+  }
+  function modelCreases(model) {
+    const all = [];
+    for (const p of model.parts) if (!p.emis) for (const b of (p.boxes || [])) all.push(b);
+    const mid = all.map(b => (b[3] + b[4] + b[5]) / 3).sort((a, b) => a - b);
+    const R = CREASE_REACH * (mid[mid.length >> 1] || 1);
+    for (const p of model.parts) {
+      if (p.emis || !p.boxes) continue;
+      p.boxAO = p.boxes.map(b => boxAO(b, all, R));
+    }
+  }
+  for (const k in MODELS) modelCreases(MODELS[k]);
+
   function buildModelMeshes(gl, model) {
     const out = [];
     for (const part of model.parts) {
       const mb = new N.MeshBuilder();
-      for (const b of part.boxes) mb.box(b[0], b[1], b[2], b[3], b[4], b[5], typeof b[6] === 'string' ? hex(b[6]) : b[6], !!part.emis, 1);
+      const ao = part.boxAO || [];
+      for (let i = 0; i < part.boxes.length; i++) {
+        const b = part.boxes[i];
+        mb.box(b[0], b[1], b[2], b[3], b[4], b[5], typeof b[6] === 'string' ? hex(b[6]) : b[6], !!part.emis, ao[i] || 1);
+      }
       out.push({ part, mesh: mb.upload(gl), pivot: part.pivot || [0, 0, 0] });
     }
     return out;

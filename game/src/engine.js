@@ -135,21 +135,36 @@
       const put = (i) => this.v(p[i * 3], p[i * 3 + 1], p[i * 3 + 2], c, sh[i], emis, top, surf);
       put(0); put(1); put(2); put(0); put(2); put(3);
     }
+    /* box: one box, six faces. `ao` is either one number carried by every
+       corner of every face, or 24 numbers -- four per face, in the face order
+       below and the corner order the face's four points are listed here --
+       which is how a creature model carries the crease where one part of it
+       meets another. The BOX_FACE table in models.js has to agree with the
+       order used here; box() keeps the face constants, the caller only says how
+       open each corner is. */
     box(x, y, z, w, h, d, c, emis, ao) {
-      const s = ao === undefined ? 1 : ao;
+      const g = ao === undefined ? 1 : ao;
+      const crease = typeof g !== 'number';
       const x1 = x + w, y1 = y + h, z1 = z + d;
+      const face = (fi, s, p) => {
+        if (!crease) this.quad(p, c, s * g, emis);
+        else {
+          const o = fi * 4;
+          this.quadAO(p, c, [s * g[o], s * g[o + 1], s * g[o + 2], s * g[o + 3]], emis);
+        }
+      };
       // +Y
-      this.quad([x, y1, z, x1, y1, z, x1, y1, z1, x, y1, z1], c, 1.0 * s, emis);
+      face(0, 1.00, [x, y1, z, x1, y1, z, x1, y1, z1, x, y1, z1]);
       // -Y
-      this.quad([x, y, z1, x1, y, z1, x1, y, z, x, y, z], c, 0.42 * s, emis);
+      face(1, 0.42, [x, y, z1, x1, y, z1, x1, y, z, x, y, z]);
       // +X
-      this.quad([x1, y, z, x1, y, z1, x1, y1, z1, x1, y1, z], c, 0.78 * s, emis);
+      face(2, 0.78, [x1, y, z, x1, y, z1, x1, y1, z1, x1, y1, z]);
       // -X
-      this.quad([x, y, z1, x, y, z, x, y1, z, x, y1, z1], c, 0.66 * s, emis);
+      face(3, 0.66, [x, y, z1, x, y, z, x, y1, z, x, y1, z1]);
       // +Z
-      this.quad([x1, y, z1, x, y, z1, x, y1, z1, x1, y1, z1], c, 0.88 * s, emis);
+      face(4, 0.88, [x1, y, z1, x, y, z1, x, y1, z1, x1, y1, z1]);
       // -Z
-      this.quad([x, y, z, x1, y, z, x1, y1, z, x, y1, z], c, 0.58 * s, emis);
+      face(5, 0.58, [x, y, z, x1, y, z, x1, y1, z, x, y1, z]);
     }
     empty() { return this.n === 0; }
     upload(gl) {
