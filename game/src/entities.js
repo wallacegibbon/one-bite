@@ -926,11 +926,19 @@
      with vy 0, a bird hovering inside solid wood. And the body worn from that
      same bird was stopped by the very same trunk (see `Player.stopsAt` above):
      two bodies made of one animal disagreed about whether a tree is air.
-     The animals on foot still ask the wider table, and that is recorded rather
-     than quietly half-changed here: measured, a bear entered a trunk in 0 of its
-     72,000 frames, and making the walk gate refuse wood is not a one-word edit
-     because `riser` answers "the ground under this column", which for a tree
-     column is the ground under the tree. */
+     A body on foot asks this same table, and its walk gate now asks the span of
+     the body rather than the one cell over the surface under the column. That one
+     cell was the whole of the difference between a wall and air for a walker, and
+     that is why the shape hid: of the 2,684 wood cells of this valley 1,830 sit on
+     wood and 843 stand on the ground, so the cell over the surface a body stands on
+     is wood in every one of them and the gate refused them all; it is the other 11
+     -- wood with open air straight under it, over the surface a walker stands on --
+     that read as air, and the body walked through the block with its shoulders.
+     The flock of this valley never walks into that shape on its own: 30 animals,
+     18,000 frames each, inside wood in 0 frames before this and 0 after, paths,
+     stands and falls the same to the centimetre. See the walk gate in
+     `Creature.update` and the rig
+     `aBodyOnFootAsksTheWoodOverItsOwnSpanAndTheRoofOverItsHead` in test/play.js. */
   function airCell(w, x, y, z) {
     const bx = x | 0, by = y | 0, bz = z | 0;
     if (w.liquidAt(bx, by, bz)) return false;
@@ -943,10 +951,36 @@
      the top of the world, one block under the top of the grid, so a body is not
      allowed to stand with its head through the ceiling of the valley. Foliage is
      not in it -- a body on foot walks through a bush with its shoulders in it and
-     a bird flies through a crown (docs/en/03 s5). */
-  function roofY(w, x, z, from, top) {
+     a bird flies through a crown (docs/en/03 s5).
+     Which blocks a body is allowed through is a second question, and the two
+     gates that ask this one answer it differently. `soft` is what this body may
+     put its head through: the whole of `TREE_BLOCK` for a body held up by air,
+     whose sideways and upward gates already refuse a trunk on its own span (see
+     `aFlyerEasedUpUnderAnOverhangingTrunkKeepsItsWholeBodyOutOfTheWood`, which is
+     what stops a climbing bird at the underside of a trunk rather than here), and
+     `N.FOLIAGE` for a body on foot, which is the same table every other question
+     about wood asks.
+     Left at one table for both, the ceiling over a body's own floor was asked out
+     of `TREE_BLOCK` and read as open sky: a 0.43 m frog standing under a trunk
+     block set two cells over that floor found room for an arc there, hopped, and
+     put its head 0.16 m into that block in 14 of 480 frames, its nearest wood at
+     0.11 m. The walk gate beside it does not answer this -- 14 frames before that
+     gate was fixed and 14 with only that gate fixed, 0 once this one was asked.
+     The arc that does not fit is not launched at all now, which is what the law
+     beside it already said a frog under a low roof does: it walks. And it is the
+     material that decides it, not the height, which is only visible where the
+     block stands: counted in the column the block is over, that frog spends 29
+     airborne frames under a crown of leaves at the same height and launches 1 arc
+     in it, and 0 frames and 0 arcs under a trunk -- while with this table not
+     asked the trunk reads 29 frames and 1 arc, the crown's own numbers exactly.
+     Counted over the whole eight seconds the two of them differ by 12 airborne
+     frames and no arc at all, because the hopper walks out of the column and
+     hops about down the shelf; a control counted over the whole eight seconds
+     reads the height and not the material. */
+  function roofY(w, x, z, from, top, soft) {
+    const allow = soft || N.TREE_BLOCK;
     for (let y = from; y < w.h; y++)
-      if (w.solidAt(x, y, z) && !N.TREE_BLOCK[w.get(x, y, z)]) return y;
+      if (w.solidAt(x, y, z) && !allow[w.get(x, y, z)]) return y;
     return top;
   }
   /* The cell convention: which cell holds the top of the water, or -1 where the
@@ -1467,7 +1501,7 @@
           }
         } else {
           /* Can this body put its feet down in that column? The surface it would
-             stand on, and the cell just above it: a step of a metre is a step, a
+             stand on, and the room over it: a step of a metre is a step, a
              surface with rock over it is a wall, and foliage over its head is
              neither -- a bear walks through a bush with its shoulders in it. The
              test used to ask for the highest solid thing in the column up to 3 m
@@ -1478,7 +1512,61 @@
           const stand = (x, z) => {
             const bx = Math.floor(x), bz = Math.floor(z);
             const gy = standY(world, bx, bz, this.y);
-            return gy - this.y < 1.6 && !world.solidAt(bx, Math.floor(gy + 0.2), bz);
+            if (gy - this.y >= 1.6) return false;
+            /* One cell over the surface is the whole of the difference between a
+               wall and air for a walker, which is why this gate looked innocent:
+               of the 2,684 wood cells of this valley 1,830 sit on wood and 843
+               stand on the ground, so the cell over the surface a body stands on is
+               wood in every one of them and they were all refused. The other 11 are
+               wood with open air straight under them, over the surface a walker
+               stands on: there the feet cell is air, the gate opens, and the body
+               walks in with its shoulders through the block. Measured with one trunk
+               block at the height a 1.54 m bear's own body occupies, two cells over
+               the shelf it stands on, it came up against wood at 0.17 m and walked
+               through it: 30 of its 480 frames with part of itself inside, up to
+               0.54 m of it through the block, its feet on the ground every one of
+               them, 30 frames standing in that column. It now stops at the face of
+               it -- nearest wood 0.50 m, 0 frames in that column -- and still walks
+               its 16.5 m. The flock itself never walks into that shape: the 30
+               animals of a fresh valley, 18,000 frames each, were inside wood in 0
+               frames before this and 0 after, with their paths, their standing
+               frames and their frames pressed against wood the same to the
+               centimetre; so the rig found it and the valley did not.
+               So the span above that surface is asked too, feet cell up to head
+               cell, exactly what the gate for a body in the air asks, and it is
+               asked of this body's own height, which is what keeps the answer about
+               the body rather than about the block: the same block one cell higher,
+               over the bear's head, is walked under (29 frames in that column, 0 of
+               them inside, in every build), and the block that lies inside the
+               bear's body is open ground to a 0.43 m frog, which walks into that
+               column 80 of its 480 frames -- 81 in the build that reads the ceiling
+               of a hop over the body's own cell only -- while a block at that
+               frog's own feet cell is refused it too. Asking the same span from the
+               height the body happens to be at, rather than from the surface of the
+               column it is asked about, was measured too: it keeps these bodies out
+               of the wood and takes the walk with it, the bear standing still 180 of
+               its 480 frames under a block one cell over its head and travelling
+               10.4 m instead of 16.5 m. A body on foot is on the floor it walks on,
+               and the body that is not --
+               a frog in the middle of an arc -- is answered by the roof instead (see
+               `roofY`, and the span and roof rig in test/play.js: with this half
+               missing alone the bear stands 30 frames inside the block and no other
+               rig moves, while with the roof asked out of the wrong table that frog
+               is inside the wood over its head -- 14 frames starting under the block,
+               28 walked at it -- and with the roof read over the body's own cell
+               only it is inside 14 frames walked at the same block and clean
+               starting under it).
+               Leaves are excused by the material table and not by a second list: a
+               body on foot walks through a crown with its shoulders in it, as it
+               always did. A trunk (6) and bone (22) are not in that table, so wood
+               is wood to a walker and to the body worn from the same animal at
+               last. */
+            const feet = Math.floor(gy + 0.2);
+            if (world.solidAt(bx, feet, bz)) return false;
+            const top = Math.floor(gy + this.tall);
+            for (let k = feet + 1; k <= top; k++)
+              if (world.solidAt(bx, k, bz) && !N.FOLIAGE[world.get(bx, k, bz)]) return false;
+            return true;
           };
           /* A body in the air asks a different question: not "what would I stand
              on" but "is the place I am about to put myself in empty". It has to
@@ -1942,8 +2030,30 @@
                not load for a jump it is not going to make: a frog coiled under a
                ceiling for a minute is a frog that looks ready to spring and never
                springs. */
-            const roof = roofY(world, Math.floor(this.x), Math.floor(this.z),
-              Math.floor(this.y) + 1, world.h);
+            /* The ceiling over a body on foot is asked of the material table, so
+               a trunk standing over the floor it is on is a roof and its arc is
+               not launched; leaves are not, and a frog under a crown still hops.
+               And it is asked over the whole of the arc, not over the body's own
+               cell: an arc goes forward as far as it goes up -- `speed * up / g`
+               metres of it before the top is reached -- and a launch read only over
+               the column the body stands in lets a frog hop out of open sky into a
+               column whose beam is over its head while it stands and through its
+               body at the top of the arc. Measured on one frog walked at a trunk
+               block two cells over a shelf at 24: 14 of its 480 frames with its head
+               0.16 m inside that block and its nearest wood at 0.31 m, having
+               launched the arc in the open column next door -- it spent 26 airborne
+               frames inside the column the block stands over and pushed off from
+               that column not once. So the roof is
+               the lowest of the cells the arc is spent over, one cell ahead for each
+               metre the arc will have travelled by its top. */
+            const cx = Math.floor(this.x), cz = Math.floor(this.z);
+            const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+            const over = Math.floor(this.y) + 1;
+            const span = Math.max(1, Math.ceil((this.speed || 0) * hop.up / GRAVITY));
+            let roof = roofY(world, cx, cz, over, world.h, N.FOLIAGE);
+            for (let k = 1; k <= span; k++)
+              roof = Math.min(roof, roofY(world, cx + Math.round(fx * k), cz + Math.round(fz * k),
+                over, world.h, N.FOLIAGE));
             const room = roof - this.y >= hop.up * hop.up / (2 * GRAVITY) + this.tall;
             this.wind = room ? Math.min(1, this.wind + dt / 0.18) : 0;
             if (this.hopT <= 0 && room && this.y <= gyH + 0.02) {
@@ -2022,7 +2132,14 @@
          (docs/en/03 s5); pushing two bears out of the crowns they walk through
          measured 171 one-metre pops in three minutes. A flying body is held by
          the rule above, which refuses the height instead of putting the body
-         inside something and then taking it out again. */
+         inside something and then taking it out again.
+         A trunk is no longer in this list for a different reason than a leaf is:
+         the gate that lets a walker into a column refuses wood on the body's own
+         span now, so this rule is not what keeps a body out of a trunk -- it is
+         only what keeps it out of rock -- and the crowns it does have to leave
+         alone it still leaves alone: in the window the walk gate was measured
+         over, no body of this valley was thrown anywhere by this correction, 0
+         frames of a body moving more than 0.9 m in one frame, before and after. */
       if (!this.isFlyer()) {
         const gx = Math.floor(this.x), gy2 = Math.floor(this.y), gz = Math.floor(this.z);
         if (world.solidAt(gx, gy2, gz) && !N.TREE_BLOCK[world.get(gx, gy2, gz)]) {

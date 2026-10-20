@@ -2640,6 +2640,15 @@ const { sim } = require('./simwait');
       const send = (secs) => {
         wf.x = lake.x; wf.z = lake.z; wf.y = lake.top - 1.2; wf.state = 'wander'; wf.sleeping = false;
         wf.tx = goal.x; wf.tz = goal.z; wf.pause = 9999; wf.alarm = 0;
+        /* what the running game left on this body a moment before the rig placed
+           it in the water: two runs of this step put the same frog, in the same
+           water, 0.9 m apart -- y 11.92 with the water holding it up, y 11.04 at
+           the bed with nothing holding it up -- and the pose of a body standing on
+           the lakebed is not the pose of a swim, so the checks below went red
+           without anything in the game changing. Recorded, not quieted. */
+        out.wildV0 = { vy: +(wf.vy || 0).toFixed(2), spd: +(wf.speed || 0).toFixed(2),
+          in: wf.inWater ? 1 : 0, gnd: wf.grounded ? 1 : 0, y: +wf.y.toFixed(2),
+          held: +(wf.held || 0).toFixed(2), air: +(wf.airAmt || 0).toFixed(2) };
         const n = Math.round(secs * 60);
         for (let i = 0; i < n; i++) { wf.update(1 / 60, p, W, g); p.update(1 / 60, {}, g); }
         const s = stroke(capture(mark));
@@ -6640,10 +6649,12 @@ What was measured before any of this was fixed, over 180 frames of walking
      check mean something -- the premise that they were driven at the wood is
      asserted in the same step (how close each one got), so "0 frames inside it"
      cannot be paid for by a flock that never got there.
-     The animals on foot still ask the wider list and this step does not pretend
-     otherwise: measured, a bear entered a trunk in 0 of its 72,000 frames, and
-     the walk gate answers "what is the ground under this column", which for a
-     tree column is the ground under the tree. */
+     The animals on foot ask the same table now, and the step below this one is
+     the half of it that belongs to a walker: the walk gate answered "what is the
+     ground under this column" plus one cell over it, which refuses a trunk
+     standing on the ground (0 frames inside a trunk for the bears of this valley
+     out of the 36,000 frames the two of them spend wandering, before and after) and
+     let in a trunk with open air under it. */
   const trunkLaw = await step('aWildAnimalIsNotLetThroughATreeTrunk', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA, P = g.player;
     const fol = (x, y, z) => !!N.FOLIAGE[W.get(x, y, z)];
@@ -6869,6 +6880,374 @@ What was measured before any of this was fixed, over 180 frames of walking
     ledgeLaw.headIn === 0, ledgeLaw);
   check('and the height it is allowed is the room the wood leaves it: floor to underside, less its own height',
     ledgeLaw.maxAbove <= ledgeLaw.limit + 0.02, ledgeLaw);
+
+
+  /* 11i2e. The same wood, asked of a body that stands on the ground. The step
+     above asks a body held up by air; a body on foot goes through a different
+     gate, and that gate asked two questions fewer than the flyer's.
+     It answers "what is the surface would I stand on in that column" (`standY`,
+     which skips the tree blocks so that the ground under a tree is the ground and
+     not the top of the tree) and then exactly one cell over that surface. For a
+     walker that single cell is the whole of the difference between a wall and
+     air, and that is exactly why the shape hid: of the 2,684 wood cells of this
+     valley 1,830 sit on wood and 843 stand on the ground, so the cell over the
+     surface a body stands on is wood in every one of those columns and the gate
+     refused them all. It is the remaining 11 -- wood with open air straight under
+     it, over the surface a walker stands on -- where the gate read air, let the
+     body in, and the body walked through the block with its shoulders. The flock
+     never finds that shape on its own: over the 540,000 frames the 30 animals of
+     a fresh valley spend wandering (18,000 frames each) not one of them was
+     inside wood in a single frame before this change or after it, and their paths
+     (11,673.9 m), their frames standing still (116,984) and their frames pressed
+     up against wood (6,977) come out the same to the centimetre either side of
+     it. The rig is the only way to the shape, and the rig had to be rebuilt
+     before it measured one law instead of one afternoon.
+     First it had to stop borrowing animals out of the flock: the same shelf, the
+     same block at the same height and the same draw gave 79 frames inside the
+     column it was aimed at in a page that had run nothing and 0 in the suite, and
+     a nearest wood of 0.60 m against 1.05 m. It was not the same animal each time
+     -- a body is born spending draws of its own, and how many the spawner spends
+     before it is born depends on the world it is sampled into -- so every body
+     here is made by the code that makes every body in the game, `N.Creature`,
+     under a draw seeded in the rig. Then it had to pin what the page leaves
+     behind: the game works the middle of each species' herd out once a tick and
+     leaves it on the game object, and the herd law pulls any animal of that
+     species that has wandered more than a throw from that middle. Take the crowd
+     away for the length of a rig and the middle it pulls towards is a leftover of
+     whatever the page was doing before the rig started: measured with the herd
+     left loose, the three rigs of one frog -- the block at three different
+     heights, under three different draws -- agreed with each other to the
+     centimetre on a 6.05 m route that strayed 4.46 m from the block and never
+     came nearer than 1.49 m to it, a route decided by something other than the
+     law under test -- and the same three rigs in another page, the same shelf and
+     the same seeds, walked a route of the same 6.05 m that came within 1.09 m of
+     the block and strayed 4.02 m from it. This body's herd is itself. And the rig
+     aims the body, because which way a body happens to be looking when a frame
+     starts is not the law either: left to its own draw the bear travelled 16.6 m
+     and never came nearer than 2.1 m to the column it was handed an errand
+     through.
+     The rig is one column of ground, flat for nine cells each way with seven
+     cells of clear air over all of it, one block in it, and one animal walked for
+     eight seconds with its errand re-set every frame. The block goes at three
+     heights -- the cell over the surface, two cells over it, three -- and is met
+     two ways: `through`, walked at from 2.5 m on one side with an errand out the
+     other, which is the walk gate being asked about a column; and `under`,
+     starting in the column itself, which is where the room for a hop is decided.
+     A trunk two cells over the floor of a shelf at 24, against a 1.54 m bear: it
+     came up against wood at 0.17 m and walked through it, 30 of its 480 frames
+     with part of itself inside, up to 0.54 m of it through the block, its feet on
+     the ground every one of those frames, 30 of them standing in that column. It
+     now stops at the face of it -- nearest wood 0.50 m, 0 frames in the column --
+     and still walks its 16.5 m. The same block one cell higher, over its head, it
+     walks under: 29 frames in that column, none of them inside, in every build.
+     And the same block at the same height is open ground to a 0.43 m frog, which
+     walks into that column 81 of its 480 frames in every build, while a block at
+     its own feet cell is refused that frog too. The span is asked of this body's
+     own height, which is what keeps the answer about the body rather than about
+     the block; asking it from the height the body happens to be at, rather than
+     from the surface it stands on, was measured too, and it keeps these bodies
+     out of the wood and takes the walk with it: the bear stood still 180 of its
+     480 frames under a block one cell over its head and travelled 10.4 m instead
+     of 16.5 m, and the eight bodies travelled 72.8 m instead of 79.9 m.
+     The span alone does not keep the frog out of the wood over its own head, and
+     there the answer is two laws and not one. A hop is launched a frame before
+     the legs push, from a read of the room over the floor the body stands on, and
+     that room was asked out of a list that exempted the whole of TREE_BLOCK,
+     trunk included: under a trunk the sky read as open sky, and the frog starting
+     under one put its head 0.16 m into that block in 14 of its 480 frames,
+     nearest wood 0.11 m. And that room was asked over the column the body stands
+     in only, when an arc goes forward as far as it goes up: the same frog walked
+     at the same block from next door launched in the open column, spent 26 of its
+     airborne frames inside the column with the block over it without ever pushing
+     off in it, and arrived with its head 0.16 m inside that block on the frame
+     after the push -- 14 frames of it, nearest wood 0.31 m, with the ceiling
+     asked of the material table but still read over its own cell only. Asked over
+     the cells the arc is spent over, and out of the material table, the arc that
+     does not fit is not launched at all: 0 frames inside, 80 frames walked in that
+     column, 145 airborne frames where it had 250, and 5 arcs where it had 9.
+     The last rig is the control that says this is about material and not about a
+     low ceiling: the same frog, the same column, the same height, the same draw,
+     the block made of leaves instead of trunk. Counted in the column the block
+     stands over, it launches 1 arc and spends 29 frames off the floor under a
+     crown, and none of either under a trunk -- the crown is not a roof to it, the
+     trunk is. And with the material table not asked, that trunk reads 29 frames
+     and 1 arc: the crown's own numbers exactly, which is the height being read
+     and not the material. Counted over the whole eight seconds the two of them
+     differ by 12 airborne frames and no arc at all, because the hopper walks out
+     of the column and hops about down the shelf, which is why the control is
+     counted where the block is.
+     Three halves, and each of them is needed by a rig of its own: with the span
+     alone missing, the bear stands 30 frames inside the block and no other rig
+     changes at all; with the material table missing from the ceiling, the frog
+     starting under the block stands 14 frames inside it and the one walked at it
+     is inside 28; with the arc's forward reach missing, the walked-at frog is
+     inside 14 frames and the one starting under the block is clean. With all
+     three missing -- the gate as it stood before any of this -- 72 of the 3,840
+     frames of these eight rigs have part of a body inside wood, every one of them
+     a head. With all three in place: no rig has any part of a body inside wood,
+     no rig ends inside rock, nothing is thrown across the shelf, and every animal
+     still travels. */
+  const spanLaw = await step('aBodyOnFootAsksTheWoodOverItsOwnSpanAndTheRoofOverItsHead', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA, P = g.player;
+    const TRUNK = 6;                       // solid, in TREE_BLOCK, not foliage: wood
+    const LEAF = 7;                        // solid too, and in TREE_BLOCK, but in FOLIAGE: a crown
+    const wood = (x, y, z) => W.solidAt(x, y, z) && !!N.TREE_BLOCK[W.get(x, y, z)] && !N.FOLIAGE[W.get(x, y, z)];
+    const airAt = (x, y, z) => !W.solidAt(x, y, z) && !W.liquidAt(x, y, z);
+    const floorOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z)) return y; return -1; };
+    /* A flat shelf, taken in a fixed order: nine cells each way at one height with
+       seven cells of clear air over all of it, so the only wood near this body is
+       the one put there on purpose and the only wall is the one it is aimed at.
+       Blind to where the creatures happen to be, for the same reason as the rig
+       above: the valley is seeded, the flock is not. */
+    let col = null;
+    for (let z = 34; z < W.d - 34 && !col; z++) for (let x = 34; x < W.w - 34 && !col; x++) {
+      const gy = floorOf(x, z);
+      if (gy < 10 || gy > W.h - 10) continue;
+      let ok = true;
+      for (let dx = -4; dx <= 4 && ok; dx++) for (let dz = -4; dz <= 4 && ok; dz++) {
+        if (floorOf(x + dx, z + dz) !== gy) { ok = false; break; }
+        for (let k = gy + 1; k <= gy + 7 && ok; k++) if (!airAt(x + dx, k, z + dz)) ok = false;
+      }
+      if (ok) col = { x, z, gy };
+    }
+    if (!col) return { error: 'no flat shelf with seven cells of clear air over it' };
+    const { x, z, gy } = col;
+    const was = { x: P.x, y: P.y, z: P.z, form: P.form, vital: P.vital, time: g.time };
+    const rnd = Math.random;
+    let sd = 0;
+    const seed = (s) => { sd = s; Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; }; };
+    const crowdWas = g.creatures;
+    const timeWas = g.time;
+    /* The body of each rig is made by the code that makes every body in the game,
+       `N.Creature`, under a draw seeded here; the flock is left where the rest of
+       the suite left it. Borrowing one of the flock is what this rig did first, and
+       it was not then measuring one law: the same shelf, the same block at the same
+       height, the same draw, gave 79 frames inside the column the body was aimed at
+       in a page that had run nothing and 0 in the suite, and a nearest wood of
+       0.60 m in the one against 1.05 m in the other. It was not the same animal
+       each time. A body is born with draws of its own -- the hop timer, the depth
+       it hangs under the surface, how high it flies over the ground -- and how many
+       draws the spawner spends before this one is born depends on the world it is
+       sampled into, so a flock seeded once is not the same flock in two worlds. A
+       rig that does not get the same animal twice is one rig only by the look of
+       it. */
+    const land = N.CREATURES.filter((s) => s.locomotion !== 'fly' && s.locomotion !== 'water');
+    /* one body tall enough that a block two cells over the floor it stands on lies
+       inside its own body, and one short enough that the same block is over its
+       head: the same wood, asked of two different spans */
+    const born = land.map((sp) => { seed(5150); return new N.Creature(sp, x + 0.5, gy + 1, z + 0.5); });
+    const tall = born.filter((c) => !c.isAmphibian() && c.tall > 1.2).sort((a, b) => b.tall - a.tall)[0];
+    const short = born.filter((c) => c.isAmphibian() && c.tall > 0.2 && c.tall < 0.8).sort((a, b) => a.tall - b.tall)[0];
+    if (!tall || !short) {
+      g.time = timeWas; Math.random = rnd;
+      return { error: 'no tall walker and no short hopper in the species table', land: born.length };
+    }
+    /* what the shelf the scan found is actually like, and what is standing on it:
+       the scan is blind to both on purpose, so the report says what they are */
+    let waterNear = 0, builtNear = 0;
+    for (let dx = -4; dx <= 4; dx++) for (let dz = -4; dz <= 4; dz++) {
+      if (W.liquidAt(x + dx, gy + 1, z + dz)) waterNear++;
+      for (let k = gy + 2; k <= gy + 7; k++) if (W.solidAt(x + dx, k, z + dz)) builtNear++;
+    }
+    const crowdNear = crowdWas.filter((c) => Math.abs(c.x - x) <= 5 && Math.abs(c.z - z) <= 5).length;
+    const rigs = [];
+    for (const sp of [tall.sp, short.sp]) {
+      /* Three ways the same block is put in front of the same body.
+         `through`: the body starts 2.5 m on one side and is handed an errand out
+         the other, which is the walk gate being asked about a column.
+         `under`: the body starts in the column itself, with the block over its
+         head, which is where the room for an arc is decided -- a body that is
+         already under a roof is the one whose launch has to answer for it.
+         And the amphibian gets the same block at the same height made of leaves:
+         the control that says the roof is asked of the material table and not of
+         the height. */
+      const plan = sp.locomotion === 'amphibian'
+        ? [[1, TRUNK, 'through'], [2, TRUNK, 'through'], [3, TRUNK, 'through'],
+          [2, TRUNK, 'under'], [2, LEAF, 'under']]
+        : [[1, TRUNK, 'through'], [2, TRUNK, 'through'], [3, TRUNK, 'through']];
+      for (const [off, mat, mode] of plan) {
+        const beam = gy + off, beamWas = W.get(x, beam, z);
+        if (beamWas !== 0) { rigs.push({ kind: sp.id, off, mat, mode, beam, error: 'beam cell not clear', beamWas }); continue; }
+        const ax = x + 0.5, az = z + 0.5;
+        /* the same draw for the same height of block, every run and whatever the
+           block is made of: an animal picks where to go with Math.random, and a
+           premise that moves between runs is not a premise. The crown rig and the
+           wood rig above it are therefore the same animal on the same errand, and
+           the only difference between the two of them is the material. */
+        seed(77001 + off * 13 + (mode === 'under' ? 300 : 0));
+        const body = new N.Creature(sp, mode === 'under' ? ax : ax - 2.5, gy + 1, az);
+        /* the rig aims it. Which way a body happens to be looking when the frame
+           starts is not the law under test, and left to its own draw the bear spent
+           the eight seconds going 16.6 m and never came nearer than 2.1 m to the
+           column it was handed an errand through. */
+        body.yaw = Math.PI / 2;
+        body.tx = mode === 'under' ? ax + 3.5 : ax + 2.5;
+        body.tz = az; body.homeX = ax; body.homeZ = az;
+        body.pause = 0; body.alarm = 0; body.dry = 0;
+        const tallOf = body.tall;
+        /* during the rig the valley holds this body and nobody else: what is under
+           test is one body and the blocks, and a rig whose answer also depends on
+           where the rest of the crowd happens to be standing is measuring
+           something else */
+        g.creatures = [body];
+        /* The middle of a herd is not part of the valley: the game works the
+           middle of each species out once a tick and leaves it on the game object,
+           and the herd law pulls any animal of that species that has wandered more
+           than a throw from it. Take the crowd away for the length of a rig and the
+           middle it pulls towards is a leftover of whatever the page was doing
+           before the rig started: measured here with the herd left loose, the three
+           rigs of one frog -- the block at three different heights, under three
+           different draws -- walked the same 6.05 m to the centimetre, straying
+           4.46 m from the block and never coming nearer than 1.49 m to it, and the
+           same three rigs in another page, the same shelf and the same seeds,
+           walked a route of the same 6.05 m that came within 1.09 m of the block
+           and strayed 4.02 m from it: routes decided by something other than the
+           law under test. This body's herd is itself. */
+        const herdWas = g.herdCentres;
+        g.herdCentres = Object.assign({}, herdWas);
+        g.herdCentres[sp.id] = { x: ax, z: az, n: 1 };
+        W.set(x, beam, z, mat);
+        P.form = null; P.vital = 10; P.x = 4; P.y = W.h - 2; P.z = 4;   // nobody to run from
+        g.time = 420 * 10 / 24; g.updateEnv();                          // a morning: both awake
+        /* The stream is seeded again here, after everything the rig does to the
+           page: what a body makes of its errand is drawn from this stream, and the
+           crown rig and the wood rig are meant to be the same animal on the same
+           errand so that the material of the block is the only difference between
+           them. The seeding above is what makes the animal; this one is what makes
+           the frames it then lives. */
+        seed(77001 + off * 13 + (mode === 'under' ? 300 : 0));
+        const A = {
+          frames: 0, beamWood: 0, onFeet: 0, air: 0, airIn: 0, hops: 0, hopsIn: 0, wasUp: 0,
+          inside: 0, feetIn: 0, headIn: 0, deep: 0,
+          inRock: 0, path: 0, atColumn: 0, underBeam: 0, pops: 0, stands: 0, gone: 0, closest: 9,
+          yEnd: 0, stateEnd: '' };
+        for (let i = 0; i < 480; i++) {
+          const px = body.x, pz = body.z, py = body.y;
+          body.tx = mode === 'under' ? ax + 3.5 : ax + 2.5; body.tz = az; body.pause = 0;
+          body.update(1 / 60, P, W, g);
+          A.frames++;
+          const dd = Math.hypot(body.x - px, body.z - pz);
+          A.path += dd;
+          if (dd < 0.002) A.stands++;
+          if (dd > 0.9 || Math.abs(body.y - py) > 0.9) A.pops++;
+          if (W.get(x, beam, z) === mat) A.beamWood++;   // the block stayed what it was set as
+          const bx = Math.floor(body.x), bz = Math.floor(body.z), by = Math.floor(body.y);
+          if (Math.abs(body.y - N.terrainY(W, bx, bz, Math.floor(body.y + 0.6))) < 0.05) A.onFeet++;
+          else A.air++;                                       // off the floor it stands on: an arc
+          const inCol = bx === x && bz === z;
+          /* an arc is a rise off the floor this body stands on, and the question the
+             material control asks is whether the arc was launched in the column with
+             the block over it: a body that walks out of that column and hops about
+             down the shelf tells us nothing about the room that column leaves. */
+          if (body.y - (gy + 1) > 0.25) {
+            if (!A.wasUp) { A.hops++; if (inCol) A.hopsIn++; }
+            A.wasUp = 1;
+          } else A.wasUp = 0;
+          if (inCol && Math.abs(body.y - N.terrainY(W, bx, bz, Math.floor(body.y + 0.6))) >= 0.05) A.airIn++;
+          if (inCol) { A.atColumn++; if (Math.floor(body.y + tallOf) < beam) A.underBeam++; }
+          let hit = -1;
+          for (let k = by; k <= Math.floor(body.y + tallOf); k++) if (wood(bx, k, bz)) { hit = k; break; }
+          if (hit >= 0) {
+            A.inside++;
+            if (hit > by) A.headIn++; else A.feetIn++;
+            const through = (body.y + tallOf) - hit;
+            if (through > A.deep) A.deep = through;
+          }
+          let rock = false;
+          for (let k = by; k <= Math.floor(body.y + tallOf); k++)
+            if (W.solidAt(bx, k, bz) && !N.TREE_BLOCK[W.get(bx, k, bz)]) rock = true;
+          if (rock) A.inRock++;
+          let cd = 9;
+          for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++)
+            for (let k = by; k <= Math.floor(body.y + tallOf); k++)
+              if (wood(bx + dx, k, bz + dz)) cd = Math.min(cd, Math.hypot(body.x - (bx + dx + 0.5), body.z - (bz + dz + 0.5)));
+          if (cd < A.closest) A.closest = cd;
+          if (Math.abs(body.x - ax) > 1.2 || Math.abs(body.z - az) > 1.2) A.gone++;
+          A.yEnd = body.y;
+          A.stateEnd = body.state + (W.liquidAt(bx, by, bz) ? '+water' : '') +
+            (body.inWater ? '+in' : '') + (body.held ? '+held' : '');
+        }
+        Math.random = rnd;
+        rigs.push({ kind: body.sp.id, off, mat, mode, beam, beamWas, tall: +tallOf.toFixed(2),
+          frames: A.frames, beamWood: A.beamWood, onFeet: A.onFeet,
+          air: A.air, hops: A.hops, airIn: A.airIn, hopsIn: A.hopsIn, inside: A.inside, feetIn: A.feetIn,
+          headIn: A.headIn, deep: +A.deep.toFixed(2), inRock: A.inRock, path: +A.path.toFixed(2),
+          atColumn: A.atColumn, underBeam: A.underBeam, pops: A.pops, stands: A.stands, gone: A.gone,
+          closest: +A.closest.toFixed(3), yEnd: +A.yEnd.toFixed(2), atEnd: A.stateEnd });
+        W.set(x, beam, z, beamWas);
+        g.creatures = crowdWas; g.herdCentres = herdWas;
+        Object.assign(P, was); g.time = timeWas; g.updateEnv();
+      }
+    }
+    const bad = rigs.filter((r) => r.error);
+    /* the control that says the roof law is about material and not about a low
+       ceiling: the same column at the same height, once of wood and once of a
+       crown, the same body, the same draw. Counted where the block stands -- the
+       frames off the floor of that column, and the arcs pushed off in it -- a crown
+       over a hopper costs it none of them and a trunk over it costs it all of them. */
+    const leafRigs = rigs.filter((r) => r.mat === LEAF);
+    const twinOf = (r) => rigs.filter((q) => q.mat === TRUNK && q.kind === r.kind &&
+      q.off === r.off && q.mode === r.mode)[0];
+    const twinMissing = leafRigs.filter((r) => !twinOf(r)).length;
+    /* the rigs the body starts inside the column of: the ones where a hop's room
+       is decided, wood or crown */
+    const underRigs = rigs.filter((r) => r.mode === 'under' && r.mat);
+    /* the rigs where the block stands inside the body's own span: `off` counts
+       cells over the surface the body stands on, and a body standing on that
+       surface occupies [1, 1 + tall] cells above it, so the block is in the body
+       itself for 0 < off < 1 + tall. These are the rigs "0 frames inside" could
+       be paid for by a body that never arrived, so the rig says it arrived:
+       `closest` is how near the body's own centre came to the centre of the
+       nearest wood cell, and under 1 m of centre-to-centre is the body standing
+       at the face of the block. Measured, the three of them came to 0.51 m,
+       0.50 m and 0.54 m. */
+    const inSpan = (r) => r.mat === TRUNK && r.mode === 'through' && r.off < 1 + r.tall;
+    const driven = rigs.filter(inSpan).map((r) => r.closest);
+    g.creatures = crowdWas; g.time = timeWas; Math.random = rnd; g.updateEnv();
+    return { col: [x, gy, z], rigs, waterNear, builtNear, crowdNear, at: +timeWas.toFixed(2),
+      error: bad.length ? 'beam cell not clear' : undefined, twinMissing,
+      inside: rigs.reduce((s, r) => s + r.inside, 0), headIn: rigs.reduce((s, r) => s + r.headIn, 0),
+      feetIn: rigs.reduce((s, r) => s + r.feetIn, 0), inRock: rigs.reduce((s, r) => s + r.inRock, 0),
+      pops: rigs.reduce((s, r) => s + r.pops, 0), deep: Math.max(...rigs.map((r) => r.deep)),
+      nearWood: rigs.filter((r) => inSpan(r) && r.closest < 1).length, driven,
+      underAt: underRigs.map((r) => r.atColumn),
+      air: rigs.map((r) => r.air), hops: rigs.map((r) => r.hops),
+      airIn: rigs.map((r) => r.airIn), hopsIn: rigs.map((r) => r.hopsIn),
+      leafAir: leafRigs.reduce((s, r) => s + r.air, 0), leafHops: leafRigs.reduce((s, r) => s + r.hops, 0),
+      twinAir: leafRigs.reduce((s, r) => s + (twinOf(r) ? twinOf(r).air : 0), 0),
+      twinHops: leafRigs.reduce((s, r) => s + (twinOf(r) ? twinOf(r).hops : 0), 0),
+      leafAirIn: leafRigs.reduce((s, r) => s + r.airIn, 0), leafHopsIn: leafRigs.reduce((s, r) => s + r.hopsIn, 0),
+      twinAirIn: leafRigs.reduce((s, r) => s + (twinOf(r) ? twinOf(r).airIn : 0), 0),
+      twinHopsIn: leafRigs.reduce((s, r) => s + (twinOf(r) ? twinOf(r).hopsIn : 0), 0),
+      stands: rigs.map((r) => r.stands), gone: rigs.map((r) => r.gone),
+      path: +rigs.reduce((s, r) => s + r.path, 0).toFixed(1),
+      frames: rigs.reduce((s, r) => s + r.frames, 0), woodFrames: rigs.reduce((s, r) => s + r.beamWood, 0),
+      tall: tall.sp.id, short: short.sp.id, tallOf: +tall.tall.toFixed(2), shortOf: +short.tall.toFixed(2),
+      woodId: TRUNK, leafId: LEAF };
+  });
+  check('a flat shelf, a tall walker and a short hopper were found to measure on, the beam cell was clear air, and the crown rig had its matching wood rig',
+    !spanLaw.error && spanLaw.rigs.length === 8 && !spanLaw.twinMissing, spanLaw);
+  check('the block stayed the material it was set as, wood or crown, so "never inside it" is not paid for by the block going away',
+    spanLaw.woodFrames === spanLaw.frames, spanLaw);
+  check('both animals were driven at the wood: every rig with a wood block in the body\u0027s own span came up against it, so "0 frames inside" is not paid for by a body that never got there',
+    spanLaw.nearWood === spanLaw.driven.length && spanLaw.driven.length >= 3, spanLaw);
+  check('a body on foot is not let inside wood with any part of itself, at the height of its own body',
+    spanLaw.inside === 0 && spanLaw.deep === 0, spanLaw);
+  check('in particular its head: the gate used to ask one cell over the surface, and the feet were in open air every frame',
+    spanLaw.headIn === 0 && spanLaw.feetIn === 0, spanLaw);
+  check('the wood did not become a wall to a body that fits under it: the short body still walks in the column it starts under, of wood or of crown, and every rig with the block a full cell over the body still goes through that column',
+    spanLaw.underAt.length === 2 && spanLaw.underAt.every((n) => n > 0) &&
+    spanLaw.rigs.filter((r) => r.mode === 'through' && r.off >= 3).every((r) => r.atColumn > 0), spanLaw);
+  check('the wood did not become a wall the body is pinned against: the block over a tall body is walked under, and every body keeps travelling',
+    spanLaw.rigs.every((r) => r.path > 3) &&
+    spanLaw.rigs.filter((r) => r.kind === spanLaw.tall && r.off === 3).every((r) => r.atColumn > 0), spanLaw);
+  check('refused the column it goes round it rather than freezing at it, and nothing is thrown across the shelf',
+    spanLaw.rigs.every((r) => r.pops === 0 && r.stands < r.frames * 0.5) &&
+    spanLaw.rigs.filter((r) => r.kind === spanLaw.tall).every((r) => r.gone > 100), spanLaw);
+  check('the roof is asked of the material table and not of the height: the same block made of leaves lets this hopper an arc inside that column and the trunk lets it none',
+    spanLaw.twinAirIn === 0 && spanLaw.leafAirIn > 20 && spanLaw.leafHopsIn > spanLaw.twinHopsIn, spanLaw);
+  check('none of them ended up inside rock or water either',
+    spanLaw.inRock === 0, spanLaw);
 
 
   /* 11i3. Falling asleep is not a pass through the roof. The flock step asks what
