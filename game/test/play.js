@@ -9324,12 +9324,104 @@ What was measured before any of this was fixed, over 180 frames of walking
        the bearing that puts the asked-for side under it */
     const SIDEYAW = { left: Math.PI, right: 0, face: -Math.PI / 2, back: Math.PI / 2 };
     const DIST = { owl: 1.1, bear: 2.0, frog: 0.8 };     // the distance the game films that body at
+    /* A joint has to hold while the animal is moving and not only while it stands
+       still, and a moving pose has to be picked off the model rather than guessed
+       at. `partAngles` is the very function the draw calls to turn a pose state
+       into a part's angles, so the sweeps below ask it: where in its own stride is
+       this body's leg furthest out of its stance, and what phase of the clock puts
+       a wing at the bottom of its stroke. The standing shots stay exactly the shots
+       they always were; these poses are added next to them. */
+    const stOf = (over) => Object.assign({ t: 0, gait: 0, phase: 0, move: 0, air: 0,
+      crouch: 0, off: 0, flap: 1, fly: false }, over);
+    const entsOf = (id) => {
+      entsOf.m = entsOf.m || {};
+      return entsOf.m[id] || (entsOf.m[id] =
+        N.MODELS[id].parts.map((pt) => ({ part: pt, pivot: pt.pivot || [0, 0, 0] })));
+    };
+    /* how far any part of this body has been turned away from standing by a pose
+       state, in radians: a joint in a moving body is only worth claiming if the
+       pose really moved the body, and this is the number that says it did */
+    const ANG = ['rx', 'ry', 'rz'];   // the three turns: the other two are a lift and a scale
+    const movedBy = (id, st) => {
+      const a0 = entsOf(id).map((e) => N.partAngles(e, stOf({})));
+      const a1 = entsOf(id).map((e) => N.partAngles(e, stOf(st)));
+      let best = 0;
+      // a claim that "the body moved" wants to be about limbs turning, in radians
+      a0.forEach((x, i) => ANG.forEach((k) => { const d = Math.abs(x[k] - a1[i][k]); if (d > best) best = d; }));
+      return +best.toFixed(3);
+    };
+    // the stride position a leg is furthest out of its stance at: the swing
+    const swingOf = (id) => {
+      let best = { u: 0, moved: 0 };
+      for (let k = 1; k <= 24; k++) {
+        const m = movedBy(id, { gait: k / 24, move: 1 });
+        if (m > best.moved) best = { u: k / 24, moved: m };
+      }
+      return best;
+    };
+    /* the phase of the clock that puts a bird's wing furthest into its stroke. The
+       beat is the sine of the world clock plus the body's phase, times the rate,
+       plus that phase again -- so the phase is swept and the wing's own angle read
+       back off the model, rather than the formula copied out here. */
+    const beatOf = (id) => {
+      const wing = entsOf(id).find((e) => e.part.anim === 'flap');
+      let best = { ph: 0, rz: 0 };
+      if (!wing) return best;
+      /* the sweep is over the phase, and 24 steps of it would not do: the beat's
+         argument is the clock times the rate plus the phase again, so it moves
+         twelve times as fast as the phase does, and 24 samples of the phase step
+         the argument by exactly pi -- every sample landing on the same stroke,
+         whichever one of them it happened to be. Sampled at 252 the argument is
+         stepped by 0.3 rad, so the best of them is within 0.011 of the bottom of
+         the stroke. */
+      for (let k = 0; k < 252; k++) {
+        const ph = k * Math.PI / 126;
+        const rz = N.partAngles(wing, stOf({ air: 1, fly: true, t: 420 * 0.42 + ph, phase: ph })).rz;
+        if (Math.abs(rz) > Math.abs(best.rz)) best = { ph: +ph.toFixed(4), rz: +rz.toFixed(3) };
+      }
+      return best;
+    };
+    const SWING = { bear: swingOf('bear') };
+    const BEAT = { owl: beatOf('owl') };
+    const TOPS = {};
+    for (const id of ['owl', 'frog', 'bear']) if (animals[id]) TOPS[id] = animals[id].sp.speed || 3;
+    /* what each pose does to the creature's own fields, and the pose state the draw
+       will be handed by it -- both here, so the premise is measured off the same
+       state the frame is shot with and not off a description of it. Every pose is
+       filmed from the same four bearings the standing body is filmed from: a moving
+       body is not pickier about where the lens stands, and pooling over the four is
+       what the idle joints are pooled over. Where a pose reads better from some of
+       them than others is measured below, not assumed. */
+    const POSES = {
+      owl: [['idle', {}, {}],
+        ['beat', { airAmt: 1, flap: 1, phase: BEAT.owl.ph },
+          { air: 1, fly: true, phase: BEAT.owl.ph, t: 420 * 0.42 + BEAT.owl.ph }]],
+      frog: [['idle', {}, {}],
+        /* A hop is not a pose the body holds while its feet are on the ground: the
+           model lets a limb the body stands on fold up only as far as the ground
+           has got out of the way of it (`off`, that clearance in body heights, read
+           by the draw as (y - ground) / (model height x scale) = 0.43 m for this
+           frog). Given the tuck with its feet on its floor, the model gives back
+           nothing at all -- measured, 0 rad moved. Half a metre over its own floor
+           is over that clearance, and the lens goes up with the body so the whole
+           body stays in the frame to be measured in. */
+        ['hop', { airAmt: 1, y: spot.y + 0.5 }, { air: 1, off: 1 }]],
+      bear: [['idle', {}, {}],
+        ['swing', { gait: SWING.bear.u, speed: TOPS.bear }, { gait: SWING.bear.u, move: 1 }]],
+      human: [['idle', {}, {}]]
+    };
+    const prem = [];
+    for (const id of ['owl', 'frog', 'bear'])
+      for (const [pose, mut, st] of POSES[id])
+        if (pose !== 'idle') prem.push({ id, pose, moved: movedBy(id, st),
+          beat: pose === 'beat' ? BEAT.owl.rz : null, u: pose === 'swing' ? SWING.bear.u : null });
     const shots = [];
     g.time = 420 * 0.42; g.mode = 'play'; g.hover = null; p.vital = 10; p.fright = 0;
     for (const id of ['owl', 'frog', 'bear', 'human']) {
       const an = id === 'human' ? null : animals[id];
       const tall = id === 'human' ? 1.8 : N.FRUIT_BY_ID[N.CREATURE_BY_ID[id].fruit].form.size[1];
-      for (const side of ['left', 'right', 'face', 'back']) {
+      for (const [pose, mut] of POSES[id]) {
+        for (const side of ['left', 'right', 'face', 'back']) {
         const yaw = SIDEYAW[side];
         p.form = null;
         const eyeH = p.eyePos() - p.y;
@@ -9342,13 +9434,34 @@ What was measured before any of this was fixed, over 180 frames of walking
              at random when the valley is built. Pin it: the seam between a folded
              wing and a trunk is a near-tangency in the silhouette, and two runs of
              a step that does not pin it measured 98 pixels of that joint and then
-             4 pixels of it, with nothing changed in between. */
-          an.phase = 0; an.t = 0; an.gait = 0; an.speed = 0;
+             4 pixels of it, with nothing changed in between. What the whole line
+             is worth was measured rather than assumed: a bear caught mid-stride in
+             the wandering flock -- gait 20.2 rad of cycle, 2.1 m/s, phase 2.68 --
+             moves 15155 pixels of the frame it is filmed in through its gait and
+             its speed and 5363 through its phase alone, and a frog out of the same
+             flock 25532 through its speed and 1365 through its phase. */
+          an.phase = 0; an.t = 0; an.gait = 0; an.speed = 0; an.bend = 0;
+          /* `bend` is the signed rate of heading, and the draw hands it to the
+             model as `turn` (game.js: turn: c.bend). The model spends a turn only
+             on a body stroking water: 1.9 rad/s of it swings a swimming frog's
+             thigh 0.179 rad and moves a walking bear's leg, a flying owl's leg and
+             a hopping frog's leg nothing at all. So pinning it changes nothing in
+             these frames today -- the shots below filmed with the biggest rate the
+             wandering flock carries left in differ by 0 pixels of 504000, and that
+             flock was measured holding 1.9 rad/s of it in its frogs and 1.6 in its
+             bears -- and it is pinned with the rest for the same reason they are:
+             a pose that is being measured should not inherit anything, a turn
+             included, from wherever the body happened to be. */
+          Object.assign(an, mut);          // the pose asked for: a stride, a beat, a tuck
           g.creatures = [an]; g.thirdPerson = false;
           /* the heading is pinned as surely as the position is: the lens stands
-             west and looks east, and a yaw left over from the step before this
-             one films the empty air on the far side of the body */
-          p.x = spot.x - DIST[id]; p.z = spot.z; p.y = spot.y + Math.max(0.12, tall * 0.55) - eyeH;
+             west and looks east, and a yaw left over from the step before this one
+             films the empty air on the far side of the body. The height is taken
+             off the body's own posed height and not off its floor, because a
+             hopping body stands half a metre above its floor for this shot: with
+             the lens left on the floor, only 5547 of that body's 55000-odd pixels
+             were in the frame at all, the rest of it cut off by the top edge. */
+          p.x = spot.x - DIST[id]; p.z = spot.z; p.y = an.y + Math.max(0.12, tall * 0.55) - eyeH;
           p.yaw = Math.PI / 2;
         } else {
           g.creatures = []; g.thirdPerson = true;
@@ -9449,11 +9562,22 @@ What was measured before any of this was fixed, over 180 frames of walking
         /* flatness inside the body, and the exact colours it is made of */
         let pairs = 0, flat = 0, sameRGB = 0;
         const rgbN = new Map();
+        /* how much of the frame each part really occupies: read straight off the id
+           buffer, and the only way to tell that a pose moved the body *in the
+           picture* rather than only in the pose state. Row 0 of a `readPixels`
+           buffer is the bottom of the image, so a part whose lowest row has come up
+           is a part that has left the ground it was standing on. */
+        const pbox = new Map();
         for (let y = 0; y < Hd; y++) for (let x = 0; x < Wd; x++) {
           const o = y * Wd + x; if (idm[o] < 0) continue;
           const i = o * 4;
           const rk = (F[i] << 16) | (F[i + 1] << 8) | F[i + 2];
           rgbN.set(rk, (rgbN.get(rk) || 0) + 1);
+          let bb = pbox.get(idm[o]);
+          if (!bb) { bb = [x, y, x, y, 0]; pbox.set(idm[o], bb); }
+          if (x < bb[0]) bb[0] = x; if (x > bb[2]) bb[2] = x;
+          if (y < bb[1]) bb[1] = y; if (y > bb[3]) bb[3] = y;
+          bb[4]++;
           for (const q of [o + 1, o + Wd]) {
             if (q === o + 1 && x + 1 >= Wd) continue;
             if (q >= Wd * Hd || idm[q] < 0) continue;
@@ -9474,15 +9598,18 @@ What was measured before any of this was fixed, over 180 frames of walking
             if (run > longRunH) longRunH = run;
           }
         }
-        shots.push({ id, side, shot: { d: f && +f.d.toFixed(2), fov: f && Math.round(f.fov) },
+        shots.push({ id, pose, side, shot: { d: f && +f.d.toFixed(2), fov: f && Math.round(f.fov) },
           parts: parts.length, sep: +sep.toFixed(1), bodyPx: nMask, cover: +(100 * nId / (nMask || 1)).toFixed(1),
           drift, pctFlat: +(100 * flat / (pairs || 1)).toFixed(1), pctSame: +(100 * sameRGB / (pairs || 1)).toFixed(1),
           tones: rgbN.size, topRGBShare: +(100 * topRGB / (nId || 1)).toFixed(1), longRunH,
+          box: parts.map((pt, i) => { const b = pbox.get(i);
+            return b ? [pt.name, b[0], b[1], b[2], b[3], b[4]] : null; }).filter(Boolean),
           seams: [...pair.values()].filter((r) => r.n >= 2).map((r) => ({ a: r.a, b: r.b, n: r.n,
             dL: +(r.dL / r.n).toFixed(1), lo: +r.lo.toFixed(1), ds: +(r.ds / r.n).toFixed(3),
             pctShare: Math.round(100 * r.over / r.n), pctSame: Math.round(100 * r.same / r.n),
             c1: r.c1.map((v) => Math.round(v / r.n)), c2: r.c2.map((v) => Math.round(v / r.n)) }))
             .sort((u, v) => u.dL - v.dL) });
+        }
       }
     }
     g.creatures = was.list; g.thirdPerson = was.tp; g.hover = was.hover; g.mode = was.mode;
@@ -9490,7 +9617,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     p.x = was.px; p.y = was.py; p.z = was.pz; p.yaw = was.yaw; p.pitch = was.pitch; p.form = was.form;
     p.headWater = was.hw; p.faceYaw = was.faceYaw; p.bank = was.bank; p.tilt = was.tilt;
     p.vital = was.vital; g.time = 420 * 0.42; g.updateEnv();
-    return { spot, shots };
+    return { spot, shots, prem, swing: SWING, beat: BEAT };
   }, marks.spot);
   /* one row per joint: the same joint at every bearing the body was filmed from,
      pooled, because a joint is worth what it is worth in the frame and not at one
@@ -9504,10 +9631,11 @@ What was measured before any of this was fixed, over 180 frames of walking
      at these four bearings the two never stand against each other in the frame
      at all -- the thigh is behind the body and the head is over it -- so there
      is no seam there for a palette to be worth anything in. */
-  const pool = (id, x, y, minN) => {
+  const pool = (id, x, y, minN, pose) => {
     let n = 0, ds = 0, dL = 0, share = 0, same = 0, worst = 1e9;
     for (const s of (joint.shots || [])) {
       if (s.id !== id) continue;
+      if (pose && s.pose !== pose) continue;
       for (const r of s.seams) {
         if (!((r.a.startsWith(x) && r.b.startsWith(y)) || (r.b.startsWith(x) && r.a.startsWith(y)))) continue;
         if (r.n < (minN || 0)) continue;
@@ -9515,11 +9643,11 @@ What was measured before any of this was fixed, over 180 frames of walking
         worst = Math.min(worst, r.lo);
       }
     }
-    return { joint: id + ' ' + x + '/' + y, n, dL: n ? +(dL / n).toFixed(1) : null,
+    return { joint: id + ' ' + x + '/' + y + (pose ? ' ' + pose : ''), n, dL: n ? +(dL / n).toFixed(1) : null,
       lo: n === 0 ? null : +worst.toFixed(1), ds: n ? +(ds / n).toFixed(3) : null,
       pctShare: n ? Math.round(share / n) : null, pctSame: n ? Math.round(same / n) : null };
   };
-  const rows = JOINTS.map((j) => pool(j[0], j[1], j[2]));
+  const rows = JOINTS.map((j) => pool(j[0], j[1], j[2], 0, 'idle'));
   check('the frame is stable enough to be measured: two reads of one shot are the same pixels',
     !joint.error && joint.shots.every((s) => s.drift === 0),
     joint.error || joint.shots.map((s) => [s.id, s.side, s.drift]));
@@ -9554,13 +9682,105 @@ What was measured before any of this was fixed, over 180 frames of walking
      move at all (192, 192, 226 and 174 pixels, before and after alike) and is
      not claimed: a run that long is one box's own back, and repainting two
      boxes differently cannot break a run lying inside a single box. */
-  const frogTop = (joint.shots || []).filter((s) => s.id === 'frog').map((s) => s.topRGBShare);
+  const frogTop = (joint.shots || []).filter((s) => s.id === 'frog' && s.pose === 'idle')
+    .map((s) => s.topRGBShare);
   check('and the flatness of the body reads the same way: one colour used to cover',
     // a third of a frog was one colour; the mean of the four bearings is what is
     // asked here, because one bearing of a pinned body is worth less than four
     !joint.error && frogTop.length === 4 &&
       frogTop.reduce((a, b) => a + b, 0) / frogTop.length < 33,
     joint.error || { mean: +(frogTop.reduce((a, b) => a + b, 0) / (frogTop.length || 1)).toFixed(1), frogTop });
+  /* ...and the body is not usually standing still. A joint measured on a pinned
+     idle body says what the palette is worth at rest, which is not what the frame
+     shows: a walking bear has a leg in the air and a knee bent under it, a frog in
+     mid-hop has folded its legs under the trunk it hops from, and an owl crossing
+     the valley has its wings out and beating. Those are the frames where a joint
+     can be lost -- a near leg hides behind the far one, a wing turns edge-on -- so
+     the same joints are pooled again over the model's own stride, beat and tuck.
+     The poses are read off `partAngles`, the very function the draw calls to turn a
+     pose state into a part's angles. What they are worth there is a different
+     measurement from the idle one and is asked separately: the bear's knee is worth
+     351 seam pixels in motion against 496 standing still, and the owl's wing joint
+     only 52 against 189, because at the beat the wing lies along the sight line at
+     the two side bearings -- the stroke shows 24 rows of shift at the front and
+     behind bearings and 3 at the sides. */
+  const MOVEPOSE = { owl: 'beat', frog: 'hop', bear: 'swing' };
+  const MOVE = [['bear', 'leg', 'shin'], ['bear', 'body', 'leg'],
+    ['frog', 'body', 'thigh'], ['owl', 'body', 'wing']];
+  const mrows = MOVE.map((j) => pool(j[0], j[1], j[2], 0, MOVEPOSE[j[0]]));
+  const shotAt = (id, pose, side) => (joint.shots || [])
+    .find((s) => s.id === id && s.pose === pose && s.side === side);
+  /* the bearings both this pose and the standing body were filmed from: a pose is
+     only proved to have reached the picture by comparing what the frame holds at
+     that bearing with what it held at the same bearing standing still */
+  const sidesOf = (id, pose) => (joint.shots || [])
+    .filter((s) => s.id === id && s.pose === pose).map((s) => s.side)
+    .filter((sd) => shotAt(id, 'idle', sd));
+  /* how far the lowest row of a named part rose, in rows of the frame: row 0 of a
+     readPixels buffer is the bottom of the image, so a part whose lowest row has
+     come up is a part that has left the ground it was standing on. This is the
+     right question for a walking body, whose feet are still on the floor. */
+  const liftOf = (id, pose, pre) => {
+    let best = 0;
+    for (const side of sidesOf(id, pose)) {
+      const a = shotAt(id, 'idle', side), b = shotAt(id, pose, side);
+      for (const ra of a.box || []) {
+        if (!ra[0].startsWith(pre)) continue;
+        const rb = (b.box || []).find((q) => q[0] === ra[0]);
+        if (rb) best = Math.max(best, rb[2] - ra[2]);
+      }
+    }
+    return best;
+  };
+  /* the same rise, counted against the body the part hangs from. A hop lifts the
+     whole body off the floor, and every part of it goes up with the trunk: what
+     says a hop reached the frame is the thigh coming up under the trunk, and for a
+     wing on the bottom of its stroke it is the wing coming down against the body it
+     beats from. Counted this way the body's own move cancels out. */
+  const shiftOf = (id, pose, pre) => {
+    let best = 0;
+    for (const side of sidesOf(id, pose)) {
+      const a = shotAt(id, 'idle', side), b = shotAt(id, pose, side);
+      const ba = (a.box || []).find((q) => q[0] === 'body');
+      const bb = (b.box || []).find((q) => q[0] === 'body');
+      if (!ba || !bb) continue;
+      for (const ra of a.box || []) {
+        if (!ra[0].startsWith(pre)) continue;
+        const rb = (b.box || []).find((q) => q[0] === ra[0]);
+        if (rb) best = Math.max(best, Math.abs((rb[2] - bb[2]) - (ra[2] - ba[2])));
+      }
+    }
+    return best;
+  };
+  /* the pose has to be the model's own extreme rather than one guessed at: swept
+     over a whole stride the bear's legs come 0.618 rad out of their stance (at 1/6
+     of a cycle), the frog's tuck is worth 1.4 rad once its feet are off the floor
+     it stands on, and the owl's wing 1.736 rad at the bottom of its stroke. Under
+     half a radian a limb has turned less than the width of the part that carries it,
+     which is a body you cannot see moving. */
+  check('the stride, the beat and the tuck asked for are the model\u0027s own extremes, and they move the body it is asking about',
+    !joint.error && joint.prem.length === 3 && joint.prem.every((x) => x.moved >= 0.5) &&
+      Math.abs(joint.beat.owl.rz) > 0.95,
+    joint.error || { prem: joint.prem, beat: joint.beat, swing: joint.swing });
+  /* and the pose has to reach the frame, not stay in the state handed to the draw:
+     measured here, the bear's shin rose 29 rows of a 560-row frame off the floor it
+     was standing on, the frog's thigh came 48 rows up against the trunk it hops
+     from (its shin 121 rows), and the owl's wing moved 24 rows against its body. */
+  check('and the pose reached the picture: a foot left the floor it was standing on, a leg came up under the body it hops from, and a wing came off the body it beats from',
+    !joint.error && liftOf('bear', 'swing', 'shin') >= 8 && shiftOf('frog', 'hop', 'thigh') >= 8 &&
+      shiftOf('owl', 'beat', 'wing') >= 8,
+    joint.error || { bearShin: liftOf('bear', 'swing', 'shin'), frogThigh: shiftOf('frog', 'hop', 'thigh'),
+      owlWing: shiftOf('owl', 'beat', 'wing') });
+  check('the id buffer still knows which part drew a pixel while the body is moving',
+    !joint.error && joint.shots.filter((s) => s.pose !== 'idle' && s.id !== 'human')
+      .every((s) => s.cover > 90),
+    joint.error || joint.shots.filter((s) => s.pose !== 'idle').map((s) => [s.id, s.pose, s.side, s.cover]));
+  check('the joints a moving body puts in the frame are still worth reading: bear knee, bear hip, frog thigh, owl wing',
+    mrows.every((r) => r.n >= 40), mrows);
+  check('and they are still two colours there, not one colour at two strengths',
+    mrows.every((r) => r.pctShare >= 80 && r.ds >= 0.05), mrows);
+  check('nor is a joint in motion a joint made of one colour on both sides of the line',
+    mrows.every((r) => r.pctSame <= 5), mrows);
 
 
   /* A save is the only thing standing between a day of walking and nothing at
