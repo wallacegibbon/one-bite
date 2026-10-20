@@ -899,11 +899,33 @@
      there is somewhere to hover. Testing one cell at the animal's feet instead
      rejects an animal that bobs, and testing only "is there water anywhere"
      lets it climb a one-block shelf, stand above the surface, and walk out of
-     the lake on its own feet. Returns the water top, or -1 for "not water". */
+     the lake on its own feet. Returns the water top, or -1 for "not water".
+     The bottom of the water is searched from the water, not from over the film.
+     It used to be searched from two cells over the film, which is the same
+     answer wherever nothing stands in the column and a different answer
+     wherever something does: the brick of the sunken tower pokes up through the
+     film of the lake it stands in, the scan hits brick, and the column answers
+     that there is no water in it at all. Twenty-five columns inside the disc
+     the lamps belong to read that way -- film at 15, lakebed at 7, **8 metres**
+     of water each -- and the dex says the field sits exactly in the outline of
+     that tower. One answer decides four things here: where a swimming body may
+     be put, where it may be sent, which way it may swim, and the height it
+     hangs at. So a bell that gets into one of those columns -- a shove from its
+     own kind asks only about solid and stone -- is pinned on the lakebed under
+     the tower for as long as it stands there, its crown **6.27 m** under the
+     film over ten seconds and **7.11 m** at the deepest, for a body whose row
+     says **1.2**; and of 90,000 lamp-frames in a five minute watch not one
+     stood in such a column, because the picker and the step gate below kept
+     the field out of columns they believed were dry. The field was therefore
+     not in the outline the dex gives it, and any body the crowd put there was
+     lost in it. Asking for the bed from the topmost water cell, rather than
+     from two cells over the film, asks what a column of water actually
+     answers, which is how deep the water is: **8 m**, and a bell hangs in it
+     **1.2 m** under the film, under the brick and off the bed. */
   function waterColumn(w, x, z) {
     const wt = waterTop(w, Math.floor(x), Math.floor(z), w.h - 1);
     if (wt < 0) return -1;
-    const gy = groundY(w, Math.floor(x), Math.floor(z), wt + 2);
+    const gy = groundY(w, Math.floor(x), Math.floor(z), wt);
     return wt + 1 - gy >= 2 ? wt : -1;
   }
   /* The height a body of this kind hangs at in the column it stands in, in one
@@ -1977,7 +1999,29 @@
            the trunk and climb it out of the lake, block by block, into the sky. */
         const bob = Math.sin(this.t + this.phase) * 0.8;
         const target = hoverLevel(this.sp, world, this.x, this.z, this.tall, this.y, bob);
-        this.y += (target - this.y) * Math.min(1, dt * 1.6);
+        /* The same law the air branch above carries, for the same reason. An ease
+           closes a distance at a rate proportional to the distance left, so when
+           the level the water states for this column is far from the height the
+           body is at -- a bell dropped off a bank into deep water, a bell held down
+           and let go, a column whose level the world has only just started
+           answering for -- the height the body wants is metres away and the answer
+           is a lift. Measured on a bell put down on the lakebed at the bottom of
+           the deepest column in the lamps' disc -- **11 m** of water there, film
+           at 15, bed at 4 -- and left to the old ease: it climbs the whole
+           **8.91 m** to the level its own row states, and the height closes
+           **0.2586 m** in a single frame, **15.51 m/s**, against the **2.2 m/s**
+           its own row swims, with **67** of its 600 frames faster than that. A
+           body in water pays for height out of the speed it has: it rises or
+           sinks no faster than it swims, and it arrives, for the same reason a
+           bird settles onto its roost -- capped, the same bell covers the same
+           **8.91 m** inside the same ten seconds at **0.0367 m** a frame, and the
+           check that pins this also insists it arrives, because a law satisfied
+           by never moving the body at all would pass the rate and fail that. */
+        const swim = sp.swimSpeed || sp.speed || 3;
+        const rise = (target - this.y) * Math.min(1, dt * 1.6);
+        const reach = swim * dt;
+        this.y += Math.abs(rise) > reach ? (rise > 0 ? reach : -reach) : rise;
+        if (Math.abs(target - this.y) < 0.01) this.y = target;
       } else {
         /* Feet, water and the ground -- one routine for every body that is not
            being held up by air. A frog and a bear are told apart by whether the

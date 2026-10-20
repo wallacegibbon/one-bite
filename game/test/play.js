@@ -8747,7 +8747,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const kind = {}, seen = { worst: 0, deep: 0, touch: 0, sum: 0 };
     const start = new Map(cs.map(c => [c, [c.x, c.z]]));
     const path = new Map(cs.map(c => [c, 0]));
-    const prev = new Map(cs.map(c => [c, [c.x, c.z]]));
+    const prev = new Map(cs.map(c => [c, [c.x, c.z, c.y]]));
     const awake = new Map(cs.map(c => [c, 0]));
     const near = new Map(cs.map(c => [c, 0]));
     /* The most a body can cover in one frame of its own accord: the speed its own
@@ -8771,6 +8771,15 @@ What was measured before any of this was fixed, over 180 frames of walking
       return c.state === 'flee' || c.state === 'chase' ? top * 1.7 : top;
     };
     const jump = { ratio: 0, who: null, m: 0, mPerS: 0, frames: 0, over: 0 };
+    /* The same question on the third axis, for the bodies whose height is not
+       their own act: the water holds one kind of body up and the air holds
+       another, and in both branches the height is *eased* towards a level the
+       world answers for them. A jump or a step down is an animal's own motion
+       and is asked elsewhere (`soak` reads a whole day of feet at 0.4 m a
+       frame); an ease is the world moving the body, and nothing at all asked its
+       rate: the water's branch was measured taking a bell 0.1587 m in a single
+       frame -- 9.52 m/s, 4.33 times the 2.2 m/s its own row swims. */
+    const lift = { ratio: 0, who: null, m: 0, mPerS: 0, frames: 0, over: 0 };
     const SECS = 150;
     for (let i = 0; i < Math.round(SECS * 60); i++) {
       g.input = {};
@@ -8800,7 +8809,17 @@ What was measured before any of this was fixed, over 180 frames of walking
           jump.ratio = +r.toFixed(2); jump.who = c.sp.id;
           jump.m = +step.toFixed(3); jump.mPerS = +(step * 60).toFixed(1);
         }
-        prev.set(c, [c.x, c.z]);
+        const vstep = Math.abs(c.y - q[2]);
+        if (c.isAquatic() || c.isFlyer()) {
+          const vr = vstep / (topOf(c) / 60);
+          lift.frames++;
+          if (vr > 1) lift.over++;
+          if (vr > lift.ratio) {
+            lift.ratio = +vr.toFixed(2); lift.who = c.sp.id;
+            lift.m = +vstep.toFixed(3); lift.mPerS = +(vstep * 60).toFixed(1);
+          }
+        }
+        prev.set(c, [c.x, c.z, c.y]);
         // a body asleep on its perch is not a body held up by its neighbours
         if (c.state !== 'roost') awake.set(c, awake.get(c) + 1);
         for (const o of cs) {
@@ -8837,7 +8856,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     return { seconds: SECS, bodies: cs.length, worst: +seen.worst.toFixed(3),
       deep: seen.deep, touch: seen.touch, mean: +(seen.sum / Math.max(seen.touch, 1)).toFixed(3),
       per, still, quiet: quiet.map(detail), lampFar: lampFar.slice(0, 3),
-      jump, birth,
+      jump, lift, birth,
       walked: +Math.max.apply(null, cs.map(c => path.get(c))).toFixed(1) };
   });
   check('no body spends the window inside another body',
@@ -8859,6 +8878,11 @@ What was measured before any of this was fixed, over 180 frames of walking
     space.jump.ratio <= 2, space.jump);
   check('a body is not born standing inside the trunk of its own kind',
     space.birth.min >= 0.4, space.birth);
+  /* And the height: in this field the water never asks for more than it has to,
+     so this is the standing guard rather than the finding -- the finding is the
+     step below, where the level itself is wrong and the ease eats it. */
+  check('no frame of that window lifts or drops a body the water or the air holds faster than that body can go',
+    space.lift.ratio <= 1.05, space.lift);
 
   /* 11m2. The way out of a neighbour is not a way into the world. The crowd pass
      asks the place it picks of `bodyRoom`, which answers for the ground a body
@@ -9000,6 +9024,185 @@ What was measured before any of this was fixed, over 180 frames of walking
     !shove.error && shove.inside === 0, shove);
   check('and the crowd still gets the file out of one another',
     !shove.error && shove.span[1] >= shove.span[0], shove);
+
+  /* 11m3. The water an animal hangs in is asked of the water, and the water
+     closes that height at the speed the animal swims.
+     How deep the water in a column is was asked by taking "the topmost water cell"
+     and subtracting "the highest solid found by scanning down from two cells above
+     it". The brick of the sunken tower pokes up through the film of the lake it
+     stands in, so that scan hits the brick and the column answers that there is no
+     water in it at all: twenty-five columns inside the lamps' own disc -- the
+     field the dex says sits "exactly in the outline of the sunken tower" -- read
+     that way, 8 metres of water each, film at 15 and lakebed at 7, and the level
+     the water is said to hold a body at is the lakebed under it. That one answer
+     decides four things: where a swimming body may be put (the crowd's room
+     question), where it may be sent (the errand picker), which way it may swim
+     (the step gate) and the height it hangs at. Nothing visible was wrong when
+     this was found -- of 90,000 lamp-frames in a five minute watch not one stood
+     in such a column, because the picker and the step gate kept the field out of
+     columns they believed were dry -- but the field was not in the outline the dex
+     gives it, and a bell that got into one of
+     those columns, by a shove from its own kind, which asks only about solid and
+     stone, was pinned on the lakebed under the tower: ten seconds there and its
+     crown sat **6.27 m** under the film on the average and **7.11 m** at the
+     deepest, for a body whose row says **1.2 m** -- which is what the first check
+     below reports when only this law is taken out. Two laws, asked in the same
+     step. The water is told by the depth of the water in the column, which is the
+     bed searched from the topmost water cell and not from the brick standing over
+     it. And the height the water holds a body at is closed at no more than the
+     speed that body swims -- the law the air branch of this file already carries
+     (docs 03 line 85, 23.9 -> 2.94 m/s) and the water branch never got: a bell
+     put on the lakebed at the bottom of the deepest column in that disc and let go
+     climbs the whole **8.91 m** of water, and the ease carries it **15.51 m/s**,
+     seven times its own speed, with **67** of its 600 frames faster than it
+     swims. */
+  const towerWater = await step('towerWater', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
+    const sp = N.CREATURES.find((s) => s.id === 'jelly');
+    const tower = (N.ZONE_BY_ID.mirrorlake || {}).tower || [0, 0];
+    const field = g.creatures.filter((c) => c.sp.id === 'jelly');
+    if (!sp || !field.length) return { error: 'no lamp jellyfish in the world' };
+    const TALL = field[0].tall;
+    const own = sp.swimSpeed || sp.speed || 3;
+    const HOVER = sp.hover === undefined ? 0.8 : sp.hover;
+    const BOB = 0.8;                      // the swing the water branch rides on
+    const f2 = (v) => (v === null || v === undefined ? null : +v.toFixed(2));
+    const filmAt = (x, z) => {
+      const wt = N.waterTop(W, x, z, W.h - 1);
+      return wt < 0 ? null : wt + 1;
+    };
+    /* How deep the water in this column is: the bottom of the water, searched up
+       from the topmost water cell. This is a fact about the valley and not about
+       any law in this file -- a column with 8 metres of water in it is 8 metres
+       deep whether or not the file knows it, and the file's own answer used to be
+       got by searching from two cells over the film instead -- so the rigs below
+       are picked the same way before the law as after it. */
+    const depthAt = (x, z) => {
+      const wt = N.waterTop(W, x, z, W.h - 1);
+      if (wt < 0) return null;
+      const film = wt + 1;
+      const bed = N.groundY(W, x, z, wt);
+      return { film, body: film - TALL - HOVER, bed, depth: film - bed };
+    };
+
+    /* Whether the surface of this column has a block standing in it. The brick of
+       the sunken tower pokes up through the film of the lake it stands in, and
+       that is a fact about the valley, not about any law in this file: asking it
+       here is how the rig below is picked the same way before the law as after
+       it, instead of being picked by the bug and vanishing when the bug goes. */
+    const capAbove = (x, z, film) => W.solidAt(x, film, z);
+
+    /* every column of the disc the lamps belong to that holds water deep enough
+       for a bell: what height does the level law answer for one standing in it? */
+    let wet = 0, deep = 0, capped = 0, bedTakes = 0, worst = null, deepest = null, cappedDeep = null;
+    const x0 = Math.max(1, Math.ceil(tower[0] - sp.spread - 1)), x1 = Math.min(W.w - 2, Math.floor(tower[0] + sp.spread + 1));
+    const z0 = Math.max(1, Math.ceil(tower[1] - sp.spread - 1)), z1 = Math.min(W.d - 2, Math.floor(tower[1] + sp.spread + 1));
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+      if (Math.hypot(x + 0.5 - tower[0], z + 0.5 - tower[1]) > sp.spread + 1) continue;
+      const col = depthAt(x, z);
+      if (col === null) continue;
+      wet++;
+      if (col.depth < 4) continue;      // not water a bell could hang in, whatever the law says
+      deep++;
+      if (!deepest || col.depth > deepest.depth)
+        deepest = { x, z, depth: col.depth, film: col.film, bed: col.bed, row: f2(col.body) };
+      if (capAbove(x, z, col.film)) {
+        capped++;
+        if (!cappedDeep || col.depth > cappedDeep.depth)
+          cappedDeep = { x, z, depth: col.depth, film: col.film, bed: col.bed, row: f2(col.body) };
+      }
+      const want = N.hoverLevel(sp, W, x + 0.5, z + 0.5, TALL, col.body, 0);
+      const under = col.film - (want + TALL);
+      if (under > HOVER + 0.5) {
+        bedTakes++;
+        if (!worst || under > worst.under)
+          worst = { x, z, under: +under.toFixed(2), want: f2(want), film: col.film, depth: col.depth };
+      }
+    }
+    const out = { tower, spread: sp.spread, tall: +TALL.toFixed(3), own, hover: HOVER,
+      wet, deep, capped, bedTakes, worst, deepest, cappedDeep };
+    if (!deepest) return Object.assign(out, { error: 'no column in the lamps disc holds water deep enough for a body' });
+
+    const bell = field[0];
+    const keep = ['x', 'y', 'z', 'homeX', 'homeZ', 'tx', 'tz', 'pause', 'state', 'yaw', 't', 'phase']
+      .map((k) => ({ k, v: bell[k] }));
+    const filmOf = (c) => filmAt(Math.floor(c.x), Math.floor(c.z));
+    const spanSolid = (c) => {
+      let n = 0;
+      for (let y = Math.floor(c.y); y <= Math.floor(c.y + TALL); y++) {
+        const b = W.get(Math.floor(c.x), y, Math.floor(c.z));
+        if (W.solidAt(Math.floor(c.x), y, Math.floor(c.z)) && !N.TREE_BLOCK[b]) n++;
+      }
+      return n;
+    };
+    const run = (secs) => {
+      let worstM = 0, over = 0, frames = 0, dry = 0, solid = 0;
+      let min = 9, max = -9, sum = 0, seen = 0;
+      for (let i = 0; i < Math.round(secs * 60); i++) {
+        const y0 = bell.y;
+        bell.update(1 / 60, p, W, g);
+        const d = Math.abs(bell.y - y0);
+        frames++;
+        if (d > worstM) worstM = d;
+        // a frame at exactly its own speed is not a frame faster than it swims
+        if (d * 60 > own + 1e-6) over++;
+        if (!W.liquidAt(Math.floor(bell.x), Math.floor(bell.y + 0.2), Math.floor(bell.z))) dry++;
+        if (spanSolid(bell)) solid++;
+        const film = filmOf(bell);
+        if (film !== null) {
+          const under = film - (bell.y + TALL);
+          seen++; sum += under;
+          if (under < min) min = under;
+          if (under > max) max = under;
+        }
+      }
+      return { frames, worstM: +worstM.toFixed(4), worstPerS: +(worstM * 60).toFixed(2),
+        ratio: +(worstM * 60 / own).toFixed(2), over, dry, solid,
+        under: seen ? { min: +min.toFixed(2), max: +max.toFixed(2), mean: +(sum / seen).toFixed(2), seen } : null,
+        at: [f2(bell.x), f2(bell.y), f2(bell.z)] };
+    };
+
+    /* rig A: a bell stood in the deepest of those columns, at the height the rest
+       of the field hangs at, and left to the level law for ten seconds with no
+       errand, no shove and no neighbour: what is left is the level and nothing
+       else. The row says a crown HOVER under the film, give or take the swing. */
+    const place = (col, y) => {
+      bell.x = col.x + 0.5; bell.z = col.z + 0.5; bell.y = y;
+      bell.tx = bell.x; bell.tz = bell.z; bell.homeX = bell.x; bell.homeZ = bell.z; bell.pause = 1e9;
+      return [f2(bell.x), f2(bell.y), f2(bell.z)];
+    };
+    const other = field.slice(1).reduce((m, c) => m + c.y, 0) / Math.max(1, field.length - 1);
+    const hungIn = cappedDeep || deepest;
+    out.hungIn = hungIn;
+    out.hung = Object.assign({ stood: place(hungIn, other) }, run(10));
+
+    /* rig B: the same column, a bell put down on the bottom of it and let go. This
+       asks the rate on its own, with no help from the level law: whatever the
+       level is, the way up to it is not a lift, and it has to be a way that
+       arrives -- a law satisfied by never moving anything would pass the rate and
+       fail this. The height it has to reach is the one its row states, asked of
+       the column here and not of the law under test. */
+    const row = deepest.film - TALL - HOVER;
+    out.risenIn = deepest;
+    out.risen = Object.assign({ row: f2(row), stood: place(deepest, deepest.bed + 0.35),
+      climb: f2(row - (deepest.bed + 0.35)) }, run(10));
+    /* a bell that reaches its level is within the swing of it; a bell left on the
+       lakebed under the tower is the whole depth of the water away from it */
+    out.risen.arrived = Math.abs(bell.y - row) < BOB + 0.4;
+    keep.forEach(({ k, v }) => { bell[k] = v; });
+    return out;
+  });
+  check('the water a swimming body hangs in is told by the water in the column, not by the brick standing over it',
+    !towerWater.error && towerWater.wet > 0 && towerWater.deep > 0 && towerWater.bedTakes === 0, towerWater);
+  check('a bell stood in the deepest of those columns hangs where its own row says it hangs, in water, out of brick',
+    !!towerWater.hung && !!towerWater.hung.under &&
+    towerWater.hung.under.min > 0.2 && towerWater.hung.under.max < towerWater.hover + 1.2 &&
+    Math.abs(towerWater.hung.under.mean - towerWater.hover) < 0.35 &&
+    towerWater.hung.dry === 0 && towerWater.hung.solid === 0, towerWater.hung);
+  check('a bell put on the bottom of that column comes up to its level, and the water never closes that height faster than it swims',
+    !!towerWater.hung && !!towerWater.risen && towerWater.hung.ratio <= 1.05 &&
+    towerWater.risen.climb > 3 && towerWater.risen.ratio <= 1.05 &&
+    towerWater.risen.arrived === true, { hung: towerWater.hung, risen: towerWater.risen });
 
   /* 11n. A body walked into a bank stands on its feet. The step-up lifts a body
      over a riser, and the lift used to be tested at the spot the body already
