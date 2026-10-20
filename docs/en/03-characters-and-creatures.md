@@ -115,8 +115,17 @@ disc — the tower it is drawn around pokes up through the surface — so the ex
 middle of it is dry ground and costs nothing. The immunity sits on the **frog**
 body — the body this lake already gave you is the body its lamps are lit for —
 and the log line that reports a sting names the answer out loud. The lamps hang
-a metre or two under the surface — **0.5–2.3 m** to the crown over five minutes
-of the field — so the dive to the tower sills stays out of reach of them.
+a metre or two under the surface — **0.51-1.89 m** to the crown over five minutes
+of the field, and the same reading on every page, which is only true because a body
+that swims is **born** at the level its own row states: the spawner used to put its
+feet on the ground of its column, so the ten lamps of Mirrorlake were born standing on
+the lakebed under their own lake and spent their first frames being pulled up to it —
+the crown read **8.73 m** under the film at the animal's very first update, the height
+closing **0.72 m a frame**, which is **14.4 m/s** against the **2.2 m/s** a lamp swims
+at — and the depth a lamp hangs at then read differently according to how long the
+page had been alive (**3.3-3.4 m**, with **226** of **60000** lamp-frames outside the
+band, seconds after the world was made, against **1.89 m** and no frames outside
+minutes later). So the dive to the tower sills stays out of reach of them.
 
 They are also the first animal to actually use `locomotion: 'water'`, and that
 mode had to be made honest: an animal that cannot leave the water is placed and

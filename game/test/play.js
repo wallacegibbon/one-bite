@@ -471,20 +471,38 @@ const { sim } = require('./simwait');
     const herd = () => g.creatures.filter(c => c.sp.id === 'jelly');
     const wet = () => herd().filter(c =>
       g.world.liquidAt(Math.floor(c.x), Math.floor(c.y + 0.2), Math.floor(c.z))).length;
-    /* A lamp's errand is picked from a disc of `spread` round the landmark, so
-       the honest bound is that disc plus the overshoot of an animal that walks
-       past the place it was sent to -- an animal that can only bend its course at
-       a fixed rate carries some of the way it was travelling past the target. */
-    let maxFar = 0;
-    const far = () => {
-      let n = 0;
-      for (const c of herd()) {
-        const d = Math.hypot(c.x - tower[0], c.z - tower[1]);
-        if (d > maxFar) maxFar = d;
-        if (d > sp.spread + 2) n++;
-      }
-      return n;
-    };
+    /* Where a lamp is allowed to stand. The errands it swims are picked from a
+       disc of `spread` round the landmark, and that disc is the promise the dex
+       makes ("the field sits exactly in the outline of the sunken tower") -- it
+       is also the thing the old bug broke, when errands were picked from a disc
+       of the same size round wherever the lamp happened to be standing: the
+       field came out twice the size it was meant to be, and one lamp sat 11 m
+       from the tower for five minutes. The body swimming an errand is not the
+       errand, though. It can only bend the course it is already on, at `turn`
+       radians a second, so at the speed its wandering cruises at (0.42 of the
+       speed its row swims at: 0.92 m/s for this one) the tightest arc its own
+       table allows is 1.16 m -- and a lamp that reaches the place it was sent to
+       still carrying a course it cannot shed swings past it and back. The
+       field's outer edge is the disc plus that swing, not the disc.
+       The bound also has to be paid frame by frame rather than at two instants.
+       Read at the start and the end of this step only, the field peaked between
+       5.7 and 7.4 m from the tower over ten watches of ten minutes each, and a
+       check written against the disc plus a bare 2 m went red on roughly one run
+       in three with nothing in the game changed. Paid frame by frame instead: the
+       field peaks at 5.7 to 6.5 m within a watch, and of the 60000 lamp-frames a
+       five-minute watch runs, 0 to 31 stand outside the disc plus one swing.
+       The errands themselves never leave the disc: 764 to 795 of them a watch,
+       the furthest 3.999 m from the tower. What does stand further out is the
+       pick a lamp makes when the tower's brick leaves it nowhere to go -- it sets
+       its errand to its own feet and waits, 322 to 422 times a watch -- and those
+       are counted apart, because a lamp standing where it already is has not been
+       sent anywhere. So the field is asked three ways: every errand inside the
+       disc, under one lamp-frame in a hundred outside the disc plus a swing, and
+       no lamp ever beyond the 8 m that was the far tail of those ten watches. */
+    const cruise = (sp.swimSpeed || sp.speed || 3) * 0.42;   // entities.js: wander cruises at 0.42
+    const arc = cruise / (sp.turn || 1);                     // the tightest arc the row allows
+    const edge = sp.spread + 2 * arc;                        // the disc, plus one swing past it
+    let maxFar = 0, maxErrand = 0, errands = 0, boxedIn = 0, outFrames = 0, lampFrames = 0;
     // standing in the field is not free (see the sting step), and this step
     // parks the player in it for 90 seconds, so the body is put back after
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital };
@@ -493,7 +511,7 @@ const { sim } = require('./simwait');
       p.form = f; p.x = one.x + 1.5; p.y = one.y; p.z = one.z;
       return one.attitudeTo(f);
     });
-    const before = { n: herd().length, wet: wet(), far: far() };
+    const before = { n: herd().length, wet: wet() };
     /* Five minutes of game time, animals only: enough for several hundred wander
        targets, and every one of those targets has to be water. Long, because the
        way an aquatic animal used to escape the lake was a slow one -- it took the
@@ -503,6 +521,7 @@ const { sim } = require('./simwait');
        from where it started, and that is the whole point of the landmark. */
     const field = herd();
     const prev = field.map(c => [c.x, c.z]);
+    const lastErrand = field.map(c => c.tx + ',' + c.tz);
     const swam = new Float64Array(field.length);
     /* Where the water holds a lamp. The depth a body of this kind hangs at is on
        the animal's own row and is measured to the crown of the body, so the crown
@@ -512,9 +531,35 @@ const { sim } = require('./simwait');
     let crownMin = 9, crownMax = -9, crownSum = 0, through = 0, bedded = 0, seen = 0;
     for (let i = 0; i < 6000; i++) for (let k = 0; k < field.length; k++) {
       const c = field[k];
+      /* Where the lamp stood when the frame opened. A lamp that is boxed in
+         against the tower's brick sets its errand to that place and cannot move;
+         the keep-apart pass at the end of an update then shoves it, so the errand
+         is at the feet it stood on when it was set, not at the feet it stands on
+         now -- which is why it is asked that way and not as an equality. */
+      const bx0 = prev[k][0], bz0 = prev[k][1];
       c.update(0.05, p, g.world, g);
-      swam[k] += Math.hypot(c.x - prev[k][0], c.z - prev[k][1]);
+      swam[k] += Math.hypot(c.x - bx0, c.z - bz0);
       prev[k][0] = c.x; prev[k][1] = c.z;
+      // the field's own extent, over every frame of the watch and not at two instants
+      const dfar = Math.hypot(c.x - tower[0], c.z - tower[1]);
+      lampFrames++;
+      if (dfar > maxFar) maxFar = dfar;
+      if (dfar > edge) outFrames++;
+      const err = c.tx + ',' + c.tz;
+      if (err !== lastErrand[k]) {
+        lastErrand[k] = err;
+        /* A lamp with nowhere it can get to sets its errand to the place it is
+           standing and waits; that is not a place this field was sent to, so it
+           is counted apart from the errands rather than loosening the bound on
+           them. It is also worth reporting: it says how often the tower's brick
+           leaves a lamp with nowhere to go. */
+        if (Math.hypot(c.tx - bx0, c.tz - bz0) < 1e-9) boxedIn++;
+        else {
+          errands++;
+          const de = Math.hypot(c.tx - tower[0], c.tz - tower[1]);
+          if (de > maxErrand) maxErrand = de;
+        }
+      }
       if (i % 20 === 19) {
         const s = g.world.liquidSurfaceAt(Math.floor(c.x), Math.floor(c.z));
         if (s < 0) continue;
@@ -553,7 +598,7 @@ const { sim } = require('./simwait');
     const swumM = +swum.toFixed(1);
     void startD;
     Object.assign(stuck, keep);
-    const after = { wet: wet(), far: far() };
+    const after = { wet: wet() };
     // an animal that cannot leave the water can also be frozen by it: every
     // step it tries runs into the tower, so "still wet" alone is not alive. What
     // is counted here is the water an animal moves through, not the ground it
@@ -562,9 +607,12 @@ const { sim } = require('./simwait');
     const drift = Array.from(swam).sort((a, b) => a - b);
     Object.assign(p, was);
     return {
-      n: before.n, wet: before.wet, far: before.far, after, atts,
+      n: before.n, wet: before.wet, after, atts,
+      spread: sp.spread, cruise: +cruise.toFixed(2), arc: +arc.toFixed(2), edge: +edge.toFixed(2),
+      errands, boxedIn, maxErrand: +maxErrand.toFixed(4),
       drift: +drift[Math.floor(drift.length / 2)].toFixed(1),
       dryFrames, solidFrames, swumM, maxFar: +maxFar.toFixed(1),
+      outFrames, lampFrames,
       hover: { want: sp.hover, min: +crownMin.toFixed(2), max: +crownMax.toFixed(2),
         mean: +(crownSum / Math.max(1, seen)).toFixed(2), through, bedded, seen },
       bears: !!sp.fruit, worn: N.FRUITS.some(f => f.creature === 'jelly'),
@@ -575,8 +623,20 @@ const { sim } = require('./simwait');
     lamps.n === 10 && lamps.bears === false && lamps.worn === false, lamps);
   check('the lamps never leave the water',
     lamps.wet === lamps.n && lamps.after.wet === lamps.n, lamps);
+  /* The errand is the promise the dex makes, and this is the tight question:
+     every place a lamp is sent to has to lie inside the tower's disc. It is
+     exact by construction -- a radius, sampled as a radius -- so it is asked
+     without slack, and it is what a field that had drifted off its landmark
+     would trip, which is exactly the bug this step was written for. */
+  check('a lamp is sent to the tower, not to wherever it happens to be standing',
+    lamps.errands > 500 && lamps.maxErrand <= lamps.spread + 0.001, lamps);
+  /* The body that swims an errand, on the other hand, is a body: it carries the
+     course it was travelling on past the place it was sent to, and comes back
+     round. That is the swing its own turn rate buys it, and the field is held to
+     the disc plus a swing on the frames it stands outside them, with a ceiling
+     at the far tail of what those watches ever reached. */
   check('the lamp field is the sunken tower, not the whole lake',
-    lamps.far === 0 && lamps.after.far === 0 && lamps.maxFar <= 6, lamps);
+    lamps.maxFar <= 8 && lamps.outFrames * 100 <= lamps.lampFrames, lamps);
   check('the lamps do not read bodies', lamps.atts.every(a => a === 'ignore'), lamps);
   check('the lamps have a dex entry', lamps.name.length > 0 && lamps.lore.length > 20, lamps);
   check('the lamps still get around the tower', lamps.drift > 20, lamps);
@@ -591,7 +651,15 @@ const { sim } = require('./simwait');
      the row states 1.2 m plus or minus the 0.8 m of bob it drifts on. The band
      accepted here is that depth, the bob, and the 0.4 m the 1.6/s ease lags a
      sine that keeps turning round -- the mean, which the ease cannot bias, is
-     pinned to the row itself. */
+     pinned to the row itself. And the body has to be **born** at that depth: the
+     sample puts a creature's feet on the ground of its column, and the ten lamps
+     were born standing on the lakebed under eight metres of their own lake. At
+     the animal's very first update its crown read **8.73 m** under the film, and
+     the height closed at **0.72 m a frame** -- 14.4 m/s, against the 2.2 m/s a
+     lamp swims. The band then read differently depending on how long the page had
+     been alive: 3.4 m and 226 of 60000 lamp-frames outside it seconds after the
+     world was made, 1.89 m and no frames outside minutes later. Born where its own
+     row says it hangs, every page reads 0.51 to 1.89 m. */
   check('a lamp hangs at the depth its own row states, measured to its crown under the film, ' +
         'and never through the film or through the lakebed',
     lamps.hover.seen > 100 && lamps.hover.min > 0.2 &&
@@ -2394,6 +2462,56 @@ const { sim } = require('./simwait');
     const CAMD = 1.5 + 2.25 * 1.8, EYE = 0.68 * 1.8, HALF = 76 / 2;
     const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1], [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]];
     const deepAt = (x, z) => { const d = depth(Math.floor(x), Math.floor(z)); return !!d && d.n >= 3; };
+    /* and the leg has to be water this animal can swim in all the way along, not
+       only water deep enough to float a body in for one frame. The crowd's frogs
+       are born with a depth of their own to hang at -- `diveTo = 1.5 +
+       Math.random() * 2.5`, entities.js -- so the deepest a frog of this kind
+       ever goes is the level the water holds a resting body at (the film, less
+       the body's own height, less the depth its record says a body of its kind
+       hangs at) less 4 m. Where the lakebed stands inside that, the dive is
+       clamped to it, the body is held within 0.2 m above the bottom its feet
+       would stand on, and the game answers -- correctly -- that the water is not
+       holding it up: the legs go back to being feet and the swim pose goes with
+       them.
+       This rig borrows its body out of the crowd rather than building one, so it
+       neither chooses that depth habit nor can be assumed to know it: sent 12 m
+       out of the column the search used to pick, in each of 8 headings, 5 of 96
+       runs of the crowd's frogs lost the water's hold for 41 to 132 frames and
+       were read standing on a bottom they had sunk up to 0.45 m into, and the
+       step went red with nothing in the game changed. So the leg is asked for as
+       a corridor: every column along it and 2.5 m either side has to hold more
+       water than the deepest dive of the animal's kind can reach, plus the 0.2 m
+       the hold itself allows. All eight headings out of the column the old
+       search picked fail that at every length tried, which is why the fix moves
+       the column rather than the heading: Mirrorlake is 1 to 11 blocks of water
+       over its 2,970 water columns (docs 02), and only its deepest part keeps a
+       corridor that deep for 16 m. On the leg this asks for, 0 of the same 96
+       runs lose the hold and no body comes nearer than 5.08 m to a bottom; the
+       narrowest water along that leg leaves 4.77 m between the deepest hang of
+       the deepest dive and the bed under it, where the leg the old search picked
+       reads -4.23 m. */
+    const spf = N.CREATURE_BY_ID.frog;
+    const DTALL = (N.MODEL_H[spf.model] || 4) * (spf.scale || 0.2);
+    const DHOVER = spf.hover === undefined ? 0.3 : spf.hover;
+    const DIVE = 4.0;                        // diveTo tops out here, entities.js
+    const surfAt = (x, z) => W.liquidSurfaceAt(Math.floor(x), Math.floor(z));
+    const bedAt = (x, z) => {
+      for (let k = W.h - 1; k > 0; k--) if (W.solidAt(Math.floor(x), k, Math.floor(z))) return k + 1;
+      return 1;
+    };
+    // water between the deepest hang a dive of this animal's kind reaches and
+    // the surface its feet would stand on, less the 0.2 m the hold itself allows
+    const diveRoom = (x, z) => {
+      const ws = surfAt(x, z);
+      return ws < 0 ? -99 : (ws - DTALL - DHOVER - DIVE) - (bedAt(x, z) + 0.2);
+    };
+    const legHeld = (x, z, ax, az, r) => {
+      const nx = -az, nz = ax;
+      for (let s = 1; s <= r; s += 0.5)
+        for (let o = -2.5; o <= 2.5; o += 0.5)
+          if (diveRoom(x + 0.5 + ax * s + nx * o, z + 0.5 + az * s + nz * o) <= 0) return false;
+      return true;
+    };
     let lake = null, shore = null, wade = null, goal = null, wq = 1e9, wang = 0;
     for (let z = M.cz - M.r - 2; z <= M.cz + M.r + 2; z++)
       for (let x = M.cx - M.r - 2; x <= M.cx + M.r + 2; x++) {
@@ -2407,7 +2525,7 @@ const { sim } = require('./simwait');
             let ok = true;
             for (let s = 1; s <= r && ok; s += 0.5)
               if (!deepAt(x + 0.5 + ax * s, z + 0.5 + az * s)) ok = false;
-            if (ok) { leg = { x: x + 0.5 + ax * r, z: z + 0.5 + az * r, r }; break; }
+            if (ok && legHeld(x, z, ax, az, r)) { leg = { x: x + 0.5 + ax * r, z: z + 0.5 + az * r, r, ax, az }; break; }
           }
           if (leg) break;
         }
@@ -2433,6 +2551,16 @@ const { sim } = require('./simwait');
           }
       }
     if (!lake) { restore(); return { error: 'no deep water, dry bank and shallow wedge together at the lake' }; }
+    // the narrowest water on the leg the search settled on, read the same way
+    // the corridor test asked it, from the column the body starts in as well as
+    // from the ground it is sent to
+    let hold = 99;
+    {
+      const nx = -goal.az, nz = goal.ax;
+      for (let s = 0; s <= goal.r; s += 0.5)
+        for (let o = -2.5; o <= 2.5; o += 0.5)
+          hold = Math.min(hold, diveRoom(lake.x + goal.ax * s + nx * o, lake.z + goal.az * s + nz * o));
+    }
     let dry = null;
     for (let x = 56; x < 112 && !dry; x++) for (let z = 60; z < 140 && !dry; z++) {
       let gy = -1;
@@ -2609,7 +2737,7 @@ const { sim } = require('./simwait');
       return out;
     };
     const out = { lake, dry, BACK: +BACK.toFixed(3), BELLY: +BELLY.toFixed(3), FLANK: +FLANK.toFixed(3),
-      TOP: +TOP.toFixed(3), HIP: +HIP.toFixed(3), MID: +MID.toFixed(3) };
+      TOP: +TOP.toFixed(3), HIP: +HIP.toFixed(3), MID: +MID.toFixed(3), holdMin: +hold.toFixed(2) };
     out.float = run(lake, lake.top - 1.2, [[4, {}]]);
     out.swim = run(lake, lake.top - 1.2, [[2, { fwd: true }]], true);
     out.dug = run(lake, lake.top - 1.2, [[6, { sneak: true }]]);
@@ -2628,6 +2756,28 @@ const { sim } = require('./simwait');
       p.form = null; p.x = shore.x; p.z = shore.z; p.y = shore.gy + 1.01; p.vx = p.vy = p.vz = 0;
       p.inWater = false; p.held = 0; p.airAmt = 0; p.grounded = true; p.yaw = Math.PI / 2; p.faceYaw = p.yaw;
       out.wade = wade; out.wadeGap = +wq.toFixed(2); out.wadeAngle = +wang.toFixed(1);
+      /* and the lens has to be turned onto the body it is about to read. A
+         creature the frame does not contain is not drawn at all: the draw asks
+         its own frustum test of a 4 m ball at the body's mid height and throws
+         the body away when it fails (`R.visible`, game.js), so a capture taken
+         with the body outside the frame finds nothing at all to read. This bank
+         stands at 22 with the film of the lake at 15, and the body hangs where
+         its kind hangs -- the level the water holds a resting body at and up to
+         4 m under that -- so a lens left level with the ground it stands on has
+         that whole band under the bottom edge of its frame: over the 12 bodies
+         the crowd of this valley actually is, 5 of them were not in the frame the
+         draw took at all, and the frame held the whole of that band at 2 of the
+         12 places they were read in and at no place along the leg. Turned onto
+         the band, 0 of the 12 are out and the band is held the length of the leg.
+         The axis of a third-person lens is the line out of the subject's own eye
+         (`shootCamera` backs the lens along it), so the pitch that puts a point
+         on that axis is read off the eye and the lens distance never enters it. */
+      const aimAt = (x, y, z) => {
+        const ey = p.y + EYE, dy = y - ey;
+        p.pitch = Math.asin(Math.max(-1, Math.min(1, dy / Math.hypot(x - p.x, dy, z - p.z))));
+      };
+      // the depth band an animal of this kind is born with, at a point of the leg
+      const bandAt = (x, z) => { const h = surfAt(x, z) - DTALL - DHOVER; return [h, h - DIVE]; };
       /* the leg has to be a leg. The body used to be pointed 20 m across the
          lake with the wander timer at zero, which let the creature pick itself a
          fresh errand half way over: often enough it picked the shore, ran
@@ -2641,27 +2791,64 @@ const { sim } = require('./simwait');
         wf.x = lake.x; wf.z = lake.z; wf.y = lake.top - 1.2; wf.state = 'wander'; wf.sleeping = false;
         wf.tx = goal.x; wf.tz = goal.z; wf.pause = 9999; wf.alarm = 0;
         /* what the running game left on this body a moment before the rig placed
-           it in the water: two runs of this step put the same frog, in the same
-           water, 0.9 m apart -- y 11.92 with the water holding it up, y 11.04 at
-           the bed with nothing holding it up -- and the pose of a body standing on
-           the lakebed is not the pose of a swim, so the checks below went red
-           without anything in the game changing. Recorded, not quieted. */
+           it in the water, and the depth habit it was born with: two runs of this
+           step put the same frog, in the same water, 0.9 m apart -- y 11.92 with
+           the water holding it up, y 11.04 at the bed with nothing holding it up.
+           That gap is the body's own `diveTo` meeting the floor of whichever
+           column it happened to be over: where the floor is inside the dive the
+           game gives the body feet, and the pose of a body standing on the
+           lakebed is not the pose of a swim, so the checks below went red without
+           anything in the game changing. Recorded here, and answered above by
+           choosing a leg the floor of is never inside the dive. */
         out.wildV0 = { vy: +(wf.vy || 0).toFixed(2), spd: +(wf.speed || 0).toFixed(2),
           in: wf.inWater ? 1 : 0, gnd: wf.grounded ? 1 : 0, y: +wf.y.toFixed(2),
-          held: +(wf.held || 0).toFixed(2), air: +(wf.airAmt || 0).toFixed(2) };
+          held: +(wf.held || 0).toFixed(2), air: +(wf.airAmt || 0).toFixed(2),
+          dive: +(wf.diveTo || 0).toFixed(2) };
         const n = Math.round(secs * 60);
-        for (let i = 0; i < n; i++) { wf.update(1 / 60, p, W, g); p.update(1 / 60, {}, g); }
+        /* the premise the pose read rests on, kept per run rather than assumed:
+           how many of these frames the water's hold was off this body, how close
+           it came to the bottom its feet would stand on, and the shallowest room
+           of water it read on the way. A body the hold has left is a body with
+           feet, and the stroke below is not a stroke of a swim any more. */
+        let lost = 0, over = 99, room = 99;
+        for (let i = 0; i < n; i++) {
+          wf.update(1 / 60, p, W, g); p.update(1 / 60, {}, g);
+          if (!wf.inWater) continue;
+          if (wf.held < 0.5) lost++;
+          const bed = bedAt(wf.x, wf.z);
+          over = Math.min(over, wf.y - bed);
+          room = Math.min(room, (surfAt(wf.x, wf.z) - 1) - bed);
+        }
+        /* the frame is turned onto the middle of that band before the body is
+           asked out of it, so the read does not depend on how deep this
+           particular body happens to have been born hanging */
+        const bh = bandAt(wf.x, wf.z);
+        aimAt(wf.x, (bh[0] + bh[1]) / 2 + 1, wf.z);
         const s = stroke(capture(mark));
+        if (!s) { restore(); return { error: 'the wild body was not in the frame the draw uploads' }; }
+        /* the frame that draw took, asked of the game's own cull test at the
+           whole band along the whole leg -- not at the depth this body happens to
+           hang at, which is the page's business, but at the whole band its kind
+           is born with, which is the part of the premise this step can state */
+        let bandIn = 1;
+        for (let k = 0; k <= goal.r; k += 2) {
+          const x = lake.x + goal.ax * k, z = lake.z + goal.az * k, b = bandAt(x, z);
+          if (!g.R.visible(x, b[0] + 1, z, 4) || !g.R.visible(x, b[1] + 1, z, 4)) bandIn = 0;
+        }
         s.body = { spd: +wf.speed.toFixed(2), y: +wf.y.toFixed(2), held: +(wf.held || 0).toFixed(2),
           inWater: wf.inWater ? 1 : 0, state: wf.state,
-          to: +Math.hypot(wf.x - lake.x, wf.z - lake.z).toFixed(1) };
+          to: +Math.hypot(wf.x - lake.x, wf.z - lake.z).toFixed(1),
+          hold: { lost, over: +over.toFixed(2), room: +room.toFixed(2),
+            pitch: +p.pitch.toFixed(2), band: bandIn } };
         return s;
       };
       out.wild = send(2);
       // and the same body sitting in the water with nowhere to go
       wf.pause = 9999; wf.alarm = 0;
       for (let i = 0; i < 240; i++) { wf.tx = wf.x; wf.tz = wf.z; wf.update(1 / 60, p, W, g); }
+      { const b = bandAt(wf.x, wf.z); aimAt(wf.x, (b[0] + b[1]) / 2 + 1, wf.z); }
       out.wildStill = stroke(capture(mark));
+      if (!out.wildStill) { restore(); return { error: 'the wild body at rest was not in the frame the draw uploads' }; }
       out.wildStill.body = { spd: +wf.speed.toFixed(2), held: +(wf.held || 0).toFixed(2), state: wf.state };
       /* and the same body in the shallows: water enough to wet it, not water
          enough to hold it up. This is where a wild body's feet go back to being
@@ -2669,8 +2856,13 @@ const { sim } = require('./simwait');
          decides the pose. */
       if (wade) {
         wf.x = wade.x; wf.z = wade.z; wf.y = wade.top; wf.state = 'wander'; wf.sleeping = false;
-        wf.tx = wade.x; wf.tz = wade.z; wf.pause = 9999; wf.alarm = 0; wf.vx = wf.vy = wf.vz = 0;
+        // a body dropped into the shallows by the rig starts from still: the only
+        // velocity a creature of this game carries on its own is the height of it
+        wf.tx = wade.x; wf.tz = wade.z; wf.pause = 9999; wf.alarm = 0; wf.vy = 0;
         for (let i = 0; i < 120; i++) wf.update(1 / 60, p, W, g);
+        // the same lens turned onto this body: it stands on the bottom here, so
+        // it is its own height and not a depth band that goes on the axis
+        aimAt(wf.x, wf.y + 1, wf.z);
         const s = stroke(capture(mark));
         if (s) s.body = { spd: +wf.speed.toFixed(2), y: +wf.y.toFixed(2), held: +(wf.held || 0).toFixed(2),
           inWater: wf.inWater ? 1 : 0, state: wf.state };
@@ -2682,7 +2874,18 @@ const { sim } = require('./simwait');
     return out;
   });
   const kSw = kick.swim, kFl = kick.float, kDg = kick.dug, kLd = kick.land, kWl = kick.wild;
-  check('the lake this runs on is four blocks deep and the body floats in it',
+  /* A leg the rig could not read is a red check, not a crash. The step names the
+     body it failed to find, and the numbers that were never collected are answered
+     "no" -- a missing reading must not be allowed to satisfy a ceiling the way an
+     undefined one does -- so that the rest of the page's readings survive it. */
+  for (const k of [kFl, kSw, kDg, kLd, kWl]) {
+    if (!k || !k.error) continue;
+    check('the kick rig found the body it went to read: ' + k.error, false, kick);
+    k.body = { inWater: 0, grounded: 0, spd: 0, held: 0, state: 'unread', to: 0,
+      hold: { lost: 0, over: 0, room: 0, pitch: 0, band: 0 } };
+    k.footY = [1e9, 1e9];
+  }
+  check('the lake this runs on is four blocks deep at the least and the body floats in it',
     !!kFl && kFl.held > 0.9 && kFl.body.inWater === 1 && kFl.body.grounded === 0, kick);
   /* A body the water is holding up, going nowhere, holds its legs in the pose
      the water holds them in. The stroke used to have a floor under it: the draw
@@ -2732,6 +2935,34 @@ const { sim } = require('./simwait');
     !!kSw && kSw.gapMax >= 0.45 && kSw.gapMin <= 0.25, kick);
   check('the wild body was still crossing when its stroke was read',
     !!kWl && kWl.body.inWater === 1 && kWl.body.spd > 1, kick);
+  /* That pose is the pose of a swim only while the water has its hold on the
+     body, and the rig above keeps that premise beside the reading rather than
+     assuming it: the leg is asked for as water no dive of the animal's kind can
+     reach the floor of, and the run is watched for the frames the hold was off
+     this body and for how close its feet came to a bottom. Take the corridor test
+     out of the search and both checks below go red with the stroke itself not
+     moving at all: the leg the old search picks reads -4.23 m at its narrowest,
+     and the body borrowed for that run came to within 2.68 m of the bottom it was
+     standing on. The stroke read there is the stroke of a body with feet, and the
+     pose checks above catch that only now and then -- which is the flake these
+     two are here to catch rather than hide. */
+  check('the leg that body is sent down is water no dive of its kind can reach the floor of',
+    kick.holdMin >= 4, kick);
+  check('and the pose was read off a body the water was holding up: the hold never left it on the leg, and the lakebed stayed 4 m under its feet',
+    !!kWl && kWl.body.hold.lost === 0 && kWl.body.hold.over >= 4, kick);
+  /* and the frame the body was read out of, which the rig has to earn: the draw
+     throws away any creature its own frustum test does not contain, so a body
+     hanging 11 to 15 m under a lens left level with the bank it stands on is not
+     in the state the draw uploads at all, and a capture taken there reads
+     nothing. Left level here, the crowd's own 12 bodies put 5 of themselves out
+     of the frame at the moment they were read, and the depth band their kind is
+     born with was inside the frame at 2 of those 12 read points and at no point
+     along the leg; turned onto that band -- 1.09 rad down on this place -- the
+     band is inside the whole length of the leg and none of the 12 is out. Take
+     the aim out of the rig and this check goes red on every page, which is the
+     thing a run of the whole suite used to pay for with a TypeError instead. */
+  check('and the frame that body was read out of holds the whole depth band its kind is born with, the length of that leg',
+    !!kWl && kWl.body.hold.band === 1, kick);
   check('a wild frog crossing the lake kicks the same way, feet behind it',
     !!kWl && kWl.held === 1 && kWl.back <= kick.BACK - 0.08 && kWl.travel >= 0.15, kick);
   check('a body dug down on the bed has feet to stand on and stops kicking',

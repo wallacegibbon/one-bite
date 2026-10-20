@@ -244,6 +244,19 @@
             c.y = Math.min(top + 1.5 + Math.random() * 4, this.world.h - 3);
             c.flyY = Math.min(Math.max(c.y + 5 + Math.random() * 8, top + 2), this.world.h - 3);
           }
+          /* A body that swims has to be **born in the water**, for the same reason
+             a body that flies has to be born in the air. The sample puts its feet
+             on the ground of the column, and the ten lamps of Mirrorlake were born
+             standing on the lakebed under eight metres of their own lake: their
+             first updates were spent being yanked up to the depth their row states
+             -- the crown read **8.73 m** under the film at the animal's very first
+             update, closing at **0.72 m a frame**, which is 14.4 m/s against the
+             2.2 m/s a lamp swims at. A lamp does not shoot up from the mud, and the
+             reading of the depth a lamp hangs at came to depend on how long the
+             page had been alive: 3.4 m under the film, 226 of 60000 lamp-frames
+             over the band the row allows, measured seconds after the world was
+             made; 1.89 m and no frames over, measured minutes later. */
+          if (c.isAquatic()) c.y = N.hoverLevel(sp, this.world, p.x, p.z, c.tall);
           this.creatures.push(c);
         }
       }

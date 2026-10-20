@@ -906,6 +906,27 @@
     const gy = groundY(w, Math.floor(x), Math.floor(z), wt + 2);
     return wt + 1 - gy >= 2 ? wt : -1;
   }
+  /* The height a body of this kind hangs at in the column it stands in, in one
+     place: the surface of that column less the body's own height less the depth
+     its row states (plus any drift it rides on), and never through the bottom.
+     The animal's own branch asks this every frame; the spawn code asks it once,
+     because a body that swims has to be **born in the water** for the same reason
+     a body that flies has to be born in the air. It was not: the ten lamps of
+     Mirrorlake were born standing on the lakebed under their own water, and their
+     first frames were spent being pulled up to it -- the crown read **8.73 m**
+     under the film at the animal's very first update, the height closed at
+     **0.72 m a frame**, which is 14.4 m/s against the 2.2 m/s their own row
+     swims at. A lamp born on the bottom and shot to the surface is not what a
+     lamp does, and it made the depth a lamp hangs at depend on how long the page
+     had been alive: read a few seconds after the world was made, the field's
+     crown sat 3.4 m under the film (226 of 60000 lamp-frames over the 2.0 m the
+     row and its bob allow), and read minutes later, 1.89 m and no frames over. */
+  function hoverLevel(sp, w, x, z, tall, fromY, extra) {
+    const wt = waterColumn(w, x, z);
+    const gy = groundY(w, Math.floor(x), Math.floor(z),
+      fromY === undefined ? w.h - 1 : Math.floor(fromY));
+    return Math.max(gy + 0.35, floatLevel(wt + 1, tall, hoverOf(sp) + (extra || 0)));
+  }
   /* Whether a body held up by air may be at this place at all: the cell it would
      occupy has to be neither rock nor water. A flying body is the only kind that
      has no ground under it, so this is the one question its movement has to keep
@@ -1919,16 +1940,11 @@
         const airWant = sleeping || this.y <= gyU + 0.4 ? 0 : 1;
         this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
       } else if (this.isAquatic()) {
-        const wt = waterColumn(world, this.x, this.z);          // -1: no water to hover in
-        /* Search down from the animal's own feet, not from above its head: a
-           tree standing in shallow water is solid all the way up, and a search
-           that starts over the body lets the animal latch onto the trunk and
-           climb it out of the lake, block by block, into the sky. */
-        const gy0 = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y));
-        /* The same law the water's hold is told by everywhere else in this file:
-           the depth an animal of this kind hangs at is on its own row, it is
-           measured to the crown of the body, and the level is the surface of the
-           column less the body's own height less that depth.
+        /* The level is asked of the column, in one place, with the same law the
+           water's hold is told by everywhere else in this file: the depth an
+           animal of this kind hangs at is on its own row, it is measured to the
+           crown of the body, and the level is the surface of the column less the
+           body's own height less that depth.
            It used to be `wt - depth`, and `wt` is the index of the topmost water
            cell while `depth` is metres: the two are only the same thing because a
            block is a metre tall, and the film is one block above that index, so
@@ -1940,9 +1956,13 @@
            the top of the bob no longer puts the crown through the surface.
            Never through the bottom either: the lake is only two blocks deep at
            its edges, and a fixed depth below the film puts an animal inside the
-           lakebed there, which is a water animal standing in the mud. */
+           lakebed there, which is a water animal standing in the mud. The ground
+           that bounds it is searched down from the animal's own feet, not from
+           above its head: a tree standing in shallow water is solid all the way
+           up, and a search that starts over the body lets the animal latch onto
+           the trunk and climb it out of the lake, block by block, into the sky. */
         const bob = Math.sin(this.t + this.phase) * 0.8;
-        const target = Math.max(gy0 + 0.35, floatLevel(wt + 1, this.tall, hoverOf(this.sp) + bob));
+        const target = hoverLevel(this.sp, world, this.x, this.z, this.tall, this.y, bob);
         this.y += (target - this.y) * Math.min(1, dt * 1.6);
       } else {
         /* Feet, water and the ground -- one routine for every body that is not
@@ -2400,5 +2420,6 @@
   N.terrainY = terrainY;
   N.standY = standY;
   N.waterTop = waterTop;
+  N.hoverLevel = hoverLevel;
 
 })(window.FRUTARIA = window.FRUTARIA || {});
