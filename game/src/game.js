@@ -193,23 +193,38 @@
         for (let i = 0; i < n; i++) {
           /* A body is born where a body of its own kind is not already standing.
              The field of the sunken tower is ten lamps sampled into a disc of
-             radius four round the tower, and only 8% of that disc is water: two
-             of them were born 9 cm apart, and the pair spent the afternoon
-             inside one another, because they started that way and the lake never
-             gave them a reason to part. A body is born with the room its own
-             trunk takes up. */
+             radius four round the tower -- 29 of its 49 columns are water and the
+             rest is the tower's own brick -- and the room a body asks of its own
+             kind is two trunks wide, 0.83 m for a lamp. Ten lamps do not fit in
+             that at that spacing, and a loop that takes the first sample clear
+             and otherwise whatever the tenth throw landed on answers a crowd it
+             cannot satisfy with the worst of the ten: two of them were once born
+             9 cm apart, and the nearest pair of the worst of five mornings stood
+             0.23 m, six of the ten born inside the room its own kind asks. The
+             pair spent the afternoon inside one another, because they started
+             that way and the lake never gave them a reason to part. So of the
+             places the species will accept, the one taken is the one furthest
+             from its own kind -- the same rule the animal follows when it picks
+             somewhere to swim to -- and a crowd the ground cannot hold is at
+             least spread as wide as that ground allows: the nearest pair of the
+             worst of five mornings went 0.23 m to 0.67 m. What the ring cannot
+             hold it still cannot hold -- eight of the ten are born inside the
+             room even now, six of them were before this -- and that is what the
+             test reports, rather than a number made to pass a bound. */
           const mw = N.MODEL_W[sp.model] || [0.5, 0.5, 0, 0];
           const room = (Math.max(mw[0], mw[1]) * (sp.scale || 0.2)) * 2 + 0.4;
-          let p = null;
+          let p = null, bestGap = -1;
           for (let t = 0; t < 10; t++) {
-            p = this.samplePos(sp.habitat[0], at, sp.spread || 4, sp.locomotion === 'fly');
-            if (!p) break;
-            let clash = false;
-            for (const q of this.creatures) {
-              if (q.sp.id !== sp.id) continue;
-              if (Math.hypot(q.x - p.x, q.z - p.z) < room) { clash = true; break; }
+            const q = this.samplePos(sp.habitat[0], at, sp.spread || 4, sp.locomotion === 'fly');
+            if (!q) break;
+            let gap = 1e9;
+            for (const c of this.creatures) {
+              if (c.sp.id !== sp.id) continue;
+              const d = Math.hypot(c.x - q.x, c.z - q.z);
+              if (d < gap) gap = d;
             }
-            if (!clash) break;
+            if (gap >= room) { p = q; break; }
+            if (gap > bestGap) { bestGap = gap; p = q; }
           }
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);

@@ -1112,6 +1112,20 @@
     const gy = standY(w, bx, bz, c.y);
     return gy - c.y < 1.6 && !w.solidAt(bx, Math.floor(gy + 0.2), bz);
   }
+  /* The cell a body would be standing in at a place, asked of the body's own
+     height rather than of the ground under it. `bodyRoom` above answers the
+     question of a body on its feet -- may it stand here, is the surface within a
+     step and clear above it -- and that answer is the wrong one for a body that
+     is not standing, or for a column whose bank runs up past its head: a frog
+     floating 1.2 m off a lakebed next to a shore of stone gets "yes, that ground
+     is one step up and nothing over it" while the cell it is put in is the stone.
+     Foliage is not in this, for the same reason it is not in the law that keeps a
+     body out of the world: a body on foot walks through a bush with its shoulders
+     in it, and a crown is not a wall. */
+  function bodyInSolid(w, c, x, z) {
+    const bx = Math.floor(x), by = Math.floor(c.y), bz = Math.floor(z);
+    return w.solidAt(bx, by, bz) && !N.TREE_BLOCK[w.get(bx, by, bz)];
+  }
 
   class Creature {
     constructor(spec, x, y, z) {
@@ -2197,6 +2211,29 @@
          allows, the one taken is the one that leaves the body least deep in
          anybody else. */
       if (game && game.creatures) {
+        /* How far the neighbours may move this body in the whole frame. The bound
+           below it is per pair -- half the way out of that one overlap, at the rate
+           the world's own corrections work at -- and a pair is the whole of it when
+           a body is in one body. It is not the whole of it when a body is in five:
+           the pairs are taken one after another and each takes its turn at the same
+           body, so the frame can move it several times over, and the field of the
+           sunken tower is where that shows. Ten lamps are sampled into a disc of
+           radius four whose wet part is 29 cells of 49, and the room a birth asks
+           its own kind for is 0.83 m, so even with the birth taking the roomiest
+           of the places it will accept, eight of the ten are put down inside a
+           neighbour every time the valley is made; the field then spends the watch
+           undoing what it was born with, and measured over 150-second watches of a
+           page the way a player meets it, before this bound, the worst single frame
+           moved a lamp 0.156 m at a sixtieth of a second -- 9.4 m/s, against the
+           2.2 m/s its row says it swims at and the 0.92 m/s it wanders at. A bell
+           thrown across its own field at four times its top speed is not a lamp
+           drifting. So the frame has a budget, and the budget is the body's own
+           speed: the crowd may move a body, but never faster than the body can
+           move itself, and a deep overlap then takes a few more frames to undo
+           along the same way out rather than being paid for in one fling. */
+        const topSpeed = this.isFlyer() ? (sp.flySpeed || sp.speed || 3)
+                       : (inWater && sp.swimSpeed) ? sp.swimSpeed : (sp.speed || 3);
+        let shoveLeft = Math.max(0.02, topSpeed * dt);
         // how deep this body is in anybody at all, before anything is shoved
         let nowIn = 0;
         for (const q of game.creatures) {
@@ -2205,15 +2242,35 @@
           if (k && k.pen > nowIn) nowIn = k.pen;
         }
         for (const o of game.creatures) {
+          if (shoveLeft <= 1e-9) break;            // this body has been moved enough
           if (o === this) continue;
           if (this.y >= o.y + o.tall || o.y >= this.y + o.tall) continue;
           const c = bodyClash(this, this.x, this.z, o);
           if (!c) continue;
-          const push = Math.min(c.pen * 0.5 + 0.004, Math.max(0.02, 6 * dt));
+          const push = Math.min(c.pen * 0.5 + 0.004,
+                                Math.max(0.02, 6 * dt), shoveLeft);
           let best = null, bestKey = 1e9;
           for (const [vx, vz] of [[c.ux, c.uz], [-c.uz, c.ux], [c.uz, -c.ux]]) {
             const nx = this.x + vx * push, nz = this.z + vz * push;
             if (!bodyRoom(world, this, nx, nz)) continue;
+            /* And the place it is put in has to be a place the body is not inside.
+               `bodyRoom` asks about the ground the body would stand on; the law
+               further up that keeps a body out of the world asks about the body's
+               own cell, and the two are not the same question. A file of four frogs
+               packed closer than their own trunks, the front one 0.15 m off a shore
+               of stone that runs up through the height they float at, was shoved
+               into that stone: 8 frames of a body inside the bank, the front one
+               inside block 4 at 47.96, and the law further up then lifting it out
+               of the stone at 0.13 m a frame and on to the crown of the bank at
+               13.0, where it stayed -- a body the lake is holding up, stood on the
+               bank's stone by its own neighbours -- which is the handful of frames
+               the flock step of the suite
+               counts when it says a frog spent a frame inside the world (1 to 5 of
+               the 2400 wet frames of its window, on some pages and not on others).
+               The way out of a neighbour is not a way into the world: when the
+               shortest way is the bank, this body takes the way round or stays where
+               it is and lets the other one go round on its own turn. */
+            if (bodyInSolid(world, this, nx, nz)) continue;
             let inMost = 0, pair = 0;
             for (const q of game.creatures) {
               if (q === this) continue;
@@ -2228,7 +2285,7 @@
             const key = inMost <= nowIn + 1e-3 ? pair : 1e3 + inMost;
             if (key < bestKey - 1e-6) { bestKey = key; best = [nx, nz]; }
           }
-          if (best) { this.x = best[0]; this.z = best[1]; }
+          if (best) { this.x = best[0]; this.z = best[1]; shoveLeft -= push; }
         }
       }
 

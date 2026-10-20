@@ -8597,17 +8597,65 @@ What was measured before any of this was fixed, over 180 frames of walking
      worst pair 0.54 m in: one bell drawn almost exactly on top of another. The
      twelve frogs of Mirrorlake spent 46% of the morning with another frog
      inside them, 0.43 m deep at the worst, and a frog inside a frog averaged
-     0.28 m. Now the worst pair is 0.23 m, the frames more than 12 cm deep are a
-     fifth of what they were, and the mean depth is 0.084 instead of 0.242. The
-     frogs are in one another's way more often than before -- 6496 frames
-     against 4099 -- because they go round one another now instead of through
-     one another: they touch more in order to stand less inside. A neighbour is
-     an obstacle the same contour takes a body round, a body may not step deeper
+     0.28 m. Now the worst pair is 0.229 m, the frames more than 12 cm deep are a
+     little over a fifth of what they were, and the mean depth of a pair that
+     touches is 0.084 instead of 0.242. The frogs are in one another's way in far
+     fewer frames than before as well -- 1339 against 4099 -- because they go
+     round one another now instead of through one another. A neighbour is an
+     obstacle the same contour takes a body round, a body may not step deeper
      into one than it already stands, and whatever overlap is left at the end of
      the frame is undone along the shortest way out that the world allows. A
      body is not a circle either: two bears end on are 1.1 m from nose to tail,
      and a rule wide enough to keep them apart would keep a bear and a frog
-     three metres apart. */
+     three metres apart.
+     Three laws are asked of this window beyond that, and each of the readings
+     below comes from a run of this same window with that one law gutted and the
+     other two in force -- the window is seeded, so a law is the only thing that
+     moved the number.
+     First: that undo is bounded for a pair -- half the way out of that one
+     overlap, at the rate the world's own corrections work at -- and it is taken
+     once for every pair that overlaps, so a body standing inside several of its
+     own kind is moved several times in the same frame, and nothing bounded the
+     frame. The lamp field is where that shows, because it is the field that is
+     born overlapping: with the frame unbounded the worst frame of this window
+     moved a lamp 0.127 m at a sixtieth of a second, 7.6 m/s, 3.46 times what
+     that lamp's own fins would have carried it, for an animal whose row says it
+     swims at 2.2 and wanders at 0.92; over five-minute watches of the field a
+     player actually meets the worst frame was 0.133-0.156 m (7.9-9.4 m/s), and
+     on one page the whole five minutes averaged 17.9 m/s, with a worst frame of
+     4.1 m and 82 m/s -- bells thrown about their own field for a whole watch.
+     Each body now has one budget a frame, and the budget is its own speed: a
+     neighbour may add to the body's own walk at most the walk the body itself
+     has, so a frame may be twice the animal and is not eight times it. The worst
+     frame of the same window is 0.052 m, 3.1 m/s, 1.42 times what that lamp's
+     fins would have carried it. The slower undo is not worse for the crowd
+     either, and where it is worse it is worse by a fingernail: 2856 pair-frames
+     deeper than 12 cm against 3653, a mean depth of 0.084 against 0.091, the
+     worst pair 0.229 against 0.223, a bell that may not be thrown clear in one
+     frame taking two frames to get clear.
+     Second: the crowd that does not fit its ground is put down on top of itself
+     by the birth loop, which used to take the first sample clear and otherwise
+     whatever the tenth throw landed on. 29 of the 49 columns of the lamp's disc
+     are water and the rest is the tower's brick, the room a lamp asks of its own
+     kind is 0.83 m, and ten lamps do not fit; in the worst of five mornings the
+     nearest pair stood 0.23 m apart -- bells inside bells -- and the field spent
+     the rest of the morning undoing it. Of the places a species will accept, the
+     one taken is now the one furthest from its own kind, the rule the animal
+     already follows when it picks somewhere to swim to, and the worst nearest
+     pair of the same five mornings is 0.67 m. What the ring cannot hold it still
+     cannot hold, and that is reported rather than hidden: six of the ten were
+     born with a neighbour inside the room and eight are now, while the nearest
+     pair moved from 0.23 m to 0.67 m -- what the law refuses is not a lamp born
+     close to a lamp, it is a bell born on top of a bell.
+     Third, and it is asked of the place a shove lands rather than of the body:
+     the step below hunts a shore the law can be asked of, and it costs this
+     window depth -- without that law the worst pair of this window is 0.192 m
+     and 2089 frames deeper than 12 cm, with it 0.229 and 2856 -- because a body
+     refused the way out it was offered must find another or stay where it is
+     pressed. The trade is between being inside a neighbour and being inside a
+     bank, and the bank is the one that used to be reported at all: the flock
+     step of this file found a frog inside a block for 1 to 5 frames of the 2400
+     wet frames of its window, on some pages and not on others. */
   const space = await step('bodiesKeepTheirOwnSpace', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
     /* The valley this is measured over is a fresh one, and the same fresh one
@@ -8623,6 +8671,44 @@ What was measured before any of this was fixed, over 180 frames of walking
     let sd = 20240921;
     Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
     const crowdWas = g.creatures;
+    /* How far a birth asks its own kind to stand away: two trunks of the species
+       and a hand's width, the same number the spawn code asks with.
+       The morning measured below is one morning and is seeded, so that the same
+       code measured twice gives the same answer. A birth spread is not a property
+       of one morning: it is a property of every morning the valley can be made
+       from, and the crowd that overfills its ground is the crowd that shows it --
+       the ten lamps of the tower field into the wet ring round the tower's brick.
+       So the birth is audited over five mornings, each its own seed, and the worst
+       of the five is what is reported. */
+    const roomOf = (sp) => {
+      const mw = N.MODEL_W[sp.model] || [0.5, 0.5, 0, 0];
+      return Math.max(mw[0], mw[1]) * (sp.scale || 0.2) * 2 + 0.4;
+    };
+    const birth = { min: 99, who: null, worstCrowd: 0, worstKind: null, rooms: {} };
+    for (let s = 0; s < 5; s++) {
+      sd = 20240921 + s * 7919;
+      g.creatures = [];
+      g.spawnCreatures();
+      const per = {};
+      for (const c of g.creatures) {
+        const room = roomOf(c.sp);
+        let gap = 99;
+        for (const q of g.creatures) {
+          if (q === c || q.sp.id !== c.sp.id) continue;
+          const d = Math.hypot(c.x - q.x, c.z - q.z);
+          if (d < gap) gap = d;
+        }
+        const k = per[c.sp.id] || (per[c.sp.id] = { min: 99, cramped: 0, room: +room.toFixed(2) });
+        if (gap < k.min) k.min = +gap.toFixed(2);
+        if (gap < room) k.cramped++;
+      }
+      for (const id in per) {
+        birth.rooms[id] = per[id].room;
+        if (per[id].min < birth.min) { birth.min = per[id].min; birth.who = id; }
+        if (per[id].cramped > birth.worstCrowd) { birth.worstCrowd = per[id].cramped; birth.worstKind = id; }
+      }
+    }
+    sd = 20240921;                       // the morning the window is measured over
     g.creatures = [];
     g.spawnCreatures();
     const cs = g.creatures.slice();
@@ -8664,6 +8750,27 @@ What was measured before any of this was fixed, over 180 frames of walking
     const prev = new Map(cs.map(c => [c, [c.x, c.z]]));
     const awake = new Map(cs.map(c => [c, 0]));
     const near = new Map(cs.map(c => [c, 0]));
+    /* The most a body can cover in one frame of its own accord: the speed its own
+       row gives it for the element it is in -- air for a bird, water for a body
+       the water is holding, ground for everything else -- at the fastest that
+       speed is ever used, which is the 1.7 of a flight or a chase. Anything over
+       that is not the body moving. The crowd law below reads the bodies where
+       they stood when the frame began, and it is applied once for every pair that
+       overlaps, so a body standing inside several of its own kind is moved once
+       per pair, each at the rate the world's corrections work at; the field of
+       the sunken tower is that field, and the same law that pulls two bells apart
+       was measured throwing a lamp 0.133 m at a sixtieth of a second -- 8 m/s for
+       an animal whose row says 2.2 m/s, and on one page of the same field an
+       average of 17.9 m/s over five whole minutes, with a worst frame of 82 m/s.
+       A body may be moved by its neighbours; it may not be moved faster than it
+       can move itself. */
+    const topOf = (c) => {
+      const sp = c.sp;
+      const top = c.isFlyer() ? (sp.flySpeed || sp.speed || 3)
+              : (c.inWater && sp.swimSpeed) ? sp.swimSpeed : (sp.speed || 3);
+      return c.state === 'flee' || c.state === 'chase' ? top * 1.7 : top;
+    };
+    const jump = { ratio: 0, who: null, m: 0, mPerS: 0, frames: 0, over: 0 };
     const SECS = 150;
     for (let i = 0; i < Math.round(SECS * 60); i++) {
       g.input = {};
@@ -8683,7 +8790,16 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
       for (const c of cs) {
         const q = prev.get(c);
-        path.set(c, path.get(c) + Math.hypot(c.x - q[0], c.z - q[1]));
+        const step = Math.hypot(c.x - q[0], c.z - q[1]);
+        path.set(c, path.get(c) + step);
+        // how much of this frame was the body's own movement
+        const r = step / (topOf(c) / 60);
+        jump.frames++;
+        if (r > 1) jump.over++;
+        if (r > jump.ratio) {
+          jump.ratio = +r.toFixed(2); jump.who = c.sp.id;
+          jump.m = +step.toFixed(3); jump.mPerS = +(step * 60).toFixed(1);
+        }
         prev.set(c, [c.x, c.z]);
         // a body asleep on its perch is not a body held up by its neighbours
         if (c.state !== 'roost') awake.set(c, awake.get(c) + 1);
@@ -8721,6 +8837,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     return { seconds: SECS, bodies: cs.length, worst: +seen.worst.toFixed(3),
       deep: seen.deep, touch: seen.touch, mean: +(seen.sum / Math.max(seen.touch, 1)).toFixed(3),
       per, still, quiet: quiet.map(detail), lampFar: lampFar.slice(0, 3),
+      jump, birth,
       walked: +Math.max.apply(null, cs.map(c => path.get(c))).toFixed(1) };
   });
   check('no body spends the window inside another body',
@@ -8731,6 +8848,158 @@ What was measured before any of this was fixed, over 180 frames of walking
     !space.still.length && space.walked > 20, space);
   check('the lamps still trace the tower they were born on',
     space.lampFar[0] <= 6, space);
+  /* And the two laws this window is now asked to hold. The first is about how a
+     body is moved: every frame of the window is read against the speed the body's
+     own row gives it, and the crowd is not allowed to be the one in front. The
+     second is about how the crowd is made: the ground a species is born on is
+     often smaller than the crowd, and a birth loop that takes the last sample
+     when it cannot find a clear one puts a body down inside its own kind and
+     leaves the whole valley to undo it. */
+  check('no frame of that window moves a body faster than its own body can go',
+    space.jump.ratio <= 2, space.jump);
+  check('a body is not born standing inside the trunk of its own kind',
+    space.birth.min >= 0.4, space.birth);
+
+  /* 11m2. The way out of a neighbour is not a way into the world. The crowd pass
+     asks the place it picks of `bodyRoom`, which answers for the ground a body
+     would stand on -- within a step (1.6 m) and clear above it -- and that is the
+     right question for a body on its feet and the wrong one for a body the water
+     is holding up beside a bank that runs up through its height. Four frogs of
+     Mirrorlake packed closer than their own trunks, the front one 0.15 m off such
+     a shore of stone, were shoved into the stone: 8 frames of that window with a
+     body inside the bank, the front one inside block 4 at 47.96, and the law
+     further up then lifting it out at 0.13 m a frame and on to the crown of the
+     bank at 13.0, where it stayed -- a swimming body stood on the bank's stone by
+     its own neighbours. Those are the frames the flock step of
+     this file counts, now and then, when it says a frog spent a frame inside the
+     world: 1 to 5 of the 2400 wet frames of its window, on some pages and not on
+     others, and always the handful that follows a body put inside by its own
+     neighbours. The geometry is therefore asked directly, on a shore the valley
+     is searched for rather than one the test invents, the four are stood facing
+     away from the face at the same point of their stroke -- the way out of a
+     neighbour is read off the boxes the trunks are carved from, so the heading
+     they are stood in belongs to the question, and leaving it to whatever an
+     earlier step happened to leave them in made the answer a different number
+     every run -- and they are given one sequence of wander draws rather than the
+     valley's own: on one page the file was still at the shore when the window
+     closed and on the next it had swum 19 m to the company a previous step left
+     it, which is the animals being animals and buries the question asked here.
+     The file is parked 0.15 m off the face with nothing else moving it (its
+     errand a quarter of an hour away, its player parked at the corner of the
+     map), and every frame of a quarter of a minute is asked whether any of the
+     four stands inside a block that is not foliage. Before: 8 frames of that
+     window, and the front body inside stone at 47.96. After: none, the file
+     still spread as far as the bank lets it -- 0.75 m front to back when the
+     window opens and 1.07 m when it closes, the same both times the suite is
+     run -- and the way round taken instead. */
+  const shove = await step('aCrowdShoveNeverPutsABodyInsideTheWorld', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
+    const hard = (x, y, z) => W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)];
+    const stands = (c) => hard(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z));
+    /* A shore the law can be asked of: water three blocks deep, and next to it a
+       bank that stands at the height a body of this size floats at, whose top is
+       no more than a step above that and clear -- exactly the place `bodyRoom`
+       answers yes to. The valley is searched for it rather than one being built,
+       so the block is the block the game made. */
+    let spot = null;
+    for (let x = 8; x < W.w - 8 && !spot; x++) for (let z = 8; z < W.d - 8 && !spot; z++) {
+      const wt = N.waterTop(W, x, z, W.h - 1);
+      if (wt < 0) continue;
+      const bed = N.terrainY(W, x, z, wt + 2);
+      if (wt + 1 - bed < 3) continue;
+      const y = bed + 1.2;
+      if (y > wt - 0.4) continue;
+      for (const [ux, uz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (!hard(x + ux, Math.floor(y), z + uz)) continue;
+        const gy = N.standY(W, x + ux, z + uz, y);
+        if (gy - y >= 1.6 || hard(x + ux, Math.floor(gy + 0.2), z + uz)) continue;
+        spot = { x, z, y: +y.toFixed(2), ux, uz, wt, bed, gy,
+          block: W.get(x + ux, Math.floor(y), z + uz) };
+        break;
+      }
+    }
+    if (!spot) return { error: 'no shore of that shape in this valley' };
+    const file = g.creatures.filter(c => c.sp.id === 'frog').slice(0, 4);
+    if (file.length < 4) return { error: 'not enough frogs to make a file' };
+    /* The draw these four make from here on is seeded, and the same seed every
+       time. A wander target is a draw, and on one page of this file's own log the
+       file was still at the shore when the window closed and on the next it had
+       swum 19 m to the company it had left in the previous step's window: that is
+       the animals being animals, which is what the steps about behaviour are for,
+       and here it buries the question this step asks. So the window has one
+       sequence of choices and the answer is the answer every time. */
+    const rnd = Math.random;
+    let sd = 20240921;
+    Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+    const keep = file.map(c => ({ x: c.x, y: c.y, z: c.z, vy: c.vy, yaw: c.yaw, t: c.t,
+      speed: c.speed, state: c.state, pause: c.pause, tx: c.tx, tz: c.tz, homeX: c.homeX,
+      homeZ: c.homeZ, hovering: c.hovering, buoy: c.buoy, inWater: c.inWater,
+      sleeping: c.sleeping, hopT: c.hopT, wind: c.wind }));
+    const pw = { x: p.x, y: p.y, z: p.z, form: p.form, vital: p.vital };
+    const t0 = g.time;
+    g.time = 420 * 13 / 24; g.updateEnv();          // the frogs are abroad
+    p.form = null; p.vital = 10; p.x = 4; p.z = 4; p.y = W.h - 2;   // nobody to run from
+    /* and no herd to walk back to: these four are asked about the crowd, not about
+       the way home, and the herd centre of Mirrorlake is a twenty-metre walk from
+       any shore this valley has */
+    const herdWas = g.herdCentres && g.herdCentres.frog;
+    if (g.herdCentres) g.herdCentres.frog = { x: spot.x + 0.5, z: spot.z + 0.5, n: file.length };
+    const face = (k) => 0.25 * k - 0.35;            // 0.15 m off the face, packed behind
+    file.forEach((c, k) => {
+      c.x = spot.x + 0.5 - spot.ux * face(k);
+      c.z = spot.z + 0.5 - spot.uz * face(k);
+      c.y = spot.y; c.vy = 0; c.state = 'wander'; c.pause = 9999; c.sleeping = false;
+      c.tx = c.x; c.tz = c.z; c.homeX = c.x; c.homeZ = c.z;
+      c.hovering = false; c.buoy = 0; c.hopT = 0; c.wind = 0; c.speed = 0;
+      /* and stood facing away from the face, all four at the same point of their
+         stroke: the way out of a neighbour is read off the boxes of the trunks,
+         so the heading they are stood in is part of the question, and leaving it
+         to the state some earlier step happened to leave them in made the answer
+         a different number every run */
+      c.yaw = Math.atan2(-spot.ux, -spot.uz);
+      c.t = 0;
+    });
+    const spanWas = Math.hypot(file[0].x - file[3].x, file[0].z - file[3].z);
+    let inside = 0, touch = 0;
+    const hits = [];
+    for (let i = 0; i < 900; i++) {
+      for (const c of file) c.update(1 / 60, p, W, g);
+      let inWorld = 0, brushing = 0;
+      for (const c of file) {
+        if (stands(c)) { inside++; inWorld++; }
+        // still in one another's way? their trunks touch at 0.41 m apart
+        let near = 9;
+        for (const q of file) if (q !== c) near = Math.min(near, Math.hypot(q.x - c.x, q.z - c.z));
+        if (near < 0.45) brushing++;
+      }
+      if (inWorld || brushing) touch++;
+      if (inWorld && hits.length < 4) {
+        hits.push({ i, at: file.map(c => [+c.x.toFixed(2), +c.y.toFixed(2), +c.z.toFixed(2),
+          W.get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)), stands(c) ? 1 : 0]) });
+      }
+    }
+    const spanNow = Math.hypot(file[0].x - file[3].x, file[0].z - file[3].z);
+    const out = { spot, inside, touchFrames: touch, hits,
+      span: [+spanWas.toFixed(2), +spanNow.toFixed(2)],
+      end: file.map(c => [+c.x.toFixed(2), +c.y.toFixed(2), +c.z.toFixed(2)]) };
+    // how far the front body ended from where it was stood, before anything is put back
+    out.drift = +Math.hypot(file[0].x - (spot.x + 0.5 + spot.ux * 0.35),
+      file[0].z - (spot.z + 0.5 + spot.uz * 0.35)).toFixed(2);
+    file.forEach((c, k) => Object.assign(c, keep[k]));
+    if (g.herdCentres) g.herdCentres.frog = herdWas;
+    g.time = t0; g.updateEnv();
+    Object.assign(p, pw);
+    Math.random = rnd;
+    return out;
+  });
+  /* A shove is a way out of a neighbour; it is not a door into the world. And the
+     law that refuses it does not stop the crowd doing its job: the file still
+     spreads (its front-to-back span is what it was or wider), and the frames in
+     which these four are still in one another's way are reported beside it. */
+  check('a shove never puts a body inside the world',
+    !shove.error && shove.inside === 0, shove);
+  check('and the crowd still gets the file out of one another',
+    !shove.error && shove.span[1] >= shove.span[0], shove);
 
   /* 11n. A body walked into a bank stands on its feet. The step-up lifts a body
      over a riser, and the lift used to be tested at the spot the body already
