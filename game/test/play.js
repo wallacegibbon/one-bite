@@ -453,6 +453,70 @@ const { sim } = require('./simwait');
   check('q5 is a bruin fig carried home', gates.carried === true, gates);
   check('q6 is a place, not a fruit', gates.farFromDoor === false && gates.atDoor === true, gates);
 
+  /* 9c. a place's name is a claim about the world, asked of that world. The keep's
+     fruit store used to carry the word for a cellar -- in the name the data gives
+     the marker, in the zone's own description, and in the hint the codex prints
+     under quest 6 -- and the room it promised is not there: the generator fills
+     the island, and every one of the 9,702 cells from the floor of the world up to
+     the row the keep's own door marker is printed at holds a block. The town's
+     Main Cellar keeps the word, and keeps it honestly: over its floor the world
+     leaves three rows of air inside a 9x9 box of dark brick, and a floor of solid
+     over that. The suite runs the page, so these are the live objects the codex
+     and the HUD read, not the source text a second checker parses. Two halves,
+     each with its own canary: put the word back into the zone's description and
+     the keep half goes red; take the store's room out of the generator and the
+     town half goes red. */
+  const named = await step('place names', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA;
+    const gh = N.POIS.find(p => p.id === 'greenhouse');
+    const keep = N.ZONE_BY_ID.starfall;
+    const cell = N.POIS.find(p => p.id === 'cellar');
+    const town = N.ZONE_BY_ID.lanternrow;
+    const q6 = g.quests.find(q => q.id === 'q6');
+    let cols = 0, cells = 0, air = 0;
+    for (let z = keep.cz - keep.r; z <= keep.cz + keep.r; z++)
+      for (let x = keep.cx - keep.r; x <= keep.cx + keep.r; x++) {
+        if (Math.hypot(x - keep.cx, z - keep.cz) > keep.r) continue;
+        cols++;
+        for (let y = 0; y <= gh.y; y++) { cells++; if (!W.get(x, y, z)) air++; }
+      }
+    const lo = [1e9, 1e9], hi = [-1e9, -1e9];
+    let box = 0;
+    for (let z = town.z0; z <= town.z1; z++) for (let x = town.x0; x <= town.x1; x++) {
+      let has = false;
+      for (let y = 0; y < W.h; y++) if (W.get(x, y, z) === 12) { has = true; break; }
+      if (!has) continue;
+      box++;
+      if (x < lo[0]) lo[0] = x; if (x > hi[0]) hi[0] = x;
+      if (z < lo[1]) lo[1] = z; if (z > hi[1]) hi[1] = z;
+    }
+    const roomRows = [];
+    for (let y = cell.y + 1; y <= cell.y + 8; y++) {
+      let a = 0;
+      for (let z = lo[1]; z <= hi[1]; z++) for (let x = lo[0]; x <= hi[0]; x++) if (!W.get(x, y, z)) a++;
+      if (!a) break;
+      roomRows.push(y);
+    }
+    const says = [gh.cn, gh.en, keep.desc, q6.hint.cn, q6.hint.en];
+    const word = /地窖|cellar/i;
+    const hud = g.zoneNameAt({ x: gh.x + 0.5, y: gh.y + 1, z: gh.z + 0.5 });
+    return { cols, cells, air, box, plan: [hi[0] - lo[0] + 1, hi[1] - lo[1] + 1], roomRows,
+      says, carrying: says.filter(s => word.test(String(s))),
+      codex: N.disp(q6) + ' / ' + N.disp(q6.hint), hud,
+      townNames: [cell.cn, cell.en] };
+  });
+  check('the island under the keep door holds no room, so the name may not promise one',
+    named.cols === 441 && named.cells === 9702 && named.air === 0, named);
+  check('and none of the five strings the game carries for that place carries the word',
+    named.says.length === 5 && named.carrying.length === 0, named);
+  check('the quest 6 the codex prints says where the greenhouse stands, not what is under it',
+    /greenhouse|温室/.test(named.codex) && !/cellar|地窖/i.test(named.codex), named.codex);
+  check('the town store names a room, and the world gives it three rows of one',
+    /cellar|果窖/.test(named.townNames.join(' ')) && named.roomRows.length === 3 &&
+    named.plan[0] === 9 && named.plan[1] === 9 && named.box > 0, named);
+  check('the name the HUD gives a body standing at that door is the keep, not a room',
+    !/cellar|地窖/i.test(named.hud), named.hud);
+
   // 10. ecology: population / species mix
   await step('ecology', () => {
     const g = window.game;

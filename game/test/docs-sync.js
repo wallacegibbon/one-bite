@@ -37,6 +37,25 @@ const norm = s => (s || '').replace(/\s+/g, '').replace(/（.*?）/g, '').replac
 function pct(x) { return Math.round(x * 100); }
 const num = s => { const m = String(s).match(/-?\d+(\.\d+)?/); return m ? +m[0] : null; };
 const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.startsWith(y) || y.startsWith(x); };
+/* A POI row prints the name the minimap and the codex show the player, so the
+   chapter has to carry the same words rather than a shorter form of them. norm()
+   cannot serve here: it throws away everything inside full-width brackets, which
+   is exactly where this valley kept a word the world refuses that place, and on
+   the Chinese side that made the drift invisible to a checker that was comparing
+   names at all. A table cell may drop a leading article -- a cell is not a
+   sentence -- and nothing else. */
+const cellName = s => String(s || '').replace(/\s+/g, '').toLowerCase().replace(/^the/, '');
+const sameName = (doc, data) => cellName(doc) === cellName(data);
+
+/* The quest list lives in game/src/game.js beside the checks that complete it
+   (docs/en/06 s2), so the words the player reads are read out of that source
+   rather than restated here as a second copy that could disagree. */
+function questLines(src) {
+  const re = /\{ id: '(q\d)', cn: '([^']*)', en: '([^']*)', done: false,\s*\n\s*hint: \{ cn: '([^']*)',\s*\n\s*en: (['"])(.*?)\5 \} \}/g;
+  const out = []; let m;
+  while ((m = re.exec(src))) out.push({ id: m[1], cn: m[2], en: m[3], hint: { cn: m[4], en: m[6] } });
+  return out;
+}
 
 /* ------------------------------------------------------------------------
  * Two document sets. `nameCol` is the column holding the zone display name,
@@ -46,13 +65,14 @@ const LANGS = [
   {
     tag: 'cn',
     dir: path.join(DOCS, 'cn'),
-    files: { zones: '02-地图与场景.md', fruits: '04-果实与变形系统.md', storage: '05-背包与仓库.md' },
+    files: { zones: '02-地图与场景.md', fruits: '04-果实与变形系统.md', storage: '05-背包与仓库.md', quests: '06-任务与进程.md' },
     heads: {
       zones: '## 2. 区域表',
       poi: '## 3. 兴趣点（POI）',
       isles: '### 5.7 云顶浮岛',
       rarity: '| 稀有度 | 中文 | 占果格',
-      storage: '| 层 | 名称 | 格数 | 腐坏倍率 | 数量 | 位置 |'
+      storage: '| 层 | 名称 | 格数 | 腐坏倍率 | 数量 | 位置 |',
+      quests: '| id | 名称 | 提示 | 教会什么 | 验证方式 |'
     },
     nameField: 'cn',
     // cellar-tree rules are prose/regex claims rather than a table
@@ -74,13 +94,14 @@ const LANGS = [
   {
     tag: 'en',
     dir: path.join(DOCS, 'en'),
-    files: { zones: '02-map-and-scenes.md', fruits: '04-fruit-and-transformation.md', storage: '05-backpack-and-storage.md' },
+    files: { zones: '02-map-and-scenes.md', fruits: '04-fruit-and-transformation.md', storage: '05-backpack-and-storage.md', quests: '06-quests-and-progression.md' },
     heads: {
       zones: '## 2. Zone Table',
       poi: '## 3. Points of Interest (POI)',
       isles: '### 5.7 Cloudspire Isles',
       rarity: '| Rarity | English | Slots | Dormancy | Regrow | Ring |',
-      storage: '| Tier | Name | Slots | Decay | Count | Location |'
+      storage: '| Tier | Name | Slots | Decay | Count | Location |',
+      quests: '| id | Name | Hint | What it teaches | Verification |'
     },
     nameField: 'en',
     scaleFile: '00-overview-and-design-pillars.md',
@@ -161,9 +182,12 @@ for (const L of LANGS) {
         if (!m || +m[1] !== p.x || +m[2] !== p.z) bad(`${T} 02 POI ${id} coords`, r[2], `(${p.x},${p.z})`);
         if (num(r[3]) !== p.y) bad(`${T} 02 POI ${id} y`, num(r[3]), p.y);
         if (r[4] !== p.icon) bad(`${T} 02 POI ${id} icon`, r[4], p.icon);
+        // the name a marker carries is the chapter's claim about that place, and
+        // it has to be the name the game shows rather than a summary of it
+        if (!sameName(r[1], p[L.nameField])) bad(`${T} 02 POI ${id} name`, r[1], p[L.nameField]);
       }
       if (n !== N.POIS.length) bad(`${T} 02 POI count`, n, N.POIS.length);
-      else good(`${T} POI table: all ${n} rows match`);
+      else good(`${T} POI table: all ${n} rows match, display names included`);
     }
   }
 
@@ -577,8 +601,46 @@ for (const L of LANGS) {
 
   /* a door the generator marks: a cellar crate standing in the marker's column */
   const DOOR = N.BLOCK_ID.cellarCrate;
-  const crateRow = (p) => { for (let y = SZ.h - 1; y > 0; y--) if (at(p.x, y, p.z) === DOOR) return y; return -1; };
+  /* The island under the keep's own door, counted cell by cell: every column the
+     zone's disc holds, from the floor of the world up to the row that zone's door
+     marker is printed at. And the room under the town's door, measured the same
+     way -- the dark-brick box the store is built in found by asking the town's
+     rect which of its columns hold block 12, then the rows over its marker that
+     hold air, then the first row over those that does not. Both answers belong to
+     a name: the chapter and the game's own strings call one of these places a
+     room and used to call the other one too. */
+  const underLo = 0, underHi = ghPOI.y;
+  let underCols = 0, underCells = 0, underAir = 0, underOOB = 0;
+  for (let z = KEEP.cz - KEEP.r; z <= KEEP.cz + KEEP.r; z++)
+    for (let x = KEEP.cx - KEEP.r; x <= KEEP.cx + KEEP.r; x++) {
+      if (Math.hypot(x - KEEP.cx, z - KEEP.cz) > KEEP.r) continue;
+      underCols++;
+      if (x < 0 || z < 0 || x >= SZ.w || z >= SZ.d) { underOOB++; continue; }
+      for (let y = underLo; y <= underHi; y++) { underCells++; if (!at(x, y, z)) underAir++; }
+    }
+  const TOWN = N.ZONE_BY_ID.lanternrow, DARK = 12;
+  const tLo = [1e9, 1e9], tHi = [-1e9, -1e9];
+  let tCols = 0;
+  for (let z = TOWN.z0; z <= TOWN.z1; z++) for (let x = TOWN.x0; x <= TOWN.x1; x++) {
+    let has = false;
+    for (let y = 0; y < SZ.h; y++) if (at(x, y, z) === DARK) { has = true; break; }
+    if (!has) continue;
+    tCols++;
+    tLo[0] = Math.min(tLo[0], x); tLo[1] = Math.min(tLo[1], z);
+    tHi[0] = Math.max(tHi[0], x); tHi[1] = Math.max(tHi[1], z);
+  }
+  const townPOI = N.POIS.find(q => q.id === 'cellar');
+  const townRows = [];
+  for (let y = townPOI.y + 1; y <= townPOI.y + 8; y++) {
+    let air = 0;
+    for (let z = tLo[1]; z <= tHi[1]; z++) for (let x = tLo[0]; x <= tHi[0]; x++) if (!at(x, y, z)) air++;
+    if (!air) break;
+    townRows.push(y);
+  }
+  const townSpan = [tHi[0] - tLo[0] + 1, tHi[1] - tLo[1] + 1];
+  const townFloor = townPOI.y + townRows.length + 1;
 
+    const crateRow = (p) => { for (let y = SZ.h - 1; y > 0; y--) if (at(p.x, y, p.z) === DOOR) return y; return -1; };
   const H = (label, cnRe, cnWant, enRe, enWant) => ({ label, cnRe, cnWant, enRe, enWant });
   const CLAIMS = [
     H('the row the lake surface stands at',
@@ -644,8 +706,18 @@ for (const L of LANGS) {
       /窗台上（\*\*y(\d+)\/y(\d+)\*\*）/, sillRows,
       /on the sills one block under two of them \(\*\*y(\d+)\/y(\d+)\*\*\)/, sillRows),
     H('the row the chapter prints for the keep greenhouse door',
-      /\*\*温室（地窖）\*\* y(\d+)/, [crateRow(ghPOI) - 1],
-      /\*\*Greenhouse \(cellar\)\*\* y(\d+)/, [crateRow(ghPOI) - 1]),
+      /\*\*温室\*\* y(\d+)/, [crateRow(ghPOI) - 1],
+      /\*\*Greenhouse\*\* y(\d+)/, [crateRow(ghPOI) - 1]),
+    H('what the island under that door holds, cell by cell',
+      /星坠堡的 \*\*(\d+)\*\* 根列从 y(\d+) 到 y(\d+) 一共 \*\*([\d,]+)\*\* 格，其中 \*\*(\d+)\*\* 格是空的/,
+      [underCols, underLo, underHi, underCells, underAir],
+      /the keep's \*\*(\d+)\*\* columns, from y(\d+) to y(\d+), hold \*\*([\d,]+)\*\* cells and \*\*(\d+)\*\* of them are air/,
+      [underCols, underLo, underHi, underCells, underAir]),
+    H('the room the town cellar door opens onto',
+      /(\d+)×(\d+) 的黑砖，y(\d+)、y(\d+)、y(\d+) 三行是空的，三行屋子，头顶就是镇子铺在 y(\d+) 的那层地板/,
+      [townSpan[0], townSpan[1], townRows[0], townRows[1], townRows[2], townFloor],
+      /(\d+)x(\d+) of dark brick with air at y(\d+), y(\d+) and y(\d+), three rows of it, under the floor the town builds on at y(\d+)/,
+      [townSpan[0], townSpan[1], townRows[0], townRows[1], townRows[2], townFloor]),
     H('the plan and rows of the glass case the keep holds its demonstration fruit in',
       /\*\*(\d+)×(\d+) 的玻璃罩，从 y(\d+) 立到 y(\d+)\*\*/, [caseSpan[0], caseSpan[1], gLo[1], gHi[1]],
       /\*\*(\d+)×(\d+) glass box, from y(\d+) to y(\d+)\*\*/, [caseSpan[0], caseSpan[1], gLo[1], gHi[1]]),
@@ -679,6 +751,8 @@ for (const L of LANGS) {
     'the rows the tower windows occupy': winRows.join('/'),
     'the rows the frog pear hangs on the sills at': sillRows.join('/'),
     'the row the chapter prints for the keep greenhouse door': `the marked door stands at y${crateRow(ghPOI)}, so the marker sits on the deck at y${crateRow(ghPOI) - 1}`,
+    'what the island under that door holds, cell by cell': `${underCols} columns x rows y${underLo}..y${underHi} = ${underCells} cells, ${underAir} air, ${underOOB} columns outside the world`,
+    'the room the town cellar door opens onto': `${tCols} dark-brick columns, plan ${townSpan[0]}x${townSpan[1]}, air at ${townRows.map(y => 'y' + y).join('/')} over marker y${townPOI.y}, solid at y${townFloor}`,
     'the plan and rows of the glass case the keep holds its demonstration fruit in': `${caseSpan[0]}x${caseSpan[1]}, y${gLo[1]}..y${gHi[1]}, ${gN} glass cells`,
     'how far that case stands from the door that marks it': `${caseFar.toFixed(2)} m from (${ghPOI.x},${ghPOI.z}) to the case centre (${(gLo[0] + gHi[0]) / 2},${(gLo[2] + gHi[2]) / 2})`,
     'what fills the inside of that case, cell by cell': `${caseRoom} cells: ${caseFillLine}`
@@ -699,6 +773,41 @@ for (const L of LANGS) {
   }
   if (!badHeights) good(`${CLAIMS.length} heights in the map chapter, asked of the world the data generates (seed ${SEED}): ` +
     CLAIMS.map(c => measured[c.label]).join(' | '));
+
+  /* ---- a name the player reads states a room, and the world answers it ----
+     This place carried the word for a cellar in every string the game carries
+     for it: the name the data gives the marker the minimap is drawn from, the
+     zone's own description, and the hint the codex prints under quest 6. The word promised a room under the keep. The census above
+     answers what the island under that door holds, and the answer is 0 air cells
+     out of 9,702 -- the island is fill -- so the word came out of the game's own
+     strings, in both languages, and the chapter says what stands there instead:
+     a glass case shut on all six faces, standing on the deck. The law runs both
+     ways, so that neither half of it can be quietly dropped: a place the world
+     gives no room may not name one, and a place that names one has to be given
+     one, which is why the town's Main Cellar keeps its word -- 80 columns of dark
+     brick, three rows of air over its floor, solid over that. Two canaries, one
+     per half: put the word back into the zone's description, or take the store's
+     room out of the generator, and each half reddens on its own. */
+  const qs6 = questLines(src).find(q => q.id === 'q6') || { hint: {} };
+  const saysRoom = [
+    ['the keep door marker\'s display name, cn', ghPOI.cn, /地窖/],
+    ['the keep door marker\'s display name, en', ghPOI.en, /cellar/i],
+    ['the keep zone\'s own description', KEEP.desc, /地窖/],
+    ['the hint quest 6 prints, cn', qs6.hint.cn, /地窖/],
+    ['the hint quest 6 prints, en', qs6.hint.en, /cellar/i]
+  ];
+  let said = 0, roomBad = 0;
+  for (const [what, text, word] of saysRoom) {
+    if (typeof text !== 'string') { bad(`02 keep name: ${what}`, 'the game no longer writes it where this check can read it', 'a string the player is shown'); roomBad++; continue; }
+    said++;
+    if (underAir === 0 && word.test(text)) { bad(`02 keep name: ${what}`, `carries the word ${word} over an island of ${underCells} cells under its own door with ${underAir} of them air`, 'no word for a room, or a room the world gives it'); roomBad++; }
+  }
+  if (/(地窖|果窖)/.test(townPOI.cn) || /cellar/i.test(townPOI.en)) {
+    if (!townRows.length) { bad('02 town cellar name', `the town store is named for a room (${townPOI.cn} / ${townPOI.en}) and the generator builds none: 0 rows of air over its floor in ${tCols} dark-brick columns`, 'the room its name promises'); roomBad++; }
+    else if (!tCols) { bad('02 town cellar name', `${tCols} columns of dark brick found inside the town's rect`, 'the box the store is built in'); roomBad++; }
+  }
+  if (!roomBad) good(`02 a name states a room: the keep's door marker stands over ${underAir} air cells in ${underCols} columns x rows y${underLo}..y${underHi} = ${underCells} of them, so none of the ${said} strings the game says about that place carries the word for a room; ` +
+    `the town's Main Cellar does carry it and the world gives it: ${tCols} dark-brick columns, plan ${townSpan[0]}x${townSpan[1]}, air at ${townRows.map(y => 'y' + y).join('/')} over its marker row y${townPOI.y}, solid at y${townFloor}`);
   const discAll = (zn) => {
     let n = 0, out = 0;
     for (let z = zn.cz - zn.r; z <= zn.cz + zn.r; z++) for (let x = zn.cx - zn.r; x <= zn.cx + zn.r; x++) {
@@ -731,10 +840,14 @@ for (const L of LANGS) {
      island under that deck is stone from y3 up -- 0 air cells inside the keep's
      disc below the deck -- so there is no cellar for that door to open onto, and
      the keep's glass case is no room but a glass shell dropped over the corner of
-     the rampart, 16 of its 27 inner cells the keep's own brick. Both are design
-     questions for the human, reported rather than guessed at. The marker moved
-     because the geometry does: a case laid out at the marker the old number named
-     would sit inside the bell tower's wall. */
+     the rampart, 16 of its 27 inner cells the keep's own brick. Both were reported
+     to the human rather than guessed at, and the first of them was answered: a
+     place is called what stands there, so the word for a cellar is no longer
+     attached to this one in any string the game carries for it. Section 12
+     below counts the cells that answer it, and refuses the word wherever the world
+     has no room for it. The marker moved because the geometry does: a case laid
+     out at the marker the old number named would sit inside the bell tower's
+     wall. */
   const doors = [];
   for (const id of ['cellar', 'greenhouse']) {
     const p = N.POIS.find(q => q.id === id);
@@ -997,6 +1110,40 @@ for (const L of LANGS) {
   }
   if (!badTallies) good(`${CLAIMS.length} more claims in the map chapter, asked of the world the same way: ` +
     CLAIMS.map(c => `${c.label} = ${measured[c.label]}`).join(' | '));
+}
+
+/* ================= 15. the words the quest chapter prints, asked of game.js =
+   The quest table in 06 s2 prints, in its own two columns, the title and the
+   hint the game shows in the codex and on the HUD -- the strings live in
+   game/src/game.js, next to the check that completes each quest, and the chapter
+   copies them. Every other column of that table was checked and those two were
+   not, so the chapter could quote a quest at the player in words the game never
+   says: quest 6's hint was rewritten in the code and the chapter went on printing
+   the old sentence, which is the same drift as a wrong coordinate except that it
+   is the one the player reads. Both document sets, all six quests, title and
+   hint: 24 comparisons over the 12 strings each set prints. */
+{
+  const src = fs.readFileSync(path.join(base, 'src', 'game.js'), 'utf8');
+  const qs = questLines(src);
+  if (qs.length !== 6) bad('06 quest text', `the quest list in game.js is no longer written in a shape this check can read (${qs.length} quests read, 6 expected)`, 'six quests, each with a title and a hint in both languages');
+  else {
+    let compared = 0, rowsWrong = 0;
+    for (const L of LANGS) {
+      const rows = tableAfter(readIn(L, L.files.quests), L.heads.quests);
+      if (!rows) { bad(`[${L.tag}] 06 quest table`, 'missing', L.heads.quests); rowsWrong++; continue; }
+      if (rows.length !== qs.length) { bad(`[${L.tag}] 06 quest count`, rows.length, qs.length); rowsWrong++; }
+      for (const r of rows) {
+        const q = qs.find(x => x.id === unbacktick(r[0]));
+        if (!q) { bad(`[${L.tag}] 06 quest id`, r[0], 'not in game.js'); rowsWrong++; continue; }
+        const want = L.tag === 'cn' ? [q.cn, q.hint.cn] : [q.en, q.hint.en];
+        for (let i = 0; i < 2; i++) {
+          if (r[i + 1] !== want[i]) { bad(`[${L.tag}] 06 ${q.id} ${i ? 'hint' : 'title'}`, r[i + 1], want[i]); rowsWrong++; }
+          compared++;
+        }
+      }
+    }
+    if (!rowsWrong && compared === 24) good(`06 quest text: the chapter prints the words the game shows -- ${compared} titles and hints compared across both sets, q6's hint reads "${(qs.find(q => q.id === 'q6') || {}).hint ? qs.find(q => q.id === 'q6').hint.en : '?'}"`);
+  }
 }
 
 /* ================= report ================= */

@@ -48,7 +48,12 @@ const DRIFTS = [
   ['02-map-and-scenes.md', 'the 25 bruin figs hang at **y29..37**', 'the 25 bruin figs hang at **y29..38**', 'bruin fig rows'],
   ['02-map-and-scenes.md', 'most of them at 37', 'most of them at 36', 'the row most figs hang at'],
   ['02-map-and-scenes.md', 'isle surfaces 29–40; what stands on them up to 47', 'isle surfaces 29–40; what stands on them up to 46', 'what stands on the isles'],
-  ['02-map-and-scenes.md', '**Greenhouse (cellar)** y21', '**Greenhouse (cellar)** y23', 'the row the keep greenhouse marker stands on'],
+  ['02-map-and-scenes.md', '**Greenhouse** y21', '**Greenhouse** y23', 'the row the keep greenhouse marker stands on'],
+  // what the island under that door holds, and the room the town's door does
+  // open onto: the chapter states both as counts, and the counts are what say
+  // which of the two places may carry the word for a room
+  ['02-map-and-scenes.md', "the keep's **441** columns, from y0 to y21, hold **9,702** cells and **0** of them are air", "the keep's **441** columns, from y0 to y21, hold **9,703** cells and **0** of them are air", 'how much of the island under the keep door is air'],
+  ['02-map-and-scenes.md', '9x9 of dark brick with air at y21, y22 and y23, three rows of it', '9x9 of dark brick with air at y21, y22 and y24, three rows of it', 'the room the town cellar door opens onto'],
   ['02-map-and-scenes.md', '**5×5 glass box, from y22 to y26**', '**5×6 glass box, from y22 to y26**', 'the keep glass case plan'],
   ['02-map-and-scenes.md', 'standing 6.3 m from that door', 'standing 7.3 m from that door', 'how far the case stands from its door'],
   ['02-map-and-scenes.md', 'of its 27 inner cells, 16 are the keep\'s own city brick', 'of its 27 inner cells, 15 are the keep\'s own city brick', 'what fills the inside of the keep glass case'],
@@ -63,7 +68,17 @@ const DRIFTS = [
   ['02-map-and-scenes.md', 'no sky over the column in **470** more, and leaves **662** where', 'no sky over the column in **471** more, and leaves **662** where', 'the isle table\'s row asked of the world as a spawn height'],
   ['02-map-and-scenes.md', 'only **380** of the 850 keep the sky a body built for flight needs', 'only **379** of the 850 keep the sky a body built for flight needs', 'how much deck keeps the sky a flyer needs'],
   ['02-map-and-scenes.md', 'rounds to **1,016** different columns, and **166** of them belong to no isle at all', 'rounds to **1,015** different columns, and **166** of them belong to no isle at all', 'the columns an isle disc sample can round to'],
-  ['02-map-and-scenes.md', "a pine's needles over **438** of them", "a pine's needles over **437** of them", 'what crowns the deck where the top-of-column read misses it']
+  ['02-map-and-scenes.md', "a pine's needles over **438** of them", "a pine's needles over **437** of them", 'what crowns the deck where the top-of-column read misses it'],
+  // the names the POI table prints: the y, the icon and the coordinates of a
+  // marker were compared and its name was not, so a display name could grow a
+  // word the world refuses that place and stay green
+  ['02-map-and-scenes.md', '| `greenhouse` | Fruit Greenhouse | (78,110) | 21 |', '| `greenhouse` | Fruit Greenhouse (cellar) | (78,110) | 21 |', 'a marker name claiming a room the island has no air for'],
+  ['02-map-and-scenes.md', '| `frogshall` | Frogshall | (92,120) | 9 |', '| `frogshall` | Frogshale | (92,120) | 9 |', 'a marker name nothing else in the chapter mentions'],
+  // the quest chapter's two text columns: the codex prints these strings, the
+  // chapter copies them out of game.js, and every other column of that table
+  // was compared while these two were not
+  ['06-quests-and-progression.md', "| `q6` | The silver mesh in the greenhouse | go to Starfall's fruit greenhouse, on the deck over the island, and find the silver divider |", "| `q6` | The silver mesh in the cellar | go to Starfall's fruit greenhouse cellar, on the deck over the island, and find the silver divider |", 'a quest title and hint the game no longer shows'],
+  ['06-quests-and-progression.md', '| `q2` | Three Owlberries | find 3 Owlberries in the oak hollows of the Whisperwood |', '| `q2` | Three Owlberries | find 4 Owlberries in the oak hollws of the Whisperwood |', 'a quest hint mis-told in the chapter that quotes it']
 ];
 
 let missed = 0;

@@ -64,7 +64,7 @@
       id: 'starfall', cn: '星坠堡', en: 'Starfall Keep', kind: 'circle',
       cx: 78, cz: 106, r: 12,
       danger: 1,
-      desc: '湖心岛上的学院。四塔一钟，地窖里是果实温室。学院教的是认果：什么果、占几格、多久失活。'
+      desc: '湖心岛上的学院。四塔一钟，城台上扣着一只玻璃温室。学院教的是认果：什么果、占几格、多久失活。'
     },
     {
       id: 'lanternrow', cn: '灯笼镇', en: 'Lanternrow', kind: 'rect',
@@ -96,11 +96,25 @@
      convention, it is what the code reads. The keep's fruit greenhouse door was
      written y18 while the crate the generator puts at (78,110) stands at y22, on
      the deck it raises over the island: four cells under its own door and inside
-     the island's plank fill. The docs-drift and docs-sync checks ask it. */
+     the island's plank fill. The docs-drift and docs-sync checks ask it.
+     A name is a claim too, and the world answers it. This place used to be
+     called a cellar in every language the game speaks -- in the zone's own
+     description, in the name the data gives the marker the minimap is drawn
+     from, and in the hint the codex prints under quest 6. Asked, the island
+     under that door holds no room: over the 441 columns of the keep's disc,
+     every one of the 9,702 cells from the floor of the world up to the row the
+     marker is printed at stands solid, and 0 of them are air. The fruit stands
+     in a glass case shut on all six faces that the generator set on top of the
+     deck, at y22..y26. So the cellar word is gone from this place's name, and
+     what it is called now says what stands there. The town's Main Cellar keeps
+     its word: the same census over the 9x9 of dark brick the store is built in
+     answers 0 air up to that marker row too, but the room it opens onto is
+     there -- air at y21, y22 and y23, three rows of it, under the floor the town
+     builds on at y24. That is a room, and the word says a room. */
   const POIS = [
     { id: 'cellar',      cn: '主果窖',     en: 'Main Cellar',          x: 136, z: 134, y: 20, icon: 'chest' },
     { id: 'belltower',   cn: '星坠堡钟塔', en: 'Starfall Bell Tower',  x: 78,  z: 104, y: 34, icon: 'tower' },
-    { id: 'greenhouse',  cn: '果实温室（地窖）', en: 'Fruit Greenhouse (cellar)', x: 78, z: 110, y: 21, icon: 'door' },
+    { id: 'greenhouse',  cn: '果实温室',   en: 'Fruit Greenhouse',     x: 78, z: 110, y: 21, icon: 'door' },
     { id: 'sunktower',   cn: '沉塔',       en: 'The Sunken Tower',     x: 66,  z: 118, y: 8,  icon: 'water' },
     { id: 'frogshall',   cn: '蛙鸣泽',     en: 'the Frogshall',        x: 92,  z: 120, y: 9,  icon: 'water' },
     { id: 'groveheart',  cn: '深鹿林之心', en: 'Heart of the Deep Grove', x: 104, z: 32, y: 24, icon: 'tree' },

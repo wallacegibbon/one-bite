@@ -49,7 +49,7 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
 | `deepgrove` | The Deep Grove | 深鹿林 | circle r18 | (104,32) | 3 | Silver trees; every deer path in the valley folds into this one |
 | `mountains` | Ashscale Ridge | 北岭·鹰喙峰 | circle r26 | (142,18) | 3 | The bear's slope, wind blowing snow sideways |
 | `mirrorlake` | Mirrorlake | 镜湖 | circle r38 | (78,106) | 3 | A sunken tower and a few sunken huts on the lakebed; the tower is lit from inside by jellyfish |
-| `starfall` | Starfall Keep | 星坠堡 | circle r12 | (78,106) | 1 | The school on the island: four towers and a bell, a greenhouse in the cellar |
+| `starfall` | Starfall Keep | 星坠堡 | circle r12 | (78,106) | 1 | The school on the island: four towers and a bell, a glass case on the deck |
 | `lanternrow` | Lanternrow | 灯笼镇 | rect | (116,114)–(154,152) | 0 | Where the main cellar stands |
 | `orchard` | The Old Orchard | 果园遗迹 | circle r15 | (24,104) | 2 | The ancestral ground of every fruit tree: broken walls, old burrows, the oldest tree |
 | `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 4 | Without a flying form this is only a shadow in the sky |
@@ -62,11 +62,11 @@ Zone ids are historical, and so are the display names: `deepgrove` is still the 
 |---|---|---|---|---|---|
 | `cellar` | Main Cellar | (136,134) | 20 | chest | Lanternrow |
 | `belltower` | Starfall Bell Tower | (78,104) | 34 | tower | Starfall Keep |
-| `greenhouse` | Fruit Greenhouse (cellar) | (78,110) | 21 | door | Starfall Keep |
+| `greenhouse` | Fruit Greenhouse | (78,110) | 21 | door | Starfall Keep |
 | `sunktower` | Sunken Tower | (66,118) | 8 | water | Mirrorlake |
 | `frogshall` | Frogshall | (92,120) | 9 | water | Mirrorlake |
 | `groveheart` | Heart of the Deep Grove | (104,32) | 24 | tree | The Deep Grove |
-| `cavemouth` | Echo Mouth | (28,34) | 24 | cave | Echo Hollow |
+| `cavemouth` | Echo Hollow Mouth | (28,34) | 24 | cave | Echo Hollow |
 | `beams` | The Old Beams | (40,20) | 38 | sky | Cloudspire |
 | `oldtree` | The Oldest Tree | (24,104) | 22 | tree | The Old Orchard |
 | `mushring` | Glowcap Ring | (60,56) | 20 | shroom | Glowglade |
@@ -92,10 +92,10 @@ The valley is not a floor, it is four:
 
 ### 5.1 Starfall Keep (the castle)
 
-On the island at the lake's centre: four towers and a bell, a fruit greenhouse in the cellar. What the school teaches is fruit reading: which fruit, how many slots, how long before dormancy.
+On the island at the lake's centre: four towers and a bell, a fruit greenhouse standing on the keep's own deck. What the school teaches is fruit reading: which fruit, how many slots, how long before dormancy.
 
 - **Bell tower** y34: the highest standing point in the valley (isles excepted). The checkpoint for the quest "Nightwing".
-- **Greenhouse (cellar)** y21: the row the marker stands on, one cell under the cellar crate (block 78) the generator puts in the marker's own column to mark this door -- the same rule `game.js` reads for the town cellar's store, which asks the world for `poi.y + 1`. The fruit is kept where no hand reaches: a **5×5 glass box, from y22 to y26** standing 6.3 m from that door, 98 glass cells closed on all six faces, its floor the deck the keep stands on. It is not an empty room, and the chapter should not let a reader picture one: of its 27 inner cells, 16 are the keep's own city brick, 5 are ground under grass and 3 are empty. The generator set the case over the corner of its own ringwall, and what it plants inside stands in the hollow that was left -- one **owlberry**, one **frog pear**, one glowstone lamp. That is the living lesson that a lake fruit is still a fruit away from the lake, and the reason the keep pays no fruit: the picking ray stops at the first solid block it enters, and glass is solid. There are no trees in the keep at all, so the chapter used to describe a glass roof over demonstration trees that were never built. And it still calls this a cellar, because that is the door the generator marks; there is no room under the keep that could be one. That is a question for the human, not a guess to be written into the map.
+- **Greenhouse** y21: the row the marker stands on, one cell under the cellar crate (block 78) the generator puts in the marker's own column to mark this door -- the same rule `game.js` reads for the town cellar's store, which asks the world for `poi.y + 1`. The fruit is kept where no hand reaches: a **5×5 glass box, from y22 to y26** standing 6.3 m from that door, 98 glass cells closed on all six faces, its floor the deck the keep stands on. It is not an empty room, and the chapter should not let a reader picture one: of its 27 inner cells, 16 are the keep's own city brick, 5 are ground under grass and 3 are empty. The generator set the case over the corner of its own ringwall, and what it plants inside stands in the hollow that was left -- one **owlberry**, one **frog pear**, one glowstone lamp. That is the living lesson that a lake fruit is still a fruit away from the lake, and the reason the keep pays no fruit: the picking ray stops at the first solid block it enters, and glass is solid. There are no trees in the keep at all, so the chapter used to describe a glass roof over demonstration trees that were never built. It is called a fruit greenhouse and nothing else, in both languages and in every string the game carries for it: the name the data gives that marker, the zone's own description, the line quest 6 prints in the codex. Keeping the word "cellar" would have meant answering a question first, and the world answered it: the keep's **441** columns, from y0 to y21, hold **9,702** cells and **0** of them are air -- the island is solid, there is no room under that door for anything to open onto, and the fruit stands on the deck, inside the case above. The town's Main Cellar keeps its word because the same measure says it earned it: asked from the floor of the world up to its own marker row it answers 0 air as well, but the room it opens onto is there -- 9x9 of dark brick with air at y21, y22 and y23, three rows of it, under the floor the town builds on at y24 -- that is a cellar.
 - **The four towers** each display one rarity. The legendary tower is empty and holds one line: "A bruin fig sat here once. It pressed the other three into pulp."
 - The walls carry **glowstone lamps** (block 14, emissive): at night the brightest light in the valley.
 

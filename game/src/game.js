@@ -156,8 +156,8 @@
           hint: { cn: '在北岭岩坡上摘一颗棕熊果：它占 12 格，7 分钟就失活——把它带进仓库',
                   en: 'pick a Bruin Fig off the ridge rock: it costs 12 slots and sleeps in 7 minutes — get it into a cellar' } },
         { id: 'q6', cn: '温室的银丝网', en: 'The silver mesh in the greenhouse', done: false,
-          hint: { cn: '去星坠堡的果实温室（地窖），找那张银丝隔层',
-                  en: "go to Starfall's fruit greenhouse (the cellar) and find the silver divider" } }
+          hint: { cn: '去星坠堡的果实温室，找那张银丝隔层',
+                  en: "go to Starfall's fruit greenhouse, on the deck over the island, and find the silver divider" } }
       ];
       // which epithet the valley has already been heard using. This is read off
       // the quest list, so it has to be taken after the quests exist.
@@ -940,7 +940,7 @@
       // q5 asks for the fruit, not the body: a legendary one costs 12 of 24
       // slots and sleeps in 420 s, so the quest is the carry, not the climb
       if (n('bruinfig') >= 1) done(q('q5'));
-      // q6: walk to the Starfall fruit greenhouse (cellar door)
+      // q6: walk to the door the generator marks at the keep's fruit greenhouse
       const gh = N.POIS.find(x => x.id === 'greenhouse');
       if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q6'), N.t('log.q6msg')); grant('divider'); }
       this.checkEpithet();

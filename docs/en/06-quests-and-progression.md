@@ -21,7 +21,7 @@ Quests are not a reward pipeline, they are **the manual for the gates**: every q
 | `q3` | Wing of Night | at night eat an Owlberry and fly above 30 metres | flight + the time bar | `form==='owlberry' && y > 30` |
 | `q4` | The ticket to Mirrorlake | become a frog, get in the water, take a Frog Pear from the sill of the sunken tower | the two-stage water gate (breath → breathing through skin) | obtain frogpear |
 | `q5` | One Bruin Fig | pick a Bruin Fig off the ridge rock: it costs 12 slots and sleeps in 7 minutes — get it into a cellar | a legendary fruit is a carry, not a collection | obtain bruinfig |
-| `q6` | The silver mesh in the greenhouse | go to Starfall's fruit greenhouse (the cellar) and find the silver divider | backpack upgrade: rare and above −1 slot | stand within 6 m of `greenhouse` (y inside −6…+10) |
+| `q6` | The silver mesh in the greenhouse | go to Starfall's fruit greenhouse, on the deck over the island, and find the silver divider | backpack upgrade: rare and above −1 slot | stand within 6 m of `greenhouse` (y inside −6…+10) |
 
 Quests appear as a checklist in the codex panel (J); completing one announces "✔ Done: …". **No reward popup, no XP** — the reward is "you can go there now".
 
