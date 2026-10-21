@@ -87,11 +87,20 @@
 
   /* Points of interest: minimap markers, and the named places the code anchors
      things to -- the cellar door, the quest greenhouse, the lake the frogs call
-     in. A POI is a place with a name; a zone is a place with a shape. */
+     in. A POI is a place with a name; a zone is a place with a shape.
+     The two door markers carry the height of the door they name, not a height
+     remembered from an older map: the generator marks a door with a cellar crate
+     in that marker's own column, so the crate stands one cell above the marker.
+     Main Cellar: marker y20, crate y21 -- and game.js asks the world for
+     `poi.y + 1` when it sets the cellar's store down, so that relation is not a
+     convention, it is what the code reads. The keep's fruit greenhouse door was
+     written y18 while the crate the generator puts at (78,110) stands at y22, on
+     the deck it raises over the island: four cells under its own door and inside
+     the island's plank fill. The docs-drift and docs-sync checks ask it. */
   const POIS = [
     { id: 'cellar',      cn: '主果窖',     en: 'Main Cellar',          x: 136, z: 134, y: 20, icon: 'chest' },
     { id: 'belltower',   cn: '星坠堡钟塔', en: 'Starfall Bell Tower',  x: 78,  z: 104, y: 34, icon: 'tower' },
-    { id: 'greenhouse',  cn: '果实温室（地窖）', en: 'Fruit Greenhouse (cellar)', x: 78, z: 110, y: 18, icon: 'door' },
+    { id: 'greenhouse',  cn: '果实温室（地窖）', en: 'Fruit Greenhouse (cellar)', x: 78, z: 110, y: 21, icon: 'door' },
     { id: 'sunktower',   cn: '沉塔',       en: 'The Sunken Tower',     x: 66,  z: 118, y: 8,  icon: 'water' },
     { id: 'frogshall',   cn: '蛙鸣泽',     en: 'the Frogshall',        x: 92,  z: 120, y: 9,  icon: 'water' },
     { id: 'groveheart',  cn: '深鹿林之心', en: 'Heart of the Deep Grove', x: 104, z: 32, y: 24, icon: 'tree' },

@@ -35,7 +35,23 @@ const DRIFTS = [
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed stomach lets both bodies act at once.', 'cut design back in (mixed stomach)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed form is possible with the right talent.', 'cut design back in (mixed form)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nBeast residue accumulates per form.', 'cut design back in (beast residue)'],
-  ['00-overview-and-design-pillars.md', '| Fruits | 3 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count']
+  ['00-overview-and-design-pillars.md', '| Fruits | 3 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count'],
+  // the map chapter's heights, which only the world built from data/ can answer.
+  // Each of these is a number the chapter carries as a measurement; none of them
+  // appears in game/data/, so the table checks above cannot see any of them.
+  ['02-map-and-scenes.md', 'Windows on all four faces at **y7/y10/y13**', 'Windows on all four faces at **y7/y10/y12**', 'sunken tower window rows'],
+  ['02-map-and-scenes.md', 'over all 2,970 water columns', 'over all 2,971 water columns', 'lake water-column census'],
+  ['02-map-and-scenes.md', 'the deepest at (72,83) where the water runs y4..y14', 'the deepest at (72,84) where the water runs y4..y14', 'which column is the lake\'s deepest'],
+  ['02-map-and-scenes.md', '258 columns stand at or above that line', '268 columns stand at or above that line', 'ridge columns at the full-bite line'],
+  ['02-map-and-scenes.md', 'surface is **y23–36** (mean 30', 'surface is **y23–37** (mean 30', 'ridge surface band'],
+  ['02-map-and-scenes.md', '88% of the ridge\'s columns are already cold', '90% of the ridge\'s columns are already cold', 'ridge cold share'],
+  ['02-map-and-scenes.md', 'the 25 bruin figs hang at **y29..37**', 'the 25 bruin figs hang at **y29..38**', 'bruin fig rows'],
+  ['02-map-and-scenes.md', 'most of them at 37', 'most of them at 36', 'the row most figs hang at'],
+  ['02-map-and-scenes.md', 'isle surfaces 29–40; what stands on them up to 47', 'isle surfaces 29–40; what stands on them up to 46', 'what stands on the isles'],
+  ['02-map-and-scenes.md', '**Greenhouse (cellar)** y21', '**Greenhouse (cellar)** y23', 'the row the keep greenhouse marker stands on'],
+  ['02-map-and-scenes.md', '**5×5 glass box, from y22 to y26**', '**5×6 glass box, from y22 to y26**', 'the keep glass case plan'],
+  ['02-map-and-scenes.md', 'standing 6.3 m from that door', 'standing 7.3 m from that door', 'how far the case stands from its door'],
+  ['02-map-and-scenes.md', 'of its 27 inner cells, 16 are the keep\'s own city brick', 'of its 27 inner cells, 15 are the keep\'s own city brick', 'what fills the inside of the keep glass case']
 ];
 
 let missed = 0;

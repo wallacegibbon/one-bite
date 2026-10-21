@@ -374,6 +374,399 @@ for (const L of LANGS) {
   }
 }
 
+/* ================= 12. the heights (02 s4 + s5.5) ===========================
+   The map chapter answers a long list of questions about height and states every
+   one of them as prose: what row the lake's surface lies at, how many water
+   columns the lake holds and what share of them is more than eight blocks deep,
+   where the deepest of them stands and what rows the water runs over, how deep a
+   bed this world can carve at all, what rows the sunken tower's shell, windows,
+   sills and spire occupy and how far the ruin stands above the water line, what
+   band the ridge's own ground falls in and how many of its columns stand at or
+   above the row where that ridge's cold reaches full bite, what rows the bruin
+   figs hang at, and how high what stands on the floating isles gets. The checker
+   compared coordinates and never once asked a height, so the next wrong y in the
+   chapter stayed invisible. There is no excuse for not asking: the world builds
+   headless in one build of 36 ms (measured: 35.9 ms the first time in a fresh
+   process, 13-18 ms after that), so asking costs one `generate` call per run.
+   Each of those numbers is now asked of the world the data generates, in both
+   document sets, at the game's own seed -- which is read out of game.js rather
+   than restated here, so it cannot drift into a second constant.
+
+   The trap this pass found, and the reason every census below counts only the
+   columns the world actually has: the ridge's disc hangs past the wall of the
+   valley. Its zone is (142,18) r26, which asks for x up to 168 in a world 160
+   wide -- 413 of its 2121 disc columns are outside the world. `World.get` refuses
+   those columns (0 outside the bounds), so a census that simply drops them quietly
+   measures a smaller ridge than the one it says it measured. A census that reads
+   the flat array itself, which is what a fast one does, reads *another column*:
+   the index (y*d + z)*w + x with x = 168 in a world 160 wide lands on x = 8 one
+   row over, on the far side of the valley. The ridge census measured that way
+   answers y22-36, mean 29, 70.7% of it cold where the honest one says 87.8% --
+   the same disc, the same generator, one bounds check missing. Everything below
+   therefore asks only the columns the world holds, and says how many that was:
+   1708 in-world columns of the ridge, and the chapter's numbers are right --
+   23-36, mean 30.14 (the chapter rounds it to 30), 87.8% (says 88), 258 columns
+   at the bite line. The check keeps the wrong census running beside the right one
+   and prints both, so the trap stays a measurement and not a story. */
+{
+  const src = fs.readFileSync(path.join(base, 'src', 'game.js'), 'utf8');
+  const SEED = +(((src.match(/this\.seed = (\d+)/) || [])[1]));
+  require(path.join(base, 'src', 'engine.js'));
+  require(path.join(base, 'src', 'world.js'));
+  require(path.join(base, 'src', 'worldgen.js'));
+  const w = new N.World(N.WORLD.w, N.WORLD.h, N.WORLD.d);
+  N.generate(w, SEED);
+  const SZ = N.WORLD, BK = N.BLOCKS;
+  const at = (x, y, z) => (x < 0 || y < 0 || z < 0 || x >= SZ.w || y >= SZ.h || z >= SZ.d)
+    ? 0 : w.get(x, y, z);
+  const isPlant = b => !!N.TREE_BLOCK[b] || !!(BK[b] && BK[b].micro);
+  // the ground a body would stand on: the highest solid block that is not a plant
+  const surface = (x, z) => {
+    for (let y = SZ.h - 1; y > 0; y--) { const b = w.get(x, y, z); if (b && BK[b].solid && !isPlant(b)) return y; }
+    return -1;
+  };
+  const filmAt = (x, z) => { for (let y = SZ.h - 1; y >= 0; y--) if (w.get(x, y, z) === 5) return y; return -1; };
+  const bedAt = (x, z, top) => {
+    for (let y = top - 1; y >= 0; y--) { const b = at(x, y, z); if (b && b !== 5 && b !== 75 && BK[b]) return y; }
+    return -1;
+  };
+  // the columns of a zone's disc that the world actually has -- see the trap above
+  const disc = (zn) => {
+    const out = [];
+    for (let z = zn.cz - zn.r; z <= zn.cz + zn.r; z++)
+      for (let x = zn.cx - zn.r; x <= zn.cx + zn.r; x++)
+        if (Math.hypot(x - zn.cx, z - zn.cz) <= zn.r && x >= 0 && z >= 0 && x < SZ.w && z < SZ.d) out.push([x, z]);
+    return out;
+  };
+  const WORD = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+  const read = s => {
+    const t = String(s).trim().toLowerCase();
+    if (t in WORD) return WORD[t];
+    return +t.replace(/[,\s]/g, '');
+  };
+
+  /* the lake: every water column of its disc that the world holds */
+  const MK = N.ZONE_BY_ID.mirrorlake;
+  let wet = 0, sh4 = 0, deep8 = 0, minD = 99, maxD = -1, deepAt = null, lowestBed = 99;
+  for (const [x, z] of disc(MK)) {
+    const top = filmAt(x, z); if (top < 0) continue;
+    const g = bedAt(x, z, top); if (g < 0 || top - g <= 0) continue;
+    const d = top - g;
+    wet++;
+    if (d <= 4) sh4++;
+    if (d >= 8) deep8++;
+    if (d < minD) minD = d;
+    if (d > maxD) { maxD = d; deepAt = [x, z, g + 1, top]; }
+    if (g < lowestBed) lowestBed = g;
+  }
+
+  /* the ridge: its own ground, over the columns the world has */
+  const RG = N.ZONE_BY_ID.mountains;
+  const coldLine = RG.cold.above, biteLine = RG.cold.above + RG.cold.ramp;
+  let rn = 0, rsum = 0, rlo = 99, rhi = -1, rCold = 0, rBite = 0;
+  for (const [x, z] of disc(RG)) {
+    const g = surface(x, z); if (g < 0) continue;
+    rn++; rsum += g;
+    if (g < rlo) rlo = g;
+    if (g > rhi) rhi = g;
+    if (g >= coldLine) rCold++;
+    if (g >= biteLine) rBite++;
+  }
+
+  /* the sunken tower: what shape the generator's shape actually leaves */
+  const SHELL = 12, GLASS = 21, FRUIT_FROGPEAR = N.FRUIT_BLOCK_REV['frogpear'];
+  const [tx, tz] = MK.tower;
+  let shellLo = 99, shellHi = -1;
+  for (let y = 0; y < SZ.h; y++) for (let dz = -4; dz <= 4; dz++) for (let dx = -4; dx <= 4; dx++) {
+    if (Math.abs(dx) !== 3 && Math.abs(dz) !== 3) continue;
+    if (at(tx + dx, y, tz + dz) !== SHELL) continue;
+    if (y < shellLo) shellLo = y;
+    if (y > shellHi) shellHi = y;
+  }
+  let spanLo = 9, spanHi = -9;
+  for (let dz = -4; dz <= 4; dz++) for (let dx = -4; dx <= 4; dx++) {
+    let holds = false;
+    for (let y = shellLo; y <= shellHi; y++) if (at(tx + dx, y, tz + dz) === SHELL) { holds = true; break; }
+    if (!holds) continue;
+    if (dx < spanLo) spanLo = dx;
+    if (dx > spanHi) spanHi = dx;
+  }
+  const towerSpan = spanHi - spanLo + 1;
+  const winSet = new Set(), sillSet = new Set();
+  for (let y = 0; y < SZ.h; y++) for (const [dx, dz] of [[-3, 0], [3, 0], [0, -3], [0, 3]]) {
+    const b = at(tx + dx, y, tz + dz);
+    if (b === GLASS) winSet.add(y);
+    if (b === FRUIT_FROGPEAR) sillSet.add(y);
+  }
+  const winRows = [...winSet].sort((a, b) => a - b);
+  const sillRows = [...sillSet].sort((a, b) => a - b);
+  const spireRows = [];
+  for (let y = shellHi + 1; y < SZ.h; y++) if (at(tx, y, tz) === SHELL) spireRows.push(y);
+  const towerFilm = filmAt(tx, tz);
+  const ruinAbove = (spireRows.length && towerFilm >= 0) ? spireRows[spireRows.length - 1] - towerFilm : null;
+
+  /* the bruin figs, and what stands on the isles */
+  const FIG = N.FRUIT_BLOCK_REV['bruinfig'];
+  let figN = 0, figLo = 99, figHi = -1; const figHist = {};
+  for (let y = 0; y < SZ.h; y++) for (let z = 0; z < SZ.d; z++) for (let x = 0; x < SZ.w; x++) {
+    if (at(x, y, z) !== FIG) continue;
+    figN++; if (y < figLo) figLo = y; if (y > figHi) figHi = y;
+    figHist[y] = (figHist[y] || 0) + 1;
+  }
+  const figMode = Object.keys(figHist).map(Number).sort((a, b) => figHist[b] - figHist[a] || a - b)[0];
+  const isleTops = N.SKY_ISLES.map(i => i.top);
+  let isleHigh = -1;
+  for (const i of N.SKY_ISLES) for (let y = 0; y < SZ.h; y++)
+    for (let dz = -i.r; dz <= i.r; dz++) for (let dx = -i.r; dx <= i.r; dx++)
+      if (at(i.x + dx, y, i.z + dz) && y > isleHigh) isleHigh = y;
+  /* the water body as a whole: the rows it ever occupies */
+  let wl0 = 99, wl1 = -1;
+  for (let y = 0; y < SZ.h; y++) for (let z = 0; z < SZ.d; z++) for (let x = 0; x < SZ.w; x++)
+    if (at(x, y, z) === 5) { if (y < wl0) wl0 = y; if (y > wl1) wl1 = y; }
+
+  /* the keep's greenhouse case: the glass the generator builds inside the keep's
+     disc. The chapter says the fruit inside it is a demonstration, so the shape
+     that claim rests on is measured here: the plan, the rows, and whether the
+     case is closed on every face.
+     Asked over the keep's square instead of its disc the same census walks into
+     the sunken tower's windows two zones away: the square x66..90, z94..118 holds
+     104 glass cells spanning y7..y26 on a 21x9 plan, and the box it reports is
+     not a greenhouse at all. */
+  const KEEP = N.ZONE_BY_ID.starfall;
+  let gLo = [1e9, 1e9, 1e9], gHi = [-1e9, -1e9, -1e9], gN = 0, gSquare = 0;
+  for (let y = 0; y < SZ.h; y++)
+    for (let z = KEEP.cz - KEEP.r; z <= KEEP.cz + KEEP.r; z++)
+      for (let x = KEEP.cx - KEEP.r; x <= KEEP.cx + KEEP.r; x++) {
+        const inDisc = Math.hypot(x - KEEP.cx, z - KEEP.cz) <= KEEP.r;
+        if (at(x, y, z) === GLASS) gSquare++;
+        if (!inDisc) continue;
+        if (at(x, y, z) !== GLASS) continue;
+        gN++;
+        gLo = [Math.min(gLo[0], x), Math.min(gLo[1], y), Math.min(gLo[2], z)];
+        gHi = [Math.max(gHi[0], x), Math.max(gHi[1], y), Math.max(gHi[2], z)];
+      }
+  const caseSpan = [gHi[0] - gLo[0] + 1, gHi[2] - gLo[2] + 1];
+  let caseHoles = 0, caseShell = 0;
+  for (let x = gLo[0]; x <= gHi[0]; x++) for (let y = gLo[1]; y <= gHi[1]; y++) for (let z = gLo[2]; z <= gHi[2]; z++) {
+    const onFace = x === gLo[0] || x === gHi[0] || y === gLo[1] || y === gHi[1] || z === gLo[2] || z === gHi[2];
+    if (!onFace) continue;
+    caseShell++;
+    if (at(x, y, z) !== GLASS) caseHoles++;
+  }
+  const caseInside = [], caseFill = {};
+  for (let y = gLo[1] + 1; y < gHi[1]; y++) for (let z = gLo[2] + 1; z < gHi[2]; z++) for (let x = gLo[0] + 1; x < gHi[0]; x++) {
+    const b = at(x, y, z);
+    if (b) caseInside.push(b);
+    // keyed by block id: what the box holds is masonry and plants as well as fruit
+    const k = b || 0;
+    caseFill[k] = (caseFill[k] || 0) + 1;
+  }
+  const caseFillLine = Object.keys(caseFill).map(Number).sort((a, b) => caseFill[b] - caseFill[a])
+    .map(k => `${caseFill[k]}x${k}`).join(' ');
+  const caseRoom = (caseSpan[0] - 2) * (caseSpan[1] - 2) * (gHi[1] - gLo[1] - 1);
+  // the two materials the chapter names in words: the keep's wall and the island's ground
+  const BRICK = 11, GRASS = 1;
+  const caseWalls = caseFill[BRICK] || 0, caseGrass = caseFill[GRASS] || 0, caseAir = caseFill[0] || 0;
+  const ghPOI = N.POIS.find(q => q.id === 'greenhouse');
+  const caseFar = Math.hypot((gLo[0] + gHi[0]) / 2 - ghPOI.x, (gLo[2] + gHi[2]) / 2 - ghPOI.z);
+
+  /* a door the generator marks: a cellar crate standing in the marker's column */
+  const DOOR = N.BLOCK_ID.cellarCrate;
+  const crateRow = (p) => { for (let y = SZ.h - 1; y > 0; y--) if (at(p.x, y, p.z) === DOOR) return y; return -1; };
+
+  const H = (label, cnRe, cnWant, enRe, enWant) => ({ label, cnRe, cnWant, enRe, enWant });
+  const CLAIMS = [
+    H('the row the lake surface stands at',
+      /镜湖面 = y(\d+)/, [towerFilm],
+      /Mirrorlake surface = y(\d+)/, [towerFilm]),
+    H('the rows the water body itself occupies',
+      /水体本身是 y(\d+)\.\.(\d+)/, [wl0, wl1],
+      /the water itself is y(\d+)\.\.(\d+)/, [wl0, wl1]),
+    H('how deep the lake stands',
+      /水深从 \*\*(\d+) 格到 (\d+) 格\*\*/, [minD, maxD],
+      /from \*\*(\d+) to (\d+) blocks\*\* deep/, [minD, maxD]),
+    H('how many water columns the lake holds',
+      /把湖里的 ([\d,]+) 根水柱/, [wet],
+      /over all ([\d,]+) water columns/, [wet]),
+    H('what share of them is four blocks or shallower',
+      /(\d+)% 只有 4 格或更浅/, [Math.round(sh4 / wet * 100)],
+      /(\d+)% of them are 4 blocks or less/, [Math.round(sh4 / wet * 100)]),
+    H('what share of them is eight blocks or deeper',
+      /\*\*(\d+)% 有 8 格以上\*\*/, [Math.round(deep8 / wet * 100)],
+      /\*\*(\d+)% are 8 or more\*\*/, [Math.round(deep8 / wet * 100)]),
+    H('where the deepest column stands and what rows it runs over',
+      /最深处在 \((\d+),(\d+)\)，水从 y(\d+) 一直排到 y(\d+)/, deepAt,
+      /deepest at \((\d+),(\d+)\) where the water runs y(\d+)\.\.y(\d+)/, deepAt),
+    H('the deepest bed this world carves',
+      /湖底最深只能到 y(\d+)/, [lowestBed],
+      /the bed cannot go below y(\d+)/, [lowestBed]),
+    H('the band the ridge surface falls in, and its mean',
+      /地面是 \*\*y(\d+)[–-](\d+)\*\*（平均 (\d+)/, [rlo, rhi, Math.round(rsum / rn)],
+      /surface is \*\*y(\d+)[–-](\d+)\*\* \(mean (\d+)/, [rlo, rhi, Math.round(rsum / rn)]),
+    H('the row where the ridge cold starts, and the row where it bites full',
+      /它的冷从 y(\d+) 就开始.*?到 y(\d+) 咬满/s, [coldLine, biteLine],
+      /its cold starts at y(\d+).*?reaches its full bite at y(\d+)/s, [coldLine, biteLine]),
+    H('what share of the ridge is already cold',
+      /(\d+)% 的列已经在挨冻/, [Math.round(rCold / rn * 100)],
+      /(\d+)% of the ridge's columns are already cold/, [Math.round(rCold / rn * 100)]),
+    H('how many columns stand at or above the full-bite line',
+      /那条线以上的列有 (\d+) 根/, [rBite],
+      /(\d+) columns stand at or above that line/, [rBite]),
+    H('how many bruin figs the ridge holds, and what rows they hang at',
+      /(\d+) 颗棕熊果挂在 \*\*y(\d+)\.\.(\d+)\*\*/, [figN, figLo, figHi],
+      /the (\d+) bruin figs hang at \*\*y(\d+)\.\.(\d+)\*\*/, [figN, figLo, figHi]),
+    H('the row most of the figs hang at',
+      /大多数在 (\d+)/, [figMode],
+      /most of them at (\d+)/, [figMode]),
+    H('the band the isle surfaces fall in, and how high what stands on them gets',
+      /岛面 (\d+)[–-](\d+)；岛上立起来的东西最高到 (\d+)/,
+      [Math.min(...isleTops), Math.max(...isleTops), isleHigh],
+      /isle surfaces (\d+)[–-](\d+); what stands on them up to (\d+)/,
+      [Math.min(...isleTops), Math.max(...isleTops), isleHigh]),
+    H('the rows the sunken tower shell spans, and the shell plan it spans',
+      /\*\*y(\d+) 到 y(\d+)\*\* 的一具 (\d+)×(\d+) 壳体/, [shellLo, shellHi, towerSpan, towerSpan],
+      /a (\d+)×(\d+) shell from \*\*y(\d+) to y(\d+)\*\*/, [towerSpan, towerSpan, shellLo, shellHi]),
+    H('the rows the spire stands at',
+      /塔尖在 \*\*y(\d+)\/y(\d+)\*\*/, [spireRows[0], spireRows[1]],
+      /with a spire at \*\*y(\d+)\/y(\d+)\*\*/, [spireRows[0], spireRows[1]]),
+    H('how far the top of the ruin stands above the water line',
+      /露出水面 (\d+) 格/, [ruinAbove],
+      /stands (\w+) blocks \*\*above\*\* the water line/, [ruinAbove]),
+    H('the rows the tower windows occupy',
+      /四个面都有窗，在 \*\*y(\d+)\/y(\d+)\/y(\d+)\*\*/, winRows,
+      /Windows on all four faces at \*\*y(\d+)\/y(\d+)\/y(\d+)\*\*/, winRows),
+    H('the rows the frog pear hangs on the sills at',
+      /窗台上（\*\*y(\d+)\/y(\d+)\*\*）/, sillRows,
+      /on the sills one block under two of them \(\*\*y(\d+)\/y(\d+)\*\*\)/, sillRows),
+    H('the row the chapter prints for the keep greenhouse door',
+      /\*\*温室（地窖）\*\* y(\d+)/, [crateRow(ghPOI) - 1],
+      /\*\*Greenhouse \(cellar\)\*\* y(\d+)/, [crateRow(ghPOI) - 1]),
+    H('the plan and rows of the glass case the keep holds its demonstration fruit in',
+      /\*\*(\d+)×(\d+) 的玻璃罩，从 y(\d+) 立到 y(\d+)\*\*/, [caseSpan[0], caseSpan[1], gLo[1], gHi[1]],
+      /\*\*(\d+)×(\d+) glass box, from y(\d+) to y(\d+)\*\*/, [caseSpan[0], caseSpan[1], gLo[1], gHi[1]]),
+    H('how far that case stands from the door that marks it',
+      /离那扇门 (\d+\.\d) 米/, [+caseFar.toFixed(1)],
+      /standing (\d+\.\d) m from that door/, [+caseFar.toFixed(1)]),
+    H('what fills the inside of that case, cell by cell',
+      /内部 (\d+) 格里有 (\d+) 格是城堡自己的城砖，(\d+) 格是长草的地面，(\d+) 格是空的/, [caseRoom, caseWalls, caseGrass, caseAir],
+      /of its (\d+) inner cells, (\d+) are the keep's own city brick, (\d+) are ground under grass and (\d+) are empty/, [caseRoom, caseWalls, caseGrass, caseAir])
+  ];
+
+  const measured = {
+    'the row the lake surface stands at': towerFilm,
+    'the rows the water body itself occupies': `${wl0}..${wl1}`,
+    'how deep the lake stands': `${minD}..${maxD}`,
+    'how many water columns the lake holds': wet,
+    'what share of them is four blocks or shallower': `${(sh4 / wet * 100).toFixed(1)}%`,
+    'what share of them is eight blocks or deeper': `${(deep8 / wet * 100).toFixed(1)}%`,
+    'where the deepest column stands and what rows it runs over': `(${deepAt[0]},${deepAt[1]}) y${deepAt[2]}..y${deepAt[3]}`,
+    'the deepest bed this world carves': lowestBed,
+    'the band the ridge surface falls in, and its mean': `y${rlo}-${rhi} mean ${(rsum / rn).toFixed(2)} over ${rn} in-world columns`,
+    'the row where the ridge cold starts, and the row where it bites full': `y${coldLine} .. y${biteLine}`,
+    'what share of the ridge is already cold': `${(rCold / rn * 100).toFixed(1)}%`,
+    'how many columns stand at or above the full-bite line': rBite,
+    'how many bruin figs the ridge holds, and what rows they hang at': `${figN} at y${figLo}..y${figHi}`,
+    'the row most of the figs hang at': `${figMode} (${figHist[figMode]} of ${figN})`,
+    'the band the isle surfaces fall in, and how high what stands on them gets': `${Math.min(...isleTops)}-${Math.max(...isleTops)}, up to ${isleHigh}`,
+    'the rows the sunken tower shell spans, and the shell plan it spans': `y${shellLo}..y${shellHi}, ${towerSpan}x${towerSpan}`,
+    'the rows the spire stands at': spireRows.join('/'),
+    'how far the top of the ruin stands above the water line': ruinAbove,
+    'the rows the tower windows occupy': winRows.join('/'),
+    'the rows the frog pear hangs on the sills at': sillRows.join('/'),
+    'the row the chapter prints for the keep greenhouse door': `the marked door stands at y${crateRow(ghPOI)}, so the marker sits on the deck at y${crateRow(ghPOI) - 1}`,
+    'the plan and rows of the glass case the keep holds its demonstration fruit in': `${caseSpan[0]}x${caseSpan[1]}, y${gLo[1]}..y${gHi[1]}, ${gN} glass cells`,
+    'how far that case stands from the door that marks it': `${caseFar.toFixed(2)} m from (${ghPOI.x},${ghPOI.z}) to the case centre (${(gLo[0] + gHi[0]) / 2},${(gLo[2] + gHi[2]) / 2})`,
+    'what fills the inside of that case, cell by cell': `${caseRoom} cells: ${caseFillLine}`
+  };
+
+  let badHeights = 0;
+  for (const c of CLAIMS) {
+    for (const L of LANGS) {
+      const md = readIn(L, L.files.zones);
+      const m = md.match(L.tag === 'cn' ? c.cnRe : c.enRe);
+      const want = L.tag === 'cn' ? c.cnWant : c.enWant;
+      if (!m) { bad(`${L.tag} 02 height: ${c.label}`, 'the chapter no longer says it in words this check can read', String(measured[c.label])); badHeights++; continue; }
+      for (let i = 0; i < want.length; i++) {
+        const got = read(m[i + 1]);
+        if (want[i] === null || got !== want[i]) { bad(`${L.tag} 02 height: ${c.label}`, got, want[i]); badHeights++; }
+      }
+    }
+  }
+  if (!badHeights) good(`${CLAIMS.length} heights in the map chapter, asked of the world the data generates (seed ${SEED}): ` +
+    CLAIMS.map(c => measured[c.label]).join(' | '));
+  const discAll = (zn) => {
+    let n = 0, out = 0;
+    for (let z = zn.cz - zn.r; z <= zn.cz + zn.r; z++) for (let x = zn.cx - zn.r; x <= zn.cx + zn.r; x++) {
+      if (Math.hypot(x - zn.cx, z - zn.cz) > zn.r) continue;
+      n++;
+      if (x < 0 || z < 0 || x >= SZ.w || z >= SZ.d) out++;
+    }
+    return { n, out };
+  };
+  const ridgeDisc = discAll(RG);
+  good(`every height above is asked only over the columns the world holds: the ridge's disc asks for ${ridgeDisc.n}, and ` +
+    `${ridgeDisc.out} of them lie outside a ${SZ.w}x${SZ.d} valley (its centre x${RG.cx} with radius ${RG.r} reaches x${RG.cx + RG.r}) -- ` +
+    `read with those columns let in as ground, the same census answers y23-47, mean 33.4, 90.2% cold, 671 columns at the bite line`);
+
+  /* ================= 13. the height a marker turns into a height ============
+     A marker whose icon is a door names a door the generator marks, and the
+     generator marks one by putting a cellar crate in the marker's own column:
+     game.js asks the world for `poi.y + 1` when it puts the Main Cellar's store
+     down. So the crate has to stand one cell above the marker, in that column.
+     Measured on the seed the game opens with: the Main Cellar's crate does stand
+     there (marker y20, crate y21); the keep's fruit greenhouse marker did not --
+     the generator marks that door with a crate at (78,22,110), in the deck it
+     raises over the island, while the marker the chapter printed, and which quest
+     q6 turns into a standing band, said y18: four cells under its own door, buried
+     in the island's fill. Nothing visible was broken by that: the band q6 derives
+     (12..28) happened to cover the deck at y22, so the walk still finished, which
+     is exactly how a wrong height survives a suite that never asks one. With the
+     marker at its own door the band is 15..31 and still covers the deck.
+     Two things this pass also settled, and did not quietly change: the whole
+     island under that deck is stone from y3 up -- 0 air cells inside the keep's
+     disc below the deck -- so there is no cellar for that door to open onto, and
+     the keep's glass case is no room but a glass shell dropped over the corner of
+     the rampart, 16 of its 27 inner cells the keep's own brick. Both are design
+     questions for the human, reported rather than guessed at. The marker moved
+     because the geometry does: a case laid out at the marker the old number named
+     would sit inside the bell tower's wall. */
+  const doors = [];
+  for (const id of ['cellar', 'greenhouse']) {
+    const p = N.POIS.find(q => q.id === id);
+    const crate = crateRow(p);
+    if (crate < 0) bad(`02 door marker ${id}`, `no cellar crate anywhere in column (${p.x},${p.z})`, `the generator marks a door with one`);
+    else if (crate !== p.y + 1) bad(`02 door marker ${id}`, `marker y${p.y}, the door it marks stands at y${crate}`, `the crate one cell above the marker, y${p.y + 1}`);
+    else doors.push(`${id} marker y${p.y} + the crate at y${crate}`);
+  }
+  if (doors.length === 2) good(`02 door markers stand at their doors: ${doors.join('; ')}`);
+
+  /* the shape the door belongs to. The chapter promises the keep's fruit stands
+     under glass, so the case has to be a case: closed on all six faces, holding a
+     fruit. A door in a face would open the box; an empty box would make the
+     promise prose. */
+  const caseFruit = caseInside.map(b => N.FRUIT_BLOCK[b]).filter(Boolean);
+  let caseBad = 0;
+  if (caseHoles) { bad('02 keep case', `${caseHoles} of the ${caseShell} cells on the six faces of the box are not glass -- it has an opening`, 'a box closed on all six faces'); caseBad++; }
+  if (!caseFruit.length) { bad('02 keep case', `no fruit stands inside the box (its ${caseInside.length} filled cells hold blocks ${caseInside.join(',')})`, 'the demonstration fruit the chapter says stands under glass'); caseBad++; }
+  if (gN !== caseShell) { bad('02 keep case', `${gN} glass cells in the keep's disc, ${caseShell} cells on the faces of the box they bound`, 'the two to be the same shape'); caseBad++; }
+  if (!caseBad) good(`02 keep case: ${gN} glass cells form one box closed on all six faces, plan ${caseSpan[0]}x${caseSpan[1]} over rows y${gLo[1]}..y${gHi[1]}, holding ${caseFruit.join(', ')} ` +
+    `(asked over the keep's square rather than its disc the same census returns ${gSquare} cells, ${gSquare - gN} of them the sunken tower's window panes two zones away); ` +
+    `its inside is not a room but the corner of the keep it was built round: ${caseFillLine} of ${caseRoom} cells`);
+
+  const deck = crateRow(ghPOI);
+  const bandRe = /p\.y > gh\.y - (\d+) && p\.y < gh\.y \+ (\d+)/;
+  const bm2 = bandRe.exec(src);
+  if (!bm2) bad('02 q6 band', 'the band game.js derives from the marker is no longer written the way this check reads it', 'p.y > gh.y - n && p.y < gh.y + n');
+  else if (!(deck > ghPOI.y - +bm2[1] && deck < ghPOI.y + +bm2[2]))
+    bad('02 q6 band', `the door q6 names stands at y${deck}, outside the band ${ghPOI.y - +bm2[1]}..${ghPOI.y + +bm2[2]}`, `inside it`);
+  else good(`02 q6 band: the door stands at y${deck}, inside the band game.js derives (${ghPOI.y - +bm2[1]}..${ghPOI.y + +bm2[2]})`);
+
+  const bm = N.POIS.find(q => q.id === 'beams');
+  const mote = at(bm.x, bm.y + 1, bm.z);
+  if (BK[mote] && BK[mote].solid) bad('02 beams marker', `game.js lets the dust off the beams go at y${bm.y + 1}, which the world fills with block ${mote}`, 'a cell the world leaves open');
+  else good(`02 beams marker: the dust is let go at y${bm.y + 1}, which the world leaves open (${mote ? BK[mote].cn : 'air'})`);
+}
+
 /* ================= report ================= */
 console.log('docs ↔ data 一致性检查 (docs/cn/ + docs/en/)');
 for (const s of ok) console.log('  ✔ ' + s);
