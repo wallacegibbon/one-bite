@@ -456,6 +456,66 @@
     }
   }
 
+  /* ---------------- the isles' decks: hold up what walks on them ----------------
+     An isle is laid before the clouds drift and before the wood is planted, and
+     both of those later passes write straight through its floor. A cloud blob
+     leaves block 16 -- which is in the block table as `solid: false`, because a
+     cloud is something you walk through, not something you stand on -- where the
+     deck's own grass was, and a pine rooted on the valley floor under an isle
+     has its crown at the height of the deck above it. The deck is thinnest at an
+     isle's rim, where the island's own thickness under the deck row is one cell:
+     two cells of floor all the way through the island there, and up to twelve at
+     the middle of a big isle (over the 850 columns of these six isles that
+     thickness runs 1..11). A cloud blob's vertical radius, read out of the pass
+     that lays it, runs 1.7..5.0 rows -- enough to eat a rim clean through, and
+     enough to eat cells out of the middle of a thick deck as well. Measured in
+     the band under those 850 deck rows at the seed the game opens with, the
+     island's own material was already gone from 406 cells of it: 230 of cloud,
+     85 of leaf, 54 of needles, 37 of dark leaf.
+
+     Measured at that seed, over the 850 columns of deck the six isles hold inside
+     the world, and read with the rule the player's own body uses (World.solidAt,
+     the call the collision box asks every frame): 700 columns stood a body on the
+     deck, 76 stood it one row low, and **74 were holes a body fell through** --
+     the worst of them 12 rows down, at (38,30) on beamisle, where the deck the
+     map chapter puts at y37 had nothing under it until y25. Read with the rule
+     the animals use for a column (terrainY, which does not accept a crown as
+     ground) the answer was worse still: 618 of the 850 answer the deck row, 30
+     answer one row above it and 202 answer under it, and those 202 fall a mean
+     2.17 rows, the worst 13. Five sixths of the hidden route the chapter
+     advertises for players who would rather not fly was floor; the rest was sky.
+
+     So the deck is re-laid after everything that can eat it. It lays the island's
+     own material in the island's own thickness -- grass at the deck row, stone
+     through the middle of the thickness and mountain rock at its bottom, exactly
+     the way `sky()` lays an untouched isle -- and only in a cell that has stopped
+     being the island: it never cuts a trunk rooted on the ground below (a severed
+     trunk would leave its crown hanging in the air, which is a worse defect than
+     the one being fixed) and it never touches a cell the island already holds.
+     It calls no random number, so it cannot move a tree, a cellar or an isle in
+     any world this seed can build: 406 cells out of the 5,038 cells of those six
+     decks, and everything else byte for byte as it was. Measured the same way at
+     four other seeds it rewrites 235 to 820 cells, and every deck column that
+     dropped a body holds again -- 145 columns of 850 needed it at seed 7, 72 at
+     seed 20261009, and two of the four seeds had nothing to fix at all.  */
+  function decks() {
+    const OWN = { 1: 1, 2: 1, 3: 1, 24: 1 };   // grass, dirt, stone, mountain rock: the island's own
+    for (const isle of N.SKY_ISLES) {
+      const { x, z, r, top } = isle;
+      for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+        const d = dist(x + dx, z + dz, x, z);
+        if (d > r) continue;
+        const th = Math.round((1 - Math.pow(d / r, 2)) * (r * 0.9)) + 1;
+        for (let y = top; y >= top - th; y--) {
+          const b = get(x + dx, y, z + dz);
+          if (OWN[b]) continue;                     // the island already holds this cell
+          if (b === 6) continue;                    // a trunk rooted under the island stays rooted
+          set(x + dx, y, z + dz, y === top ? 1 : (y > top - th + 1 ? 3 : 24));
+        }
+      }
+    }
+  }
+
   /* ---------------- forest / plants / fruit ---------------- */
   function forest() {
     /* jittered grid planting: ground stays visible between canopies */
@@ -564,6 +624,9 @@
       for (let y = h + 1; y <= SEA; y++) set(x, y, z, 5);
     }
     cave(); castle(); village(); orchard(); lakebed(); sky(); forest();
+    // the isles' decks last: cloud drift and the wood below both write through
+    // them, and a deck that is not a floor is a hole in a floating island
+    decks();
     // boundary: flatten the outermost ring and raise the Grey Veil pillars
     for (let i = 0; i < W.w; i += 7) {
       for (const [x, z] of [[i, 4], [i, W.d - 5], [4, i], [W.w - 5, i]]) {

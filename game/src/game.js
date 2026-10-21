@@ -295,11 +295,31 @@
         } else if (z.kind === 'rect') {
           x = z.x0 + Math.random() * (z.x1 - z.x0); zz = z.z0 + Math.random() * (z.z1 - z.z0);
         } else if (z.kind === 'sky') {
+          /* A sky zone picks a column out of an isle's disc, and then asks the
+             world the same question every other zone asks. It used to answer the
+             height itself -- `isle.top + 1`, straight out of the isle table --
+             and return before the shared validation below ever ran. That made it
+             the only branch in this function that never once looked at the world
+             it was standing in: the table row says where an isle's deck is, not
+             whether the cell over that deck is open or whether the deck holds.
+             Measured at the seed the game opens with, over the 850 columns of
+             deck the six isles hold inside the valley, that copied height puts a
+             body inside a block in **156** of them -- a pine's trunk, a spray of
+             needles, a cell of dirt, one of the old beams -- and leaves it with
+             no sky over its head in **470** more, while only **662** of the 850
+             are both clear at the body's rows and supported under it.
+             No creature reaches this branch today: `game.js` asks for a habitat
+             with `sp.habitat[0]`, and no species in `data/creatures.js` names a
+             sky zone first -- the owl's first habitat is whisperwood (cloudspire
+             is fourth on its list), the bear's is mountains, the frog's and the
+             jellyfish's are mirrorlake -- so the defect is latent rather than
+             live, which is exactly why it is worth closing now, before an owl is
+             ever moved up there. Asking the world instead costs nothing: 380 of
+             those 850 columns do have the sky a flyer needs, so the loop's 300
+             tries find one. */
           const isle = N.SKY_ISLES[(Math.random() * N.SKY_ISLES.length) | 0];
           const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * isle.r;
           x = isle.x + Math.cos(a) * r; zz = isle.z + Math.sin(a) * r;
-          const y = isle.top + 1;
-          return { x, y, z: zz };
         } else { // border
           const side = (Math.random() * 4) | 0;
           if (side === 0) { x = 8 + Math.random() * (W.w - 16); zz = 9; }
@@ -308,6 +328,15 @@
           else { x = W.w - 10; zz = 8 + Math.random() * (W.d - 16); }
         }
         x = Math.max(8, Math.min(W.w - 8, x)); zz = Math.max(8, Math.min(W.d - 8, zz));
+        /* A sky zone means an isle's deck, and nothing else. A point drawn out
+           of an isle's disc rounds to 1,016 different columns, and **166** of
+           them belong to no isle at all -- the disc is a disc of points, and the
+           column a point lands in is named by its corner. Every rejection below
+           is happy with one of those 166 columns, because the valley floor under
+           an isle is ground like any other, so a body asked for in the sky is put
+           down in the wood. The disc is therefore checked with the same rule the
+           isles are built with. */
+        if (z.kind === 'sky' && !N.isleDeckAt(Math.floor(x), Math.floor(zz))) continue;
         /* The ground, not the crown above it -- see terrainY. And the ground
            cell itself has to be air: an animal put down inside a trunk is an
            animal standing in a tree. */

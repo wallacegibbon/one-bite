@@ -564,6 +564,20 @@
   N.WATER = WATER;
   N.BLOCK_ID = BLOCK_ID;
   N.TREE_BLOCK = TREE_BLOCK;
+  /* Which floating isle, if any, this column belongs to: the disc rule the
+     isles are built with (`sky()` and the deck pass in worldgen.js sweep exactly
+     this disc and nothing outside it), asked the other way round. `game.js`
+     needs it because a sky zone has to mean an isle's deck -- a column outside
+     the six discs is the valley floor fifteen rows under one -- and a test needs
+     it because "every column of deck the six isles hold" is only a census if the
+     census and the generator use one disc rule. It answers the isle row from
+     `data/world.js`, so the row's `top` is the deck row of that column. */
+  N.isleDeckAt = function (x, z) {
+    for (const isle of N.SKY_ISLES) {
+      if (Math.hypot(x - isle.x, z - isle.z) <= isle.r) return isle;
+    }
+    return null;
+  };
   /* Which blocks a body built for the air does not stop against: the material
      the mesher already calls `soft` -- leaves, needles, silver leaves, dark
      leaves, willow. (Cloud is soft too and is not solid at all, so it never

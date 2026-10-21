@@ -102,6 +102,17 @@ const LANGS = [
 
 const readIn = (L, f) => fs.readFileSync(path.join(L.dir, f), 'utf8');
 
+/* The docs write a count as a word sometimes and with a thousands comma other
+   times ("six isles", "1,016 columns"); both spellings have to reach the same
+   number, or the checker reports a drift that is only a spelling. Shared by every
+   section that reads a claim out of a chapter. */
+const WORD = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+const read = s => {
+  const t = String(s).trim().toLowerCase();
+  if (t in WORD) return WORD[t];
+  return +t.replace(/[,\s]/g, '');
+};
+
 for (const L of LANGS) {
   const T = `[${L.tag}]`;
 
@@ -438,12 +449,6 @@ for (const L of LANGS) {
         if (Math.hypot(x - zn.cx, z - zn.cz) <= zn.r && x >= 0 && z >= 0 && x < SZ.w && z < SZ.d) out.push([x, z]);
     return out;
   };
-  const WORD = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
-  const read = s => {
-    const t = String(s).trim().toLowerCase();
-    if (t in WORD) return WORD[t];
-    return +t.replace(/[,\s]/g, '');
-  };
 
   /* the lake: every water column of its disc that the world holds */
   const MK = N.ZONE_BY_ID.mirrorlake;
@@ -765,6 +770,233 @@ for (const L of LANGS) {
   const mote = at(bm.x, bm.y + 1, bm.z);
   if (BK[mote] && BK[mote].solid) bad('02 beams marker', `game.js lets the dust off the beams go at y${bm.y + 1}, which the world fills with block ${mote}`, 'a cell the world leaves open');
   else good(`02 beams marker: the dust is let go at y${bm.y + 1}, which the world leaves open (${mote ? BK[mote].cn : 'air'})`);
+}
+
+/* ================= 14. the decks of the isles, asked of the world =========
+   The isle table in 02 s5.7 states a `Top y` for every isle, and that row is
+   read three different ways by three different parts of the game: it is the row
+   a body stands on, it is the row the sky branch of `samplePos` used to copy as
+   a spawn height, and it is the row the chapter's layer ladder prints for the
+   top of the valley. Not one of those reads was ever asked of the world. Asked,
+   the committed generator answered like this over the 850 columns of deck the
+   six isles hold inside a 160x160 valley: read the way a body reads a column
+   (`World.solidAt`, the call the collision box makes every frame), 700 columns
+   held at the row their isle names and **150 did not** -- 76 of those dropped a
+   body one row, and 74 dropped it two rows or more, worst **12** rows, at
+   (38,30) on beamisle, where the chapter puts the deck at y37 and nothing at all
+   held until y25. Read the way an animal reads a column (`terrainY`, which will
+   not take a crown for ground) it was worse: 618 answers at the deck, 202 under
+   it, by 2.17 rows on average and 13 at worst. The cause is order: `sky()` lays
+   an isle, and the cloud drift that follows it leaves block 16 -- a block the
+   table marks not solid, because a cloud is something you walk through --
+   straight through the deck, while the wood planted after that carries the
+   crowns of pines rooted on the valley floor up through the same cells. At the
+   rim of an isle the whole deck is two cells (the surface and one cell of
+   mountain rock under it, 52 of the 850 columns exactly that and the other 798
+   thicker), and a cloud blob reaches five rows up and down, so one blob eats a
+   deck clean through and the island has a hole in it.
+
+   `worldgen.js` now re-lays the decks after everything that can eat them, and
+   the census below is what it answers: 850 columns holding, 0 holes, 0 columns
+   that an animal would be set down under. Of the 30 columns where the animal's
+   rule still reads a surface above the deck row, what stands on the deck is
+   counted rather than guessed at: a burrow mound heaped there in 18 of them and
+   one of `sky()`'s own old-beam planks in 12, 28 of the 30 one cell over the
+   deck and 2 three cells over. It changed 406 cells of the 5,038
+   those six decks are made of and no cell outside the six discs -- measured on
+   four other seeds too (7, 20261009, 123456789, 4242: 820, 542, 235 and 254
+   cells, all of them inside a disc), and on the two seeds where nothing was
+   eating a deck the pass still changed cells without moving one body, which is
+   what a pass that draws no random number is for.
+
+   Two reads are printed beside the honest ones, because both look right and
+   both are traps. `groundY` answers "the top of the column plus one", and a
+   crown is solid: it gives the deck row to a body in 76 of the 850 columns, and
+   at beamisle's own centre (40,20) it answers y46, eight rows up in the needles,
+   where the deck would set that same body down at y38. And a check that reads the isle table instead of the world answers every
+   one of the 850 columns as floor, and notices nothing at all when a deck is dug
+   out -- so this section digs one out itself, from the two-cell deck at
+   (40,37,9) on beamisle, reads the column back, and reports the drop it sees.
+   The copied spawn height is printed too: asked of the world, `Top y + 1` puts a
+   body inside a block in 156 columns (a pine trunk, needles, one of the old
+   beams), leaves no sky over the column in 470 more, and leaves 662 where the
+   cell stands open at the body's rows with something holding under it, while
+   only 380 of the 850 keep the sky a body built for flight needs. And a point
+   drawn out of an isle's disc rounds to 1,016 different columns, 166 of which
+   belong to no isle at all: valley floor, which is ground like any other, so a
+   sky spawn that trusts the disc alone is put down in the wood. `game.js` no
+   longer copies a height out of this table, and `play.js` walks the branch. */
+{
+  const SZ = N.WORLD;
+  const gsrc = fs.readFileSync(path.join(base, 'src', 'game.js'), 'utf8');
+  const SEED = +(((gsrc.match(/this\.seed = (\d+)/) || [])[1]));
+  for (const f of ['src/engine.js', 'src/world.js', 'src/worldgen.js', 'src/models.js', 'src/entities.js']) require(path.join(base, f));
+  const w = new N.World(SZ.w, SZ.h, SZ.d);
+  N.generate(w, SEED);
+
+  /* the census: every column an isle owns, by the rule the game itself uses */
+  const deck = [];
+  for (let z = 0; z < SZ.d; z++) for (let x = 0; x < SZ.w; x++) {
+    const isle = N.isleDeckAt(x, z);
+    if (isle) deck.push([x, z, isle]);
+  }
+  let hold = 0, hole = 0, worst = 0, worstAt = '';
+  let aDeck = 0, aAbove = 0, aAbove1 = 0, aAboveMore = 0, aMound = 0, aBeam = 0, aBelow = 0, aSum = 0, aWorst = 0;
+  let two = 0, thick = 0, band = 0;
+  let insideRow = 0, noSkyRow = 0, clearSupported = 0, withSky = 0, crownOk = 0;
+  /* what stands OVER the deck, in the columns where the read that takes the top
+     of a column for its floor misses the deck row: named and counted, not guessed */
+  let crownNeedles = 0, crownLeaf = 0, crownDarkLeaf = 0, crownOther = 0, crownLo = 99, crownHi = 0;
+  for (const [x, z, isle] of deck) {
+    let fl = -1;
+    for (let y = isle.top; y > 0; y--) if (w.solidAt(x, y, z)) { fl = y; break; }
+    const drop = isle.top - fl;
+    if (drop === 0) hold++;
+    else {
+      hole++;
+      if (drop > worst) { worst = drop; worstAt = `${isle.id} (${x},${z}): deck row y${isle.top}, nothing held until y${fl}`; }
+    }
+    const g = N.terrainY(w, x, z, SZ.h - 1);
+    if (g === isle.top + 1) aDeck++;
+    else if (g > isle.top + 1) {
+      /* something is standing on the deck, so the surface an animal reads is
+         above the row the chapter prints. Which thing, and how far above, is a
+         fact about the world too -- the chapter says it, so the check counts it. */
+      aAbove++;
+      if (g === isle.top + 2) aAbove1++; else aAboveMore++;
+      const on = w.get(x, g - 1, z);
+      if (on === 2) aMound++; else if (on === 26) aBeam++;
+    }
+    else { aBelow++; aSum += isle.top + 1 - g; if (isle.top + 1 - g > aWorst) aWorst = isle.top + 1 - g; }
+    const d = Math.hypot(x - isle.x, z - isle.z);
+    const th = Math.round((1 - Math.pow(d / isle.r, 2)) * (isle.r * 0.9)) + 1;
+    band += th + 1;
+    if (th === 1) two++; else thick++;
+    if (w.solidAt(x, isle.top + 1, z)) insideRow++;
+    if (N.groundY(w, x, z, SZ.h - 1) + 3 >= SZ.h) noSkyRow++;
+    if (!w.solidAt(x, isle.top + 1, z) && !w.solidAt(x, isle.top + 2, z) && w.solidAt(x, isle.top, z)) clearSupported++;
+    if (N.groundY(w, x, z, SZ.h - 1) + 3 < SZ.h) withSky++;
+    if (N.groundY(w, x, z, SZ.h - 1) - 1 === isle.top) crownOk++;
+    else {
+      /* the read that takes the top of a column for its floor missed the deck:
+         name what it landed on instead, so the chapter's reason is a measurement */
+      const on = w.get(x, N.groundY(w, x, z, SZ.h - 1) - 1, z);
+      const rows = N.groundY(w, x, z, SZ.h - 1) - 1 - isle.top;
+      if (on === 8) crownNeedles++; else if (on === 7) crownLeaf++; else if (on === 27) crownDarkLeaf++; else crownOther++;
+      if (rows < crownLo) crownLo = rows;
+      if (rows > crownHi) crownHi = rows;
+    }
+  }
+  const centre = N.SKY_ISLES[0];
+  const crownCentre = N.groundY(w, centre.x, centre.z, SZ.h - 1);
+
+  /* the trap in the sampling itself, counted geometrically rather than by
+     drawing random points: which integer columns a point anywhere inside an
+     isle's disc can round to */
+  const reach = new Set();
+  for (const isle of N.SKY_ISLES) {
+    for (let z = Math.floor(isle.z - isle.r) - 1; z <= Math.ceil(isle.z + isle.r) + 1; z++)
+      for (let x = Math.floor(isle.x - isle.r) - 1; x <= Math.ceil(isle.x + isle.r) + 1; x++) {
+        if (x < 0 || z < 0 || x >= SZ.w || z >= SZ.d) continue;
+        // the corner of this unit column closest to the disc centre
+        const nx = Math.max(x, Math.min(isle.x, x + 1)), nz = Math.max(z, Math.min(isle.z, z + 1));
+        if (Math.hypot(nx - isle.x, nz - isle.z) <= isle.r) reach.add(`${x},${z}`);
+      }
+  }
+  let unowned = 0;
+  for (const k of reach) { const p = k.split(','); if (!N.isleDeckAt(+p[0], +p[1])) unowned++; }
+
+  /* the teeth: dig a deck out of the two-cell column at the rim of an isle and
+     read that column back the way a body does, then put it straight back */
+  let rim = null;
+  for (let dz = -centre.r; dz <= centre.r && !rim; dz++) for (let dx = -centre.r; dx <= centre.r && !rim; dx++) {
+    const d = Math.hypot(dx, dz);
+    if (d > centre.r) continue;
+    if (Math.round((1 - Math.pow(d / centre.r, 2)) * (centre.r * 0.9)) + 1 !== 1) continue;
+    const x = centre.x + dx, z = centre.z + dz;
+    if (x < 0 || z < 0 || x >= SZ.w || z >= SZ.d) continue;
+    if (w.solidAt(x, centre.top, z)) rim = [x, z];
+  }
+  let digDrop = -1, digAt = '';
+  if (rim) {
+    const saved = w.get(rim[0], centre.top, rim[1]);
+    w.set(rim[0], centre.top, rim[1], 0);
+    let fl = -1;
+    for (let y = centre.top; y > 0; y--) if (w.solidAt(rim[0], y, rim[1])) { fl = y; break; }
+    digDrop = centre.top - fl;
+    digAt = `(${rim[0]},${centre.top},${rim[1]}), block ${saved}`;
+    w.set(rim[0], centre.top, rim[1], saved);
+    if (!w.solidAt(rim[0], centre.top, rim[1])) bad('14 deck dig', 'the dug cell did not go back', 'the world as it was before the dig');
+  }
+
+  let badDecks = 0;
+  if (hole) { bad('14 isle decks hold', `${hole} of ${deck.length} columns of isle deck do not hold at the row the chapter prints -- worst ${worst} rows: ${worstAt}`, 'every column of deck to hold at the row its isle names'); badDecks++; }
+  if (aBelow) { bad('14 isle decks, animals\' rule', `${aBelow} of ${deck.length} columns answer ${aWorst} rows at worst under the deck for an animal (mean ${aBelow ? (aSum / aBelow).toFixed(2) : 0} rows), so a body set down there is inside a floating island`, 'the deck, or something standing on it'); badDecks++; }
+  if (crownOther) { bad('14 what crowns the deck', `${crownOther} of the columns where the top-of-column read misses the deck row are crowned by something the chapter does not name (it names needles, leaf and the old beams' dark leaf)`, 'needles, leaf or dark leaf, every one'); badTallies++; }
+  if (aMound + aBeam !== aAbove) { bad('14 what stands on the deck', `the chapter attributes it to a burrow mound and a beam plank, which account for ${aMound} + ${aBeam} of the ${aAbove} columns an animal's rule answers above the deck row`, `${aAbove} columns, every one of them named`); badTallies++; }
+  if (digDrop < 1) { bad('14 the checker has teeth', `digging the deck out of ${digAt || 'no rim column found'} changed nothing in the read a body uses`, 'the read to notice a missing deck cell'); badDecks++; }
+  if (/const y = isle\.top \+ 1;/.test(gsrc)) { bad('14 the sky spawn height', 'game.js copies `isle.top + 1` out of the isle table again and returns it without asking the world', 'the sky branch to ask the world the way every other branch does'); badDecks++; }
+  if (!badDecks) good(`14 the isles' decks hold, asked of the world (seed ${SEED}, ${deck.length} columns of deck in the six discs, ${band} cells): ` +
+    `${hold} hold at the row the chapter prints, ${hole} are a hole under it (worst ${worst} rows); an animal's rule answers the deck in ${aDeck}, something standing on it in ${aAbove}, under it in ${aBelow}; ` +
+    `${two} columns are two cells thick at an isle rim and ${thick} thicker; the dug deck at ${digAt} drops a body ${digDrop} row(s) and the read sees it`);
+
+  /* the chapter's claims, in both document sets */
+  const H = (label, cnRe, cnWant, enRe, enWant) => ({ label, cnRe, cnWant, enRe, enWant });
+  const CLAIMS = [
+    H('the columns of deck the six isles hold inside the valley',
+      /六座岛在谷内占的 \*\*(\d+)\*\* 列甲板/, [deck.length],
+      /over the \*\*(\d+)\*\* columns of deck the six isles hold inside the valley/, [deck.length]),
+    H('how many of them hold at the row the table names, for a body on foot',
+      /\*\*(\d+)\*\* 列在那一行承重，\*\*(\d+)\*\* 列在那一行下面是洞/, [hold, hole],
+      /\*\*(\d+)\*\* of them hold at that row and \*\*(\d+)\*\* are a hole under it/, [hold, hole]),
+    H('what the rule the animals use answers over the same columns',
+      /\*\*(\d+)\*\* 列答的就是那一行，\*\*(\d+)\*\* 列答的是它上面某一行——那 \d+ 列里 \*\*(\d+)\*\* 列是堆在甲板上的土丘、\*\*(\d+)\*\* 列是立在甲板上的旧梁暗木板——而 \*\*(\d+)\*\* 列答在它下面；这 \d+ 列里 \*\*(\d+)\*\* 列高出甲板一格，\*\*(\d+)\*\* 列高出三格/s,
+      [aDeck, aAbove, aMound, aBeam, aBelow, aAbove1, aAboveMore],
+      /\*\*(\d+)\*\* answer that row, \*\*(\d+)\*\* answer a row above it -- a burrow mound heaped on the deck in \*\*(\d+)\*\* of those columns, one of the old beams' dark planks standing on it in \*\*(\d+)\*\* -- and \*\*(\d+)\*\* answer under it; \*\*(\d+)\*\* of those 30 sit one cell over the deck and \*\*(\d+)\*\* three cells over/s,
+      [aDeck, aAbove, aMound, aBeam, aBelow, aAbove1, aAboveMore]),
+    H('how thick the decks are at the rim of an isle',
+      /\*\*(\d+)\*\* 列正好两格厚，甲板加它底下一格；其余 (\d+) 列更厚/, [two, thick],
+      /\*\*(\d+)\*\* of the 850 columns are exactly two cells thick, the deck and one cell under it; the other (\d+) are thicker/, [two, thick]),
+    H('the read that takes the top of a column for its floor',
+      /在 \d+ 列里答出甲板那一行的只有 \*\*(\d+)\*\* 根：另外 \d+ 根头上罩着长在甲板上的东西：松针罩着 \*\*(\d+)\*\* 根、扎根在甲板上的树的阔叶罩着 \*\*(\d+)\*\* 根、旧梁的暗叶罩着 \*\*(\d+)\*\* 根，高出甲板 \*\*(\d+)\*\* 到 \*\*(\d+)\*\* 格.*?它答的是身体该站的那一行 \*\*y(\d+)\*\*，而甲板会把身体放到 \*\*y(\d+)\*\*/s,
+      [crownOk, crownNeedles, crownLeaf, crownDarkLeaf, crownLo, crownHi, crownCentre, centre.top + 1],
+      /answers the deck row in only \*\*(\d+)\*\* of the \d+ columns: the other \d+ have something growing over the deck: a pine's needles over \*\*(\d+)\*\* of them, the leaf of a tree rooted on the deck over \*\*(\d+)\*\*, the old beams' dark leaf over \*\*(\d+)\*\*, from \*\*(\d+)\*\* to \*\*(\d+)\*\* rows up.*?it answers \*\*y(\d+)\*\* for the row a body would be set down on, where the deck would set it down at \*\*y(\d+)\*\*/s,
+      [crownOk, crownNeedles, crownLeaf, crownDarkLeaf, crownLo, crownHi, crownCentre, centre.top + 1]),
+    H('the row one cell over the deck, asked of the world as a spawn height',
+      /\*\*(\d+)\*\* 列会把身体放进一个方块里.*?另有 \*\*(\d+)\*\* 列头上没有天空，剩下 \*\*(\d+)\*\* 列/s, [insideRow, noSkyRow, clearSupported],
+      /puts a body \*\*inside\*\* a block in \*\*(\d+)\*\* of the 850 columns.*?no sky over the column in \*\*(\d+)\*\* more, and leaves \*\*(\d+)\*\* where/s, [insideRow, noSkyRow, clearSupported]),
+    H('how much of that deck keeps the sky a flying body needs',
+      /850 列里留给飞行够用的天空的只有 \*\*(\d+)\*\* 列/, [withSky],
+      /only \*\*(\d+)\*\* of the 850 keep the sky a body built for flight needs/, [withSky]),
+    H('the columns an isle disc sample can round to',
+      /四舍五入能落到 \*\*([\d,]+)\*\* 根不同的列上，其中 \*\*(\d+)\*\* 根不属于任何一座岛/, [reach.size, unowned],
+      /rounds to \*\*([\d,]+)\*\* different columns, and \*\*(\d+)\*\* of them belong to no isle at all/, [reach.size, unowned])
+  ];
+  const measured = {
+    'the columns of deck the six isles hold inside the valley': deck.length,
+    'how many of them hold at the row the table names, for a body on foot': `${hold} hold, ${hole} hole`,
+    'what the rule the animals use answers over the same columns': `${aDeck} deck, ${aAbove} above (${aAbove1} one cell over the deck, ${aAboveMore} further: ${aMound} burrow mound, ${aBeam} beam plank), ${aBelow} under`,
+    'how thick the decks are at the rim of an isle': `${two} two-cell rims, ${thick} thicker`,
+    'the read that takes the top of a column for its floor': `${crownOk} of ${deck.length} give the deck row; over the other ${deck.length - crownOk} the crown over the deck is ${crownNeedles} needles, ${crownLeaf} leaf, ${crownDarkLeaf} dark leaf, ${crownLo}..${crownHi} rows up; a body stands at y${crownCentre} at (${centre.x},${centre.z}) where the deck would stand it at y${centre.top + 1}`,
+    'the row one cell over the deck, asked of the world as a spawn height': `${insideRow} inside a block, ${noSkyRow} no sky, ${clearSupported} open and held`,
+    'how much of that deck keeps the sky a flying body needs': withSky,
+    'the columns an isle disc sample can round to': `${reach.size} reachable, ${unowned} belong to no isle`
+  };
+  let badTallies = 0;
+  for (const c of CLAIMS) {
+    for (const L of LANGS) {
+      const md = readIn(L, L.files.zones);
+      const m = md.match(L.tag === 'cn' ? c.cnRe : c.enRe);
+      const want = L.tag === 'cn' ? c.cnWant : c.enWant;
+      if (!m) { bad(`${L.tag} 02 deck: ${c.label}`, 'the chapter no longer says it in words this check can read', String(measured[c.label])); badTallies++; continue; }
+      for (let i = 0; i < want.length; i++) {
+        const got = read(m[i + 1]);
+        if (want[i] === null || got !== want[i]) { bad(`${L.tag} 02 deck: ${c.label}`, got, want[i]); badTallies++; }
+      }
+    }
+  }
+  if (!badTallies) good(`${CLAIMS.length} more claims in the map chapter, asked of the world the same way: ` +
+    CLAIMS.map(c => `${c.label} = ${measured[c.label]}`).join(' | '));
 }
 
 /* ================= report ================= */

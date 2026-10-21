@@ -51,7 +51,19 @@ const DRIFTS = [
   ['02-map-and-scenes.md', '**Greenhouse (cellar)** y21', '**Greenhouse (cellar)** y23', 'the row the keep greenhouse marker stands on'],
   ['02-map-and-scenes.md', '**5×5 glass box, from y22 to y26**', '**5×6 glass box, from y22 to y26**', 'the keep glass case plan'],
   ['02-map-and-scenes.md', 'standing 6.3 m from that door', 'standing 7.3 m from that door', 'how far the case stands from its door'],
-  ['02-map-and-scenes.md', 'of its 27 inner cells, 16 are the keep\'s own city brick', 'of its 27 inner cells, 15 are the keep\'s own city brick', 'what fills the inside of the keep glass case']
+  ['02-map-and-scenes.md', 'of its 27 inner cells, 16 are the keep\'s own city brick', 'of its 27 inner cells, 15 are the keep\'s own city brick', 'what fills the inside of the keep glass case'],
+  // the isles' decks: how thick they are, whether they hold, and what the height
+  // the chapter prints for them answers when it is asked of the world instead of
+  // read off the table. None of these numbers is in game/data/ either.
+  ['02-map-and-scenes.md', 'over the **850** columns of deck the six isles hold inside the valley', 'over the **849** columns of deck the six isles hold inside the valley', 'how many columns of isle deck the valley holds'],
+  ['02-map-and-scenes.md', '**850** of them hold at that row and **0** are a hole under it', '**849** of them hold at that row and **1** are a hole under it', 'whether the decks hold where the chapter says they do'],
+  ['02-map-and-scenes.md', '**820** answer that row, **30** answer a row above it', '**821** answer that row, **30** answer a row above it', 'what the animals\' rule answers over the decks'],
+  ['02-map-and-scenes.md', '**52** of the 850 columns are exactly two cells thick', '**53** of the 850 columns are exactly two cells thick', 'how thick an isle deck is at its rim'],
+  ['02-map-and-scenes.md', 'it answers **y46** for the row a body would be set down on, where the deck would set it down at **y38**', 'it answers **y45** for the row a body would be set down on, where the deck would set it down at **y38**', 'the read that takes the top of a column for its floor'],
+  ['02-map-and-scenes.md', 'no sky over the column in **470** more, and leaves **662** where', 'no sky over the column in **471** more, and leaves **662** where', 'the isle table\'s row asked of the world as a spawn height'],
+  ['02-map-and-scenes.md', 'only **380** of the 850 keep the sky a body built for flight needs', 'only **379** of the 850 keep the sky a body built for flight needs', 'how much deck keeps the sky a flyer needs'],
+  ['02-map-and-scenes.md', 'rounds to **1,016** different columns, and **166** of them belong to no isle at all', 'rounds to **1,015** different columns, and **166** of them belong to no isle at all', 'the columns an isle disc sample can round to'],
+  ['02-map-and-scenes.md', "a pine's needles over **438** of them", "a pine's needles over **437** of them", 'what crowns the deck where the top-of-column read misses it']
 ];
 
 let missed = 0;

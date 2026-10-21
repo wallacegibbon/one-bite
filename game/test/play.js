@@ -9204,6 +9204,82 @@ What was measured before any of this was fixed, over 180 frames of walking
     towerWater.risen.climb > 3 && towerWater.risen.ratio <= 1.05 &&
     towerWater.risen.arrived === true, { hung: towerWater.hung, risen: towerWater.risen });
 
+  /* 11m4. A place the game sends a body to has to be a place a body can stand,
+     and the sky zone was the one place it never asked. `samplePos` picks a column
+     five ways and four of them end at the same validation: the ground of that
+     column, the cell over it open, sky over the tallest thing in it for a body
+     with wings, no water, not under the world. The fifth -- `kind: 'sky'`, the
+     floating isles -- answered the height itself, `isle.top + 1` straight out of
+     the isle table in `data/world.js`, and returned before any of that ran. Asked
+     of the world the running game made, that copied height puts a body **inside**
+     a block in **156** of the **850** columns of deck the six isles hold (a pine's
+     trunk, a spray of needles, a cell of dirt, one of the old beams), leaves no
+     sky over the column in **470** more, and leaves **662** where the cell stands
+     open at the body's rows with something holding under it. And the disc the
+     sample draws from is a disc of points while a column is named by its corner:
+     a point anywhere in an isle's disc rounds to **1,016** different columns, and
+     **166** of them belong to no isle at all -- valley floor, which is ground like
+     any other -- so a body asked for in the sky could be put down in the wood. No
+     species reaches that branch today, because no `habitat[0]` in
+     `data/creatures.js` names a sky zone (the owl's is whisperwood, and cloudspire
+     is fourth on its list), which is the whole reason it survived: a latent defect
+     is not a harmless one, it is an untested one. Asked of the branch as it now
+     stands: **300** calls, **0** refusals, **0** bodies on a column that is not an
+     isle's deck, **0** standing inside a block, **0** with nothing holding under
+     their feet, **0** without sky over their heads -- and between **28** and
+     **36** (the draw is random; the number is reported, never gated) with a trunk or a
+     spray of needles in the row over their feet, which is not a trap for a flyer:
+     the spawn lifts a flying body above the top of its own column before it ever
+     moves. The decks themselves are read here as well, in the world the game made
+     rather than the one a checker builds: **850** columns, **850** holding at the
+     row the chapter prints, **0** holes, worst drop **0** rows. */
+  const skyStand = await step('aSkySpawnIsGivenADeckToStandOn', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world;
+    const out = { tries: 300, got: 0, nulls: 0, noDeck: 0, feetIn: 0, headIn: 0, unsupported: 0, noSky: 0 };
+    for (let t = 0; t < 300; t++) {
+      /* spread 0 and no `at`, so the zone's own branch is what is being asked */
+      const p = g.samplePos('cloudspire', null, 0, true);
+      if (!p) { out.nulls++; continue; }
+      out.got++;
+      const fx = Math.floor(p.x), fz = Math.floor(p.z), fy = Math.floor(p.y);
+      if (!N.isleDeckAt(fx, fz)) out.noDeck++;
+      if (W.solidAt(fx, fy, fz)) out.feetIn++;
+      if (W.solidAt(fx, fy + 1, fz)) out.headIn++;
+      if (!W.solidAt(fx, fy - 1, fz)) out.unsupported++;
+      if (N.groundY(W, fx, fz, W.h - 1) + 3 >= W.h) out.noSky++;
+    }
+    /* and the decks those answers stand on, census of the world this game made:
+       every column of every isle's disc, read at the row the chapter prints */
+    const trap = { cols: 0, held: 0, fell: 0, worst: 0, inside: 0, open: 0 };
+    for (const i of N.SKY_ISLES) {
+      for (let dz = -i.r; dz <= i.r; dz++) for (let dx = -i.r; dx <= i.r; dx++) {
+        if (Math.hypot(dx, dz) > i.r) continue;
+        const x = i.x + dx, z = i.z + dz;
+        if (x < 0 || z < 0 || x >= W.w || z >= W.d) continue;
+        trap.cols++;
+        if (W.solidAt(x, i.top, z)) trap.held++;
+        else {
+          let fl = -1;
+          for (let y = i.top; y > 0; y--) if (W.solidAt(x, y, z)) { fl = y; break; }
+          if (i.top - fl > trap.worst) trap.worst = i.top - fl;
+          trap.fell++;
+        }
+        if (W.solidAt(x, i.top + 1, z)) trap.inside++;
+        if (!W.solidAt(x, i.top + 1, z) && !W.solidAt(x, i.top + 2, z) && W.solidAt(x, i.top, z)) trap.open++;
+      }
+    }
+    out.trap = trap;
+    return out;
+  });
+  check('a body asked for in the sky is put on an isle, and the game never refuses the sky',
+    skyStand.got === skyStand.tries && skyStand.nulls === 0 && skyStand.noDeck === 0, skyStand);
+  check('and the cell it is put in is open where its feet are, with something holding under them',
+    skyStand.feetIn === 0 && skyStand.unsupported === 0, skyStand);
+  check('and a body asked for with room to fly has room to fly',
+    skyStand.noSky === 0, skyStand);
+  check('the decks of the six isles hold at the row the chapter prints, in the world this game made',
+    skyStand.trap.held === skyStand.trap.cols && skyStand.trap.fell === 0 && skyStand.trap.worst === 0, skyStand.trap);
+
   /* 11n. A body walked into a bank stands on its feet. The step-up lifts a body
      over a riser, and the lift used to be tested at the spot the body already
      stands in -- where of course there is room -- and the move was then retried
