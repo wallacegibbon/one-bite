@@ -2217,6 +2217,87 @@ const { sim } = require('./simwait');
     Object.keys(nightfall.views).every(k => nightfall.views[k].day.blackPct === 0 && nightfall.views[k].day.geoMin > 30),
     nightfall.views);
 
+  /* 10s. the sky below the horizon is the fog the world fades into, not a grey
+     of its own. The sky quad draws a fixed grey there all day: a grey tuned
+     while the sun was up (luminance ~132 by day, against a day horizon of
+     0.72/0.82/0.92 -- the right order, so a daytime silhouette against it is a
+     silhouette). By night the horizon behind it is 0.10/0.12/0.20 and the same
+     grey lands at luminance 44 while the whole night world, tuned against the
+     horizon and zenith bands (17..31), lands at 10..38. Measured at 23:29 on
+     the lake, the lens in the water at the island's west wall -- the frame the
+     human drew as black blocks in the night sky, a dark band with a 1 m stepped
+     edge across the frame and the smooth blue of the night on the other side:
+     the sky below the horizon read 44, the wall that fills the frame 25..39,
+     the far shore's silhouette 17..27. Every surface at the horizon was
+     darker than the sky it stood against, so the wall and the shore came back
+     as black blocks cut into a pale band. Asked of the frame the way the eye
+     asks it -- draw the world, then draw the sky alone at the same pose, and a
+     pixel of the first frame that is 15 or more below the sky that stands
+     behind it is a pixel of black cut out of the sky -- 17.97% of the frame
+     was one for the human and 4.38% for the frog. The band is not the sky: it
+     is the far terrain the world is fading into at the edge of sight, so it
+     has to be the colour the world fades into, the fog. `night` is the gate,
+     the sky's own darkness: in the sun it is 0 and the grey is exactly what
+     it always was (a noon frame measured bit for bit the frame it was, and the
+     only pixel differences in a second run of the same code are the creature
+     blips the minimap and the world carry, 0.99% of the frame), and from
+     18:32 to 05:28 the band is the fog, luminance ~25, the same order the
+     world sits at, and the same frame answers 0.14% (human) and 0.11% (frog)
+     of black cut out of the sky. The fog the band asks of is the fog **after**
+     the lens has had its say -- the edge's veil and the water the lens sits in
+     have already moved it -- because that is the fog the world at the edge of
+     sight is fading into. */
+  const band = await step('theSkyBelowTheHorizon', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame, third: g.thirdPerson };
+    const luma = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+    g.mode = 'play'; g.thirdPerson = false;
+    p.form = null; p.vx = p.vy = p.vz = 0;
+    /* the frame the human drew: the lake at the island's west wall, the wall
+       across the frame, the sky on the other side of it. The lens is in the
+       air 1.5 m over the water, where the below-horizon band is visible as the
+       water's own far edge -- not sitting in a liquid, or the fog would be the
+       liquid's colour and this step would be asking of the wrong fog. */
+    p.x = 63.5; p.y = 15.0; p.z = 112.5; p.yaw = 2.0944; p.pitch = 0.35;
+    g.time = 0; g.updateEnv();
+    const eye = p.eyePos();
+    const air = !W.get(Math.floor(p.x), Math.floor(eye), Math.floor(p.z));
+    const inWater = g.env.inWater;
+    const envGap = Math.abs(luma(g.env.ground) - luma(g.env.fogCol)) * 255;
+    g.render();   // warm: the camera settles onto the eye before the measured frame
+    const grab = () => {
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { w, h, px };
+    };
+    const A = grab();
+    const drawMesh = R.drawMesh;
+    R.drawMesh = function () {};
+    g.render();
+    const B = grab();
+    R.drawMesh = drawMesh;
+    /* the eye's own question: a pixel of the world frame that is 15 or more
+       below the sky that stands behind it is black cut out of the sky */
+    let hole = 0, tot = 0;
+    for (let Y = 0; Y < A.h; Y += 2) for (let X = 0; X < A.w; X += 2) {
+      const i = (Y * A.w + X) * 4;
+      tot++;
+      if (A.px[i] * 0.3 + A.px[i + 1] * 0.59 + A.px[i + 2] * 0.11 <
+          B.px[i] * 0.3 + B.px[i + 1] * 0.59 + B.px[i + 2] * 0.11 - 15) hole++;
+    }
+    g._camFrame = null; g.render();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    g.thirdPerson = was.third;
+    return { air, inWater, envGap: +envGap.toFixed(1), holePct: +(hole / tot * 100).toFixed(2) };
+  });
+  check('the sky below the horizon at night is the colour the world fades into',
+    band.air && !band.inWater && band.envGap < 3, band);
+  check('and the world at the horizon is not cut out of it as black: under 1% of the frame is more than 15 below the sky behind it',
+    band.air && !band.inWater && band.holePct < 1, band);
+
   /* 10t. the phase word has to follow which way the sun is moving. `night` is
      symmetric about noon, and the HUD picked dawn/dusk/night/day from that value
      alone, so the hour the game opens on -- 07:00, night 0.37 -- was labelled
@@ -9844,30 +9925,49 @@ What was measured before any of this was fixed, over 180 frames of walking
        sharp edge is the count: the question "how much water stands over this
        vertex" has to be answered out of a table, not out of a hash. Asked of a
        hash it cost five lookups a vertex, 5.5M of them over the valley, which is
-       what this file used to do. */
+       what this file used to do.
+       The worst chunk is asked the same question once more: three times, and it
+       is read as the *minimum* of the three. The machine this runs on
+       preempts: the sweep runs 400 chunks back to back, and one of them takes
+       whatever else is on the box with it. Measured with a headless browser
+       sweeping the same machine, one chunk read 20.4 ms against 2.8..3.6 ms on
+       the quiet passes around it, and the law went red on a machine that had
+       done nothing wrong. The minimum of the passes is what the chunk costs
+       when the machine is not busy with something else, and it is still the
+       number a frame feels -- a frame that gets preempted is preempted as a
+       frame, not as one chunk, and a chunk that costs 15 ms on every pass
+       answers 15 to the minimum and goes red the same way. The raw worst of
+       all three passes is reported next to it, for the record, and is not
+       asked of. */
     let best = null;
     const mapGet = Map.prototype.get;
     let gets = 0;
     Map.prototype.get = function (k) { gets++; return mapGet.call(this, k); };
+    const perCi = new Array(W.cx * W.cz).fill(Infinity);
+    let rawWorst = { ms: 0, ci: -1 };
     for (let pass = 0; pass < 3; pass++) {
-      let total = 0, nv = 0, worst = { ms: 0, ci: -1 };
+      let total = 0, nv = 0;
       for (let ci = 0; ci < W.cx * W.cz; ci++) {
         const t = performance.now(); W.buildChunk(R.gl, ci);
         const ms = performance.now() - t;
         total += ms;
+        if (ms < perCi[ci]) perCi[ci] = ms;
+        if (ms > rawWorst.ms) rawWorst = { ms, ci };
         let n = 0; const m = W.chunks[ci];
         if (m) for (const q of m) if (q) n += q.count;
         nv += n;
-        if (ms > worst.ms) worst = { ms, ci };
       }
-      if (!best || total < best.total) best = { total, nv, worst };
+      if (!best || total < best.total) best = { total, nv };
     }
     Map.prototype.get = mapGet;
+    let worstCi = 0;
+    for (let ci = 1; ci < perCi.length; ci++) if (perCi[ci] > perCi[worstCi]) worstCi = ci;
     N.MeshBuilder.prototype.upload = up0;
     return { chunks: wetCi.length, verts, wet, bad, badEx, cross, deep, micro, microWet,
       sweepVerts: best.nv, sweepMs: +best.total.toFixed(1),
       meanMs: +(best.total / (W.cx * W.cz)).toFixed(2),
-      worstMs: { ms: +best.worst.ms.toFixed(2), ci: best.worst.ci },
+      worstMs: { ms: +perCi[worstCi].toFixed(2), ci: worstCi },
+      worstRaw: { ms: +rawWorst.ms.toFixed(2), ci: rawWorst.ci },
       perK: +(best.total / Math.max(1, best.nv) * 1000).toFixed(3),
       mapGets: gets, getsPerK: +(gets / Math.max(1, best.nv) * 1000).toFixed(1) };
   });

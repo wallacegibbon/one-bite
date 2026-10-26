@@ -415,6 +415,34 @@
       const gone = 1 - day;
       const skyLight = mix(zenith, horizon, 0.5);
       const ambK = gone * gone * (3 - 2 * gone) * 0.42;
+      /* The sky below the horizon is not the sky. It is the far terrain the
+         world is fading into at the edge of sight, so it has to be the colour
+         the world fades into -- the fog -- not a grey of its own. The grey
+         this had, `mix(horizon, [0.25,0.22,0.2], 0.5)`, was tuned while the
+         sun was up: by day the horizon behind it is 0.72/0.82/0.92 and the
+         grey lands at luminance ~132, the same order the day's lit terrain
+         has, so a silhouette against it is a silhouette. By night the
+         horizon is 0.10/0.12/0.20 and the same grey lands at luminance 44
+         while the whole of the night world -- tuned above against the
+         horizon and zenith bands, 17..31 -- lands at 10..38. Measured at
+         23:29 on the lake, lens in the water at the island's west wall:
+         the sky below the horizon read 44, the wall that fills the frame
+         reads 25 (human) to 38 (frog, whose eye is built for the dark), the
+         far shore's silhouette 17..27. Every surface at the horizon is
+         darker than the sky it stands against, so the wall and the shore
+         come back as black blocks cut into a pale band -- "black blocks in
+         the sky", the frame the user drew: a dark band with a 1 m stepped
+         edge across the middle of the frame and, on the other side of it,
+         the smooth blue of the night. The gate is `night`, the sky's own
+         darkness: in the sun `night` is 0 and the grey is exactly what it
+         always was, and from 18:32 to 05:28 the band becomes the fog
+         colour, luminance ~25, the same order the world sits at, so a
+         silhouette fades into the band instead of being cut out of it.
+         The fog the blend asks of is the fog **after** the lens has had its
+         say -- the edge's veil and the water the lens is sitting in have
+         already moved it -- because that is the fog the world at the edge
+         of sight is fading into. */
+      const groundDay = mix(horizon, [0.25, 0.22, 0.2], 0.5);
       // the Grey Veil
       const W = this.world, p = this.player;
       const edge = Math.min(p.x, p.z, W.w - p.x, W.d - p.z);
@@ -467,7 +495,7 @@
       }
       this.env = {
         time: this.time, day: eyeDay, night: this.night,
-        fogCol, fogDen, zenith, horizon, ground: mix(horizon, [0.25, 0.22, 0.2], 0.5),
+        fogCol, fogDen, zenith, horizon, ground: mix(groundDay, fogCol, this.night),
         ambient: [skyLight[0] * ambK, skyLight[1] * ambK, skyLight[2] * ambK],
         emisKeep, waterK, waterY, hazeK, hazeOn, inWater,
         /* The one colour a veil of this liquid paints over the view. The haze

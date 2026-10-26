@@ -73,7 +73,7 @@ const DRIFTS = [
   // marker were compared and its name was not, so a display name could grow a
   // word the world refuses that place and stay green
   ['02-map-and-scenes.md', '| `greenhouse` | Fruit Greenhouse | (78,110) | 21 |', '| `greenhouse` | Fruit Greenhouse (cellar) | (78,110) | 21 |', 'a marker name claiming a room the island has no air for'],
-  ['02-map-and-scenes.md', '| `frogshall` | Frogshall | (92,120) | 9 |', '| `frogshall` | Frogshale | (92,120) | 9 |', 'a marker name nothing else in the chapter mentions'],
+  ['02-map-and-scenes.md', '| `frogshall` | Frogshall | (92,120) | 7 |', '| `frogshall` | Frogshale | (92,120) | 7 |', 'a marker name nothing else in the chapter mentions'],
   // the quest chapter's two text columns: the codex prints these strings, the
   // chapter copies them out of game.js, and every other column of that table
   // was compared while these two were not

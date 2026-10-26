@@ -110,18 +110,34 @@
      its word: the same census over the 9x9 of dark brick the store is built in
      answers 0 air up to that marker row too, but the room it opens onto is
      there -- air at y21, y22 and y23, three rows of it, under the floor the town
-     builds on at y24. That is a room, and the word says a room. */
+     builds on at y24. That is a room, and the word says a room.
+     The other six markers are sights, not doors, and no code reads their y
+     (the minimap takes only x/z): each carries the row the place stands at,
+     measured off the seed the game opens with (20261008), and the tables in the
+     docs print exactly what is written here. The bell tower's top slab is city
+     brick at y36 -- the 9x9 is closed at that row (77 brick, the four corners
+     roof tile where the eave overwrites them) and a body standing on it stands
+     at y37; the eaves and the bell hang above it at y37..y42 as single tiles,
+     so only a flying body lands on them. The ridge tops out at y36 over 258
+     columns, which the slab ties rather than beats, and the forest's crowns
+     (47) stand higher still. The sunken tower's floor row is y6: its 7x7 shell
+     runs y6..y15 on a plinth capped at y5, water inside to y14. The huts'
+     floors are y7: shell y7..y10, water inside to y9. The last four are the
+     row the ground stands at in the marker's own column: y27 at the hollow's
+     mouth (the void under it runs y18..y23), y20 at the oldest tree's base
+     (its crown tops out at y35), y24 at the glowcap ring (the caps stand at
+     y25) and y24 at the grove's heart (moss over dirt). */
   const POIS = [
     { id: 'cellar',      cn: '主果窖',     en: 'Main Cellar',          x: 136, z: 134, y: 20, icon: 'chest' },
-    { id: 'belltower',   cn: '星坠堡钟塔', en: 'Starfall Bell Tower',  x: 78,  z: 104, y: 34, icon: 'tower' },
+    { id: 'belltower',   cn: '星坠堡钟塔', en: 'Starfall Bell Tower',  x: 78,  z: 104, y: 36, icon: 'tower' },
     { id: 'greenhouse',  cn: '果实温室',   en: 'Fruit Greenhouse',     x: 78, z: 110, y: 21, icon: 'door' },
-    { id: 'sunktower',   cn: '沉塔',       en: 'The Sunken Tower',     x: 66,  z: 118, y: 8,  icon: 'water' },
-    { id: 'frogshall',   cn: '蛙鸣泽',     en: 'the Frogshall',        x: 92,  z: 120, y: 9,  icon: 'water' },
+    { id: 'sunktower',   cn: '沉塔',       en: 'The Sunken Tower',     x: 66,  z: 118, y: 6,  icon: 'water' },
+    { id: 'frogshall',   cn: '蛙鸣泽',     en: 'the Frogshall',        x: 92,  z: 120, y: 7,  icon: 'water' },
     { id: 'groveheart',  cn: '深鹿林之心', en: 'Heart of the Deep Grove', x: 104, z: 32, y: 24, icon: 'tree' },
-    { id: 'cavemouth',   cn: '回声洞口',   en: 'Echo Hollow Mouth',    x: 28,  z: 34,  y: 24, icon: 'cave' },
+    { id: 'cavemouth',   cn: '回声洞口',   en: 'Echo Hollow Mouth',    x: 28,  z: 34,  y: 27, icon: 'cave' },
     { id: 'beams',       cn: '旧梁',       en: 'the Old Beams',        x: 40,  z: 20,  y: 38, icon: 'sky' },
-    { id: 'oldtree',     cn: '最老的树',   en: 'the Oldest Tree',      x: 24,  z: 104, y: 22, icon: 'tree' },
-    { id: 'mushring',    cn: '荧光菇环',   en: 'Glowcap Ring',         x: 60,  z: 56,  y: 20, icon: 'shroom' }
+    { id: 'oldtree',     cn: '最老的树',   en: 'the Oldest Tree',      x: 24,  z: 104, y: 20, icon: 'tree' },
+    { id: 'mushring',    cn: '荧光菇环',   en: 'Glowcap Ring',         x: 60,  z: 56,  y: 24, icon: 'shroom' }
   ];
 
   /* Cloudspire isles: x, z, radius, top surface height */

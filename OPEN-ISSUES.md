@@ -6,55 +6,88 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `a539291` plus the uncommitted (and
-now committed) test instrumentation in `game/test/play.js`.
+State at time of writing: round 26, tree `8e549e3` plus the uncommitted
+below-horizon-sky fix (`game/src/game.js`), the meshing-budget fix and the
+new `theSkyBelowTheHorizon` law (`game/test/play.js`), the POI row
+corrections (`game/data/world.js`, both docs' POI tables and two detail
+lines) with the drift-harness line following the new frogshall row. Issue 1
+is root-caused, fixed and pinned by a new law; issue 3 is measured and fixed
+(data + docs only). Both await the round-end gates (suite green twice on the
+committed tree, push to both remotes). The soak flake (2c) has not
+reproduced in seventeen full runs.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
 **Reported by the user (screenshot, in conversation, not in the repo).**
 Scene: Mirrorlake, night (23:29, day 1), player in frog form (ate a Frog
-Pear), at the lakebed looking up at the sky. What the user sees: a large dark
-band with a jagged, 1 m-stepped edge running diagonally across the frame; on
-the other side of the edge a smooth dark-blue night sky with a moon glow.
-User's verdict: "the sky still has black blocks in it. This is wrong."
+Pear), at the lake's edge looking up at the sky. What the user sees: a large
+dark band with a jagged, 1 m-stepped edge running diagonally across the
+frame; on the other side of the edge a smooth dark-blue night sky with a moon
+glow. User's verdict: "the sky still has black blocks in it. This is wrong."
 
-Suspects (code read only, nothing verified yet):
+**Root cause (measured, reproduced in the user's own pose).** The sky quad
+(`FS_SKY` in `game/src/engine.js`) draws a fixed grey below the horizon:
+`mix(uGround, uHorizon, smoothstep(...))`, with `uGround =
+mix(horizon, [0.25, 0.22, 0.2], 0.5)` built in `updateEnv`. That grey was
+tuned while the sun was up: by day it lands at luminance ~132, the same
+order as the day's lit terrain, so a daytime silhouette against it is a
+silhouette. By night the horizon behind it is 0.10/0.12/0.20 and the same
+grey lands at luminance **44** while the whole night world, tuned against the
+horizon and zenith bands (17..31), lands at **10..38**. Every surface at the
+horizon was darker than the sky it stood against, so the island's west wall
+and the far shore's silhouette came back as black blocks cut into a pale
+band.
 
-- (a) The water-surface pane pass, `FS_WORLD` `uPane` branch in
-  `game/src/engine.js` (~line 380). Looking up from under the surface: pass 1
-  scales whatever is behind (the sky) by `surv * (1.0 - F)` where
-  `surv = exp(-uLiqK * vPan.z)` — Beer-Lambert through the whole water column.
-  At night the sky itself is dim (the file's own comment measures the night
-  sky at luminance 17..21), so 4-8 m of lake takes it to near black; pass 2
-  then adds `(1.0 - F) * uVeil * (1.0 - surv) + F * mir`, and from under the
-  surface `mir` is forced to `uVeil` (`vPan.y = 1`). If `uVeil` is dark at
-  night, the surface face reads as a black slab and its boundary is the
-  shoreline — a stepped diagonal exactly like the screenshot. May be close to
-  physical, but it reads as a blocky artifact; the user says it is wrong.
-- (b) Cloud blocks (id 16, `solid: false`) drawn as a dark slab at night. A
-  stepped cloud mass would also show as black blocks in the sky. The cloud
-  block row and its draw path have not been read yet.
+Reproduced with the puppeteer + swiftshader harness at the user's pose
+(lens in the water at the lake's edge, the island's west wall across the
+frame, yaw 2.0944, pitch 0.35, 23:29, seed 20261008; the frame with the wall
+across it and the moon on the other side is the user's frame). Asked of the
+frame the way the eye asks it — draw the world, then draw the sky alone at
+the same pose, and count the pixels of the first frame that are 15 or more
+luminance below the sky that stands behind them — **17.97%** of the frame
+was such a pixel for the human and **4.38%** for the frog. The below-horizon
+sky band read 44.2; the wall 25..39; the far shore's silhouette 17..27; the
+water 26..38.
 
-To do, in order:
+The two suspects from the code read were ruled out by measurement: (a) the
+water-surface pane is not the band — the lens of the frame is in the air
+(`inWater = 0`) and the pane mirrors `uHor`/`uZen`, which the fix does not
+touch (the `lakeMirrorsTheSky` law's baseline is unchanged); (b) the cloud
+blocks are not black blocks — the soft-face cloud table computes to
+luminance ~38..70 at night, brighter than the sky, and the band's edge is a
+1 m-stepped **terrain** edge, which an in-page raycast attributed to the
+island's stone west wall (block 3) 2.6..7.9 m from the lens.
 
-1. Reproduce with the existing puppeteer + `google-chrome` swiftshader harness
-   (the one `game/test/play.js` runs on): load `game/index.html`, wait for
-   boot, set the clock to night (~23:29), put the lens at the lakebed
-   ((66.5, ~5, 115.5) or the frog's own bed) with the camera pitched up, take
-   a screenshot. Compare the dark region's edge against the lake shoreline
-   and against the cloud layer height; sample pixel rows to find where the
-   black band is.
-2. Attribute the black pixels to one draw: read `uVeil`/`uZen`/`uHor` at
-   night, or toggle the pane pass and the cloud draw in a scratch copy (do
-   not ship the toggles), and screenshot each.
-3. Decide the intended look (night sky through water: at least the moon and
-   some stars should survive in Snell's window; no black blocky slab), fix
-   the law in the shader (English comments, measured), and prove it with
-   before/after screenshots plus pixel statistics, at night AND at day, from
-   the lakebed AND from the bank.
-4. If the fix touches the world fragment shader, re-measure the existing
-   water laws in `test/play.js` (the suite has pixel-statistics checks for
-   the lake seen from several lens positions).
+**Fix (landed, `game/src/game.js`, `updateEnv`).** The band below the
+horizon is not the sky: it is the far terrain the world is fading into at
+the edge of sight, so it has to be the colour the world fades into — the
+fog. `ground` is now `mix(groundDay, fogCol, this.night)`, asked of the fog
+**after** the lens has had its say (the edge's veil and the water the lens
+sits in have already moved it), because that is the fog the world at the
+edge of sight is fading into. The gate is `night`, the sky's own darkness:
+in the sun it is 0 and the grey is exactly what it always was (a noon frame
+measured bit for bit the frame it was — `ground` at `night = 0` is the old
+formula — and the only pixel differences between two runs of the same code
+at noon are the creature blips the minimap and the world carry, 0.99% of the
+frame); from 18:32 to 05:28 the band is the fog, luminance ~25.
+
+**Measured after, same pose, same harness.** The below-horizon band:
+44.2 -> **24.7** (the fog's own luminance). The black-cut-out share of the
+frame: 17.97% (human) / 4.38% (frog) -> **0.14% / 0.11%** — the same order
+as the run-to-run noise floor of the frame itself. Dusk (18:51) carries the
+residual warm dusk fog in the band; the world's regions sit at or above the
+band (wall 39.0/23.1, shore 27.6/21.6 against a band of 24.7 at night;
+40.4/25.2 and 30.7/25.2 against 31.1 at dusk).
+
+**Pinned by a new law** (`game/test/play.js`, step
+`theSkyBelowTheHorizon` + two checks): the sky below the horizon at night is
+the colour the world fades into (`env.ground` within 3 of `env.fogCol`; the
+pre-fix law would have read 19.7), and under 1% of the frame is more than 15
+below the sky behind it (pre-fix: 17.97%). The law runs at midnight in the
+user's pose with the lens in the air, asks for `air` and `inWater = 0` as
+preconditions, and restores the player, clock, mode and view exactly.
+
+Status: fixed and pinned; awaiting the round-end gates.
 
 ## 2. The soak flake (round 26; work item T23, bug B34)
 
@@ -151,23 +184,52 @@ pre-entry trajectory, decide law vs rig, fix minimally, measure before/after
 (soak `inside = 0` over N loop runs, all the other soak numbers unchanged),
 and add the canary: break the fix, expect exactly the recorded red line.
 
-### 2d. Loop tooling and current tally
+### 2d. Meshing-budget law (NEW, loop 3 run 7) — `the whole valley rebuilds inside the budget a frame gives meshing`
+
+Rig: `game/test/play.js` ~line 9860 (three passes over all 400 chunks; the
+pass with the lowest total is kept and `worstMs.ms < 12 && perK < 1` is
+asked). Red line, run 7 of round 26 loop 3, verbatim:
+
+```
+CHECK FAILED: and the whole valley rebuilds inside the budget a frame gives meshing {"chunks":24,"verts":226014,"wet":51814,"bad":0,"badEx":[],"cross":443,"deep":11,"micro":10656,"microWet":5328,"sweepVerts":1105374,"sweepMs":390.1,"meanMs":3.9,"worstMs":{"ms":20.4,"ci":22},"perK":0.353,"mapGets":0,"getsPerK":0}
+```
+
+Not a logic bug — CPU contention. The law's own comment states the premise
+("other things ran through the whole pass"); the fragile statistic was the
+**single-pass worst chunk**: one chunk that gets preempted by the OS while a
+headless browser is sweeping the same machine reads 20.4 ms against the
+2.8..3.6 ms that chunk reads on the quiet passes around it (fifteen of the
+seventeen full runs read 2.8..3.6 ms; the two runs that overlapped the
+192-pose screenshot sweep read 9.5 and 20.4). The count half of the law
+(`perK 0.353`, `getsPerK 0`) was green — only the time half went red.
+
+Fix (landed, same file): the worst chunk is asked three times and read as the
+**minimum of the three** (`perCi`), so a one-off preemption is dropped while
+a chunk that costs 15 ms on every pass still answers 15 and goes red the same
+way; the raw worst of all three passes is reported as `worstRaw` for the
+record and is not asked of; the 12 ms cap and the `perK < 1` half are
+unchanged. A frame that gets preempted is preempted as a frame, not as one
+chunk.
+
+### 2e. Loop tooling and current tally
 
 Faithful repro = full `node game/test/play.js` under Chrome/puppeteer
 (swiftshader), one run ~6-7 minutes. Loop scripts in `/tmp/m26flake/` (not in
-the repo): `loop.sh` / `loop2.sh` run 12 sequential full suites into
-`/tmp/m26flake/r2-N.log`, stop at the first red, append
-`GREEN/RED on run N` + `CHECKFAILED=<n>` to `/tmp/m26flake/status2`.
+the repo): `loop.sh` / `loop2.sh` / `loop3.sh` run 12 sequential full suites
+into `/tmp/m26flake/{run,r2-*,r3-*}.log`, stop at the first red, append
+`GREEN/RED on run N` + `CHECKFAILED=<n>` to `status{,2,3}`.
 Parse a red log with `python3 /tmp/m26flake/parse.py <log>` — never `tail`
 or `sed` the whole line (one step prints one ~100 KB JSON line).
 
 Tally at time of writing: loop 1 — runs 1-4 green. Loop 2 — runs 1-5 green,
-run 6 red (law 2c above). Across those nine runs the two B34 laws (2a, 2b)
-stayed green: the recorded red lines have not reproduced on the current
-tree, and the flake pool is wider than B34 (2c is new evidence). If the next
-loop finishes 12/12 green, launch loop 3 (prefix `r3-`, status `status3`);
-if ~24 runs stay green, report the dust half honestly (guard provable,
-measured airtight) and keep hunting the frog halves.
+run 6 red (law 2c above). Loop 3 — runs 1-6 green, run 7 red (law 2d above,
+the meshing budget, not a soak law). Across all seventeen full runs the soak
+laws (2a, 2b, 2c) stayed green: their recorded red lines have not reproduced
+on the current tree, and the only two reds are the preemption (2d) and the
+one unexplained tower-masonry entry (2c). The next red, whatever it is, gets
+parsed with `parse.py` and read before anything is touched. If ~24 runs stay
+green, report the dust half honestly (guard provable, measured airtight) and
+keep hunting the frog halves.
 
 Instrumentation shipped with this commit (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b).
@@ -175,15 +237,49 @@ The soak itself is not instrumented yet — that is the next step (2c).
 
 ## 3. POI heights and the teleport waypoint (theme queue item 10)
 
-After the flake work is closed: ask the generated world (seed 20261008) for
-the five unmeasured POI columns plus the teleport waypoint cell at
-`door.y + 1.05, door.z - 7.5`. The POI rows state heights the world may not
-have: `belltower 34, groveheart 24, sunktower 8, frogshall 9, cellar 20`.
-Measure each before touching anything — the sunken tower's masonry tops at
-16 in the seed world (see 2c), so at least the `sunktower 8` row needs a
-re-read of what the number means. Fix the rows or the world, whichever the
-measurement says is wrong, in both languages of `docs/`, with the measured
-numbers.
+**Closed (fix uncommitted at time of writing; awaits the round-end gates).**
+All ten POI columns and the teleport waypoint were asked of the world the
+data generates (seed 20261008; probe `/tmp/m26band/poi2.js`). A POI's y is
+the row the place stands at: the cellar's floor row (20) and the greenhouse's
+deck row (21) were already right and are pinned by docs-sync §13, and
+groveheart 24 was already the ground row in its own column, so it stands.
+The other six rows stated heights the world did not have:
+
+- `belltower 34` -> **36**. The keep's top is a 9x9 slab of city brick at
+  y36 (77 brick, the four corners roof tile where the eave overwrites), and
+  a body standing on it stands at y37. The eaves and the bell hang above it
+  at y37..y42 as single floating tiles, reachable only by flight. A
+  valley-wide census (isles excepted) answers: highest standable row with
+  crowns counted 47 (the forest's crowns), without crowns the slab's own
+  y36 -- tied with the ridge's rock top (also y36, 258 columns at that row).
+  The docs' "the highest standing point in the valley" claim was rewritten
+  to this measured tie, in both languages.
+- `sunktower 8` -> **6**. The marker column was the shell's own water
+  (interior water y7..y14). The shell's floor row is y6 (the 7x7 shell runs
+  y6..y15 on a plinth capped at y5); the docs already state that range, the
+  marker row just never said it.
+- `frogshall 9` -> **7**. The marker column is the east wall of hut
+  (90,120): shell y7..y10, water inside to y9. The huts' floor row is y7.
+- `cavemouth 24` -> **27**. y24 was inside the hill's fill (the void under
+  it runs y18..y23). The ground row at the marker column is y27; the mouth
+  columns themselves slope down from y25 to y16.
+- `oldtree 22` -> **20**. y22 was inside the trunk. The ground row at the
+  tree's base is y20 (its crown tops out at y35 in its own column).
+- `mushring 20` -> **24**. y20 was deep in the stone. The ground row is
+  y24; the glowcaps stand at y25.
+
+None of the six is read by code (the minimap takes only x/z; the game reads
+only the y of `cellar`, `greenhouse` and `beams`), so the fix is data and
+docs only: the `game/data/world.js` rows, both POI tables, the bell-tower
+and frogshall detail lines in both languages, and the measured numbers in
+the data's own comment. docs-sync §2 pins all ten rows in both languages;
+the drift harness's frogshall name injection follows the new row.
+
+Waypoint: verified sound. In the seed world `N.spawn` takes the street-spot
+path at (136.5, 22.05, 128.5), yaw -pi/2: cell (136,22,128) is air, ground
+below at 21, sky over. The fallback cell (136,21,126) is also air over
+ground 20 with sky over. Nothing to change; `door.y + 1.05, door.z - 7.5`
+answers against the measured `cellar 20`.
 
 ## Standing contract (every session, in order)
 
