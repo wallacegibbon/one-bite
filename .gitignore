@@ -3,6 +3,8 @@ node_modules/
 *.log
 .DS_Store
 *.alaya
+# session state, never part of the deliverable
+.sessions/
 .docs-backup/
 *.swp
 .*.swp

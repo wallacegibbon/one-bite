@@ -5483,6 +5483,19 @@ What was measured before any of this was fixed, over 180 frames of walking
     p.x = beams.x; p.z = beams.z; p.y = beams.y; p.headWater = false;
     g.night = 0; g.ambTimer = 0; P.n = 0;
     let born = 0, bornIn = 0, dSamples = 0, dIn = 0;
+    /* Instrumented for the soak flake that went red one run in three: a guard
+       that refuses the move into a solid should make inSolid zero on any world
+       that does not change while the loop runs, and one run nonetheless spent
+       152 of 61,073 samples inside a block. So the question is no longer
+       "does the guard work" but "what was the world doing to the mote": for
+       the first motes found inside a block, the trail says where the mote was
+       in the frames before, with the block its own cell held at each of them,
+       and the dump says what the cells around it hold when it is caught. A
+       trail that runs on in one place while the block id under it turns from
+       air into stone is a world that changed under a resting mote; a trail
+       that walks into the block is a guard the world got through. */
+    const trails = new Map();
+    const bad = [];
     for (let f = 0; f < 3600; f++) {
       const nWas = P.n;
       g.ambient(1 / 60);
@@ -5492,11 +5505,29 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
       for (let i = 0; i < P.n; i++) {
         dSamples++;
-        if (W.solidAt(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) dIn++;
+        const cx = P.px[i] | 0, cy = P.py[i] | 0, cz = P.pz[i] | 0;
+        const solid = W.solidAt(cx, cy, cz);
+        if (solid) dIn++;
+        if (solid && bad.length < 6) {
+          const around = [];
+          for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++)
+            for (let dx = -1; dx <= 1; dx++)
+              around.push(W.get(cx + dx, cy + dy, cz + dz));
+          bad.push({ f, i, x: +P.px[i].toFixed(3), y: +P.py[i].toFixed(3), z: +P.pz[i].toFixed(3),
+            cell: [cx, cy, cz], block: W.get(cx, cy, cz),
+            vx: +P.vx[i].toFixed(4), vy: +P.vy[i].toFixed(4), vz: +P.vz[i].toFixed(4),
+            life: +P.life[i].toFixed(2), grav: P.grav[i],
+            trail: (trails.get(i) || []).slice(-90), around });
+        }
+        const h = trails.get(i) || [];
+        h.push([f, +P.px[i].toFixed(3), +P.py[i].toFixed(3), +P.pz[i].toFixed(3),
+          solid ? 1 : 0, W.get(cx, cy, cz), +P.vy[i].toFixed(4)]);
+        if (h.length > 90) h.shift();
+        trails.set(i, h);
       }
       P.update(1 / 60, W);
     }
-    rows.dust = { born, bornIn, samples: dSamples, inSolid: dIn };
+    rows.dust = { born, bornIn, samples: dSamples, inSolid: dIn, bad };
     /* the ring the night's motes are scattered over reaches eighteen metres out
        from the body, so a body standing near the edge of the map scatters some of
        them off the map, where `get` answers "air" to a question that was never
@@ -7648,6 +7679,21 @@ What was measured before any of this was fixed, over 180 frames of walking
     frog.hopT = 0.2; frog.wind = 0;                           // the push-off is due now
     frog.tx = spot.x + 30; frog.tz = spot.z;                  // somewhere far to walk to
     let launches = 0, badLaunch = 0, inRock = 0, headThrough = 0, room0 = 0, roomAt = [];
+    /* Instrumented for the soak flake that went red one run in three: a body
+       on foot was found 52 frames with its feet cell solid and 21 frames with
+       its head through the ceiling of the cavity it stood in, and it had pushed
+       off in that cavity although the hop gate is min'd over the body's own
+       column, which there is a rock. So the whole window is recorded: the
+       height and the rate of it, the gate's state, the floor the standing code
+       read, the blocks of the body's column, and the very ceiling the entity's
+       hop gate reads -- its own column and the span the arc will cross, leaves
+       excused by the material table, recomputed here the way it is computed
+       there -- so a red run says in which frame the body was told there was
+       room and in which frame the world gave it no place. The neighbours are
+       recorded too: the bodies the world leaves standing are the only other
+       things a frame may move this one with. */
+    const hopUp = (frog.sp && frog.sp.hop && frog.sp.hop.up) || 6;
+    const traj = [];
     for (let i = 0; i < 150; i++) {
       frog.update(1 / 60, p, W, g);
       const bx = Math.floor(frog.x), bz = Math.floor(frog.z), by = Math.floor(frog.y);
@@ -7657,6 +7703,30 @@ What was measured before any of this was fixed, over 180 frames of walking
       let roof = W.h;
       for (let k = by + 1; k < W.h; k++) if (hard(bx, k, bz)) { roof = k; break; }
       const room = roof - frog.y;
+      // the ceiling the hop gate reads: the lowest of the cells its own column
+      // and the span of the arc hold, from one cell over the feet up, with the
+      // material table's excuse for leaves
+      let gate = W.h;
+      const fxx = Math.sin(frog.yaw), fzz = -Math.cos(frog.yaw);
+      const span = Math.max(1, Math.ceil((frog.speed || 0) * hopUp / 23));
+      for (let k = 0; k <= span; k++) {
+        const gx2 = bx + Math.round(fxx * k), gz2 = bz + Math.round(fzz * k);
+        for (let q = Math.floor(frog.y) + 1; q < W.h; q++)
+          if (W.solidAt(gx2, q, gz2) && !N.FOLIAGE[W.get(gx2, q, gz2)]) { if (q < gate) gate = q; break; }
+      }
+      const near = [];
+      for (const q of g.creatures) {
+        if (q === frog) continue;
+        const dx = q.x - frog.x, dz = q.z - frog.z;
+        if (dx * dx + dz * dz < 2.25) near.push([q.sp.id, +q.x.toFixed(2), +q.y.toFixed(2), +q.z.toFixed(2)]);
+      }
+      traj.push({ f: i, x: +frog.x.toFixed(3), y: +frog.y.toFixed(4), z: +frog.z.toFixed(3),
+        vy: +frog.vy.toFixed(3), st: frog.state, ct: frog.climbTo === null ? null : frog.climbTo,
+        cr: +frog.climbRate.toFixed(2), wind: +frog.wind.toFixed(2), spd: +frog.speed.toFixed(3),
+        roof, gate, gy: N.standY(W, bx, bz, frog.y), room: +room.toFixed(3),
+        inR: hard(bx, by, bz) ? 1 : 0, head: frog.y + frog.tall > roof ? 1 : 0,
+        col: [W.get(bx, by - 1, bz), W.get(bx, by, bz), W.get(bx, by + 1, bz), W.get(bx, by + 2, bz)],
+        near });
       if (!room0) room0 = +room.toFixed(2);
       /* A push-off is only allowed where the arc it launches fits: 0.78 m over
          the feet for the 6 m/s the data gives a frogpear, over a body 0.43 m
@@ -7671,7 +7741,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     const out = { spot, tall: +frog.tall.toFixed(2), room: room0, launches, badLaunch,
       roomAt, inRock, headThrough, state: frog.state, speed: +frog.speed.toFixed(2),
-      wind: +frog.wind.toFixed(2) };
+      wind: +frog.wind.toFixed(2), traj };
     Object.assign(frog, body);
     Object.assign(p, was);
     return out;
