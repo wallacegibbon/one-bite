@@ -2069,6 +2069,69 @@ const { sim } = require('./simwait');
   check('no stars are out while the sun is up', stars.day.spikes <= 2, stars);
   check('the stars are still there at midnight', stars.night.spikes > 50, stars);
 
+  /* 10s. the night sky is mostly dark: the stars are a scatter, not a carpet.
+     The star hash floors the unit direction by 160 and multiplies the cell's
+     coordinates far past the range a mediump float is only required to hold,
+     so on a strict GPU the hash degrades and the stars clump into a dense
+     regular dot grid that fills the night -- seen on a real device at 00:50
+     over Mirrorlake, where the suite's software backend reads mediump at full
+     range and never shows it, so neither the laws nor the watch could see it
+     either. The sky shader asks for highp now (engine.js, FS_SKY); this step
+     pins the scatter itself, so a change that fills the frame with bright
+     cells is caught where the frame is read. Measured at 00:50, 30 m over the
+     open lake, 77 degrees up with the moon out of the frame: 0.20% of the
+     frame is a star's brightness and the largest bright patch is 46 pixels,
+     one star cell stretched at the frame's edge. A collapsed grid is most of
+     the frame; a sky with no stars is none of it. */
+  const starField = await step('nightSkyIsAScatterNotACarpet', () => {
+    const g = window.game, N = window.FRUTARIA, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame, third: g.thirdPerson };
+    g.mode = 'play'; g.thirdPerson = false;
+    p.form = null; p.vx = p.vy = p.vz = 0;
+    /* 30 m over the open lake, 77 degrees up. The frame spans 39..90 degrees
+       of elevation; the tallest thing within a hundred metres of this point
+       tops out at 13 degrees, and at 00:50 the moon sits out of the frame, so
+       every bright pixel the frame holds is a star. */
+    p.x = 100; p.z = 90; p.y = 30; p.yaw = 0.4; p.pitch = 1.35;
+    g.time = 50; g.updateEnv();
+    g._camFrame = g.shootCamera(p); g.render();
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    const px = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const L = (X, Y) => { const i = (Y * w + X) * 4; return px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11; };
+    const lit = (X, Y) => L(X, Y) > 110;
+    let bright = 0;
+    const seen = new Uint8Array(w * h);
+    let patches = 0, largest = 0;
+    for (let Y = 0; Y < h; Y++) for (let X = 0; X < w; X++) {
+      if (lit(X, Y)) bright++;
+      if (!lit(X, Y) || seen[Y * w + X]) continue;
+      patches++;
+      const stack = [[X, Y]]; seen[Y * w + X] = 1; let size = 0;
+      while (stack.length) {
+        const c = stack.pop(); size++;
+        for (let k = 0; k < 4; k++) {
+          const nx = c[0] + (k === 0 ? 1 : k === 1 ? -1 : 0), ny = c[1] + (k === 2 ? 1 : k === 3 ? -1 : 0);
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h || seen[ny * w + nx] || !lit(nx, ny)) continue;
+          seen[ny * w + nx] = 1; stack.push([nx, ny]);
+        }
+      }
+      if (size > largest) largest = size;
+    }
+    g._camFrame = null; g.render();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    g.thirdPerson = was.third;
+    return { brightPct: +(bright / (w * h) * 100).toFixed(3), patches, largest };
+  });
+  check('at night the stars are a scatter: under 1% of a sky-only frame is a star brightness',
+    starField.brightPct < 1, starField);
+  check('and the sky is not empty of them: at least half a tenth of a percent is',
+    starField.brightPct > 0.05, starField);
+  check('and no bright mass stands in the night sky: the largest bright patch is one stretched star cell, not a grid',
+    starField.largest < 500, starField);
+
   /* 10s. the dark of a night is the sky's light, not a grey. The world shader lit
      every surface by `uDay` -- 0.16 of its own colour at midnight -- and nothing
      else, so a dark material (conifer 0.14/0.30/0.20, dark leaf, roof tile) came

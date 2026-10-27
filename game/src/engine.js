@@ -417,7 +417,19 @@
   varying vec3 vDir;
   void main(){ gl_Position = vec4(aCorner, 0.999, 1.0); vDir = normalize(uFwd + uRight*aCorner.x*uTanX + uUp*aCorner.y*uTanY); }`;
   const FS_SKY = `
-  precision mediump float;
+  precision highp float;
+  /* The one fragment shader allowed past the mediump range. Its star field
+     floors the unit direction by 160, so a cell's hash input runs to a few
+     hundred; the hash below multiplies those coordinates by 0.3183099 (to
+     ~51) and by 17 (to ~867) before a four-fold product (to ~1e6). The range
+     a mediump float is only required to hold is +-2.0, so on a strict GPU
+     every one of those steps overflows and the hash degrades: the stars stop
+     scattering and clump into a dense regular dot grid that fills the night.
+     That was measured on a real device at 00:50 over Mirrorlake, where the
+     suite's software backend reads mediump at full range and never shows it,
+     which is why the watch could not see it either. highp is required in
+     vertex shaders and present in desktop fragment shaders, and the sky is a
+     single fullscreen pass, so the price is negligible. */
   varying vec3 vDir;
   uniform vec3 uZenith, uHorizon, uSunDir, uSunCol, uGround;
   uniform float uNight, uTime;
