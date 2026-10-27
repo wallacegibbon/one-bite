@@ -6,7 +6,7 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `48e1f50` (pushed to both remotes,
+State at time of writing: round 26, tree `bc2e1bb` (pushed to both remotes,
 round-end gates green twice). Issue 1 (night sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
@@ -61,10 +61,17 @@ in the red line, **130** of **61,626** reproduced on the fifty-eighth fresh
 attempt of a live probe that audits the guard's own inputs on every mote
 every frame and watched the twenty-seven cells around the trap for any
 world change, and saw none). The wall is now asked of the cell the mote is
-*stored* in, and 150 fresh attempts of the same rig come back clean, so
-the round has one hundred and one faithful full green runs, with the two
-recorded flake lines plus this third one now all explained, and the
-standing watch is loop 10 on the fixed tree.
+*stored* in, and 150 fresh attempts of the same rig come back clean. The
+watch loop 10 on the fixed tree came back green on its first three runs and
+red on its fourth, on a new line (section 2f below): the afternoon-walk law
+read the two bears at **57** of their frames moving for **99 m**, against a
+bound of 60 and a green range of 86-99, outside every measured range; the
+read found the walk-stop-walk the wander state gives a bear between errands
+and no fault in the bear's code, so the game was not changed, and the rig
+now carries the per-body read so the next red of it is readable in the log.
+The round now has one hundred and four faithful full green runs, the three
+earlier red lines root-caused and fixed and this fourth one read and
+watched with the loop, and the standing watch is loop 11 on the same tree.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -145,12 +152,15 @@ round's final tree.
 The suite's soak laws went red in roughly one run in three to six. Three
 laws were in the flake pool; the first two were recorded in round 25 (B34)
 and the third went red for the first time in round 26, loop 2, run 6. State
-at time of writing: one hundred and one faithful full green runs on the
-corrected trees (loops 1-8) plus the first of loop 9; 2c is root-caused,
-fixed and pinned, 2a re-opened by the red of loop 9 run 2 and closed with
-the fix (the wall is asked of the cell the mote is stored in), and 2b is
-watched with the loop (its recorded red line is a mid-development
-artifact).
+at time of writing: one hundred and four faithful full green runs on the
+corrected trees (loops 1-8, the first of loop 9 and the first three of loop
+10); 2c is root-caused, fixed and pinned, 2a re-opened by the red of loop 9
+run 2 and closed with the fix (the wall is asked of the cell the mote is
+stored in), 2b is watched with the loop (its recorded red line is a
+mid-development artifact), and 2f (the walking-soak law, the red of loop 10
+run 4, a new line) is read as the walk-stop-walk outside every measured
+range, recorded with the per-body instrumentation, and watched with the
+loop.
 
 ### 2a. Dust law (B34, half one) — `aMoteKeepsToTheAirItWasGiven`
 
@@ -396,7 +406,8 @@ pushed as its own commit, and loop 7 came back twenty-four green in a row
 on it (the soak's inside count 0 in every one; in the five runs a frog
 came to the tower's wall the entry window read the frames and the
 masonry stayed out). The standing watch on it is the round's standing
-watch -- loop 9 when this line was written, loop 10 after the dust fix --
+watch -- loop 9 when this line was written, loop 10 after the dust fix, and
+loop 11 after the walking-soak red of loop 10 run 4 --
 until the next red of its own law.
 
 ### 2d. Meshing-budget law (NEW, loop 3 run 7) — `the whole valley rebuilds inside the budget a frame gives meshing`
@@ -432,10 +443,10 @@ Faithful repro = full `node game/test/play.js` under Chrome/puppeteer
 (swiftshader), one run ~6-7 minutes. Loop scripts in `/tmp/m26flake/` (not in
 the repo): `loop.sh` / `loop2.sh` / `loop3.sh` / `loop4.sh` / `loop5.sh` run
 12 sequential full suites into
-`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` / `loop8.sh` / `loop9.sh` run 24 each into
-`{r6-*,r7-*,r8-*,r9-*}.log`. All stop at the first
+`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` / `loop8.sh` / `loop9.sh` / `loop10.sh` / `loop11.sh` run 24 each into
+`{r6-*,r7-*,r8-*,r9-*,r10-*,r11-*}.log`. All stop at the first
 red and append `GREEN/RED on run N` + `CHECKFAILED=<n>` to
-`status{,2,3,4,5,6,7,8,9}`.
+`status{,2,3,4,5,6,7,8,9,10,11}`.
 Parse a red log with `python3 /tmp/m26flake/parse.py <log>` — never `tail`
 or `sed` the whole line (one step prints one ~100 KB JSON line). The parser
 prints the soak's entry window (per-frame lines near the tower column:
@@ -456,27 +467,98 @@ runs 1-19 green, stopped to land the night-sky star fix (issue 4); no red,
 nothing to parse. Loop 9 (on the night-sky tree) — run 1 green, run 2 red:
 the dust half of the soak flake (2a), reproduced on the current code after
 forty-four green runs on the corrected trees, and root-caused and fixed in
-section 2a. Across all of it the soak laws have gone red three times in the
-round -- twice on the recorded lines of round 25 (2c in loop 2 run 6, 2a in
-loop 9 run 2) and once on a new one (2d, the meshing budget, not a soak
-law) -- and all three are now root-caused and fixed: one hundred and one
-faithful full green runs in the round (fifty-five on the tree before the
-correction, forty-six on the corrected one, the round's double all.sh
-counts included the way the forty-one did), the tower-masonry entry (2c)
-is root-caused, corrected and pinned, and the dust half (2a) re-opened by
-the red of loop 9 run 2 is closed with the fix. The next red, whatever it
-is, gets parsed with `parse.py` and read before anything is touched; the
-loop keeps running as the standing watch (loop 10 is the current one, on
-the fixed tree).
+section 2a. Loop 10 (on the dust-fixed tree) — runs 1-3 green, run 4 red:
+the walking-soak law (2f below), a new line, outside every measured range;
+the read found the walk-stop-walk the wander state gives a bear between
+errands and no fault in the bear's code, so the game was not changed and
+the rig now carries the per-body read so the next red of it is readable.
+Across all of it the laws have gone red four times in the round -- twice on
+the recorded lines of round 25 (2c in loop 2 run 6, 2a in loop 9 run 2),
+once on the meshing budget (2d, not a soak law, loop 3 run 7) and once on
+the new walking-soak line (2f, loop 10 run 4) -- and the first three are
+root-caused and fixed while the fourth is read, recorded and watched: one
+hundred and four faithful full green runs in the round (fifty-five on the
+tree before the correction, forty-nine on the corrected one, the round's
+double all.sh counts included the way the forty-one did), the
+tower-masonry entry (2c) is root-caused, corrected and pinned, the dust
+half (2a) re-opened by the red of loop 9 run 2 is closed with the fix, and
+the walking-soak line (2f) stands recorded with its per-body read. The
+next red, whatever it is, gets parsed with `parse.py` and read before
+anything is touched; the loop keeps running as the standing watch (loop 11
+is the current one, on the same tree).
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
 the soak's per-frame entry window with frame and frog identity and the
 column dump near the tower (2c), the soak's inside count aligned to the
 hard world (a leaf at the feet is the bush the body is hopping through),
-and the pinned-door canary law (2c). The `skim` law's raw-`solidAt` feet
+the pinned-door canary law (2c), and the walking-soak rig's per-body read
+(2f: where each bear stood, what it walked, and where it stood still). The `skim` law's raw-`solidAt` feet
 count is the same outlier pattern as 2c pre-fix, but it has never gone red
 and the lake holds no trees: it is left as is and watched, not widened.
+
+### 2f. Walking-soak law (NEW, loop 10 run 4) — `animalsWalkTheirAfternoon`
+
+Rig: `game/test/play.js` ~line 6499 (the afternoon walk: the clock is set
+to 06:07 with every species out, 1800 frames of each creature's own
+wandering at 0.05 s, and a creature counts as moving on the frames its
+`speed > 0.1`; `metres` is the path over the number of the species'
+animals). The bound is deliberately nowhere near the measurement: owl, frog
+and bear over **60** of their frames moving, the lamp field over **50**;
+what the bound must never come back with is the old one-in-five.
+
+Red line, run 4 of round 26 loop 10 (the dust-fixed tree), verbatim:
+
+```
+CHECK FAILED: the wild bear spends its afternoon walking rather than standing still {"owl":{"movingPct":76,"metres":168},"frog":{"movingPct":98,"metres":167},"bear":{"movingPct":57,"metres":99},"jelly":{"movingPct":91,"metres":58}}
+```
+
+The only failure of that run: the dust law of the same run read `inSolid 0`
+of 61,058 samples (the fix held), the meshing budget read a worst 3 ms
+against the 12 ms backstop, and the turn law of the same run read the
+bear's peak at its own 1.6 limit and was green.
+
+Read before anything was touched. The forty-eight green runs before it read
+**86-99** for the bear (43-176 m), and thirty-six fresh pages of the same
+rig read **75-94**, the six of them with both bears stood at the centre of
+their home discs -- the start that maximises the short errands the stand
+runs come from -- reading **75-93**. The red's **57** is outside every
+measured range. Its shape is the walk-stop-walk the wander state gives a
+bear between errands, measured on the bears themselves: the bears spawn at
+their home, the errands are picked from a disc of radius 14 round the home,
+the walk to one is at the bear's own wander speed (2.1 m/s, the cruise's
+0.42), the bear stands within the 0.8 m arrival radius of the errand it
+reached while the 2-8 s pause runs, and the pause re-picks a new errand in
+the same disc. 99 m at that rate while moving and the rest of the afternoon
+standing at reached errands is a bear that walked at full speed whenever it
+walked and stood at the errands it had reached -- a bear that walked,
+stopped to look about, and walked again. The top law asks that the
+animals' movement be natural, and that is what a bear does. It is not the
+shape of the bug the law was set to catch: that was a bear standing eighty
+per cent of its afternoon against a cliff, 24 m of path, with the step in
+front of it rejected 2024 times in 2400 frames.
+
+What the pooled number cannot say: which of the two bears the red belongs
+to. One bear standing a fourth of its afternoon at the errands it reaches
+and one walking at the usual rate pools to the same number as two bears
+each standing a fifth, so the red alone does not say whether a body stood
+where it was going or somewhere it was not. The rig now records, per bear,
+what discriminates (test-only, no bound moved, the check lines
+byte-identical): the distance from the home the errand disc is picked from
+(`dHome`), its own moving share and path, and its stand runs -- how many,
+the longest, the total, and how many of the stands ended at the errand it
+reached, within the 0.8 m arrival radius of the walk the body is on. A bear
+that stands at the errand it reached is spending the pause that re-picks
+the next one; a bear that stands somewhere it is not going is the anomaly
+to root-cause, and the stand run that ends away from its errand is the one
+that asks what held the body.
+
+Status: not root-caused as a defect -- the walk, the turn rate and the turn
+budget all read at the bear's own record in the same run, and the shape is
+the behaviour the data gives a bear between errands -- but the round's
+fourth red, on a new line, outside every measured range. No game change;
+the rig carries the per-body read, and the standing watch is loop 11 on the
+same tree.
 
 ## 3. POI heights and the teleport waypoint (theme queue item 10)
 
@@ -528,8 +610,9 @@ answers against the measured `cellar 20`.
 ## 4. The night sky's stars clump into a dot grid on a strict GPU (round 26; user report)
 
 **Fixed and pinned (commit `9d75468`; round-end gates green twice on that
-tree; the standing watch was loop 9 on that tree, and is loop 10 on the
-tree that followed it, after the dust fix).**
+tree; the standing watch was loop 9 on that tree, was loop 10 on the tree
+that followed it, after the dust fix, and is loop 11 on the same tree after
+the walking-soak red of loop 10 run 4).**
 The report: at 00:50 with the head in the water at Mirrorlake, the night sky
 reads as a large dark mass covered in a fine regular dot grid, cut from
 smooth dark blue by a one-metre-stepped diagonal edge (a voxel silhouette),
