@@ -2044,12 +2044,25 @@
            hollow shaft -- got lifted to the roof of its own cell, through the
            glass that tops the door, and carried up the masonry at 0.1 m a frame
            by the correction: the day soak of the valley caught one of the twelve
-           in it. The ceiling is asked the way the hop gate asks it -- the
-           material table, leaves excused, over the body's own column, which is
+           in it. The ceiling is asked the way the step gate asks it -- the
+           material table, all wood excused, over the body's own column, which is
            the whole of the lift's arc, for the lift is vertical and in place --
            and the feet are kept under it by the body's own height plus the same
            hand's width the ceiling over a bird's head keeps, so it is the head
-           that meets the block the feet do not. The cap only ever lowers the
+           that meets the block the feet do not. The table excuses the trunk and
+           the bone, not only the leaf, because the gate that set this lift is
+           the step gate, and its law is rock over the step top: a trunk over
+           the top is the tree the walker goes under, not a wall. Asked the hop
+           gate's way -- leaves excused, the trunk counted -- the cap held one
+           frog of the valley at four-fifths of its step for the whole watch
+           under a row of trunks the carved hollow had severed one cell above
+           the grass: 584 of its 600 frames at 0.48 m under the step top it was
+           owed, 0.6 m of path in them. Asked the step gate's way the frog climbs
+           the step the way it has always climbed it, its feet through the
+           severed cell for the one frame the crossing takes, which the
+           correction at the end of the frame leaves alone as all wood. The
+           door's glass is rock, which is why the cap still holds the body in
+           the doorway. The cap only ever lowers the
            height the feet are raised onto: a body standing on its own floor
            stands below the ceiling its head is under, so its floor is not what
            is lowered, and a body already under the ceiling by more than a hand
@@ -2067,7 +2080,7 @@
         let gyH = gyH0;
         if (!feetHard) {
           const roofOwn = roofY(world, Math.floor(this.x), Math.floor(this.z),
-            Math.floor(this.y) + 1, world.h, N.FOLIAGE);
+            Math.floor(this.y) + 1, world.h, N.TREE_BLOCK);
           gyH = Math.min(gyH0, roofOwn - this.tall - 0.05);
         }
         const hop = this.isAmphibian() ? sp.hop : null;

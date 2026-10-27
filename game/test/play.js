@@ -7017,6 +7017,98 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('a frog pinned in the doorway of the tower does not ride the lift out of the wall',
     !door.error && door.inside === 0 && door.maxY <= door.cap + 0.1, door);
 
+  /* 10z3. The same ceiling asked with the step gate's table, not the hop
+     gate's. The hollow the world carves does not sever a trunk rooted on the
+     ground it cuts through -- a severed trunk would leave its crown hanging --
+     but one line of four trunks in the valley's meadow was planted a round
+     before the hollow ran under it, and the cut took their base cell: the
+     trunks of that line stand one cell above the grass, with open air where
+     their roots were, and the grass of the meadow is a metre below the step
+     that runs along their north face. The step gate reads a step the way it
+     reads every step: rock over its top is a wall, wood over its top is the
+     tree the walker goes under, so the frog that walks the meadow under that
+     line and wants the step is owed it -- the gate lets the climb, and the
+     lift is to carry the feet onto the top of it. Asked the hop gate's way,
+     the ceiling the lift now asks is the material table with only the leaves
+     excused, and the severed trunk over the step top reads as the roof: the
+     lift carried the frog four-fifths of the way onto the step and stopped,
+     and there it stood -- measured, 584 of its 600 frames at 0.48 m under the
+     top it was owed, 0.6 m of path in the whole of them, not a hop (the hop
+     gate, rightly, still counts the trunk as the roof over the arc), not a
+     step (the step cell is the step's own rock). Asked the step gate's way --
+     all wood excused, the way the gate that set the lift asks -- the trunk is
+     the tree the walker goes under and the lift carries the feet onto the
+     top: the frog is over the edge by the fiftieth frame, its feet through
+     the severed cell for the one frame the crossing takes, which the
+     correction at the end of the frame leaves alone as all wood. This is the
+     step itself, asked directly: a frog of the flock on the meadow grass
+     under the line, aimed at the step for five seconds, its errand held
+     where it is and the middle of the flock emptied for the watch, so the
+     walk measured is the walk to the step and not the walk back to the
+     lake. Before the table was the gate's it never crossed; after, it is
+     over the edge well inside the watch, and the only height it is held at
+     is the top of the step it came to climb. The tower's door is glass, and
+     glass is rock, so this change does not reach it -- the law beside pins
+     that one, and it still pins it. */
+  const floatStep = await step('theFrogClimbsTheStepBeneathTheFloatingTrunk', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
+    const frog = g.creatures.find(c => c.sp.id === 'frog');
+    if (!frog) return { error: 'no frog in the valley' };
+    const hard = (x, y, z) => W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)];
+    // the meadow column under the severed line: grass at 25, open air at 26,
+    // the severed trunk at 27 -- one cell above the grass, where its base was
+    // cut -- and the step along the north face with its top at the trunk's
+    // height and its top cell open
+    const cx = 37, cz = 31;
+    if (!hard(cx, 25, cz)) return { error: 'the meadow grass under the severed line is gone; the world moved' };
+    if (W.solidAt(cx, 26, cz)) return { error: 'the air under the severed trunk is no longer air; the world moved' };
+    if (!W.solidAt(cx, 27, cz) || !N.TREE_BLOCK[W.get(cx, 27, cz)])
+      return { error: 'there is no severed trunk over the step top; the world moved' };
+    if (!hard(cx, 26, cz - 1) || W.solidAt(cx, 27, cz - 1))
+      return { error: 'the step along the north face is no longer open at the trunk\'s height; the world moved' };
+    const body = { x: frog.x, y: frog.y, z: frog.z, yaw: frog.yaw, vy: frog.vy, state: frog.state,
+      pause: frog.pause, tx: frog.tx, tz: frog.tz, homeX: frog.homeX, homeZ: frog.homeZ,
+      speed: frog.speed, t: frog.t, hopT: frog.hopT, wind: frog.wind, sleeping: frog.sleeping,
+      climbTo: frog.climbTo, climbRate: frog.climbRate };
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form };
+    const herdWas = g.herdCentres;
+    p.form = null; p.x = 4; p.z = 4; p.y = W.h - 2;      // nobody to run from
+    // awake, on the grass, aimed at the step: the target is repointed every
+    // frame so the frog keeps wanting the step the whole watch -- what is
+    // under test is whether the lift carries it onto the step, not whether
+    // its errand happens to change at the right moment. Two more hands keep
+    // the frog pointed at the step for the whole of it: the errand is held
+    // where it is (a retarget would pick a new errand from a disc of the
+    // home, and the walk to it is not the step under test), and the middle
+    // of the flock is emptied (a frog of the flock more than a throw from
+    // the middle of its kind walks back to the lake, and that walk is not
+    // the step under test either). The watch is one synchronous block, so
+    // what the game works out once a tick is not worked out again inside
+    // it: the emptied middle stays emptied until it is put back.
+    g.herdCentres = {};
+    frog.state = 'wander'; frog.sleeping = false;
+    let hover = 0, climbed = -1, insideHard = 0, maxY = -1;
+    for (let i = 0; i < 300; i++) {
+      if (i === 0) { frog.x = cx + 0.5; frog.y = 26; frog.z = cz + 0.5; frog.yaw = 0; frog.vy = 0; }
+      frog.tx = cx + 0.5; frog.tz = cz - 2.5;
+      frog.pause = 999;
+      frog.update(1 / 60, p, W, g);
+      const fy = Math.floor(frog.y), fz = Math.floor(frog.z);
+      if (hard(Math.floor(frog.x), fy, fz)) insideHard++;
+      if (frog.y > 26.3 && frog.y < 26.6 && fz === cz) hover++;
+      if (climbed < 0 && fz === cz - 1 && frog.y >= 26.9) climbed = i;
+      if (frog.y > maxY) maxY = frog.y;
+    }
+    const out = { spot: [cx, cz], climbed, hover, insideHard, maxY: +maxY.toFixed(2),
+      yEnd: +frog.y.toFixed(2), xEnd: +frog.x.toFixed(2), zEnd: +frog.z.toFixed(2) };
+    Object.assign(frog, body);
+    Object.assign(p, was);
+    g.herdCentres = herdWas;
+    return out;
+  });
+  check('a frog under the severed trunk climbs the step the gate owes it, and is not held at four-fifths of it',
+    !floatStep.error && floatStep.climbed >= 0 && floatStep.hover < 200 && floatStep.insideHard === 0, floatStep);
+
   /* 11i2. Leaves are not a roof to a body in the air. The flock step above shows
      the rule working over forty seconds of a whole valley, which is how it should
      look and a slow way to find out whether it is still there: the bird that gets

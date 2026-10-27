@@ -23,7 +23,18 @@ keeps the lift onto its floor — the lakebed law), the inside count is
 aligned to the hard world (a leaf at the feet is the bush the body is
 hopping through, as every gate already excuses), the soak is instrumented
 with a per-frame entry window near the tower column, and a pinned-door
-canary asks the fix directly. On that tree the soak loops came back
+canary asks the fix directly. The check the fix owed — whether the new
+ceiling and the climbTo step it rides interact — found the cap had asked
+the hop gate's material question (leaves excused, the trunk counted)
+where it owes the step gate's (rock over the step top is a wall, wood is
+the tree the walker goes under): over one of the worldgen's fallen logs,
+which the meadow's dip leaves floating a cell above the grass, the cap
+read the log as the roof and held a frog aimed at the step at four-fifths
+of it for the whole watch (584 of 600 frames, measured); the cap now asks
+the step gate's table, all wood excused, and the same frog is over the
+edge by the fiftieth frame. The tower's glass is rock, so the door canary
+is untouched and still pins the door, and a second pinned canary asks the
+step directly. On the tree of `6494e99` the soak loops came back
 twenty-four green in a row (loops 4 and 5) -- forty-one consecutive
 faithful full green runs altogether -- so the dust half of the flake (2a)
 is closed on the resolution it was set to close on (guard provable,
@@ -283,8 +294,53 @@ flock is pinned in the door cell, feet at the bottom of its dive, for 300
 frames; the hard-world inside count must be 0 and the feet must never rise
 past the cap (pre-fix: 14 and 16.73).
 
-Status: fixed and pinned; awaiting the round-end gates, then the loop
-again until the next red.
+The check the fix owed — whether the new ceiling and the climbTo step it
+rides interact — found the cap had asked the hop gate's material question
+where it owes the step gate's. The hop gate excuses only the leaves and
+counts the trunk as a roof, because a hop is an arc and the arc's body
+passes through the span; the step gate asks only about rock, because a
+body climbing a step raises its feet in place, and the gate's law is rock
+over the step top — wood over it is the tree the walker goes under, the
+way the stand gate already lets a frog's body under a block one cell over
+its head. The cap, added against the hop gate's table, read a trunk as
+the roof of the lift. The world has the shape that exposes it, and it is
+stable on the seed: one of the worldgen's fallen logs — sixteen of them,
+five trunk cells in a straight line at the start cell's ground + 1, the
+height not re-read along the line — runs along the edge of a one-cell dip
+in the meadow at (36-40, 27, 31), so over the dip the log's cells stand
+one cell above the grass with open air under them, and the step along the
+log's north face, (37,30), has its top at the log's height with its top
+cell open. A frog on the meadow grass under the log, aimed at the step,
+is owed the climb by the step gate — its own-column check reads the log,
+not rock, and lets it; the cap, asked the hop gate's way, read the log as
+the roof and held the lift at four-fifths of the step: measured on a frog
+of the canary's rig on the tree before the correction, 584 of 600 frames
+at 0.48 m under the step top it was owed, 0.6 m of path in the whole of
+them, not a hop (the hop gate, rightly, still counts the log over the
+arc — the arc's body would pass through it) and not a step (the step cell
+is the step's own rock). The correction is the cap's table: all wood
+excused, the way the gate that set the lift asks — `roofY` over the
+body's own column from one cell over the feet with `TREE_BLOCK`, not
+`FOLIAGE` — and the same frog is over the edge of the step by the
+fiftieth frame, its feet through the log's cell for the one frame the
+crossing takes. Nothing else the cap does moves: it binds only when the
+height the feet are raised onto is over its ceiling, and for a settled
+body the floor is an integer under the ceiling by construction, while for
+a climbing body the step gate's own-column check has already refused a
+rock ceiling at the step top — so the only ceiling the corrected table
+stops binding on is wood at the step top, which is the geometry the gate
+says is not a wall. The tower's glass is rock, so the door's cap is
+untouched and the door canary still pins it (re-measured after: 0 inside,
+the feet stop at 12.52). Pinned by a second law (`play.js`, step
+`theFrogClimbsTheStepBeneathTheFloatingTrunk` + check): a frog of the flock
+on the meadow grass under the log, aimed at the step for 300 frames; it
+must be over the edge of the step inside the watch (frame 44 measured by
+the canary, 45-52 by the probe), spend less than a third of the watch in
+the half-step band, and never put its feet in a hard block.
+
+Status: fixed and pinned; the material table corrected after; awaiting the
+round-end gates on the corrected tree, then the loop again until the next
+red.
 
 ### 2d. Meshing-budget law (NEW, loop 3 run 7) — `the whole valley rebuilds inside the budget a frame gives meshing`
 
@@ -454,9 +510,13 @@ only (CJK inside string/regex literals is fine).
   air under the slab rides that lift straight up through the masonry.
   That is what law 2c was catching. The lift that raises a body onto its
   floor (the on-foot altitude branch) is capped by the ceiling of the
-  body's own column minus its height (`roofY − tall − 0.05`, leaves excused,
-  the 2c fix) while the feet are not already inside a hard block: that is
-  what keeps the door's frog under the glass; a body buried in the rock
+  body's own column minus its height (`roofY − tall − 0.05`, all wood
+  excused — the step gate's table, not the hop gate's: the hop gate counts
+  a trunk as the roof over the arc, but the step gate's law is rock over
+  the step top, and a cap that counted the log the meadow's dip leaves
+  floating read it as the roof and held a frog at four-fifths of its step,
+  2c correction) while the feet are not already inside a hard block: that
+  is what keeps the door's frog under the glass; a body buried in the rock
   keeps the uncapped lift onto its floor (`aBodyClimbsItsBank`), because a
   capped lift under the top of its own bank would settle it back under the
   rock the correction is lifting it out of.
