@@ -6,7 +6,7 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `6494e99` (pushed to both remotes,
+State at time of writing: round 26, tree `0236ff1` (pushed to both remotes,
 round-end gates green twice). Issue 1 (night sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
@@ -41,6 +41,9 @@ is closed on the resolution it was set to close on (guard provable,
 measured airtight, the recorded red line never reproduced), and the
 frog-ceiling half (2b) stands watched with the loop: its recorded red line
 is a mid-development artifact of a rig the committed code cannot print.
+The watch that was running when the material correction was found (loop 6,
+on the previous tree) stood fourteen green and was stopped to make way;
+the standing watch is loop 7 on `0236ff1`.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -338,9 +341,10 @@ must be over the edge of the step inside the watch (frame 44 measured by
 the canary, 45-52 by the probe), spend less than a third of the watch in
 the half-step band, and never put its feet in a hard block.
 
-Status: fixed and pinned; the material table corrected after; awaiting the
-round-end gates on the corrected tree, then the loop again until the next
-red.
+Status: fixed and pinned; the material table corrected after; the round-end
+gates on the corrected tree came back green twice, the correction is
+pushed as its own commit, and loop 7 is the standing watch on it until the
+next red.
 
 ### 2d. Meshing-budget law (NEW, loop 3 run 7) — `the whole valley rebuilds inside the budget a frame gives meshing`
 
