@@ -43,7 +43,9 @@ frog-ceiling half (2b) stands watched with the loop: its recorded red line
 is a mid-development artifact of a rig the committed code cannot print.
 The watch that was running when the material correction was found (loop 6,
 on the previous tree) stood fourteen green and was stopped to make way;
-the standing watch is loop 7 on `0236ff1`.
+loop 7 on `0236ff1` came back twenty-four green in a row -- eighty-one
+faithful full green runs in the round, no red since the two recorded lines
+that are now explained -- and the standing watch is loop 8.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -116,7 +118,8 @@ below the sky behind it (pre-fix: 17.97%). The law runs at midnight in the
 user's pose with the lens in the air, asks for `air` and `inWater = 0` as
 preconditions, and restores the player, clock, mode and view exactly.
 
-Status: fixed and pinned; awaiting the round-end gates.
+Status: fixed and pinned; the round-end gates came back green twice on the
+round's final tree.
 
 ## 2. The soak flake (round 26; work item T23, bug B34)
 
@@ -195,8 +198,8 @@ body's own column and the span the arc crosses -- and is pinned by the
 deterministic law `frogDoesNotHopThroughItsOwnCeiling`. The recorded red
 line is a mid-development artifact: its `roomAt: 1.91` with `badLaunch: 1`
 is arithmetically impossible in the committed rig (the threshold is
-`tall + 0.7 = 1.13`), so the line cannot be printed by the code the
-twenty-nine green runs ran on. The rig records the whole 150-frame window,
+`tall + 0.7 = 1.13`), so the line cannot be printed by the code every green
+run of the round ran on. The rig records the whole 150-frame window,
 so the next red -- if it comes from the post-suite state the flake needs --
 says in which frame the body was told there was room. Watched with the
 loop; not closed, because there is no proof of airtight for that
@@ -343,8 +346,11 @@ the half-step band, and never put its feet in a hard block.
 
 Status: fixed and pinned; the material table corrected after; the round-end
 gates on the corrected tree came back green twice, the correction is
-pushed as its own commit, and loop 7 is the standing watch on it until the
-next red.
+pushed as its own commit, and loop 7 came back twenty-four green in a row
+on it (the soak's inside count 0 in every one; in the five runs a frog
+came to the tower's wall the entry window read the frames and the
+masonry stayed out). The standing watch on it is loop 8, until the next
+red.
 
 ### 2d. Meshing-budget law (NEW, loop 3 run 7) — `the whole valley rebuilds inside the budget a frame gives meshing`
 
@@ -379,8 +385,10 @@ Faithful repro = full `node game/test/play.js` under Chrome/puppeteer
 (swiftshader), one run ~6-7 minutes. Loop scripts in `/tmp/m26flake/` (not in
 the repo): `loop.sh` / `loop2.sh` / `loop3.sh` / `loop4.sh` / `loop5.sh` run
 12 sequential full suites into
-`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`, stop at the first red, append
-`GREEN/RED on run N` + `CHECKFAILED=<n>` to `status{,2,3,4,5}`.
+`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` /
+`loop8.sh` run 24 each into `{r6-*,r7-*,r8-*}.log`. All stop at the first
+red and append `GREEN/RED on run N` + `CHECKFAILED=<n>` to
+`status{,2,3,4,5,6,7,8}`.
 Parse a red log with `python3 /tmp/m26flake/parse.py <log>` — never `tail`
 or `sed` the whole line (one step prints one ~100 KB JSON line). The parser
 prints the soak's entry window (per-frame lines near the tower column:
@@ -390,13 +398,21 @@ nearby bodies) and the pinned-door canary.
 Tally at time of writing: loop 1 — runs 1-4 green. Loop 2 — runs 1-5 green,
 run 6 red (law 2c above). Loop 3 — runs 1-6 green, run 7 red (law 2d above,
 the meshing budget, not a soak law). Loop 4 and loop 5 (on the tree with
-the 2c fix) — runs 1-12 green each. Across all of it the soak laws have
-gone red twice on recorded lines and not since: forty-one consecutive
-faithful full runs on the current tree have gone green, the tower-masonry
-entry (2c) is root-caused and pinned, and the dust half (2a) is closed on
-its pre-set honest path. The next red, whatever it is, gets parsed with
-`parse.py` and read before anything is touched; the loop keeps running as
-the standing watch.
+the 2c fix) — runs 1-12 green each. Loop 6 (on the previous tree, standing
+when the 2c material correction was found) — runs 1-14 green, stopped to
+make way for the corrected tree. Loop 7 (on the corrected tree) — runs
+1-24 green: the soak's inside count 0 in every one, the pinned-door canary
+and the step-under-the-log canary byte-identical in all of them, and in
+the five runs a frog came to the tower's wall the entry window read the
+frames and the masonry stayed out. Across all of it the soak laws have
+gone red twice on recorded lines and not since: eighty-one faithful full
+green runs in the round (fifty-five on the tree before the correction,
+twenty-six on the corrected one, the round's double all.sh counts included
+the way the forty-one did), the tower-masonry entry (2c) is root-caused,
+corrected and pinned, and the dust half (2a) is closed on its pre-set
+honest path. The next red, whatever it is, gets parsed with `parse.py` and
+read before anything is touched; the loop keeps running as the standing
+watch (loop 8 is the current one).
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -409,7 +425,8 @@ and the lake holds no trees: it is left as is and watched, not widened.
 
 ## 3. POI heights and the teleport waypoint (theme queue item 10)
 
-**Closed (fix uncommitted at time of writing; awaits the round-end gates).**
+**Closed (data and docs only; committed, and past the round-end gates, which
+came back green twice on the round's final tree).**
 All ten POI columns and the teleport waypoint were asked of the world the
 data generates (seed 20261008; probe `/tmp/m26band/poi2.js`). A POI's y is
 the row the place stands at: the cellar's floor row (20) and the greenhouse's
