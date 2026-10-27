@@ -23,13 +23,13 @@ keeps the lift onto its floor — the lakebed law), the inside count is
 aligned to the hard world (a leaf at the feet is the bush the body is
 hopping through, as every gate already excuses), the soak is instrumented
 with a per-frame entry window near the tower column, and a pinned-door
-canary asks the fix directly. On that tree the soak loop came back twelve
-green in a row -- twenty-nine consecutive faithful full green runs
-altogether -- so the dust half of the flake (2a) is closed on the
-resolution it was set to close on (guard provable, measured airtight, the
-recorded red line never reproduced), and the frog-ceiling half (2b) stands
-watched with the loop: its recorded red line is a mid-development artifact
-of a rig the committed code cannot print.
+canary asks the fix directly. On that tree the soak loops came back
+twenty-four green in a row (loops 4 and 5) -- forty-one consecutive
+faithful full green runs altogether -- so the dust half of the flake (2a)
+is closed on the resolution it was set to close on (guard provable,
+measured airtight, the recorded red line never reproduced), and the
+frog-ceiling half (2b) stands watched with the loop: its recorded red line
+is a mid-development artifact of a rig the committed code cannot print.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -109,8 +109,8 @@ Status: fixed and pinned; awaiting the round-end gates.
 The suite's soak laws went red in roughly one run in three to six. Three
 laws were in the flake pool; the first two were recorded in round 25 (B34)
 and the third went red for the first time in round 26, loop 2, run 6. State
-at time of writing: twenty-nine consecutive faithful full runs on the
-current tree have gone green (loops 1-4); 2c is root-caused, fixed and
+at time of writing: forty-one consecutive faithful full runs on the
+current tree have gone green (loops 1-5); 2c is root-caused, fixed and
 pinned, 2a is closed on its pre-set honest path, and 2b is watched with the
 loop (its recorded red line is a mid-development artifact).
 
@@ -174,8 +174,8 @@ ceiling); (2) mid-hop steering bending the arc off the gate's straight span;
 (3) a landing in a low-ceiling riser, lifted out at 0.1 m/frame by the
 solid-exit correction (`game/src/entities.js` ~2200-2220).
 
-State at time of writing: not reproduced in twenty-nine consecutive
-faithful full runs on the current tree (loops 1-4), and the hop gate it
+State at time of writing: not reproduced in forty-one consecutive
+faithful full runs on the current tree (loops 1-5), and the hop gate it
 would need has since been made to ask the ceiling -- material table, the
 body's own column and the span the arc crosses -- and is pinned by the
 deterministic law `frogDoesNotHopThroughItsOwnCeiling`. The recorded red
@@ -329,14 +329,14 @@ nearby bodies) and the pinned-door canary.
 
 Tally at time of writing: loop 1 — runs 1-4 green. Loop 2 — runs 1-5 green,
 run 6 red (law 2c above). Loop 3 — runs 1-6 green, run 7 red (law 2d above,
-the meshing budget, not a soak law). Loop 4 (on the tree with the 2c fix) —
-runs 1-12 green. Across all of it the soak laws have gone red twice on
-recorded lines and not since: twenty-nine consecutive faithful full runs on
-the current tree have gone green, the tower-masonry entry (2c) is
-root-caused and pinned, and the dust half (2a) is closed on its pre-set
-honest path. The next red, whatever it is, gets parsed with `parse.py` and
-read before anything is touched; the loop keeps running as the standing
-watch.
+the meshing budget, not a soak law). Loop 4 and loop 5 (on the tree with
+the 2c fix) — runs 1-12 green each. Across all of it the soak laws have
+gone red twice on recorded lines and not since: forty-one consecutive
+faithful full runs on the current tree have gone green, the tower-masonry
+entry (2c) is root-caused and pinned, and the dust half (2a) is closed on
+its pre-set honest path. The next red, whatever it is, gets parsed with
+`parse.py` and read before anything is touched; the loop keeps running as
+the standing watch.
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -418,6 +418,14 @@ Per-round gate contract, in this order, never concurrent:
 5. `./game/test/all.sh` -> 10/10 PASS, run **twice** on the tree that gets
    committed, each run followed by
    `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> `0`.
+
+Docs-only commits (a diff limited to `*.md`, checked with
+`git diff --name-only` before pushing) run gates 1-4 only and skip gate 5:
+the code suites of all.sh cannot see a markdown-only diff, and the code was
+already verified on the earlier tree of the round. The full gate 5 still runs
+twice on the final tree of the round, at the round's end, whatever the
+last commit touched. (Round 26, second commit: the first docs-only commit
+to take this path, saved the ~25 min double all.sh.)
 
 After that: `git push origin main && git push gitee main`, confirm both
 remotes equal HEAD, and write the final report in Chinese prose (no tables,
