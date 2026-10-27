@@ -6,8 +6,8 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `bc2e1bb` (pushed to both remotes,
-round-end gates green twice). Issue 1 (night sky read as black blocks) is
+State at time of writing: round 26, tree `251c5af` (the lake-squares fix of
+issue 5, pushed to both remotes, round-end gates green twice). Issue 1 (night sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
 only. The meshing red of loop 3 run 7 is root-caused to CPU preemption and
@@ -69,9 +69,19 @@ bound of 60 and a green range of 86-99, outside every measured range; the
 read found the walk-stop-walk the wander state gives a bear between errands
 and no fault in the bear's code, so the game was not changed, and the rig
 now carries the per-body read so the next red of it is readable in the log.
-The round now has one hundred and four faithful full green runs, the three
-earlier red lines root-caused and fixed and this fourth one read and
-watched with the loop, and the standing watch is loop 11 on the same tree.
+The user's lake-squares question (issue 5) is root-caused to the water mesh
+drawing a flat one-metre pane against every kelp cell -- kelp is a micro
+block, non-opaque and visually water, so the water rule read it as "not
+water" -- and is fixed (the water now culls the face against a micro cell,
+the way it already culls it against water) and pinned; the proof is an
+eight-thousand-pixel A/B that takes the squares out and restores the frame
+pixel for pixel. The fix surfaced a fifth red in the round: the kelp law's
+non-vacuity read was riding on two far stalks at the edge of the frame whose
+contrast the cull took, and it is resolved by the test-only amendment that
+puts the lens under the surface a metre and a half above a stalk and reads
+it at two lum. The round now has one hundred and seven faithful full green
+runs, the four earlier red lines stand as recorded and this fifth is
+resolved, and the standing watch is loop 11 on the fixed tree.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -472,20 +482,24 @@ the walking-soak law (2f below), a new line, outside every measured range;
 the read found the walk-stop-walk the wander state gives a bear between
 errands and no fault in the bear's code, so the game was not changed and
 the rig now carries the per-body read so the next red of it is readable.
-Across all of it the laws have gone red four times in the round -- twice on
+Across all of it the laws have gone red five times in the round -- twice on
 the recorded lines of round 25 (2c in loop 2 run 6, 2a in loop 9 run 2),
-once on the meshing budget (2d, not a soak law, loop 3 run 7) and once on
-the new walking-soak line (2f, loop 10 run 4) -- and the first three are
-root-caused and fixed while the fourth is read, recorded and watched: one
-hundred and four faithful full green runs in the round (fifty-five on the
-tree before the correction, forty-nine on the corrected one, the round's
-double all.sh counts included the way the forty-one did), the
-tower-masonry entry (2c) is root-caused, corrected and pinned, the dust
-half (2a) re-opened by the red of loop 9 run 2 is closed with the fix, and
-the walking-soak line (2f) stands recorded with its per-body read. The
-next red, whatever it is, gets parsed with `parse.py` and read before
-anything is touched; the loop keeps running as the standing watch (loop 11
-is the current one, on the same tree).
+once on the meshing budget (2d, not a soak law, loop 3 run 7), once on the
+new walking-soak line (2f, loop 10 run 4), and a fifth, the kelp law's
+non-vacuity read (section 5), which the pane fix of issue 5 surfaced and
+the test-only close-up amendment resolved -- and the first three are
+root-caused and fixed, the fourth is read, recorded and watched, and the
+fifth stands resolved with its close-up read: one hundred and seven
+faithful full green runs in the round (fifty-five on the tree before the
+correction, forty-nine on the corrected one, and three on the fixed tree
+this session, the standalone play and the round's double all.sh, the
+counts included the way the forty-one did), the tower-masonry entry (2c)
+is root-caused, corrected and pinned, the dust half (2a) re-opened by the
+red of loop 9 run 2 is closed with the fix, the walking-soak line (2f)
+stands recorded with its per-body read, and the kelp-law line stands
+resolved with its close-up read. The next red, whatever it is, gets parsed
+with `parse.py` and read before anything is touched; the loop keeps running
+as the standing watch (loop 11 is the current one, on the fixed tree).
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -657,6 +671,107 @@ for the precision the grid needs. A render from the lake at 00:50
 bell-tower's silhouette and lit window quads as ordinary world geometry --
 the dark mass the frame reports is the sky itself, and it is the grid in it
 that was wrong.
+
+## 5. Flat blue grid squares afloat at various depths under Mirrorlake (round 26; user report)
+
+**Reported by the user (two daytime screenshots, in conversation, not in
+the repo).** Scene: Mirrorlake, mid-afternoon (15:51 and 16:31), player in
+frog form, under the surface. What the user sees: a field of flat pale-blue
+squares, grid-like, at various depths in the water column over the bed.
+Question: what are they?
+
+**What they are not (measured, in order).** Not the jellies: a render of the
+lake at 15:51 from mid-water in a deep column, and the same render with all
+ten jellies moved 200 m away, differ only where the character stands -- the
+squares sit in the part of the frame that did not change. Not the frogs:
+the same lens with all twelve frogs moved away leaves every square standing.
+Not the bed: the squares are in the water column at various depths, and the
+bed sits at the bottom of the frame. They are static world geometry, and the
+only world geometry in a water column is the water mesh.
+
+**Root cause (measured).** The water branch of the chunk mesher draws a face
+of a water cell against a neighbour that is not water and not opaque. The
+kelp the lakebed grows (`75`, non-opaque, a micro block: a 0.2 m stem) is
+neither, so a kelp cell is treated as "not water" and every water cell
+round every stalk wears a flat 1 m pane of its own -- though a kelp cell is
+visually water with a thin stem in it, the way the glass rule already
+excuses a glass cell next to a glass cell. Census of the seed world
+(headless): 21,916 water cells, and of the faces the rule draws, 243 are
+against kelp cells -- 181 vertical, 62 horizontal, the vertical ones at
+y6-y13, the lakebed stepping from the shallow shelf to the eleven-metre
+deep; 32 are against the glass of the sunken tower and the huts (a real
+water/glass boundary), 16 against the berries in its windows, and 2,933
+against the air (the surface sheet and the shore, as intended). There are
+no interior air pockets in the water (0), so no other pane hides there.
+
+**Proof, before the fix, in the page.** Marking the kelp block opaque and
+re-meshing all 100 chunks takes the 243 faces out: the squares are gone
+from the frame (8,135 px across 31 cells between the two renders), and
+restoring the flag and re-meshing brings the frame back pixel for pixel (0
+px between the restored render and the first). The squares are the faces,
+and the faces are the kelp's.
+
+**Fix (landed, `game/src/world.js`, `buildChunk`, the water branch).** The
+water now also culls the face against a micro cell, the way it already
+culls it against water itself: `if (B[nb] && B[nb].micro) continue;`. A
+face against a micro cell is water against water with something small in
+it -- the cell holds a thin stem or a berry and the water passes through
+it -- and drawn it is a flat pane afloat in the column. The micro box is
+drawn by its own branch and wants no face of its own. Nothing else the
+water draws moves: the sheet against the air, the shore sides, and the
+glass of the sunken tower are all against non-micro neighbours and keep
+their faces. After: the same lens at 15:51 shows the water column clean --
+the bed, the shore, the light through the surface, and the kelp where it
+stands, which from a distance is a thin green stem and reads as what it
+is.
+
+**The other candidate, recorded for the report.** The ten lamp jellyfish of
+the lake drift on the outline of the sunken tower from the surface, their
+bells a flat light-blue box about 0.4 m across with a brighter dome over
+it and a darker rim, all of it lit from inside. In the deep column the
+water holds them at y12.6-y13.8; from mid-water they are a short way off
+and read as faint glowing plates in the dark of the lake. They are the
+only fruitless animal in the valley, and their movement -- a slow drift
+with a gentle vertical bob, turning on the arc its 0.8 rad/s allows -- is
+what it should be, and was checked against the top law: natural, nothing
+to fix.
+
+**The kelp law it owed (test-only, `game/test/play.js`).** The cull had one
+consequence the round owed. The kelp law's last check is a non-vacuity
+read: take the ordinary micro mesh out of every chunk and count the pixels
+the frame loses -- over 200 at four lum, or the check is not reading what
+it claims to read. The law's old lens, 0.1 m above the water of the deep
+column and straight down, held exactly two stalks in the frame, near the
+column, at the frame's edge (the engine's own projection puts them at 260,
+69 and 1113, 445 of the 1200x700 frame, 5.8 and 7.5 m down the view axis),
+and pre-fix the diff was riding on those two stalks read against their
+panes -- the flat 1 m faces every water cell round a stalk wore. The cull
+removes the panes, and with them the stalks' background: post-fix, at the
+old pose, the removal diff is zero pixels at four lum (measured: zero, the
+largest difference in the whole frame 1.3 lum), because what is left in the
+frame is two thin stems a few metres off, and a stem reads at one to three
+lum over the bed -- the histogram of the removal diff at the close lens:
+831,963 pixels at 0-1 lum, 2,466 at 1-2, 5,523 at 2-3, 10 at 3-4, 38 at
+4-5, none above five. The red was a consequence of the fix, not a flake:
+the render is deterministic (two identical grabs differ by zero pixels),
+so the fixed tree read zero at the old pose on every run before the
+amendment. The amendment moves the lens under the surface, where a stalk is
+the largest thing in the frame: it hovers 1.2 m over the top of the stem
+of the stalk nearest the column (the stem is 0.9 m; the lens sits at y
+11.1, the column's surface at y 14, so nearly three under it), and it reads
+the diff at two lum. Two lum is safe: the render is deterministic, so a
+low threshold counts the stalk with no noise to count instead, and the
+emissive-removal read at the same pose is exactly zero -- a noon lake frame
+holds no self-lit block, the jellyfish lamps are bodies and are drawn
+elsewhere -- so nothing but a real thing in the micro mesh can move the
+number. Post-fix the read is 3,549 pixels at two lum (the largest
+difference 4.9) against the bound of 200 -- seventeen times the bound --
+and it stood at the same 3,549 in the standalone run and in both round-end
+runs of the fixed tree, with the emissive-removal read still exactly 0 in
+every one.
+
+Status: root-caused and fixed; the round-end gates on the fixed tree came
+back green twice, and the standing watch runs loop 11 on that tree.
 
 ## Standing contract (every session, in order)
 

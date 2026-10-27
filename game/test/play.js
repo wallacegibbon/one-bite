@@ -5014,8 +5014,9 @@ What was measured before any of this was fixed, over 180 frames of walking
      and the depth question answered "dry" for every one of them. It also used
      to state `emis: 1`, copied from the glowcap ring on the next line of the
      block table, and that never showed either because no kelp was ever placed.
-     The lens now goes under the surface and hovers a metre and a half above a
-     stalk: just above the water the stalks read at 1.2 lum over the bed (the
+     The lens now goes under the surface and hovers 1.2 m over the top of the
+     stalk's stem: just above the water the stalks read at 1.3 lum over the
+     bed (the
      flat water panes that used to back them were the grid of blue squares the
      user saw under the lake, and the cull that removed them took the stalks'
      last sliver of contrast seen through seven metres of lake), so the old
@@ -5062,8 +5063,8 @@ What was measured before any of this was fixed, over 180 frames of walking
       if (bed >= 0 && top + 1 - bed >= 7) deep = { x: x + 0.5, z: z + 0.5, top, bed };
     }
     if (!deep) return back({ error: 'no stretch of the lake seven metres deep' });
-    // the underwater stalk nearest that column; the lens hovers a metre and a
-    // half above its top, under the surface
+    // the underwater stalk nearest that column; the lens hovers 1.2 m over
+    // the top of its stem, under the surface
     let near = null, bd = 1e9;
     for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) for (let y = 0; y < W.h; y++) {
       if (W.get(x, y, z) !== 75 || !W.liquidAt(x, y + 1, z)) continue;
