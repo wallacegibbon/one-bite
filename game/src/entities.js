@@ -2499,15 +2499,38 @@
         const nx = this.px[i] + this.vx[i] * dt;
         const ny = this.py[i] + this.vy[i] * dt;
         const nz = this.pz[i] + this.vz[i] * dt;
-        /* `inside` is part of the same question and not a second one: outside the
-           map `get` answers "air" to a question that was never asked, so a mote
-           that drifts off the edge has no wall to stop it and flies on out of the
-           valley for the rest of its life -- **21,863** of **149,080** mote-samples
-           spent outside the map at a body standing eight blocks in from the edge,
-           and the spawner being kept on the map leaves **0** of them there. */
-        if (world && !world.solidAt(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0) &&
-            (!world.inside(nx | 0, ny | 0, nz | 0) || world.solidAt(nx | 0, ny | 0, nz | 0))) {
-          this.vx[i] = this.vy[i] = this.vz[i] = 0;
+        /* The step is computed in double, but the position arrays are float32,
+           and that is the whole of the wall question: a destination a hair
+           below a cell boundary in double stores as the boundary itself, so a
+           mote asked of the double sees the near face and is left standing on
+           the far side of the wall it was let through. The canopy of the
+           beams' isle is that wall one run in a while: a mote born in the air
+           below it, rising at 0.5 m/s, crossed the face of a leaf cell whose
+           double destination was still the air cell under it, the stored
+           position was the leaf, and the rule below then kept its move (a
+           mote the world has closed around keeps its move) so it walked
+           through the canopy it was let into and spent the rest of its life
+           inside it -- 130 of 61,626 samples in one run, 152 of 61,073 in the
+           red the canary kept. The wall is therefore asked of the cell the
+           mote is *stored* in: the move is made first (the store is the
+           rounding), and a mote that was not already inside a block is put
+           back where it stood and spends its speed where the stored cell is
+           solid or off the map -- `inside` is part of the same question and
+           not a second one: outside the map `get` answers "air" to a question
+           that was never asked, and the stored position is the one the frame
+           is drawn from (**21,863** of **149,080** mote-samples were spent off
+           the map at a body eight blocks in from the edge, before the spawner
+           was kept on the map). */
+        if (world) {
+          const curSolid = world.solidAt(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0);
+          const ox = this.px[i], oy = this.py[i], oz = this.pz[i];
+          this.px[i] = nx; this.py[i] = ny; this.pz[i] = nz;
+          if (!curSolid &&
+              (!world.inside(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0) ||
+               world.solidAt(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0))) {
+            this.px[i] = ox; this.py[i] = oy; this.pz[i] = oz;
+            this.vx[i] = this.vy[i] = this.vz[i] = 0;
+          }
         } else {
           this.px[i] = nx; this.py[i] = ny; this.pz[i] = nz;
         }
