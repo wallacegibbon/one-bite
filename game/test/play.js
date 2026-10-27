@@ -6658,7 +6658,6 @@ What was measured before any of this was fixed, over 180 frames of walking
     // away, spends these forty seconds on one spot and is not flocking at all
     for (const c of [...frogs, ...owls]) { c.state = 'wander'; c.sleeping = false; c.pause = Math.random() * 3; }
     const cell = c => [Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)];
-    const solid = c => { const [x, y, z] = cell(c); return W.solidAt(x, y, z); };
     // the surface a body is over: what it would fall to, read from its own feet.
     // Reading it from the top of the map instead would call the crown of a wood
     // the floor of the sky above it, and a bird flying under that crown would be
@@ -6697,12 +6696,61 @@ What was measured before any of this was fixed, over 180 frames of walking
     let headIn = 0, crown = 0, jam = 0, crownIn = 0, flown = 0;
     const headHits = [], insideHits = [];
     const owlPath = new Map(); for (const c of owls) owlPath.set(c, 0);
+    // the entry window the red run was missing. In the one red run the inside
+    // counter fired on the sunken tower's south wall column (66,115): a wild
+    // frog's feet were in the masonry at y13-14 and the solid-exit correction
+    // -- the 0.1 m per frame lift -- carried the body out of the world without
+    // ever asking how it got into it. The hits recorded there carried no frame
+    // number, no frog identity, and none of the frames before the entry, so the
+    // entry itself -- the step that put the feet in the wall -- was invisible.
+    // What is recorded here: every frame of every frog within one column of
+    // that wall. Each line starts with the frame number and the frog's own
+    // numbers and ends with the other bodies close enough that a shove could
+    // have reached them. The two flags at the feet are the raw read (any
+    // solid, leaves among them) and the hard read (what the inside count
+    // above is), so a red line re-reads as the frame the feet first went
+    // hard, whatever the bush was doing. The window keeps its head (the cap
+    // drops the tail of a long sojourn), so an entry early in a long sojourn
+    // is still kept -- and a sojourn long enough to hit the cap is itself a
+    // finding. The column dump is static through the run, so it is read once
+    // here.
+    const towerX = 66, towerZ = 115, winCap = 480;
+    const towerWin = new Map();
+    const frogIdx = new Map(); frogs.forEach((c, k) => frogIdx.set(c, k));
+    const towerCols = {};
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      const cx = towerX + dx, cz = towerZ + dz, rows = [];
+      for (let y = 0; y <= 20; y++) rows.push(W.get(cx, y, cz) || 0);
+      towerCols[cx + ',' + cz] = rows;
+    }
     for (let i = 0; i < n; i++) {
       for (const c of frogs) {
         c.update(1 / 60, p, W, g);
-        if (solid(c)) { inside++;
-          if (insideHits.length < 6) { const [fx, fy, fz] = cell(c);
-            insideHits.push(['frog', W.get(fx, fy, fz), fx, fy, fz, +c.y.toFixed(2), c.state]); } }
+        const [cx, cy, cz] = cell(c);
+        /* The count is the hard world -- rock, masonry, glass. A leaf at the
+           height of the feet is the bush the body is hopping through: the step
+           gate, the ceiling, and the bird's own count below all excuse it, and
+           the block that got a body into the tower's wall was masonry, not a
+           bush. */
+        if (hard(cx, cy, cz)) { inside++;
+          if (insideHits.length < 6)
+            insideHits.push(['frog', i, W.get(cx, cy, cz), cx, cy, cz, +c.y.toFixed(2), c.state, frogIdx.get(c)]);
+        }
+        if (Math.abs(cx - towerX) <= 1 && Math.abs(cz - towerZ) <= 1) {
+          let win = towerWin.get(c);
+          if (!win) { win = []; towerWin.set(c, win); }
+          if (win.length < winCap) {
+            const near = [];
+            for (const b of g.creatures) {
+              if (b === c || Math.abs(b.y - c.y) > 2.5) continue;
+              if (Math.hypot(b.x - c.x, b.z - c.z) <= 2)
+                near.push([b.sp.id, +b.x.toFixed(1), +b.y.toFixed(1), +b.z.toFixed(1), +(b.vy || 0).toFixed(2), b.state]);
+            }
+            win.push([i, +c.x.toFixed(2), +c.y.toFixed(2), +c.z.toFixed(2), +(c.vy || 0).toFixed(2),
+              +(((c.yaw % 6.283) + 6.283) % 6.283).toFixed(2), c.state, W.solidAt(cx, cy, cz) ? 1 : 0,
+              hard(cx, cy, cz) ? 1 : 0, near]);
+          }
+        }
       }
       const ys = [];
       for (const c of frogs) {
@@ -6743,7 +6791,7 @@ What was measured before any of this was fixed, over 180 frames of walking
            this does too. */
         const [fx, fy, fz] = cell(c);
         if (W.liquidAt(fx, fy, fz) || hard(fx, fy, fz)) { inside++;
-          if (insideHits.length < 6) insideHits.push(['owl', W.get(fx, fy, fz), fx, fy, fz, +c.y.toFixed(2), c.state]); }
+          if (insideHits.length < 6) insideHits.push(['owl', i, W.get(fx, fy, fz), fx, fy, fz, +c.y.toFixed(2), c.state]); }
         else if (W.solidAt(fx, fy, fz)) crownIn++;
         const ab = c.y - over(c);
         aboveSum += ab; aboveN++;
@@ -6784,6 +6832,13 @@ What was measured before any of this was fixed, over 180 frames of walking
     for (const d of depths) if (d < 1) nearFilm++;
     const out = { seconds: 40, frogs: frogs.length, owls: owls.length, wetFrames: wet, inside,
       insideHits,
+      // the entry window (2c): setup and the line format above the loop --
+      // frame, position, vy, yaw, state, the raw and the hard read at the
+      // feet, then the bodies a shove could reach; the frogs that came within
+      // one column of the wall, and every frame each of them spent there
+      towerWindow: { cols: towerCols,
+        frogs: frogs.map((c, k) => { const win = towerWin.get(c);
+          return win ? { i: k, frames: win.length, lines: win } : null; }).filter(Boolean) },
       depthSamples: depths.length,
       depthMedian: +(depths[depths.length >> 1] || 0).toFixed(2),
       depthLow: +(depths[Math.floor(depths.length * 0.05)] || 0).toFixed(2),
@@ -6854,7 +6909,12 @@ What was measured before any of this was fixed, over 180 frames of walking
      (the spread of ten runs; the errands each bird is walking at the moment the
      window closes move this number more than anything in the flight code does),
      every one of them climbs and descends by 4.3-22.5 m over the window, and the
-     longest any of them went without moving its height at all is 2.8-5.2 s. */
+     longest any of them went without moving its height at all is 2.8-5.2 s.
+     The count of a body inside the world is the hard world -- rock, masonry,
+     glass: a leaf at the height of the feet is the bush the body is hopping
+     through, which is the same excuse the body's own step gate and ceiling
+     already give it, and the block that got a body into the tower's wall was
+     masonry, not a bush. */
   check('the twelve frogs on one lake do not all swim at one depth',
     !flock.error && flock.sameLinePct < 10, flock);
   check('they are spread over metres of the water, not a hand span of it',
@@ -6882,6 +6942,80 @@ What was measured before any of this was fixed, over 180 frames of walking
     !flock.error && flock.holdRunMax < 8, flock);
   check('and none of them spends a frame inside the world',
     !flock.error && flock.inside === 0, flock);
+
+  /* 10z2. The door of the sunken tower is a door. The twelve frogs of
+     Mirrorlake walk in and out of the hollow shaft of the tower through the
+     holes of frogpear in its south wall -- the holes are not rock, so a frog
+     walking deep in its dive steps flat across the face of the wall into one
+     of them the way it steps into any doorway -- and then the lift that
+     raises a body onto the floor it stands on did its part and no more: it
+     asked how high the floor is, never what stands over the head of the body
+     being raised. The floor of the doorway is the top of the glass a metre
+     over it, so the lift raised the feet into the glass in the first frame,
+     and the correction that puts a body out of the rock it is in took over
+     at 0.1 m a frame and walked the frog up the face of the wall to the roof
+     at 16.7 m. The red run of the soak measured exactly that: fourteen frames
+     inside the world, the first at 13.1 m, drifting 0.1 m a frame, on the
+     south wall column of the tower. The lift now asks the ceiling of the
+     body's own column -- the same question the hop gate already asks,
+     material table, leaves excused -- and caps the height it raises the feet
+     onto at that ceiling minus the body's height: in the doorway that is the
+     underside of the glass, so a frog that steps in lands under it and walks
+     on into the pool, and the door still opens. This is the doorway itself,
+     asked directly instead of over forty seconds of a valley: a frog of the
+     flock is pinned in the doorway cell, feet at the bottom of its dive, for
+     five seconds, and only its height is under test. Before the cap it rode
+     the lift out of the wall -- fourteen frames inside the hard world, the
+     highest its feet reached 16.7 m; with the cap its feet never leave the
+     hard world at all, and the highest they ever get is the underside of the
+     glass, 12.5 m. */
+  const door = await step('theFrogPinnedInTheTowerDoorStaysOutOfTheWall', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
+    const frog = g.creatures.find(c => c.sp.id === 'frog');
+    if (!frog) return { error: 'no frog in the valley' };
+    const hard = (x, y, z) => W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)];
+    // the doorway cell of the tower's south wall: frogpear, not rock, with the
+    // glass of the wall one block over it. It is where the red run of the soak
+    // found the flock's frog, so the door under test is the same door, not one
+    // searched for
+    const dx = 66, dz = 115, dy = 12;
+    if (!W.solidAt(dx, dy + 1, dz) || N.TREE_BLOCK[W.get(dx, dy + 1, dz)])
+      return { error: 'the doorway has no masonry ceiling one block over it; the world moved' };
+    // the ceiling the lift itself works with: the first hard cell of the body's
+    // own column, minus the body's height and the hand's width the bird's
+    // ceiling keeps, the way the lift computes it. The guard above put the
+    // glass of the wall at dy + 1, which is the first hard cell of every frame
+    // of the test, since the feet stay in the doorway cell
+    const cap = (dy + 1) - frog.tall - 0.05;
+    const body = { x: frog.x, y: frog.y, z: frog.z, yaw: frog.yaw, vy: frog.vy, state: frog.state,
+      pause: frog.pause, tx: frog.tx, tz: frog.tz, homeX: frog.homeX, homeZ: frog.homeZ,
+      speed: frog.speed, t: frog.t, hopT: frog.hopT, wind: frog.wind, sleeping: frog.sleeping,
+      climbTo: frog.climbTo, climbRate: frog.climbRate };
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form };
+    p.form = null; p.x = 4; p.z = 4; p.y = W.h - 2;      // nobody to run from
+    // awake and wandering: a sleeping body would skip the height code and the
+    // test would pass on the sleep, not on the ceiling
+    frog.state = 'wander'; frog.sleeping = false;
+    // pinned in the doorway at the bottom of the dive: every frame the body is
+    // put back over the same cell before it moves, so only the height is under
+    // test; the first frame starts the feet a hand under the glass
+    let inside = 0, maxY = -1;
+    for (let i = 0; i < 300; i++) {
+      if (i === 0) { frog.y = dy + 0.45; frog.vy = 0; }
+      frog.x = dx + 0.5; frog.z = dz + 0.5;
+      frog.update(1 / 60, p, W, g);
+      const fx = Math.floor(frog.x), fy = Math.floor(frog.y), fz = Math.floor(frog.z);
+      if (hard(fx, fy, fz)) inside++;
+      if (frog.y > maxY) maxY = frog.y;
+    }
+    const out = { door: [dx, dy, dz], doorBlock: W.get(dx, dy, dz), cap: +cap.toFixed(2),
+      inside, maxY: +maxY.toFixed(2), yEnd: +frog.y.toFixed(2) };
+    Object.assign(frog, body);
+    Object.assign(p, was);
+    return out;
+  });
+  check('a frog pinned in the doorway of the tower does not ride the lift out of the wall',
+    !door.error && door.inside === 0 && door.maxY <= door.cap + 0.1, door);
 
   /* 11i2. Leaves are not a roof to a body in the air. The flock step above shows
      the rule working over forty seconds of a whole valley, which is how it should

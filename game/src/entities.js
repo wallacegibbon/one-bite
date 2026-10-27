@@ -2036,7 +2036,40 @@
            The water's depth is still measured off the ground under the body, so a
            frog climbing out of the lake does not lose the water's hold halfway up
            the bank. */
-        const gyH = this.climbTo !== null && this.climbTo > gy ? this.climbTo : gy;
+        const gyH0 = this.climbTo !== null && this.climbTo > gy ? this.climbTo : gy;
+        /* The lift below raises the feet onto `gyH` at a rate, and it used to
+           ask nothing about what stands over the body's head while it does.
+           Asked, that is how a frog in the door of the sunken tower -- the
+           frogpear cell in the wall, the way its kind walks in and out of the
+           hollow shaft -- got lifted to the roof of its own cell, through the
+           glass that tops the door, and carried up the masonry at 0.1 m a frame
+           by the correction: the day soak of the valley caught one of the twelve
+           in it. The ceiling is asked the way the hop gate asks it -- the
+           material table, leaves excused, over the body's own column, which is
+           the whole of the lift's arc, for the lift is vertical and in place --
+           and the feet are kept under it by the body's own height plus the same
+           hand's width the ceiling over a bird's head keeps, so it is the head
+           that meets the block the feet do not. The cap only ever lowers the
+           height the feet are raised onto: a body standing on its own floor
+           stands below the ceiling its head is under, so its floor is not what
+           is lowered, and a body already under the ceiling by more than a hand
+           is settled back under it by the fall, not moved by the lift.
+           Only while the feet are not already inside a hard block. A body left
+           in the bank of a lake shore -- the step law's frog 1.5 m inside the
+           shelf -- has the top of that bank for its ceiling, and the cap would
+           put it under the floor it is owed: the settle onto the cap undoes the
+           lift out of the rock frame for frame, and the body is found still in
+           the solid after six hundred of them. A body with its feet in the rock
+           is already inside the world, and the lift does there what it has
+           always done: carries it onto the floor at the rate. */
+        const feetHard = world.solidAt(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z))
+          && !N.TREE_BLOCK[world.get(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z))];
+        let gyH = gyH0;
+        if (!feetHard) {
+          const roofOwn = roofY(world, Math.floor(this.x), Math.floor(this.z),
+            Math.floor(this.y) + 1, world.h, N.FOLIAGE);
+          gyH = Math.min(gyH0, roofOwn - this.tall - 0.05);
+        }
         const hop = this.isAmphibian() ? sp.hop : null;
         // the cell convention, one below the surface: `room` below counts the
         // blocks of water between the bottom and the surface, and wants at least

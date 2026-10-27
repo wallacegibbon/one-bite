@@ -6,15 +6,26 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `8e549e3` plus the uncommitted
-below-horizon-sky fix (`game/src/game.js`), the meshing-budget fix and the
-new `theSkyBelowTheHorizon` law (`game/test/play.js`), the POI row
-corrections (`game/data/world.js`, both docs' POI tables and two detail
-lines) with the drift-harness line following the new frogshall row. Issue 1
-is root-caused, fixed and pinned by a new law; issue 3 is measured and fixed
-(data + docs only). Both await the round-end gates (suite green twice on the
-committed tree, push to both remotes). The soak flake (2c) has not
-reproduced in seventeen full runs.
+State at time of writing: round 26, tree `0a55ee6` (pushed to both remotes,
+round-end gates green twice). Issue 1 (night sky read as black blocks) is
+root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
+(POI heights + teleport waypoint) is measured and fixed, data and docs
+only. The meshing red of loop 3 run 7 is root-caused to CPU preemption and
+the statistic is now the min of the chunk's three passes (2d). Law 2c (the
+tower-masonry inside count of the day soak) is root-caused and fixed: a frog
+deep in its dive steps flat across the wall face into the tower's frogpear
+door (the doors are not rock), and the lift that raises a body onto its
+floor asked nothing about the ceiling over its head, so it lifted the frog
+into the glass and the solid-exit correction carried it up the masonry to
+the roof; the lift now caps at the body's own column ceiling minus its
+height while the feet are not already inside a hard block (a buried body
+keeps the lift onto its floor — the lakebed law), the inside count is
+aligned to the hard world (a leaf at the feet is the bush the body is
+hopping through, as every gate already excuses), the soak is instrumented
+with a per-frame entry window near the tower column, and a pinned-door
+canary asks the fix directly. What remains open
+is the soak flake 2a/2b: not reproduced in seventeen full runs; gates
+pending, then the loop again until a red.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -166,23 +177,83 @@ cannot fall back through the slab: every frame its feet cell is solid it is
 lifted 0.1 m and its downward rate is erased. 14 inside frames total; the
 hits record only the first 6.
 
-Tower column (66,115), seed 20261008 (measured): masonry from y4 to y15
-(dark brick / glass / block 41 alternating; 41 is not solid), open air from
-y16. `standY(66,115) = 16`: the tower's top is a floor at 16.0. The lake
-water around it tops at cell 14 (film at 15.0). The hop gate blocks a hop
-inside the hollow (room 1 < 1.2126), and a hop from the 16.0 roof only goes
-up, so the entry mechanism is not yet identified. Candidates: a shove into a
-non-solid 41 cell and a climb; a hop from a shelf at roof height drifting
-back into the tower column and being pinned mid-arc; a swim path the water
-law lets through.
+Tower column (66,115), seed 20261008 (measured): y0-3 sand/dirt, y4 dirt,
+y5 sand, y6 dark brick, y7 glass, y8 dark brick, y9 frogpear (41, not
+solid), y10 glass, y11 dark brick, y12 frogpear, y13 glass, y14-15 dark
+brick, open air from y16. The neighbour columns (65,115) and (67,115) are
+masonry y6..y15 with no frogpear holes; the frogpear doors exist only in
+(66,115) and (66,121) — the tower's south and north wall. The lake water at
+z=114 and the interior pool at z=116 top at cell 14 (film at 15.0).
 
-To do: instrument the soak (for each frame, record x, y, z, vy, yaw, state,
-and the column's blocks of every frog whose column is within one of
-(66,115) — the entry window is what is missing; the rig already records the
-first 6 inside frames), relaunch the loop until the next red, read the
-pre-entry trajectory, decide law vs rig, fix minimally, measure before/after
-(soak `inside = 0` over N loop runs, all the other soak numbers unchanged),
-and add the canary: break the fix, expect exactly the recorded red line.
+Root cause (measured and reproduced, round 26): frogs move on foot even
+submerged (the `waterColumn`-gated aquatic branch of `Creature.update`
+never runs for them), and in the door cell the step and the floor both
+answer "nothing over the head": `riser` reads the frogpear as not rock
+(its `rockAt` is `solidAt && !TREE_BLOCK`), so `can` is a flat step and a
+frog walking deep in its dive steps across the wall face into the door the
+way it steps into any doorway — the doors are the tower's designed
+entrances, and the hop gate (already landed) blocks the other way in. In
+the door `inWater` is false (no water in the column), so the on-foot
+altitude branch reads the floor as `standY(66,115) = 14` — the top of the
+glass a metre over the door — and the lift raises the feet onto that floor
+at `want * min(1, dt*9)` (0.27 m in the first frame), into the glass. The
+solid-exit correction then takes over at 0.1 m a frame with `vy` zeroed,
+and walks the frog up the masonry to the roof at y16: 13.12, 13.35, 13.55,
+13.87, 14.14, 14.37 — the recorded red line, 14 inside frames.
+
+Fix (landed, `game/src/entities.js`, the on-foot altitude branch): the lift
+asks the ceiling of the body's own column the way the hop gate already
+asks it — `roofY` up the column from one cell over the feet, material
+table, leaves excused — and caps the height it raises the feet onto at
+that ceiling minus the body's height and the hand's width the bird's
+ceiling keeps, but only while the feet are not already inside a hard
+block. In the door the cap is the underside of the glass (12.52
+m), so a frog that steps in lands under it and walks on into the pool: the
+door still opens. A body on the open roof or climbing an open column is
+untouched, because there the floor is under the ceiling its head is
+already under; a body already under a ceiling by more than a hand is
+settled back under it by the fall, not moved by the lift.
+
+The feet check is what the first version of the cap was missing. Capped
+unconditionally, the lift of the lakebed law — a frog left 1.5 m inside
+the shelf's bank, where the top of the bank is the ceiling over its head —
+was capped at 12.52, under the shelf floor at 14 it is owed, and the
+settle onto the cap undid the lift out of the rock frame for frame: the
+body oscillated between 12.52 and 12.62 and was still inside the solid
+after 600 frames, and `aBodyClimbsItsBank` went red on the first pre-commit
+run of the day. A body with its feet in the rock is already inside the
+world, and there the lift does what it has always done: it carries it onto
+the floor at the rate (measured after: out of the bank in ten frames,
+worst single-frame move 0.153 m, on the shelf and walking by frame 20).
+
+The count is aligned with the rest of the code (test-only, `play.js`): the
+inside predicate is now the hard world (`solidAt && !TREE_BLOCK`), the way
+`stand`, `riser`, the solid-exit correction, the shove, the frog-ceiling
+law and the owl's own count in the same step already read it. A leaf at
+the feet's height is the bush the body is hopping through — the worldgen
+puts dark-leaf bushes (block 27) at ground + 1.2 with fruit over them, and
+a frog hopping from one bush lands with its feet in a neighbour's leaf at
+the arc's apex, which the soak's control runs measured after the fix.
+That is intended movement, not an inside frame; the masonry and the glass
+— what the red was about — still count.
+
+Measured (headless replica of the canary, `/tmp/m26flake/repro.js`):
+before the cap, a frog pinned in the door cell (feet 12.45) rides the lift
+out of the wall — 14 frames inside the hard world, first at 13.15 m, the
+lift's own drift 13.15, 13.38, 13.57, 13.88, 14.15, 14.38, 14.57, 14.89,
+highest 16.73 m; after the cap, 0 frames inside for every pinned door
+depth 11.9-12.45 and the feet stop at 12.52 m, the underside of the glass.
+Un-pinned control (a frog sent at the door walks into the pool): 0 inside,
+reaches the pool in all five trials.
+
+Pinned by a new law (`play.js`, step
+`theFrogPinnedInTheTowerDoorStaysOutOfTheWall` + check): a frog of the
+flock is pinned in the door cell, feet at the bottom of its dive, for 300
+frames; the hard-world inside count must be 0 and the feet must never rise
+past the cap (pre-fix: 14 and 16.73).
+
+Status: fixed and pinned; awaiting the round-end gates, then the loop
+again until the next red.
 
 ### 2d. Meshing-budget law (NEW, loop 3 run 7) — `the whole valley rebuilds inside the budget a frame gives meshing`
 
@@ -215,11 +286,14 @@ chunk.
 
 Faithful repro = full `node game/test/play.js` under Chrome/puppeteer
 (swiftshader), one run ~6-7 minutes. Loop scripts in `/tmp/m26flake/` (not in
-the repo): `loop.sh` / `loop2.sh` / `loop3.sh` run 12 sequential full suites
-into `/tmp/m26flake/{run,r2-*,r3-*}.log`, stop at the first red, append
-`GREEN/RED on run N` + `CHECKFAILED=<n>` to `status{,2,3}`.
+the repo): `loop.sh` / `loop2.sh` / `loop3.sh` / `loop4.sh` run 12 sequential
+full suites into `/tmp/m26flake/{run,r2-*,r3-*,r4-*}.log`, stop at the first
+red, append `GREEN/RED on run N` + `CHECKFAILED=<n>` to `status{,2,3,4}`.
 Parse a red log with `python3 /tmp/m26flake/parse.py <log>` — never `tail`
-or `sed` the whole line (one step prints one ~100 KB JSON line).
+or `sed` the whole line (one step prints one ~100 KB JSON line). The parser
+prints the soak's entry window (per-frame lines near the tower column:
+frame, position, vy, yaw, state, the raw and the hard read at the feet,
+nearby bodies) and the pinned-door canary.
 
 Tally at time of writing: loop 1 — runs 1-4 green. Loop 2 — runs 1-5 green,
 run 6 red (law 2c above). Loop 3 — runs 1-6 green, run 7 red (law 2d above,
@@ -231,9 +305,14 @@ parsed with `parse.py` and read before anything is touched. If ~24 runs stay
 green, report the dust half honestly (guard provable, measured airtight) and
 keep hunting the frog halves.
 
-Instrumentation shipped with this commit (test-only, `game/test/play.js`):
-the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b).
-The soak itself is not instrumented yet — that is the next step (2c).
+Instrumentation shipped in this round (test-only, `game/test/play.js`):
+the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
+the soak's per-frame entry window with frame and frog identity and the
+column dump near the tower (2c), the soak's inside count aligned to the
+hard world (a leaf at the feet is the bush the body is hopping through),
+and the pinned-door canary law (2c). The `skim` law's raw-`solidAt` feet
+count is the same outlier pattern as 2c pre-fix, but it has never gone red
+and the lake holds no trees: it is left as is and watched, not widened.
 
 ## 3. POI heights and the teleport waypoint (theme queue item 10)
 
@@ -332,7 +411,14 @@ only (CJK inside string/regex literals is fine).
 - The solid-exit correction lifts a body out of a hard block at
   `Math.max(0.1, 6*dt)` per frame and zeroes `vy` — a body inside a slab with
   air under the slab rides that lift straight up through the masonry.
-  That is what law 2c is catching.
+  That is what law 2c was catching. The lift that raises a body onto its
+  floor (the on-foot altitude branch) is capped by the ceiling of the
+  body's own column minus its height (`roofY − tall − 0.05`, leaves excused,
+  the 2c fix) while the feet are not already inside a hard block: that is
+  what keeps the door's frog under the glass; a body buried in the rock
+  keeps the uncapped lift onto its floor (`aBodyClimbsItsBank`), because a
+  capped lift under the top of its own bank would settle it back under the
+  rock the correction is lifting it out of.
 - `bodyInSolid` (shove destination test) checks only the feet cell;
   `bodyRoom` never asks about the ceiling. The shove can therefore move a
   body into a low-ceiling column.
