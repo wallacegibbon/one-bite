@@ -6,7 +6,7 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `0236ff1` (pushed to both remotes,
+State at time of writing: round 26, tree `9d75468` (pushed to both remotes,
 round-end gates green twice). Issue 1 (night sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
@@ -43,9 +43,13 @@ frog-ceiling half (2b) stands watched with the loop: its recorded red line
 is a mid-development artifact of a rig the committed code cannot print.
 The watch that was running when the material correction was found (loop 6,
 on the previous tree) stood fourteen green and was stopped to make way;
-loop 7 on `0236ff1` came back twenty-four green in a row -- eighty-one
-faithful full green runs in the round, no red since the two recorded lines
-that are now explained -- and the standing watch is loop 8.
+loop 7 on `0236ff1` came back twenty-four green in a row, and loop 8 stood
+nineteen green before it was stopped to land the night-sky star fix, so the
+round has one hundred faithful full green runs and no red since the two
+recorded lines that are now explained. The user's night-sky report (a
+regular dot grid filling the sky at 00:50 over Mirrorlake) is root-caused to
+the star hash leaving the range a mediump float can hold and is fixed and
+pinned on `9d75468` (issue 4); the standing watch is loop 9.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -385,10 +389,10 @@ Faithful repro = full `node game/test/play.js` under Chrome/puppeteer
 (swiftshader), one run ~6-7 minutes. Loop scripts in `/tmp/m26flake/` (not in
 the repo): `loop.sh` / `loop2.sh` / `loop3.sh` / `loop4.sh` / `loop5.sh` run
 12 sequential full suites into
-`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` /
-`loop8.sh` run 24 each into `{r6-*,r7-*,r8-*}.log`. All stop at the first
+`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` / `loop8.sh` / `loop9.sh` run 24 each into
+`{r6-*,r7-*,r8-*,r9-*}.log`. All stop at the first
 red and append `GREEN/RED on run N` + `CHECKFAILED=<n>` to
-`status{,2,3,4,5,6,7,8}`.
+`status{,2,3,4,5,6,7,8,9}`.
 Parse a red log with `python3 /tmp/m26flake/parse.py <log>` — never `tail`
 or `sed` the whole line (one step prints one ~100 KB JSON line). The parser
 prints the soak's entry window (per-frame lines near the tower column:
@@ -404,15 +408,17 @@ make way for the corrected tree. Loop 7 (on the corrected tree) — runs
 1-24 green: the soak's inside count 0 in every one, the pinned-door canary
 and the step-under-the-log canary byte-identical in all of them, and in
 the five runs a frog came to the tower's wall the entry window read the
-frames and the masonry stayed out. Across all of it the soak laws have
-gone red twice on recorded lines and not since: eighty-one faithful full
+frames and the masonry stayed out. Loop 8 (on the same corrected tree) —
+runs 1-19 green, stopped to land the night-sky star fix (issue 4); no red,
+nothing to parse. Across all of it the soak laws have
+gone red twice on recorded lines and not since: one hundred faithful full
 green runs in the round (fifty-five on the tree before the correction,
-twenty-six on the corrected one, the round's double all.sh counts included
+forty-five on the corrected one, the round's double all.sh counts included
 the way the forty-one did), the tower-masonry entry (2c) is root-caused,
 corrected and pinned, and the dust half (2a) is closed on its pre-set
 honest path. The next red, whatever it is, gets parsed with `parse.py` and
 read before anything is touched; the loop keeps running as the standing
-watch (loop 8 is the current one).
+watch (loop 9 is the current one).
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -469,6 +475,55 @@ path at (136.5, 22.05, 128.5), yaw -pi/2: cell (136,22,128) is air, ground
 below at 21, sky over. The fallback cell (136,21,126) is also air over
 ground 20 with sky over. Nothing to change; `door.y + 1.05, door.z - 7.5`
 answers against the measured `cellar 20`.
+
+## 4. The night sky's stars clump into a dot grid on a strict GPU (round 26; user report)
+
+**Fixed and pinned (commit `9d75468`; round-end gates green twice on that
+tree; the standing watch is loop 9).**
+The report: at 00:50 with the head in the water at Mirrorlake, the night sky
+reads as a large dark mass covered in a fine regular dot grid, cut from
+smooth dark blue by a one-metre-stepped diagonal edge (a voxel silhouette),
+the upper-left corner dark teal. The dot grid is the star field. `FS_SKY`
+asks for a star in every cell of a `floor(d*160)` grid on the unit
+direction; the cell's hash multiplies the coordinates by `0.3183099` (to
+~51) and by `17.0` (to ~867) before a four-fold product (to ~1e6). A
+mediump float is only *required* to hold +-2.0 and *permitted* to hold
++-65504; the product exceeds even the permitted range, and the world
+shader's view-space lengths (to the 260 far plane) stay inside it -- which
+is why the user's world reads normally while the sky does not. On a GPU
+whose mediump range stops below the product the hash degrades and the stars
+clump: a cell is ~3 px at 1200x700 and 76 degrees, so a few cells of
+lit-and-dark is the reported 15-20 px dot spacing. The suite's software
+backend (swiftshader) implements mediump at full range: a standalone probe
+of the exact hash shader (`/tmp/m26flake/star_hi.png` / `star_med.png`)
+answers byte-identical at `mediump` and `highp` -- 133 sparse stars in the
+up-look frame -- so neither the laws nor the watch could show the
+degeneration.
+
+Fix: `FS_SKY` asks for `precision highp float` (engine.js). highp is
+required in vertex shaders and present in desktop fragment shaders, and the
+sky is one fullscreen pass, so the price is negligible; no other shader
+changes, and the uniform set is untouched (the sky program is the only
+consumer of its uniforms, so no precision clash can fail the link).
+
+Pinned by the law `nightSkyIsAScatterNotACarpet` (the 10s sky family in
+`game/test/play.js`): at 00:50, 30 m over the open lake at (100,90), 77
+degrees up, the frame spans 39..90 degrees of elevation, the tallest thing
+within 100 m tops out at 13 degrees, and the moon sits out of the frame, so
+every bright pixel is a star. Under 1% of the frame is a star's brightness
+(measured 0.20%), at least half a tenth of a percent is (the sky is not
+empty), and the largest bright patch is under 500 px (measured 30-46 px, one
+star cell stretched at the frame's edge).
+
+What the pin cannot catch, stated plainly: the degeneration itself, on a
+GPU that implements mediump at or below its permitted range. No in-suite
+law can reproduce it, because the suite's backend does not; the pin guards
+the density and the shape of the scatter, and the shader source now asks
+for the precision the grid needs. A render from the lake at 00:50
+(`/tmp/m26flake/sky3.png`) shows the scatter in the open sky and the
+bell-tower's silhouette and lit window quads as ordinary world geometry --
+the dark mass the frame reports is the sky itself, and it is the grid in it
+that was wrong.
 
 ## Standing contract (every session, in order)
 
