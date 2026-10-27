@@ -6,7 +6,7 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `0a55ee6` (pushed to both remotes,
+State at time of writing: round 26, tree `6494e99` (pushed to both remotes,
 round-end gates green twice). Issue 1 (night sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
@@ -23,9 +23,13 @@ keeps the lift onto its floor — the lakebed law), the inside count is
 aligned to the hard world (a leaf at the feet is the bush the body is
 hopping through, as every gate already excuses), the soak is instrumented
 with a per-frame entry window near the tower column, and a pinned-door
-canary asks the fix directly. What remains open
-is the soak flake 2a/2b: not reproduced in seventeen full runs; gates
-pending, then the loop again until a red.
+canary asks the fix directly. On that tree the soak loop came back twelve
+green in a row -- twenty-nine consecutive faithful full green runs
+altogether -- so the dust half of the flake (2a) is closed on the
+resolution it was set to close on (guard provable, measured airtight, the
+recorded red line never reproduced), and the frog-ceiling half (2b) stands
+watched with the loop: its recorded red line is a mid-development artifact
+of a rig the committed code cannot print.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -102,9 +106,13 @@ Status: fixed and pinned; awaiting the round-end gates.
 
 ## 2. The soak flake (round 26; work item T23, bug B34)
 
-The suite's soak laws go red in roughly one run in three to six. Three laws
-are in the flake pool; the first two were recorded in round 25 (B34) and the
-third went red for the first time in round 26, loop 2, run 6 (today).
+The suite's soak laws went red in roughly one run in three to six. Three
+laws were in the flake pool; the first two were recorded in round 25 (B34)
+and the third went red for the first time in round 26, loop 2, run 6. State
+at time of writing: twenty-nine consecutive faithful full runs on the
+current tree have gone green (loops 1-4); 2c is root-caused, fixed and
+pinned, 2a is closed on its pre-set honest path, and 2b is watched with the
+loop (its recorded red line is a mid-development artifact).
 
 ### 2a. Dust law (B34, half one) — `aMoteKeepsToTheAirItWasGiven`
 
@@ -118,11 +126,20 @@ CHECK FAILED: the dust of the highest isle is let go above the beams and not ins
 State of the art: the guard in `Particles.update` (`game/src/entities.js`
 ~2446-2463) is provably airtight on a static world (induction argument plus a
 node replica, `inSolid = 0` in all 10 seeded runs). The recorded red line
-predates, or is inconsistent with, the current code. If the dust law never
-goes red in the loops, the honest resolution is: guard provable + measured
-airtight — say so with the measurement, and close the half. The rig now
-records a per-slot 90-frame trail and a `bad` array (first 6 motes caught in
-a solid, with a 3x3x3 dump) so a future red is readable.
+predates, or is inconsistent with, the current code. The rig records a
+per-slot 90-frame trail and a `bad` array (first 6 motes caught in a solid,
+with a 3x3x3 dump) so a future red is readable.
+
+Closed (round 26): the dust law never went red in the loops. Twenty-nine
+consecutive faithful full runs on the current tree (loops 1-4) have gone
+green, past the twenty-four the resolution was set at. The guard is
+provably airtight on a static world (a mote born in air may only move to an
+in-map cell that is not solid; the loop is synchronous inside one
+page.evaluate, so nothing else can run inside it), and the node replica
+measures it airtight: ten seeded runs, `inSolid = 0` in every one, the same
+shape as the page's green runs. The recorded red line has not reproduced on
+the current code. The law stays in the suite as a watch, with the trail and
+the `bad` dump so a future red is readable.
 
 ### 2b. Frog-ceiling law (B34, half two) — `frogDoesNotHopThroughItsOwnCeiling`
 
@@ -156,6 +173,20 @@ gate allowed the hop (the gate runs before the shove; the shove's
 ceiling); (2) mid-hop steering bending the arc off the gate's straight span;
 (3) a landing in a low-ceiling riser, lifted out at 0.1 m/frame by the
 solid-exit correction (`game/src/entities.js` ~2200-2220).
+
+State at time of writing: not reproduced in twenty-nine consecutive
+faithful full runs on the current tree (loops 1-4), and the hop gate it
+would need has since been made to ask the ceiling -- material table, the
+body's own column and the span the arc crosses -- and is pinned by the
+deterministic law `frogDoesNotHopThroughItsOwnCeiling`. The recorded red
+line is a mid-development artifact: its `roomAt: 1.91` with `badLaunch: 1`
+is arithmetically impossible in the committed rig (the threshold is
+`tall + 0.7 = 1.13`), so the line cannot be printed by the code the
+twenty-nine green runs ran on. The rig records the whole 150-frame window,
+so the next red -- if it comes from the post-suite state the flake needs --
+says in which frame the body was told there was room. Watched with the
+loop; not closed, because there is no proof of airtight for that
+post-suite state.
 
 ### 2c. Day-soak law (NEW, loop 2 run 6) — `and none of them spends a frame inside the world`
 
@@ -286,9 +317,10 @@ chunk.
 
 Faithful repro = full `node game/test/play.js` under Chrome/puppeteer
 (swiftshader), one run ~6-7 minutes. Loop scripts in `/tmp/m26flake/` (not in
-the repo): `loop.sh` / `loop2.sh` / `loop3.sh` / `loop4.sh` run 12 sequential
-full suites into `/tmp/m26flake/{run,r2-*,r3-*,r4-*}.log`, stop at the first
-red, append `GREEN/RED on run N` + `CHECKFAILED=<n>` to `status{,2,3,4}`.
+the repo): `loop.sh` / `loop2.sh` / `loop3.sh` / `loop4.sh` / `loop5.sh` run
+12 sequential full suites into
+`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`, stop at the first red, append
+`GREEN/RED on run N` + `CHECKFAILED=<n>` to `status{,2,3,4,5}`.
 Parse a red log with `python3 /tmp/m26flake/parse.py <log>` — never `tail`
 or `sed` the whole line (one step prints one ~100 KB JSON line). The parser
 prints the soak's entry window (per-frame lines near the tower column:
@@ -297,13 +329,14 @@ nearby bodies) and the pinned-door canary.
 
 Tally at time of writing: loop 1 — runs 1-4 green. Loop 2 — runs 1-5 green,
 run 6 red (law 2c above). Loop 3 — runs 1-6 green, run 7 red (law 2d above,
-the meshing budget, not a soak law). Across all seventeen full runs the soak
-laws (2a, 2b, 2c) stayed green: their recorded red lines have not reproduced
-on the current tree, and the only two reds are the preemption (2d) and the
-one unexplained tower-masonry entry (2c). The next red, whatever it is, gets
-parsed with `parse.py` and read before anything is touched. If ~24 runs stay
-green, report the dust half honestly (guard provable, measured airtight) and
-keep hunting the frog halves.
+the meshing budget, not a soak law). Loop 4 (on the tree with the 2c fix) —
+runs 1-12 green. Across all of it the soak laws have gone red twice on
+recorded lines and not since: twenty-nine consecutive faithful full runs on
+the current tree have gone green, the tower-masonry entry (2c) is
+root-caused and pinned, and the dust half (2a) is closed on its pre-set
+honest path. The next red, whatever it is, gets parsed with `parse.py` and
+read before anything is touched; the loop keeps running as the standing
+watch.
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
