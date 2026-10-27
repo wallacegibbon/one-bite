@@ -79,7 +79,7 @@ pixel for pixel. The fix surfaced a fifth red in the round: the kelp law's
 non-vacuity read was riding on two far stalks at the edge of the frame whose
 contrast the cull took, and it is resolved by the test-only amendment that
 puts the lens under the surface a metre and a half above a stalk and reads
-it at two lum. The round now has one hundred and seven faithful full green
+it at two lum. The round now has one hundred and nine faithful full green
 runs, the four earlier red lines stand as recorded and this fifth is
 resolved, and the standing watch is loop 11 on the fixed tree.
 
@@ -489,11 +489,12 @@ new walking-soak line (2f, loop 10 run 4), and a fifth, the kelp law's
 non-vacuity read (section 5), which the pane fix of issue 5 surfaced and
 the test-only close-up amendment resolved -- and the first three are
 root-caused and fixed, the fourth is read, recorded and watched, and the
-fifth stands resolved with its close-up read: one hundred and seven
+fifth stands resolved with its close-up read: one hundred and nine
 faithful full green runs in the round (fifty-five on the tree before the
-correction, forty-nine on the corrected one, and three on the fixed tree
-this session, the standalone play and the round's double all.sh, the
-counts included the way the forty-one did), the tower-masonry entry (2c)
+correction, forty-nine on the corrected one, and five on the fixed tree
+this session -- the standalone play and the four all.sh runs, the two
+gate runs of each of the fixed tree's two commits -- the counts included
+the way the forty-one did), the tower-masonry entry (2c)
 is root-caused, corrected and pinned, the dust half (2a) re-opened by the
 red of loop 9 run 2 is closed with the fix, the walking-soak line (2f)
 stands recorded with its per-body read, and the kelp-law line stands
@@ -717,10 +718,14 @@ culls it against water itself: `if (B[nb] && B[nb].micro) continue;`. A
 face against a micro cell is water against water with something small in
 it -- the cell holds a thin stem or a berry and the water passes through
 it -- and drawn it is a flat pane afloat in the column. The micro box is
-drawn by its own branch and wants no face of its own. Nothing else the
-water draws moves: the sheet against the air, the shore sides, and the
-glass of the sunken tower are all against non-micro neighbours and keep
-their faces. After: the same lens at 15:51 shows the water column clean --
+drawn by its own branch and wants no face of its own. The sheet against
+the air (2,933) and the shore sides, and the glass of the sunken tower
+(32), are against non-micro neighbours and keep their faces. One other
+class moves, for the same reason: the 16 water faces against the berries
+in the tower's windows -- a berry is a micro block too, and a pane afloat
+behind a berry is the same defect as one behind a kelp stem, so it goes
+with the same cull. After: the same lens at 15:51 shows the water column
+clean --
 the bed, the shore, the light through the surface, and the kelp where it
 stands, which from a distance is a thin green stem and reads as what it
 is.
