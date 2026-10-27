@@ -6503,8 +6503,28 @@ What was measured before any of this was fixed, over 180 frames of walking
     const g = window.game, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, form: p.form, time: g.time, night: g.night };
     p.form = null; p.vx = p.vy = p.vz = 0;
-    const out = {}, prev = new Map();
-    for (const c of g.creatures) { out[c.sp.id] = { n: 0, moving: 0, path: 0 }; prev.set(c, { x: c.x, z: c.z }); }
+    const out = {}, prev = new Map(), body = new Map();
+    for (const c of g.creatures) { out[c.sp.id] = { n: 0, moving: 0, path: 0 }; prev.set(c, { x: c.x, z: c.z });
+      /* The pooled number per species is the bound; the per-body read is what
+         a red of it needs. The law first went red on run four of the watch
+         that followed the dust fix: **57** of the frames for **99 m**, where
+         the forty-eight runs before it on the same trees read **86-99** and
+         thirty-six fresh pages of this same rig read **75-94**, the six of
+         them with both bears stood at the centre of their home discs -- the
+         start that maximises the short errands the stand runs come from --
+         reading **75-93**. The pooled number alone cannot say which of the two
+         bears a red belongs to: one bear standing a fourth of its afternoon
+         at the errands it reaches and one walking at the usual rate pools to
+         the same number as two bears each standing a fifth. A bear that stands
+         at the errand it has reached is spending the pause that re-picks the
+         next one, which is what a bear does between walks; a bear that stands
+         somewhere it is not going is not. The distance from the home the
+         disc of errands is picked from is the same question for both: far
+         from it the errands are long and the walk does not stop, and a stand
+         run that ends away from its errand is the one that asks what held
+         the body. */
+      if (c.sp.id === 'bear') body.set(c, { dHome: +Math.hypot(c.x - c.homeX, c.z - c.homeZ).toFixed(1),
+        n: 0, moving: 0, path: 0, inStand: 0, runs: 0, max: 0, total: 0, atErrand: 0 }); }
     const t0 = g.time;
     g.time = 420 * 21 / 24; g.updateEnv();          // night: every one of them is out
     for (let i = 0; i < 1800; i++) {
@@ -6520,7 +6540,28 @@ What was measured before any of this was fixed, over 180 frames of walking
         const s = out[c.sp.id];
         s.n++;
         if (c.speed > 0.1) s.moving++;
-        s.path += Math.hypot(c.x - pv.x, c.z - pv.z); pv.x = c.x; pv.z = c.z;
+        const dstep = Math.hypot(c.x - pv.x, c.z - pv.z);
+        s.path += dstep;
+        const b = body.get(c);
+        if (b) {
+          b.n++;
+          if (c.speed > 0.1) {
+            b.moving++;
+            if (b.inStand) {
+              b.runs++; b.max = Math.max(b.max, b.inStand); b.total += b.inStand;
+              /* 0.8 is the arrival radius of the walk the body is on (`d > 0.8`
+                 in Creature.update, line 1398): a body standing at the errand
+                 it reached stands at most 0.8 m off it, and the errand is not
+                 retired until the pause re-picks, so the stand ends with the
+                 errand still 0.8 m out. Farther than that and the stand is
+                 somewhere the body is not going. */
+              if (Math.hypot(c.tx - c.x, c.tz - c.z) <= 0.8) b.atErrand++;
+              b.inStand = 0;
+            }
+          } else b.inStand++;
+          b.path += dstep;
+        }
+        pv.x = c.x; pv.z = c.z;
       }
     }
     g.time = t0; g.updateEnv();
@@ -6530,6 +6571,14 @@ What was measured before any of this was fixed, over 180 frames of walking
       const s = out[id];
       res[id] = { movingPct: Math.round(100 * s.moving / s.n), metres: Math.round(s.path / (s.n / 1800)) };
     }
+    const bodies = {};
+    for (const [c, b] of body) {
+      if (b.inStand) { b.runs++; b.max = Math.max(b.max, b.inStand); b.total += b.inStand; }
+      bodies[Object.keys(bodies).length] = { dHome: b.dHome,
+        movingPct: Math.round(100 * b.moving / b.n), metres: Math.round(b.path),
+        standRuns: b.runs, standMax: b.max, standTotal: b.total, atErrand: b.atErrand };
+    }
+    res.bodies = bodies;
     return res;
   });
   /* The bound is deliberately nowhere near the measurement: what it must never
