@@ -5014,11 +5014,21 @@ What was measured before any of this was fixed, over 180 frames of walking
      and the depth question answered "dry" for every one of them. It also used
      to state `emis: 1`, copied from the glowcap ring on the next line of the
      block table, and that never showed either because no kelp was ever placed.
-     Read the frame three ways: whole, with the emissive micro mesh taken out,
-     and with the ordinary one taken out. A lake frame at noon has no self-lit
-     block in it -- the jellyfish lamps are bodies and are drawn elsewhere -- so
-     the first pair has to be the same frame, and the kelp is in the frame, so
-     the second pair has not be. */
+     The lens now goes under the surface and hovers a metre and a half above a
+     stalk: just above the water the stalks read at 1.2 lum over the bed (the
+     flat water panes that used to back them were the grid of blue squares the
+     user saw under the lake, and the cull that removed them took the stalks'
+     last sliver of contrast seen through seven metres of lake), so the old
+     lens could not tell a stalk from the bed. Close in, under the surface, a
+     stalk is the largest thing in the frame. The diff threshold is two lum,
+     not four: a stalk is a low-contrast object (its whole signature is one to
+     three lum over the bed), and the render is deterministic (two identical
+     grabs differ by zero pixels), so a low threshold counts the stalk with no
+     noise to count instead. Read the frame three ways: whole, with the
+     emissive micro mesh taken out, and with the ordinary one taken out. A lake
+     frame at noon has no self-lit block in it -- the jellyfish lamps are
+     bodies and are drawn elsewhere -- so the first pair has to be the same
+     frame, and the kelp is in the frame, so the second pair has not be. */
   const kelpFrame = await step('theKelpInTheLakeIsNotALamp', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
@@ -5052,8 +5062,20 @@ What was measured before any of this was fixed, over 180 frames of walking
       if (bed >= 0 && top + 1 - bed >= 7) deep = { x: x + 0.5, z: z + 0.5, top, bed };
     }
     if (!deep) return back({ error: 'no stretch of the lake seven metres deep' });
+    // the underwater stalk nearest that column; the lens hovers a metre and a
+    // half above its top, under the surface
+    let near = null, bd = 1e9;
+    for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) for (let y = 0; y < W.h; y++) {
+      if (W.get(x, y, z) !== 75 || !W.liquidAt(x, y + 1, z)) continue;
+      const d = (x + 0.5 - deep.x) ** 2 + (z + 0.5 - deep.z) ** 2;
+      if (d < bd) { bd = d; near = [x, y, z]; }
+    }
+    if (!near) return back({ error: 'no kelp in the lake' });
     const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
-    p.x = deep.x; p.y = deep.top + 1.05 - (p.eyePos() - p.y); p.z = deep.z;
+    const sx = near[0] + 0.5, sy = near[1], sz = near[2] + 0.5;
+    let ly = sy + 0.9 + 1.2;
+    while (ly < W.h - 1 && W.solidAt(sx | 0, ly | 0, sz | 0)) ly += 0.5;
+    p.x = sx; p.z = sz; p.y = ly - (p.eyePos() - p.y);
     // straight down: at 28 degrees of pitch the frame still reaches the shore,
     // and the shore of this lake wears frog pears on its bushes, which are
     // self-lit and belong to a different question
@@ -5070,7 +5092,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       let n = 0, max = 0;
       for (let i = 0; i < a.length; i += 4) {
         const d = Math.abs(lum(a, i) - lum(b, i));
-        if (d > 4) n++;
+        if (d > 2) n++;
         if (d > max) max = d;
       }
       return { changed: n, max: +max.toFixed(1) };

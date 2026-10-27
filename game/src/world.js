@@ -418,6 +418,19 @@
                 const nb = at(x + f.n[0], y + f.n[1], z + f.n[2]);
                 if (nb === b) continue;
                 if (B[nb] && B[nb].opaque) continue;
+                /* A face against a micro cell is water against water with
+                   something small in it: the cell holds a thin stem or a
+                   berry, and the water passes through it. Drawn, each such
+                   face is a flat 1 m pane afloat in the column -- the lake
+                   carries 243 of them round its kelp (181 vertical, at
+                   y6-y13), and a lens under water reads them as a field of
+                   flat blue squares at various depths over the bed, which
+                   the user saw and asked about. Measured: with the faces
+                   culled the squares are gone, and with them restored the
+                   frame is back pixel for pixel (8,135 px between the two).
+                   The micro box itself is drawn by its own branch above and
+                   wants no face of its own. */
+                if (B[nb] && B[nb].micro) continue;
                 const p = [];
                 for (const c of f.c) p.push(x + c[0], y + c[1], z + c[2]);
                 /* Which way this face points: the top face of a column faces
