@@ -6,7 +6,7 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `9d75468` (pushed to both remotes,
+State at time of writing: round 26, tree `48e1f50` (pushed to both remotes,
 round-end gates green twice). Issue 1 (night sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
@@ -37,19 +37,34 @@ is untouched and still pins the door, and a second pinned canary asks the
 step directly. On the tree of `6494e99` the soak loops came back
 twenty-four green in a row (loops 4 and 5) -- forty-one consecutive
 faithful full green runs altogether -- so the dust half of the flake (2a)
-is closed on the resolution it was set to close on (guard provable,
+was closed on the resolution it was set to close on (guard provable,
 measured airtight, the recorded red line never reproduced), and the
-frog-ceiling half (2b) stands watched with the loop: its recorded red line
+frog-ceiling half (2b) stood watched with the loop: its recorded red line
 is a mid-development artifact of a rig the committed code cannot print.
 The watch that was running when the material correction was found (loop 6,
 on the previous tree) stood fourteen green and was stopped to make way;
 loop 7 on `0236ff1` came back twenty-four green in a row, and loop 8 stood
-nineteen green before it was stopped to land the night-sky star fix, so the
-round has one hundred faithful full green runs and no red since the two
-recorded lines that are now explained. The user's night-sky report (a
-regular dot grid filling the sky at 00:50 over Mirrorlake) is root-caused to
-the star hash leaving the range a mediump float can hold and is fixed and
-pinned on `9d75468` (issue 4); the standing watch is loop 9.
+nineteen green before it was stopped to land the night-sky star fix. The
+user's night-sky report (a regular dot grid filling the sky at 00:50 over
+Mirrorlake) is root-caused to the star hash leaving the range a mediump
+float can hold and is fixed and pinned on `9d75468` (issue 4). The watch
+loop 9, started on that tree, went green on its first run and red on its
+second -- the highest-isle dust law, the 2a half of the soak flake, red
+after forty-four green runs on the corrected tree: the airtight proof that
+closed it (section 2a) asked the wall of the double-precision destination
+while the position is stored in float32, and a destination a hair below a
+cell boundary in double stores as the boundary itself, so the guard let a
+mote born in air across the face of a solid cell it was stored in, and the
+rule that keeps the move of a mote already inside a block then carried it
+through the canopy for the rest of its life (**134** of **61,626** samples
+in the red line, **130** of **61,626** reproduced on the fifty-eighth fresh
+attempt of a live probe that audits the guard's own inputs on every mote
+every frame and watched the twenty-seven cells around the trap for any
+world change, and saw none). The wall is now asked of the cell the mote is
+*stored* in, and 150 fresh attempts of the same rig come back clean, so
+the round has one hundred and one faithful full green runs, with the two
+recorded flake lines plus this third one now all explained, and the
+standing watch is loop 10 on the fixed tree.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -130,37 +145,64 @@ round's final tree.
 The suite's soak laws went red in roughly one run in three to six. Three
 laws were in the flake pool; the first two were recorded in round 25 (B34)
 and the third went red for the first time in round 26, loop 2, run 6. State
-at time of writing: forty-one consecutive faithful full runs on the
-current tree have gone green (loops 1-5); 2c is root-caused, fixed and
-pinned, 2a is closed on its pre-set honest path, and 2b is watched with the
-loop (its recorded red line is a mid-development artifact).
+at time of writing: one hundred and one faithful full green runs on the
+corrected trees (loops 1-8) plus the first of loop 9; 2c is root-caused,
+fixed and pinned, 2a re-opened by the red of loop 9 run 2 and closed with
+the fix (the wall is asked of the cell the mote is stored in), and 2b is
+watched with the loop (its recorded red line is a mid-development
+artifact).
 
 ### 2a. Dust law (B34, half one) — `aMoteKeepsToTheAirItWasGiven`
 
-Rig: `game/test/play.js` ~line 5431 (the dust of the highest isle).
+Rig: `game/test/play.js` ~line 5595 (the dust of the highest isle).
 Recorded red line (round 25, kept verbatim for the canary):
 
 ```
 CHECK FAILED: the dust of the highest isle is let go above the beams and not inside the isle that holds them {"born":349,"bornIn":0,"samples":61073,"inSolid":152}
 ```
 
-State of the art: the guard in `Particles.update` (`game/src/entities.js`
-~2446-2463) is provably airtight on a static world (induction argument plus a
-node replica, `inSolid = 0` in all 10 seeded runs). The recorded red line
-predates, or is inconsistent with, the current code. The rig records a
-per-slot 90-frame trail and a `bad` array (first 6 motes caught in a solid,
-with a 3x3x3 dump) so a future red is readable.
+The closing of round 26's first half (never reproduced; the guard "provably
+airtight" by an induction over the destination cell; ten seeded node
+replica runs at `inSolid = 0`) **stood, and was wrong**: the induction
+asked the wall of the double-precision destination, and the position is
+stored in float32. A destination a hair below a cell boundary in double
+truncates to the near cell and stores as the boundary itself, so the guard
+checked the cell the mote was *not* put in.
 
-Closed (round 26): the dust law never went red in the loops. Twenty-nine
-consecutive faithful full runs on the current tree (loops 1-4) have gone
-green, past the twenty-four the resolution was set at. The guard is
-provably airtight on a static world (a mote born in air may only move to an
-in-map cell that is not solid; the loop is synchronous inside one
-page.evaluate, so nothing else can run inside it), and the node replica
-measures it airtight: ten seeded runs, `inSolid = 0` in every one, the same
-shape as the page's green runs. The recorded red line has not reproduced on
-the current code. The law stays in the suite as a watch, with the trail and
-the `bad` dump so a future red is readable.
+Reproduced live on the current code (watch loop 9, run 2):
+
+```
+CHECK FAILED: the dust of the highest isle is let go above the beams and not inside the isle that holds them {"born":345,"bornIn":0,"samples":61626,"inSolid":134,...}
+```
+
+and on the fifty-eighth fresh attempt of a probe that audits the guard's
+own inputs on every mote every frame: a mote born in air under the canopy
+of the beams' isle, rising at 0.5 m/s, with current cell air and
+double-precision destination cell air (verdict: allow) and the stored
+position in the trunk cell beside it -- the guard's own reads, taken a
+microsecond before the guard's own check, say allow; the stored position
+says inside. The twenty-seven cells around the trap read identically in
+every frame of every attempt (the world does not change under the loop),
+and `bornIn` stays 0: the mote is born in the air and walks into the solid
+through the face the double saw. Once inside, the rule that keeps the move
+of a mote already inside a block (the escape rule, **19** frames out of a
+needle) carries it on through the canopy at its own 0.5 m/s until its
+life runs out inside -- hence the whole red line is one mote's remaining
+lifetime: **134** of **61,626** samples in the red line, **130** of
+**61,626** in the probe, against **152** of **61,073** in the canary.
+
+Fixed (`game/src/entities.js`, `Particles.update` ~2505): the move is made
+first -- the store is the rounding -- and the wall is asked of the cell the
+mote is *stored* in; a mote that was not already inside a block is put
+back where it stood and spends its speed where the stored cell is solid or
+off the map. The escape rule is untouched (a mote already inside keeps its
+move), the no-world path is untouched, and the read cost is the same two
+cell reads the old guard paid. After: 150 fresh attempts of the audit rig
+find 0 motes in any solid and 0 world changes. Status: closed on the
+resolution it was set to close on -- the recorded red line reproduced, the
+cause measured at the guard's own inputs, the fix pinned by the law that
+caught it (the dust half of `aMoteKeepsToTheAirItWasGiven` keeps
+`inSolid === 0` and `bornIn === 0`).
 
 ### 2b. Frog-ceiling law (B34, half two) — `frogDoesNotHopThroughItsOwnCeiling`
 
@@ -353,8 +395,9 @@ gates on the corrected tree came back green twice, the correction is
 pushed as its own commit, and loop 7 came back twenty-four green in a row
 on it (the soak's inside count 0 in every one; in the five runs a frog
 came to the tower's wall the entry window read the frames and the
-masonry stayed out). The standing watch on it is loop 8, until the next
-red.
+masonry stayed out). The standing watch on it is the round's standing
+watch -- loop 9 when this line was written, loop 10 after the dust fix --
+until the next red of its own law.
 
 ### 2d. Meshing-budget law (NEW, loop 3 run 7) — `the whole valley rebuilds inside the budget a frame gives meshing`
 
@@ -410,15 +453,21 @@ and the step-under-the-log canary byte-identical in all of them, and in
 the five runs a frog came to the tower's wall the entry window read the
 frames and the masonry stayed out. Loop 8 (on the same corrected tree) —
 runs 1-19 green, stopped to land the night-sky star fix (issue 4); no red,
-nothing to parse. Across all of it the soak laws have
-gone red twice on recorded lines and not since: one hundred faithful full
-green runs in the round (fifty-five on the tree before the correction,
-forty-five on the corrected one, the round's double all.sh counts included
-the way the forty-one did), the tower-masonry entry (2c) is root-caused,
-corrected and pinned, and the dust half (2a) is closed on its pre-set
-honest path. The next red, whatever it is, gets parsed with `parse.py` and
-read before anything is touched; the loop keeps running as the standing
-watch (loop 9 is the current one).
+nothing to parse. Loop 9 (on the night-sky tree) — run 1 green, run 2 red:
+the dust half of the soak flake (2a), reproduced on the current code after
+forty-four green runs on the corrected trees, and root-caused and fixed in
+section 2a. Across all of it the soak laws have gone red three times in the
+round -- twice on the recorded lines of round 25 (2c in loop 2 run 6, 2a in
+loop 9 run 2) and once on a new one (2d, the meshing budget, not a soak
+law) -- and all three are now root-caused and fixed: one hundred and one
+faithful full green runs in the round (fifty-five on the tree before the
+correction, forty-six on the corrected one, the round's double all.sh
+counts included the way the forty-one did), the tower-masonry entry (2c)
+is root-caused, corrected and pinned, and the dust half (2a) re-opened by
+the red of loop 9 run 2 is closed with the fix. The next red, whatever it
+is, gets parsed with `parse.py` and read before anything is touched; the
+loop keeps running as the standing watch (loop 10 is the current one, on
+the fixed tree).
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -479,7 +528,8 @@ answers against the measured `cellar 20`.
 ## 4. The night sky's stars clump into a dot grid on a strict GPU (round 26; user report)
 
 **Fixed and pinned (commit `9d75468`; round-end gates green twice on that
-tree; the standing watch is loop 9).**
+tree; the standing watch was loop 9 on that tree, and is loop 10 on the
+tree that followed it, after the dust fix).**
 The report: at 00:50 with the head in the water at Mirrorlake, the night sky
 reads as a large dark mass covered in a fine regular dot grid, cut from
 smooth dark blue by a one-metre-stepped diagonal edge (a voxel silhouette),
