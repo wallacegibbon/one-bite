@@ -8,8 +8,25 @@
 
 你实际在做的事：找果子，躲开能伤到你的东西，走到没有对的身体就到不了的地方。这背后没有等着被揭开的谜。
 
-- 完整设定文档：[`docs/cn/`](docs/cn/README.md)（中文）· [`docs/en/`](docs/en/README.md)（English）
+- 完整设定文档：[`docs/`](docs/) 下八章，英文一套（索引见下）
 - 可玩原型：[`game/index.html`](game/index.html)
+
+## 设定文档
+
+`docs/` 下八章，只保留英文一套；索引由两份根 README（本文件与 `README.md`）分别以中、英各留一份：
+
+| 章节 | 内容 |
+|---|---|
+| [00-overview-and-design-pillars.md](docs/00-overview-and-design-pillars.md) | 设计支柱、体验目标、反目标、MVP 边界 |
+| [01-worldview-and-story.md](docs/01-worldview-and-story.md) | 谷地（它没有名字）、灰雾墙、唯一的魔法、三个机构 |
+| [02-map-and-scenes.md](docs/02-map-and-scenes.md) | 区域表、ASCII 地图、垂直分层、果实门禁图、POI |
+| [03-characters-and-creatures.md](docs/03-characters-and-creatures.md) | 主角、NPC、生物、态度矩阵、具名生物 |
+| [04-fruit-and-transformation.md](docs/04-fruit-and-transformation.md) | 果实全表、形态能力、副作用 |
+| [05-backpack-and-storage.md](docs/05-backpack-and-storage.md) | **仓库机制方案（原始需求中未定）**：3 个方案对比 + 推荐设计 |
+| [06-quests-and-progression.md](docs/06-quests-and-progression.md) | 邀请（任务）、为什么没有支线、图鉴、死亡与时间 |
+| [07-art-audio-technical.md](docs/07-art-audio-technical.md) | 体素美术规范、调色板、音频、渲染与数据结构 |
+
+`game/test/docs-sync.js` 校验这套文档与 `game/data/` 的一致性：文档里的每个数字都必须是数据里的数字，漂移会让构建失败。
 
 ## 运行原型
 
@@ -73,8 +90,7 @@ NPC 对话树；窖树被熊拆毁；雨蛙形皮肤湿度的 HUD 条（脱水�
 ## 目录
 
 ```
-docs/cn/         设定文档（中文，8 篇 + 索引）
-docs/en/         同一套文档的英文版（编号相同）
+docs/            设定文档（英文一套，00–07）
 game/
   index.html     入口
   css/ui.css     HUD 样式
@@ -91,8 +107,8 @@ game/
 node game/test/node-smoke.js   # 无浏览器：数据 → 生成 → 网格化（假 GL）
 node game/test/probe.js        # 各区域/POI 的取景点与水深
 node game/test/reach.js        # 数据里声明的每个字段：要么被代码读到，要么被列成"没做"
-node game/test/docs-sync.js    # 文档 ↔ 数据一致性（中英文两套，不一致 exit 1）
-node game/test/docs-drift.js   # 自检：向文档注入 24 处错误，确认 docs-sync 每一处都能抓到
+node game/test/docs-sync.js    # 文档 ↔ 数据一致性（不一致 exit 1）
+node game/test/docs-drift.js   # 自检：向文档注入 48 处错误，确认 docs-sync 每一处都能抓到
 node game/test/play.js         # 玩法闭环：采集→重生→容量→变形→存取→窖树→掠夺→邮递→存档
 node game/test/save.js         # 存档往返：写入存档、重新加载、从开始界面继续
 node game/test/upgrade.js      # 背包升级与果格数学

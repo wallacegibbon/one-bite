@@ -1,8 +1,7 @@
 /* ==========================================================================
  *  FRUTARIA
  *  Player identity data -- the protagonist has NO fixed name.
- *  Mirrors: docs/en/03-characters-and-creatures.md sections 1 and 6
- *           (the Chinese set under docs/cn/ is the same text, same section numbers)
+ *  Mirrors: docs/03-characters-and-creatures.md sections 1 and 6
  *
  *  Why identity is split in three layers:
  *    id      -- stable machine identity, generated once per save/account.
@@ -40,14 +39,14 @@
     ]
     // There is no talent list here on purpose. The protagonist holds no talent
     // that bends the transformation rules: two magics never share one body, for
-    // them as much as for anyone (docs/en/04 s5.2).
+    // them as much as for anyone (docs/04 s5.2).
   };
 
   N.IDENTITY = IDENTITY;
 
   /* The body you start in. It lives here rather than in src/entities.js for the
      same reason the animals live in data/creatures.js: it is a body record, and
-     `size` on it is a rule, not a rendering detail -- docs/en/04 s4 makes the
+     `size` on it is a rule, not a rendering detail -- docs/04 s4 makes the
      collision box a hard gate. `size` is in metres (a square footprint: the box
      does not turn with the body, so a model has to fit it at any facing, which
      node-smoke.js measures). `scale` converts the model's authored units to

@@ -1,7 +1,5 @@
 # 02 · Map and Scenes
 
-[中文: ../cn/02-地图与场景.md](../cn/02-地图与场景.md)
-
 Source of truth: `game/data/world.js` (zones / POIs / isles), `game/src/worldgen.js` (generation and fruit placement).
 
 World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** The prototype world is 160×48×160 voxels (the full setting is 1024×128×1024).

@@ -214,7 +214,7 @@
       this.dirty = new Uint8Array(this.cx * this.cz).fill(1);
     }
     /* No heightmap. A `maxY` map -- Uint8Array(w*d), kept up to date on every
-       write, exactly as docs/en/07 s3.3 still plans for the full game -- was
+       write, exactly as docs/07 s3.3 still plans for the full game -- was
        tried here to bound the meshing loop. Rebuilding all 100 chunks costs
        about 1.0 ms per chunk with it or without it, so the empty sky above the
        treetops is not where the time goes; the faces are. And it had to be
@@ -300,7 +300,7 @@
     /* Re-mesh the chunks a block edit flagged. The game calls this once per
        frame with a millisecond budget: picking a fruit must not stall the
        frame, so the geometry catches up over the next few frames instead
-       (docs/en/07 s3.5, "no async meshing"). At least one chunk is always
+       (docs/07 s3.5, "no async meshing"). At least one chunk is always
        rebuilt, so a flagged chunk can never stay stale. */
     rebuildDirty(gl, budgetMs) {
       const t0 = performance.now();

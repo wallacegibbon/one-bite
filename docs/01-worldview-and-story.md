@@ -1,7 +1,5 @@
 # 01 · The World
 
-[中文: ../cn/01-世界观与故事.md](../cn/01-世界观与故事.md)
-
 ## 1. The Valley
 
 A basin completely ringed by **grey fog**, about nine kilometres across. Inside it: forest, one very deep lake, a north ridge, a ruined orchard, and a chain of **rock islands floating in the air**.

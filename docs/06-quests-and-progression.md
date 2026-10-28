@@ -1,7 +1,5 @@
 # 06 · Quests and Progression
 
-[中文: ../cn/06-任务与进程.md](../cn/06-任务与进程.md)
-
 ## 1. Progression philosophy
 
 **There are no levels.** The player's "progress" is only three things:

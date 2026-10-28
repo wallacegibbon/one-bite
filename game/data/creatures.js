@@ -1,5 +1,5 @@
 /* ==========================================================================
- *  Creature data -- mirrors docs/en/03-characters-and-creatures.md
+ *  Creature data -- mirrors docs/03-characters-and-creatures.md
  *  Four species, one per niche. Three of them bear a fruit and so are a body the
  *  player can wear; the fourth -- the lamps of Mirrorlake -- bears nothing. It
  *  is the exception that shows what the rule costs: a fruitless species still

@@ -1,7 +1,7 @@
 /* ==========================================================================
  *  FRUTARIA
  *  Fruit / plant / rarity data -- the single source of truth shared by the design docs and the game
- *  Mirrors: docs/en/04-fruit-and-transformation.md and docs/en/05-backpack-and-storage.md
+ *  Mirrors: docs/04-fruit-and-transformation.md and docs/05-backpack-and-storage.md
  *  One fruit per species, and one species per niche: three fruits, three bodies.
  *  The rarity ladder still has five rungs; the valley currently only grows
  *  three of them (common / rare / legendary).
@@ -12,7 +12,7 @@
    * Rarity: decides backpack footprint (slots), spoilage and regrowth.
    * slots  = number of slots one unit of this fruit occupies
    * fresh  = seconds before a picked fruit goes dormant; in storage it decays at x0.1
-   * regrow = in-game days before that fruiting site bears again (docs/en/04, docs/en/07)
+   * regrow = in-game days before that fruiting site bears again (docs/04, docs/07)
    * ------------------------------------------------------------------ */
   const RARITY = {
     common:    { id: 'common',    cn: '常见', en: 'Common',    tier: 1, slots: 1,  fresh: 1500, regrow: 1.0, color: [0.60, 0.74, 0.52], ring: '#9ab97e' },
@@ -71,7 +71,7 @@
    * already lives in that water.
    * A field comes back when a fruit asks for it, not before.
    * Nothing here is a mental effect: a form inherits a body and the world's
-   * reaction to that body, never a mind (docs/en/04 s5.0).
+   * reaction to that body, never a mind (docs/04 s5.0).
    * ------------------------------------------------------------------ */
 
   const FRUITS = [
@@ -154,7 +154,7 @@
   ];
 
   /* ------------------------------------------------------------------
-   * Spoilage / storage / backpack parameters (mirrors docs/en/05)
+   * Spoilage / storage / backpack parameters (mirrors docs/05)
    * ------------------------------------------------------------------ */
   const STORAGE = {
     backpack: { slots: 24, decay: 1.0, upgrades: [

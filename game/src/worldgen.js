@@ -1,7 +1,7 @@
 /* ==========================================================================
  *  worldgen.js -- valley generation: terrain / Mirrorlake / Starfall Keep / Whisperwood / Echo Hollow /
  *                  Lanternrow / the old orchard / Cloudspire isles / fruit and plant distribution
- *                  Every fruit is placed where its own species lives (docs/en/02 s6).
+ *                  Every fruit is placed where its own species lives (docs/02 s6).
  * ========================================================================== */
 (function (N) {
   const D = N.BLOCKS;

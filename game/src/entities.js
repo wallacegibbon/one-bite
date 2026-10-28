@@ -237,7 +237,7 @@
       return false;
     }
     /* Foliage is neither a wall nor a roof to a body built for the air
-       (docs/en/03 s3). The owl animal has always had that -- every gate it is
+       (docs/03 s3). The owl animal has always had that -- every gate it is
        asked through exempts the blocks a tree is made of -- and the body worn
        from that same animal did not: standing in a crown with the climb key
        held, it rose 2.3 m in the first 1.5 s and then did not move again for
@@ -382,7 +382,7 @@
       // town cellar, and the form captured above no longer describes it
       if (this.dead) return;
 
-      // ---- skin must stay wet (amphibian bodies: docs/en/04 s3) ----
+      // ---- skin must stay wet (amphibian bodies: docs/04 s3) ----
       // The frog breathes in water and on land, but its skin has to stay wet.
       // This is the cost of the water niche on land -- it drowns on the shore.
       if (f.dryTimer) {
@@ -395,7 +395,7 @@
         }
       } else this.dry = 0;
 
-      // ---- the ridge is cold (docs/en/02 s7: Ashscale Ridge -- the cold) ----
+      // ---- the ridge is cold (docs/02 s7: Ashscale Ridge -- the cold) ----
       /* The cold belongs to the ground and the height, not to the sky: it bites
          the same at noon and at midnight, and it bites harder the higher you
          get, reaching the full rate `ramp` metres above the line. A bear body
@@ -510,7 +510,7 @@
       // ---- the body turns with mass ----
       // facing never snaps to the mouse: an animal pivots, and the bigger it is
       // the slower it pivots. That is what makes third person watchable instead
-      // of twitchy (docs/en/07, "camera and comfort").
+      // of twitchy (docs/07, "camera and comfort").
       const h = this.size()[1];
       const spd = Math.hypot(this.vx, this.vz);
       if (spd > 0.4) {
@@ -573,7 +573,7 @@
              go of the key and it comes down. `glide` is the fraction of normal
              fall speed it accepts, so an owl descends at about a third of the
              rate you do and keeps the ground speed it had while it does --
-             height is what pays for distance (docs/en/04 s4). */
+             height is what pays for distance (docs/04 s4). */
           this.vy -= GRAVITY * dt;
           this.vy = Math.max(-MAX_FALL * f.glide, this.vy);
         } else {
@@ -994,7 +994,7 @@
      the top of the world, one block under the top of the grid, so a body is not
      allowed to stand with its head through the ceiling of the valley. Foliage is
      not in it -- a body on foot walks through a bush with its shoulders in it and
-     a bird flies through a crown (docs/en/03 s5).
+     a bird flies through a crown (docs/03 s5).
      Which blocks a body is allowed through is a second question, and the two
      gates that ask this one answer it differently. `soft` is what this body may
      put its head through: the whole of `TREE_BLOCK` for a body held up by air,
@@ -1046,7 +1046,7 @@
     for (let y = from; y >= 0; y--) if (w.liquidAt(x, y, z)) return y;
     return -1;
   }
-  /* The part of the day a species is out (docs/en/03 s3: day / night / both /
+  /* The part of the day a species is out (docs/03 s3: day / night / both /
      dusk). `night` is the curve the sky already runs on: 1 at midnight, 0 at
      noon. A dusk animal is out at both ends of the day and asleep at noon and
      at midnight -- no species in the valley uses 'dusk' right now, but the word
@@ -1401,7 +1401,7 @@
       if (this.vy < -0.5) { this.climbTo = null; this.climbRate = 0; }   // off the ledge: the fall decides
       if (d > 0.8) {
         /* The table gives a speed on foot and, for the bodies that have them, a
-           speed in the air and in the water (docs/en/03 s3: "3.2 (fly 7.0)").
+           speed in the air and in the water (docs/03 s3: "3.2 (fly 7.0)").
            The owl that crosses the valley is not doing it at walking pace. */
         const cruise = this.isFlyer() ? (sp.flySpeed || sp.speed || 3)
                      : (inWater && sp.swimSpeed) ? sp.swimSpeed
@@ -1648,7 +1648,7 @@
              crossed once the body is high enough to be over it.
              Three things are not steps. Foliage is not a riser and is not a
              ceiling: a body on foot walks through a bush with its shoulders in it
-             (docs/en/03 s5). A body in the air -- a hop, or a fall off a ledge --
+             (docs/03 s5). A body in the air -- a hop, or a fall off a ledge --
              is not climbing: where it lands is decided by the rule at the end of
              the update, and refusing a step mid-air would stop a hop dead. And a
              body already in the middle of a climb keeps climbing: it is above its
@@ -2253,7 +2253,7 @@
          step lands on the step.
          Wood and leaves are not in this. A body on foot walks through a bush with
          its shoulders in it and a crown is not ground to be pushed off
-         (docs/en/03 s5); pushing two bears out of the crowns they walk through
+         (docs/03 s5); pushing two bears out of the crowns they walk through
          measured 171 one-metre pops in three minutes. A flying body is held by
          the rule above, which refuses the height instead of putting the body
          inside something and then taking it out again.

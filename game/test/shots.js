@@ -15,7 +15,7 @@ const SHOTS = [
   ['underwater', 'pos=92,11,120 yaw=0.5 pitch=-0.15'],
   // the lamps: midnight, one metre under the surface of Mirrorlake, looking at
   // the sunken tower. The jellyfish parts are emissive, so this shot is the
-  // proof that the lake has a light of its own at night (docs/en/02 s5)
+  // proof that the lake has a light of its own at night (docs/02 s5)
   ['lamps', 'pos=60,13,112 yaw=2.36 pitch=-0.15 time=385'],
   ['forest', 'pos=104,25,32 yaw=1.2 pitch=-0.05 safe'],
   ['glade', 'pos=60,25,56 yaw=0.4 pitch=-0.05 safe'],
@@ -28,7 +28,7 @@ const SHOTS = [
   // 315 s is 18:00: the hour the clock calls night (night 0.78) while the sky is
   // at its brightest of the whole day. The ground has to keep the dusk's own
   // light rather than turn into a cut-out against it -- see the uAmb note in
-  // docs/en/07 s3.2
+  // docs/07 s3.2
   ['dusk', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe time=315'],
   // the same town, the same hour, an owl's eyes: nightVision is the only change
   ['nightowl', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe form=owlberry time=385'],

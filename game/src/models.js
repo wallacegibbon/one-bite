@@ -25,7 +25,7 @@
                   crouch:[rx,ry,rz], emis:true, boxes:[[x,y,z,w,h,d,'#hex'],...] }
      `emis` makes the part self-lit in the shader -- the same switch a fruit
      block uses. Only the lamps of Mirrorlake use it: no body you can wear
-     carries a light (docs/en/07 s1). */
+     carries a light (docs/07 s1). */
   const MODELS = {
     /* ---------------- human (untransformed) ----------------
        1.80 m tall, about 3.7 heads. A body you look at for an hour in third
@@ -56,7 +56,7 @@
              colour at: the head is half the body, and its own colour is one luma
              step from the coat. It is the widest thing the person wears, so it is
              the model's reach: 0.40 m against the 0.41 m the collision box
-             allows (docs/en/04 s4). */
+             allows (docs/04 s4). */
           [-1.6, 7.1, -1.5, 3.2, 0.6, 3.0, '#7a4a3a'],           // collar, round the neck
           [-1.25, 5.4, 0.85, 0.45, 1.2, 0.12, '#6a5138']          // satchel strap
         ] },
@@ -314,7 +314,7 @@
     /* ---------------- bear ----------------
        1.5 m at the shoulder, and the whole animal has to live inside the
        1.4 x 1.5 box the data gives it, because that box is what will not fit a
-       low hole (docs/en/04 s4). The head used to hang 0.58 m in front of it, so
+       low hole (docs/04 s4). The head used to hang 0.58 m in front of it, so
        a bear walking into a wall put its head through the wall; the muzzle is
        now carried over the chest instead of out in front of the body. */
     bear: {

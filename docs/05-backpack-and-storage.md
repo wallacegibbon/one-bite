@@ -1,7 +1,5 @@
 # 05 · Backpack and Storage Mechanism
 
-[中文: ../cn/05-背包与仓库.md](../cn/05-背包与仓库.md)
-
 > **This is the only part the original brief left open**: "the player has a fixed-location warehouse; warehouses can be newly built, but the mechanism is undecided."
 > This document gives 3 candidate options, an assessment, and the final recommended design (whose core is implemented in the prototype).
 

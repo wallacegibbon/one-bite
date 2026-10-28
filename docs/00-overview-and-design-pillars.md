@@ -1,7 +1,5 @@
 # 00 · Overview and Design Pillars
 
-[中文: ../cn/00-总览与设计支柱.md](../cn/00-总览与设计支柱.md)
-
 ## 1. The original brief (given by the user, with the revisions from this pass)
 
 1. A magic exploration game, **voxel style**: the map skeleton of castle / forest / lake / sky.

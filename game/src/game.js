@@ -134,10 +134,10 @@
       // creatures
       this.spawnCreatures();
       // identity: the protagonist has no fixed name. id is stable, the epithet is
-      // earned by deeds, the name is the player's own (docs/en/03 section 6).
+      // earned by deeds, the name is the player's own (docs/03 section 6).
       this.id = IDEN.idPrefix + Math.random().toString(36).slice(2, 2 + IDEN.idBytes);
       this.name = IDEN.nameDefault;
-      // quests: a quest is an invitation to use a body (docs/en/06 s3), so its
+      // quests: a quest is an invitation to use a body (docs/06 s3), so its
       // text lives here next to the check that completes it
       this.quests = [
         { id: 'q1', cn: '认识主果窖', en: 'Know the main cellar', done: false,
@@ -693,7 +693,7 @@
       // One body at a time: a second fruit simply replaces the body you are
       // wearing. There is no organ that holds two magics, so there is nothing
       // to churn and no counter of how many you have swallowed -- the cost is
-      // the body you end early and the fruit you spent (docs/en/00 P3).
+      // the body you end early and the fruit you spent (docs/00 P3).
       if (p.form) this.logMsg(N.t('log.overwrite', { a: N.disp(FRU[p.form].form), b: N.disp(f.form) }), 'warn');
       p.form = fruitId;
       p.formT = f.duration; p.formMax = f.duration;
@@ -791,7 +791,7 @@
       if (this.quests) this.checkQuests();
     }
 
-    /* ------------------------- owl post (docs/en/05 section 5.2) ------------------------- */
+    /* ------------------------- owl post (docs/05 section 5.2) ------------------------- */
     /* cellar tree -> main cellar, one fruit at a time, delivered after 3 in-game days, 10% lost.
        Requires at least one owlberry stored in the main cellar (unlocks "Pendulum"). */
     owlUnlocked() { return this.cellar().items.some(i => i.id === 'owlberry') || this._owlUnlocked; }
@@ -877,7 +877,7 @@
          top of the water over it, because fruit that sinks to the floor of a
          lake 18 m down is fruit nobody can dive for on one breath -- and
          "retrievable" is the whole point of scattering it rather than deleting
-         it (docs/en/06 s6). A crown is not ground (see terrainY), and a column
+         it (docs/06 s6). A crown is not ground (see terrainY), and a column
          whose surface is not level with the place the body fell is a column the
          fruit cannot be picked back up from, so it lands at the body's feet.
          Before this the fruit simply stayed a metre above the height the body
@@ -913,7 +913,7 @@
     }
 
     /* ------------------------- per-game-day rolls ------------------------- */
-    /* docs/en/05: a cellar tree is a living store -- it attracts thieves. The main cellar is guarded by Old Mei and is never robbed. */
+    /* docs/05: a cellar tree is a living store -- it attracts thieves. The main cellar is guarded by Old Mei and is never robbed. */
     dailyRolls() {
       // the town cellar is deliberately skipped: the docs state theft as a rule of
       // field storage (05, cellar-tree table), not of the town, which has Old Mei.
@@ -1039,7 +1039,7 @@
         let rate = 1;
         const f = FRU[p.form].form;
         // A body that breathes water is weakened out of it -- unless it is
-        // amphibian, which pays with drying skin instead (docs/en/04 s3).
+        // amphibian, which pays with drying skin instead (docs/04 s3).
         if (f.breatheAir === false && !f.dryTimer && !this.player.headWater) rate = 2;
         if (p.fright > 0.3) rate += p.fright;                                 // fright drains the timer
         p.formT -= dt * rate;
@@ -1455,7 +1455,7 @@
       this.particles.draw(R, this.world);
     }
 
-    /* ------------------------- identity (docs/en/03 section 6) ------------------------- */
+    /* ------------------------- identity (docs/03 section 6) ------------------------- */
     // the valley's name for you: the last earned epithet wins.
     // The HUD reads this every frame and the answer only moves when a quest
     // does, so it is cached on the quest flags themselves -- a test that flips

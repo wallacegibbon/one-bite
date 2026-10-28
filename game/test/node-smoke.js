@@ -65,7 +65,7 @@ const F = window.FRUTARIA;
    footprint that does not turn with the body, so what matters is the model's
    horizontal **radius**: a model wider than its box walks an arm, a snout or a
    head through a wall the body is pressed against, and the player trusts the
-   box -- docs/en/04 s4 makes size a hard gate, not flavour. A limb may cross
+   box -- docs/04 s4 makes size a hard gate, not flavour. A limb may cross
    the line a little (a swinging arm, a tail, a muzzle carried over the chest),
    so the allowance is 0.1 m. Before this check existed nothing in the build
    could see it: the bear's head hung 0.56 m outside its box and the frog's
@@ -180,7 +180,7 @@ const extents = (modelId, sc) => {
    above to measure it against -- it is the only model in the game nobody
    measures. Its size is pinned anyway, because a model nobody measures is a
    model that quietly grows: 0.61 m across, 0.74 m from the top of the dome to
-   the tip of the longest arm, at its scale of 0.16 (docs/en/07 s1). */
+   the tip of the longest arm, at its scale of 0.16 (docs/07 s1). */
 {
   const sc = F.CREATURE_BY_ID.jelly.scale, e = extents('jelly', sc);
   const bad = [];
@@ -189,7 +189,7 @@ const extents = (modelId, sc) => {
   if (Math.abs(e.r * 2 - 0.61) > 0.02) bad.push(`宽 ${(e.r * 2).toFixed(3)} != 0.61`);
   if (Math.abs((e.top - e.bottom) - 0.74) > 0.02) bad.push(`高 ${(e.top - e.bottom).toFixed(3)} != 0.74`);
   /* The one self-lit model in the game, and the only one: no body you can wear
-     carries a light (docs/en/07 s1). */
+     carries a light (docs/07 s1). */
   if (!F.MODELS.jelly.parts.every(p => p.emis)) bad.push('a lamp part is not lit');
   for (const id of ['human', 'owl', 'frog', 'bear'])
     if (F.MODELS[id].parts.some(p => p.emis)) bad.push(`${id} glows`);

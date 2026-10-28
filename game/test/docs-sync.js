@@ -1,8 +1,10 @@
 /* ==========================================================================
  *  docs-sync.js -- checks that the numbers in docs/ match game/data/
  *  The README claims data/ is the single source of truth; this script makes that claim executable.
- *  Both document sets are checked: docs/cn/ (Chinese) and docs/en/ (English),
- *  which are sibling folders. Table column order must stay identical across languages.
+ *  The setting documents keep one language: the single English set that sits
+ *  flat in docs/ as the eight numbered chapters; the index lives in the root
+ *  README.md and README.zh.md. The game's own strings stay bilingual in
+ *  game/data/ (07 s3.4) -- this checks the setting documents.
  *  Usage: node game/test/docs-sync.js
  * ========================================================================== */
 const fs = require('fs');
@@ -48,7 +50,7 @@ const cellName = s => String(s || '').replace(/\s+/g, '').toLowerCase().replace(
 const sameName = (doc, data) => cellName(doc) === cellName(data);
 
 /* The quest list lives in game/src/game.js beside the checks that complete it
-   (docs/en/06 s2), so the words the player reads are read out of that source
+   (docs/06 s2), so the words the player reads are read out of that source
    rather than restated here as a second copy that could disagree. */
 function questLines(src) {
   const re = /\{ id: '(q\d)', cn: '([^']*)', en: '([^']*)', done: false,\s*\n\s*hint: \{ cn: '([^']*)',\s*\n\s*en: (['"])(.*?)\5 \} \}/g;
@@ -63,37 +65,8 @@ function questLines(src) {
  * ------------------------------------------------------------------------ */
 const LANGS = [
   {
-    tag: 'cn',
-    dir: path.join(DOCS, 'cn'),
-    files: { zones: '02-地图与场景.md', fruits: '04-果实与变形系统.md', storage: '05-背包与仓库.md', quests: '06-任务与进程.md' },
-    heads: {
-      zones: '## 2. 区域表',
-      poi: '## 3. 兴趣点（POI）',
-      isles: '### 5.7 云顶浮岛',
-      rarity: '| 稀有度 | 中文 | 占果格',
-      storage: '| 层 | 名称 | 格数 | 腐坏倍率 | 数量 | 位置 |',
-      quests: '| id | 名称 | 提示 | 教会什么 | 验证方式 |'
-    },
-    nameField: 'cn',
-    // cellar-tree rules are prose/regex claims rather than a table
-    scaleFile: '00-总览与设计支柱.md',
-    scaleHead: '## 8. 规模',
-    scaleLabels: { world: '世界', zones: '区域', fruits: '果实', creatures: '生物', quests: '主线', day: '一天' },
-    rules: [
-      [/\|\s*上限\s*\|\s*(\d+)\s*棵/, N.STORAGE.treestash.max, '窖树上限'],
-      [/\|\s*最小间距\s*\|\s*(\d+)\s*m/, N.STORAGE.treestash.minDist, '窖树最小间距'],
-      [/\|\s*被偷[^|]*\|\s*每游戏日\s*\d+\s*次判定，\s*(\d+)%/, pct(N.STORAGE.treestash.raidChance), '掠夺概率%'],
-      [/偷走\s*(\d+)\s*–\s*\d+\s*颗/, N.STORAGE.treestash.raidMin, '偷走下限'],
-      [/偷走\s*\d+\s*–\s*(\d+)\s*颗/, N.STORAGE.treestash.raidMax, '偷走上限'],
-      [/玩家若在\s*(\d+)\s*m\s*内/, N.STORAGE.treestash.raidScareRadius, '赶走半径 m']
-    ],
-    keyRe: /按\s*([A-Z])\s*(?:种|使用|打开|交互|吃|存|寄)/g,
-    nameOf: x => x.cn,
-    cut: ['混合形态', '混胃', '魔力胃', '兽化残留']
-  },
-  {
     tag: 'en',
-    dir: path.join(DOCS, 'en'),
+    dir: DOCS,
     files: { zones: '02-map-and-scenes.md', fruits: '04-fruit-and-transformation.md', storage: '05-backpack-and-storage.md', quests: '06-quests-and-progression.md' },
     heads: {
       zones: '## 2. Zone Table',
@@ -298,22 +271,17 @@ for (const L of LANGS) {
   }
 }
 
-/* ================= 8. every Chinese doc has an English counterpart ================= */
+/* ================= 8. the docs tree keeps one language ================= */
 {
   const CN = path.join(DOCS, 'cn'), EN = path.join(DOCS, 'en');
-  const cn = fs.readdirSync(CN).filter(f => f.endsWith('.md'));
-  const en = new Set(fs.readdirSync(EN).filter(f => f.endsWith('.md')));
-  // pair by the numeric prefix instead of the (translated) file name
-  const numPrefix = f => (f.match(/^(\d+)/) || [null, 'README'])[1];
-  const enPrefix = new Set([...en].map(numPrefix));
-  const missing = cn.map(numPrefix).filter(p => !enPrefix.has(p));
-  if (missing.length) bad('docs/en missing', missing, 'one file per doc in docs/cn');
-  else good(`docs/en has an English counterpart for all ${cn.length} docs in docs/cn`);
-  if (en.size !== cn.length) bad('docs/en file count', en.size, cn.length);
-  // docs/ itself must hold nothing but the two language folders
-  const loose = fs.readdirSync(DOCS).filter(f => f.endsWith('.md'));
-  if (loose.length) bad('docs/ loose files', loose, 'only docs/cn/ and docs/en/ may hold .md');
-  else good('docs/ holds only the sibling folders cn/ and en/');
+  if (fs.existsSync(CN) || fs.existsSync(EN)) bad('docs/cn or docs/en back', 'present', 'the setting documents live flat in docs/: the eight numbered chapters and nothing else');
+  const md = fs.readdirSync(DOCS).filter(f => f.endsWith('.md'));
+  const numPrefix = f => (f.match(/^(\d+)/) || [null, ''])[1];
+  const have = new Set(md.map(numPrefix));
+  const missing = ['00', '01', '02', '03', '04', '05', '06', '07'].filter(x => !have.has(x));
+  if (missing.length) bad('docs/ missing', missing, 'the eight numbered chapters');
+  else if (md.length !== 8) bad('docs/ loose files', md, 'the eight numbered chapters only: the index lives in the root READMEs');
+  else good(`docs/ holds the whole set: the eight numbered chapters (${md.length} files), nothing else`);
 }
 
 /* ================= 9. identity: the protagonist has NO fixed name ================= */
@@ -324,7 +292,7 @@ for (const L of LANGS) {
     const T = `[${L.tag}]`;
     const all = fs.readdirSync(L.dir).filter(f => f.endsWith('.md')).map(f => readIn(L, f)).join('\n');
     for (const w of banned)
-      if (all.includes(w)) bad(`${T} fixed protagonist name`, w, 'the protagonist is not named (docs/en/03 s6)');
+      if (all.includes(w)) bad(`${T} fixed protagonist name`, w, 'the protagonist is not named (docs/03 s6)');
     const miss = ID.epithets.map(e => e[L.nameField]).filter(x => !all.includes(x));
     if (miss.length) bad(`${T} epithets missing from docs`, miss, 'IDENTITY.epithets');
     if (!all.includes(ID.epithetDefault[L.nameField])) bad(`${T} default epithet`, 'missing', ID.epithetDefault[L.nameField]);
@@ -343,10 +311,10 @@ for (const L of LANGS) {
   else good(`language switch key ${N.LOCALE_KEY} is bound`);
 }
 
-/* ================= 10. the mind is never affected (doc 04 in both sets) =================
+/* ================= 10. the mind is never affected (doc 04 in the set) =================
    A form inherits the animal's body and the world's reaction to that body --
    never a mind. No urges, no compulsions, no truth spells, no hijacked instincts.
-   The vocabulary itself is banned in the data and in both doc sets. */
+   The vocabulary itself is banned in the data and in the docs. */
 {
   const BANNED = [
     [/忍不住|不受控|无法抗拒|冲动|强迫|强制入睡|说谎|记忆模糊|只想朝北|趋光/g, 'cn'],
@@ -354,14 +322,9 @@ for (const L of LANGS) {
   ];
   const targets = [
     path.join(base, 'data', 'fruits.js'), path.join(base, 'data', 'creatures.js'),
-    path.join(base, '..', 'docs', 'cn', '00-总览与设计支柱.md'),
-    path.join(base, '..', 'docs', 'cn', '03-角色与生物.md'),
-    path.join(base, '..', 'docs', 'cn', '04-果实与变形系统.md'),
-    path.join(base, '..', 'docs', 'cn', 'README.md'),
-    path.join(base, '..', 'docs', 'en', '00-overview-and-design-pillars.md'),
-    path.join(base, '..', 'docs', 'en', '03-characters-and-creatures.md'),
-    path.join(base, '..', 'docs', 'en', '04-fruit-and-transformation.md'),
-    path.join(base, '..', 'docs', 'en', 'README.md')
+    path.join(base, '..', 'docs', '00-overview-and-design-pillars.md'),
+    path.join(base, '..', 'docs', '03-characters-and-creatures.md'),
+    path.join(base, '..', 'docs', '04-fruit-and-transformation.md')
   ];
   const hits = [];
   for (const f of targets) {
@@ -1125,7 +1088,7 @@ for (const L of LANGS) {
 {
   const src = fs.readFileSync(path.join(base, 'src', 'game.js'), 'utf8');
   const qs = questLines(src);
-  if (qs.length !== 6) bad('06 quest text', `the quest list in game.js is no longer written in a shape this check can read (${qs.length} quests read, 6 expected)`, 'six quests, each with a title and a hint in both languages');
+  if (qs.length !== 6) bad('06 quest text', `the quest list in game.js is no longer written in a shape this check can read (${qs.length} quests read, 6 expected)`, 'six quests, each with a title and a hint in the English set');
   else {
     let compared = 0, rowsWrong = 0;
     for (const L of LANGS) {
@@ -1142,12 +1105,12 @@ for (const L of LANGS) {
         }
       }
     }
-    if (!rowsWrong && compared === 24) good(`06 quest text: the chapter prints the words the game shows -- ${compared} titles and hints compared across both sets, q6's hint reads "${(qs.find(q => q.id === 'q6') || {}).hint ? qs.find(q => q.id === 'q6').hint.en : '?'}"`);
+    if (!rowsWrong && compared === 12) good(`06 quest text: the chapter prints the words the game shows -- ${compared} titles and hints compared in the English set, q6's hint reads "${(qs.find(q => q.id === 'q6') || {}).hint ? qs.find(q => q.id === 'q6').hint.en : '?'}"`);
   }
 }
 
 /* ================= report ================= */
-console.log('docs ↔ data 一致性检查 (docs/cn/ + docs/en/)');
+console.log('docs ↔ data 一致性检查 (docs/)');
 for (const s of ok) console.log('  ✔ ' + s);
 if (problems.length) {
   console.log('\n✘ ' + problems.length + ' 处不一致：');

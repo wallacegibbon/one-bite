@@ -193,7 +193,7 @@ const { sim } = require('./simwait');
   // 5b. one body at a time. A second fruit replaces the body you are wearing;
   //     it does not punish you. The magic stomach used to make the third fruit
   //     eaten inside 90 seconds destroy itself, deal 0.8 damage and refuse the
-  //     transformation -- that concept is deleted (docs/en/04 s5.1), and this
+  //     transformation -- that concept is deleted (docs/04 s5.1), and this
   //     step is what keeps it deleted.
   const swap = await step('oneBodyAtATime', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
@@ -734,7 +734,7 @@ const { sim } = require('./simwait');
   // 10c. the lamps sting. This is measured rather than asserted loosely, because
   //      the number is the design: the field has to cost something to loiter in
   //      and must not kill the 18-second dive to the tower sills, which is the
-  //      one fruit the lake gives you before it asks anything (docs/en/02 s4).
+  //      one fruit the lake gives you before it asks anything (docs/02 s4).
   const sting = await step('sting', () => {
     const g = window.game, p = g.player, N = window.FRUTARIA;
     const herd = g.creatures.filter(c => c.sp.id === 'jelly');
@@ -2578,7 +2578,7 @@ const { sim } = require('./simwait');
      a kick does not (left = right).
      The two halves are read off two different bodies, because they are two
      different animals' errands. A stride belongs to a body that walks, and a frog
-     is not one: on land it hops (docs/en/03 s3), and its hind leg is longer than
+     is not one: on land it hops (docs/03 s3), and its hind leg is longer than
      its hip is high, so any swing at the hip takes the foot through the ground on
      the way back and well above it on the way up -- which is how the frog of B19
      got its legs into the floor it was standing on. The kick belongs to the frog.
@@ -8885,7 +8885,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      steering, going round a wall, the water column, the hop -- writes x and z
      directly, and none of them had ever been watched for a minute at a time. */
   /* Death scatters the pack, and the whole point of scattering it rather than
-     deleting it is that it is retrievable (docs/en/06 s6). The fruit used to
+     deleting it is that it is retrievable (docs/06 s6). The fruit used to
      stay a metre above the height the body died at: measured, from a lake shore
      all 8 landed under water and one of them 29 m down, and on a roof all 8 hung
      in the air, up to 3 m above the ground beside them. */

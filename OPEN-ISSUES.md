@@ -3,13 +3,17 @@
 The working queue of unresolved problems, kept in git on purpose: `TODO.md` is
 gitignored (local notes between sessions), so this file is the copy that
 survives summarization and session boundaries. Measured claims about the game
-live in `docs/` (both languages); round-by-round history lives in the commit
-log. Update this file the moment a problem is found or closed, and commit it.
+live in `docs/` (the single English set, with the bilingual index beside it);
+round-by-round history lives in the commit log. Update this file the moment a
+problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `e0b20c2` (the kelp comment of the
-block table aligned to the amended law's lens, on top of the minimap's dots
-turned with the map (issue 8) and the star-twinkle fix of issue 7, all pushed
-to both remotes with their gate runs green). Issue 1 (night sky read as black blocks) is
+State at time of writing: round 26, tree `098ae22` (the docs prose drift of
+issue 9 pushed to both remotes with its gates green), with two further
+pieces in flight: the docs keep one language (issue 10) and the valley
+narrows to the frog (issue 11, staged). The watch (loop 14) ran to
+twenty-four green on the pre-removal tree; the next watch starts on the
+final tree. Issue 1 (night
+sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
 only. The meshing red of loop 3 run 7 is root-caused to CPU preemption and
@@ -132,7 +136,7 @@ leaf layer of the crowns they crossed, the altitude the flight gives them,
 with the hard-world reads of the same window at their own record; the game
 was not changed and the law was not moved, and the rig now carries the
 per-owl crown read so the next red of the line names the bird dragging the
-mean. The round now has one hundred and seventy-three faithful full green
+mean. The round now has one hundred and ninety-seven faithful full green
 runs, the six red lines of the round stand as recorded -- the first three
 root-caused and fixed, the kelp-law fifth resolved with its close-up read,
 the walking-soak fourth and the crown-line sixth read, recorded and watched
@@ -218,8 +222,9 @@ round's final tree.
 The suite's soak laws went red in roughly one run in three to six. Three
 laws were in the flake pool; the first two were recorded in round 25 (B34)
 and the third went red for the first time in round 26, loop 2, run 6. State
-at time of writing: one hundred and seventy-three faithful full green runs
-(loops 1-13; loop 13 came back five green and red on its sixth run); 2c is
+at time of writing: one hundred and ninety-seven faithful full green runs
+(loops 1-14; loop 13 came back five green and red on its sixth run, loop 14
+twenty-four green); 2c is
 root-caused, fixed and pinned, 2a re-opened by the red of loop 9
 run 2 and closed with the fix (the wall is asked of the cell the mote is
 stored in), 2b is watched with the loop (its recorded red line is a
@@ -564,15 +569,16 @@ the test-only close-up amendment resolved, and a sixth, the flock's crown
 line (2g, loop 13 run 6), which the read placed at the documented bottom
 of its range -- and the first three are root-caused and fixed, the fourth
 and the sixth stand read, recorded and watched, and the fifth stands
-resolved with its close-up read: one hundred and seventy-three faithful
+resolved with its close-up read: one hundred and ninety-seven faithful
 full green runs in the round (fifty-five on the tree before the
 correction, forty-nine on the corrected one, five on the lake-squares
 fixed tree -- the standalone play and the four all.sh runs, the two gate
 runs of each of its two commits -- twenty-four on that tree's watch, loop
 11, and forty on the star-fixed tree this session -- the standalone play
 and the ten all.sh runs, the two gate runs of each of its five commits,
-twenty-four on its watch loop 12, and five on its watch loop 13, which
-stopped on the red of its sixth run -- the counts included the way the
+twenty-four on its watch loop 12, five on its watch loop 13, which
+stopped on the red of its sixth run, and twenty-four on its watch loop 14,
+which finished clean -- the counts included the way the
 forty-one did), the tower-masonry entry (2c) is root-caused, corrected and
 pinned, the dust half (2a) re-opened by the red of loop 9 run 2 is closed
 with the fix, the walking-soak line (2f) stands recorded with its per-body
@@ -1191,6 +1197,141 @@ Status: fixed in `docs/en/{02,04,06,07}` and `docs/cn/{02,04,06,07}`
 `[]`/0/0, docs-sync all-consistent, docs-drift every injection detected,
 tree restored). The full gate-5 double still runs on this round's final
 tree per the standing contract.
+
+## 10. The docs keep one language (round 26; user decision)
+
+User, verbatim: 「当前的文档同时有英文和中文，我觉得这是一个不必要的
+浪费。只保留英文版。README可以同时保留中文和英文的，其他的文档保留英文
+就可以了。」
+
+Mid-stage the user asked, verbatim: 「为什么 docs 目录下面还有一个 README，
+还有一个 en 的层级？我们只有英语的文档了，还要什么层级？」 and, once the
+`en/` level was gone, again: 「为什么 docs 下面还有一个 readme？」 The `en/`
+level was a transition leftover from the one-language step: it had kept
+the new English set and the old index apart while the tests were rewritten.
+The `docs/README.md` index was the other half of the same leftover: the
+two-language era had an index in each place (the Chinese one at `docs/`
+and the English one at `docs/en/`), and merging the two sets had merged
+the two indexes into one file. With the root `README.md` / `README.zh.md`
+already the entry points, a third index under `docs/` carried nothing the
+root READMEs did not. Both were removed in this stage: the set moved flat
+into `docs/` (which now holds exactly the eight numbered chapters and
+nothing else), the level and the merged index were deleted, and the
+document index table now lives in the two root READMEs — the two files the
+user's 「README可以同时保留中文和英文的」 allows to stay in both languages.
+
+What that does: the setting documents sit flat in `docs/` -- exactly the
+eight numbered chapters `00..07` and nothing else. The document index
+lives in the two root READMEs, one half per language. What the user's
+instruction covers is the docs, not the game: the game's own strings stay
+bilingual in `game/data/i18n.js` (the language switch is a game feature,
+and `game/test/lang.js` checks the byte-identical save it promises), and
+the data files under `game/data/` keep their `cn`/`en` display names for
+the same reason.
+
+What changed:
+- deleted `docs/cn/` (8 docs + its README) and `tools/link-docs.js` (the
+  cross-language link rewriter, which existed only to keep the two sets
+  pointing at each other).
+- `docs/00..07`: moved out of the transitional `docs/en/` level, which is
+  deleted with its `README.md`; the set is flat in `docs/` and nothing
+  else sits there.
+- `docs/README.md`: the merged bilingual index, deleted after the user's
+  second question; its index table now lives in the root `README.md` and
+  `README.zh.md` (the two files that keep both languages).
+- root `README.md` / `README.zh.md`: a new "The setting documents" /
+  "设定文档" section carries the eight-row index; the layout block and the
+  docs pointer name `docs/` (the eight chapters, English); the tests list
+  no longer says "both languages" and counts the 48 drift injections.
+- `game/test/docs-sync.js`: the `LANGS` table has one entry now; the doc
+  dir is `docs/` itself; section 8 checks the tree instead ("the docs tree
+  keeps one language": neither `docs/cn` nor `docs/en` may exist, and
+  `docs/` holds exactly `00..07` -- no README, no loose md files); the
+  quest comparison is the twelve titles and hints (6 quests x 2 columns);
+  the banned fixed-protagonist-name and banned-mental-effect checks read
+  the data files plus the chapters, not an index.
+- `game/test/docs-drift.js`: the injection and restore paths are `docs/`
+  itself; the missing-file test unlinks `docs/07`; the loose-file test
+  drops `docs/stray.md`.
+- `docs/07`: the test-suite table names `docs/` and counts the 48
+  injections the drift test actually runs (the table's "52, four per
+  language" phrasing was a leftover of the two-set era).
+- `game/data/player.js` line 5: the header no longer names the Chinese
+  set; it lands with the `docs/en/`-to-`docs/` comment sweep across the
+  game sources, in this same commit (the sweep waits for the watch to
+  release `game/`).
+
+Status: flat rewrite done. Gates 1-4 re-run on the flat tree; the full
+contract with gate 5 lands once the watch (loop 14) ends, so the commit's
+double all.sh runs on the final tree of the stage.
+
+## 11. The valley narrows to the frog (round 26; user decision, staged)
+
+User, verbatim: 「我在考虑要不要删掉会飞行的动物…飞行这个动作的处理可能
+没有办法达到我的预期…去掉"飞行"这个概念…另外除了猫头鹰，我希望把熊也
+删掉，呃与熊相关的一些设定也删掉。这个游戏，我打算从青蛙开始。后续我再
+考虑增加什么东西。先把青蛙单独这一块，它的世界，它的动作，它的样子，我们
+全部优化到最好，然后再去增加东西。」
+
+Decisions the user made (verbatim): 「水母留下。劫掠不留。北岭的冷和熊
+一起删。蛙果降到普通档, 将来新果可能会有稀有档。按照你的规划来做吧，还是
+那个要求。嗯，这是一个重要且长远的项目。非必要的时候不要等我确认。持续
+做下去。」
+
+So: the flying animal (the owl) and the bear go, and with them everything
+that exists for them -- the player's flight physics, the owl post, the
+owl's fruit and form, the sky isles (nothing can reach them any more), the
+mountains' cold (its only immunity was the bear's body), and the raids on
+cellar trees (the raider was the bear or a thief the bear drew in). The
+jellyfish stays -- it is not flying, it stings, and the frog body's
+immunity to its sting is what the lake gives the player. The raids go even
+though the thief half is not a bear: the user said 劫掠不留, and without
+the bear the mechanism has no reason left.
+
+Frog pear drops from rare to common. The rarity ladder (common/uncommon/
+rare/epic/legendary) stays in full: the tiers are a rule, and future fruit
+may use the rare rung.
+
+Quests go from six to three: the owl's two (three owlberries; fly above
+30 m) die with the owl, the bear's one (carry a bruin fig home) dies with
+the bear, and the main cellar, Mirrorlake and the greenhouse keep theirs.
+The ids of the surviving quests are NOT renumbered: a save stores the done
+flags as `[id, done]` pairs, and renumbering would make an existing
+player's progress land on the wrong quest.
+
+Three stages, each with the full gate contract (gates 1-5, the all.sh
+double) and its own commit pushed to both remotes:
+- Stage A: flight + the owl. Player flight physics and the glide, the owl
+  species/fruit/form, its model, the owl post, the sky isles + cloudspire
+  zone + Old Beams POI (the beams' isle is where the structure stands),
+  quests q2/q3, the owl's epithet, the owl's i18n and help text, and every
+  test and doc claim that names any of it. The sixteen decorative cloud
+  blobs stay (scenery, not isles).
+- Stage B: the bear + the cold + the raids. The bear species/fruit/form,
+  its model, the mountains' cold (the mountains themselves stay, at
+  danger 3 -- the height is still the threat), the raid fields on the
+  cellar tree and the raid pass in the game, quest q5, the bear's
+  epithet, and the tests and docs that name them.
+- Stage C: the frog pear becomes common, the quest list is written as the
+  three that remain, and the scale tables and field counts settle on the
+  frog-only valley. These two gate-5 runs double as the round's final
+  double.
+
+What is deliberately NOT touched: the frog's movement code (the user's
+standing instruction puts animal movement above gameplay, and no measured
+fault exists there), the frog's laws in the suite, the jellyfish, the
+clouds, the mountains' terrain, and the RARITY ladder.
+
+Save note: a pre-refactor save stores fruit by id and block diffs by
+number, and the fruit block numbers are the index in the fruit table
+(40 + position), so an old save's 40/42 re-map onto the frog pear after
+the table narrows, and an old save's `owlberry` item id names a fruit the
+valley no longer has. This is a development prototype; the start screen
+offers to clear the save. Recorded here so it is a decision, not a
+surprise.
+
+Status: staged. The docs one-language commit (issue 10) lands first, then
+stages A, B, C in order; the standing watch resumes on the final tree.
 
 ## Standing contract (every session, in order)
 

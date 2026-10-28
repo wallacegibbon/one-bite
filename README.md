@@ -8,8 +8,26 @@ Eat it and you become the animal the fruit remembers, reverting after a while. Y
 
 What you actually do: find fruit, avoid what can hurt you, and walk somewhere you could not reach until you had the right body. There is nothing behind that waiting to be uncovered.
 
-- Full setting documents: [`docs/en/`](docs/en/README.md) (English) · [`docs/cn/`](docs/cn/README.md) (中文)
+- Full setting documents: the eight chapters in [`docs/`](docs/), English (the index is below)
 - Playable prototype: [`game/index.html`](game/index.html)
+
+## The setting documents
+
+Eight chapters, one language, in `docs/` — the root READMEs (this file and
+`README.zh.md`) carry the index in both languages:
+
+| Chapter | Contents |
+|---|---|
+| [00 — overview and design pillars](docs/00-overview-and-design-pillars.md) | Design pillars, experience goals, anti-goals, MVP boundary |
+| [01 — worldview and story](docs/01-worldview-and-story.md) | The valley (it has no name), the Grey Veil, the one magic, its three institutions |
+| [02 — map and scenes](docs/02-map-and-scenes.md) | Zone table, ASCII map, vertical layers, fruit gating graph, POIs |
+| [03 — characters and creatures](docs/03-characters-and-creatures.md) | Protagonist, NPCs, creatures, attitude matrix, named individuals |
+| [04 — fruit and transformation](docs/04-fruit-and-transformation.md) | Full table of the fruits, form abilities, side effects |
+| [05 — backpack and storage](docs/05-backpack-and-storage.md) | The storage mechanism (the one open question in the original brief): 3 options compared + the recommended design |
+| [06 — quests and progression](docs/06-quests-and-progression.md) | The invitations (quests), why there are no side quests, the codex, death and time |
+| [07 — art, audio, technical](docs/07-art-audio-technical.md) | Voxel art rules, palette, audio, rendering and data structures |
+
+`game/test/docs-sync.js` validates the set against `game/data/`: every number in the chapters is a number in the data, and a drift fails the build.
 
 ## Running the prototype
 
@@ -73,8 +91,7 @@ Mixed forms, the magic stomach, beast residue, the twelve side quests, the tradi
 ## Layout
 
 ```
-docs/cn/         setting documents in Chinese (8 + index)
-docs/en/         the same documents in English, same numbering
+docs/            the setting documents (English, 00-07)
 game/
   index.html     entry point
   css/ui.css     HUD styles
@@ -91,8 +108,8 @@ game/
 node game/test/node-smoke.js   # no browser: data → generation → meshing (fake GL)
 node game/test/probe.js        # camera spots and water depth for each zone / POI
 node game/test/reach.js        # every declared data field is either read by the code or listed as not built
-node game/test/docs-sync.js    # docs ↔ data consistency, both languages (exit 1 on drift)
-node game/test/docs-drift.js   # self-test: injects 24 errors into the docs, confirms docs-sync catches each one
+node game/test/docs-sync.js    # docs ↔ data consistency (exit 1 on drift)
+node game/test/docs-drift.js   # self-test: injects 48 errors into the docs, confirms docs-sync catches each one
 node game/test/play.js         # gameplay loop: harvest → regrow → capacity → transform → storage → cellar tree → raid → post → save
 node game/test/save.js         # save round trip: write a save, reload, continue from the start screen
 node game/test/upgrade.js      # backpack upgrades and slot maths

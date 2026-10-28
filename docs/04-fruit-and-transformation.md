@@ -1,7 +1,5 @@
 # 04 · Fruit and Transformation
 
-[中文: ../cn/04-果实与变形系统.md](../cn/04-果实与变形系统.md)
-
 Source of truth: `game/data/fruits.js`. Every number in this document comes straight from that file.
 
 **One fruit per animal.** The valley has four animals you can wear (03), so it has four transformation fruits. There is no "second fox fruit", and no fruit that belongs to no animal.

@@ -76,7 +76,7 @@ const { sim } = require('./simwait');
   await page.keyboard.up('w');
   out.push('veil ' + JSON.stringify(await P()));
 
-  // ---- camera comfort: the lens never cuts, the body never snaps (docs/en/07) ----
+  // ---- camera comfort: the lens never cuts, the body never snaps (docs/07) ----
   const bad = [];
   const check = (name, cond, detail) => { if (!cond) bad.push('CHECK FAILED: ' + name + ' ' + JSON.stringify(detail)); };
 

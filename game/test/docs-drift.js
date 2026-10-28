@@ -1,17 +1,17 @@
-/* Drift test: inject known errors into docs/en/ (and docs/ itself) and confirm docs-sync.js reports each one. */
+/* Drift test: inject known errors into docs/ and confirm docs-sync.js reports each one. */
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
-const EN = path.join(ROOT, 'docs', 'en');
+const DOCS = path.join(ROOT, 'docs');
 const BAK = path.join(ROOT, '.docs-backup');
 
-const files = fs.readdirSync(EN);
+const files = fs.readdirSync(DOCS).filter(f => f.endsWith('.md'));
 fs.rmSync(BAK, { recursive: true, force: true });
 fs.mkdirSync(BAK);
-for (const f of files) fs.copyFileSync(path.join(EN, f), path.join(BAK, f));
+for (const f of files) fs.copyFileSync(path.join(DOCS, f), path.join(BAK, f));
 
-const restore = () => { for (const f of files) fs.copyFileSync(path.join(BAK, f), path.join(EN, f)); };
+const restore = () => { for (const f of files) fs.copyFileSync(path.join(BAK, f), path.join(DOCS, f)); };
 const run = () => {
   try { const out = execSync('node game/test/docs-sync.js', { cwd: ROOT, encoding: 'utf8' }); return { code: 0, out }; }
   catch (e) { return { code: e.status, out: (e.stdout || '') + (e.stderr || '') }; }
@@ -83,7 +83,7 @@ const DRIFTS = [
 
 let missed = 0;
 for (const [file, from, to, label] of DRIFTS) {
-  const p = path.join(EN, file);
+  const p = path.join(DOCS, file);
   const md = fs.readFileSync(p, 'utf8');
   if (!md.includes(from)) { console.log(`SETUP FAIL: "${from}" not in ${file}`); missed++; continue; }
   fs.writeFileSync(p, md.replace(from, to));
@@ -99,30 +99,30 @@ for (const [file, from, to, label] of DRIFTS) {
 }
 
 // missing counterpart file
-fs.unlinkSync(path.join(EN, '07-art-audio-technical.md'));
+fs.unlinkSync(path.join(DOCS, '07-art-audio-technical.md'));
 {
   const r = run();
-  console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [missing en counterpart] exit=${r.code}`);
+  console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [missing doc] exit=${r.code}`);
   if (r.code === 0) missed++;
   else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
 }
 restore();
 
-// a stray markdown file left directly in docs/ (the two language folders must be the only ones)
-fs.writeFileSync(path.join(ROOT, 'docs', 'README.md'), '# stray\n');
+// a stray markdown file left directly in docs/ (the eight numbered docs are the only .md that belong there)
+fs.writeFileSync(path.join(ROOT, 'docs', 'stray.md'), '# stray\n');
 {
   const r = run();
   console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [loose md in docs/] exit=${r.code}`);
   if (r.code === 0) missed++;
   else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
 }
-fs.unlinkSync(path.join(ROOT, 'docs', 'README.md'));
+fs.unlinkSync(path.join(ROOT, 'docs', 'stray.md'));
 
-// a fixed protagonist name must never come back (Chinese set)
+// a fixed protagonist name must never come back
 {
-  const CN = path.join(ROOT, 'docs', 'cn'), f = '03-角色与生物.md', p = path.join(CN, f);
+  const f = '03-characters-and-creatures.md', p = path.join(DOCS, f);
   const bak = fs.readFileSync(p, 'utf8');
-  fs.writeFileSync(p, bak.replace('### 采集者（16 岁）—— 名字由玩家决定', '### 林奈（Linnaeus，16 岁）'));
+  fs.writeFileSync(p, bak.replace('### The forager (16) — the name is the player\'s', '### Linnaeus (the forager, 16) — the name is the player\'s'));
   const r = run();
   console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [fixed protagonist name] exit=${r.code}`);
   if (r.code === 0) missed++;
@@ -130,24 +130,9 @@ fs.unlinkSync(path.join(ROOT, 'docs', 'README.md'));
   fs.writeFileSync(p, bak);
 }
 
-// a design that was cut must stay out of the Chinese docs as well: one
-// injection per phrase in the cn `cut` list
-{
-  const CN = path.join(ROOT, 'docs', 'cn'), f = '04-果实与变形系统.md', p = path.join(CN, f);
-  const bak = fs.readFileSync(p, 'utf8');
-  for (const [phrase, label] of [['混胃', 'mixed stomach'], ['混合形态', 'mixed form'], ['魔力胃', 'magic stomach'], ['兽化残留', 'beast residue']]) {
-    fs.writeFileSync(p, bak.replace('### 5.1 时间条', `### 5.1 时间条\n\n有 \`${phrase}\` 者可得两种身体共存。`));
-    const r = run();
-    console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [cut design back in, cn: ${label}] exit=${r.code}`);
-    if (r.code === 0) missed++;
-    else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
-    fs.writeFileSync(p, bak);
-  }
-}
-
 // identity numbers in the English docs must match IDENTITY
 {
-  const f = '03-characters-and-creatures.md', p = path.join(EN, f);
+  const f = '03-characters-and-creatures.md', p = path.join(DOCS, f);
   const bak = fs.readFileSync(p, 'utf8');
   fs.writeFileSync(p, bak.replace('nameMax 16 characters', 'nameMax 20 characters'));
   const r = run();
