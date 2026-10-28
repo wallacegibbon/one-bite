@@ -893,7 +893,15 @@ scatter reads 0.151% of the frame (issue 4's 0.20% at the same time, when
 every star stood at its brightest; the law's bound is half a tenth to one
 percent) and its largest bright patch is 30 pixels (bound 500; the probe
 frame's is the same 46 as before the fix). At midnight the sharp-star
-count reads 710 (the stars-only-in-dark bound is fifty).
+count reads 710 (the stars-only-in-dark bound is fifty). An audit of the
+whole sky (a double-precision replica of the shader's three hashes over
+the 237,300 grid cells that stand on the unit sphere above the gate, no
+GPU in it) finds 842 stars -- the mask's 0.355% of the cells, unchanged by
+the fix -- with the mean phase fraction at 0.503 against 0.5 and the mean
+speed at 1.531 against 1.5 of a uniform [0.5, 2.5]; the chi-square over
+the twenty phase bins is 30.5 (df 19: just over the 95% bound of 30.14,
+under the 99% bound of 36.19 -- a chance-level wobble, no pattern in the
+bins) and over the ten speed bins 3.9.
 
 **Pinned (test-only, `game/test/play.js`, `starsTwinkleOnTheirsOwnClocks`,
 the 10s sky family).** The same lens, four grabs one game-second apart:
