@@ -5094,7 +5094,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      emissive micro mesh taken out, and with the ordinary one taken out. A lake
      frame at noon has no self-lit block in it -- the jellyfish lamps are
      bodies and are drawn elsewhere -- so the first pair has to be the same
-     frame, and the kelp is in the frame, so the second pair has not be. */
+     frame, and the kelp is in the frame, so the second pair has to be different. */
   const kelpFrame = await step('theKelpInTheLakeIsNotALamp', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
@@ -10003,7 +10003,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       p.x = spot.x; p.z = spot.z + 1.2;
       /* Feet on the shelf, not on the highest thing in the column: `groundY`
          answers "the top of the highest solid block", and a crown is solid, so
-         over a shelf with a tree standing in it it put the body down on the
+         over a shelf with a tree standing in it, it put the body down on the
          leaves seven metres up, inside its own crown, and the step's own guard
          sent every body away. The shelf is level at gy over every cell a body
          can stand in here, so gy is the surface under its feet. */

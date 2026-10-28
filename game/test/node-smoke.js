@@ -33,6 +33,34 @@ const F = window.FRUTARIA;
   console.log('i18n 语言', ids.join('/'), '每语言', keys.length, '键', bad ? '!! ' + bad + ' 张表不一致' : 'OK');
   if (bad) process.exitCode = 1;
 }
+/* Keys built at runtime never appear in the HTML, so the table check above
+   never asks about them, and a missing one does not crash: t() prints the
+   raw dotted key into the UI as is. Every reaction the observe log can
+   print -- the fallback and each value the attitude tables hold -- and
+   every store name the store code can ask for must hold a non-empty string
+   in every language. */
+{
+  const ids = F.LANGS.map(l => l.id);
+  const reactions = new Set(['flee', 'hostile', 'curious', 'ignore']);
+  for (const c of F.CREATURES)
+    for (const v of Object.values(c.attitude || {})) reactions.add(v);
+  const storeKeys = ['cellar', 'tree', 'yourTree'];
+  let bad = 0;
+  for (const id of ids) {
+    for (const r of reactions)
+      if (typeof F.T[id]['att.' + r] !== 'string' || !F.T[id]['att.' + r].trim()) {
+        bad++;
+        console.log('!! i18n 动态键', id, '缺 att.' + r + '（观察日志会原样打印键名）');
+      }
+    for (const k of storeKeys)
+      if (typeof F.T[id]['store.' + k] !== 'string' || !F.T[id]['store.' + k].trim()) {
+        bad++;
+        console.log('!! i18n 动态键', id, '缺 store.' + k + '（窖名会原样打印键名）');
+      }
+  }
+  console.log('i18n 动态键 att.*/store.*', ids.join('/'), '每语言', reactions.size + storeKeys.length, '键', bad ? '!! 缺 ' + bad + ' 条' : 'OK');
+  if (bad) process.exitCode = 1;
+}
 /* A model has to fit the box its body collides with. The box is a square
    footprint that does not turn with the body, so what matters is the model's
    horizontal **radius**: a model wider than its box walks an arm, a snout or a

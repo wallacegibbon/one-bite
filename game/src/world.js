@@ -192,7 +192,7 @@
      never drops below 0.74 and takes no AO, so the blob still has a shape.
      A canopy is the same object for the same reason: a crown is a blob of leaf
      blocks, its underside is the face you look at when you stand under the
-     tree, and the ring of solid its crevice samples are is the crown itself.
+     tree, and the ring of solid its crevice samples is the crown itself.
      Leaf blocks are soft too. */
   const SOFT_S = FACES.map(f => 0.55 + 0.45 * f.s);
   /* How far a face has to look clear, along its own normal, before it is taken
