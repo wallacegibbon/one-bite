@@ -806,9 +806,23 @@ and it stood at the same 3,549 in the standalone run and in both round-end
 runs of the fixed tree, with the emissive-removal read still exactly 0 in
 every one.
 
+**The comment it owes (found during the docs alignment, same day).** The
+comment on the kelp row of the block table (`game/src/world.js`) still tells
+the pre-amendment story: the noon frame a metre above the surface, 574
+pixels taken out with the emissive mesh. That reading is the discovery
+measurement of the lit-stalks bug, and it is kept in the rewritten comment
+as history, but the comment must also tell where the law reads now: under
+the surface, 1.2 m over the top of the stem of the stalk nearest the water
+seven metres deep, 0 pixels with the emissive mesh out and 3,549 with the
+ordinary one (largest difference 4.9, bound 200). Queued behind the
+standing watch (no edit of a `game/` source while its Chrome runs); full
+gates on landing. The kelp line of the technical doc in both languages was
+rewritten to the amended lens the same day (docs-only diff, gates 1-4).
+
 Status: root-caused and fixed; the round-end gates on the fixed tree came
 back green twice, and the standing watch ran loop 11 on that tree and came
-back twenty-four green in a row.
+back twenty-four green in a row. The comment alignment above is queued
+behind the standing watch; the technical-doc line is already aligned.
 
 ## 6. Glowing dots over the water of Mirrorlake at night (round 26; user report)
 
