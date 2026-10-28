@@ -509,7 +509,8 @@ the read found the walk-stop-walk the wander state gives a bear between
 errands and no fault in the bear's code, so the game was not changed and
 the rig now carries the per-body read so the next red of it is readable.
 Loop 11 (on the lake-squares fixed tree) — runs 1-24 green: no red,
-nothing to parse.
+nothing to parse. Loop 12 (on the star-fixed tree) — runs 1-24 green: no
+red, nothing to parse.
 Across all of it the laws have gone red five times in the round -- twice on
 the recorded lines of round 25 (2c in loop 2 run 6, 2a in loop 9 run 2),
 once on the meshing budget (2d, not a soak law, loop 3 run 7), once on the
@@ -517,21 +518,23 @@ new walking-soak line (2f, loop 10 run 4), and a fifth, the kelp law's
 non-vacuity read (section 5), which the pane fix of issue 5 surfaced and
 the test-only close-up amendment resolved -- and the first three are
 root-caused and fixed, the fourth is read, recorded and watched, and the
-fifth stands resolved with its close-up read: one hundred and thirty-eight
+fifth stands resolved with its close-up read: one hundred and sixty-two
 faithful full green runs in the round (fifty-five on the tree before the
 correction, forty-nine on the corrected one, five on the lake-squares
 fixed tree -- the standalone play and the four all.sh runs, the two gate
 runs of each of its two commits -- twenty-four on that tree's watch, loop
-11, and five on the star-fixed tree this session -- the standalone play
-and the four all.sh runs, the two gate runs of each of its two commits --
-the counts included the way the forty-one did), the tower-masonry entry (2c)
+11, and twenty-nine on the star-fixed tree this session -- the standalone
+play and the four all.sh runs, the two gate runs of each of its two
+commits, and twenty-four on the star-fixed tree's watch, loop 12 -- the
+counts included the way the forty-one did), the tower-masonry entry (2c)
 is root-caused, corrected and pinned, the dust half (2a) re-opened by the
 red of loop 9 run 2 is closed with the fix, the walking-soak line (2f)
 stands recorded with its per-body read, and the kelp-law line stands
 resolved with its close-up read. The next red, whatever it is, gets parsed
-with `parse.py` and read before anything is touched; the loop keeps running
-as the standing watch (loop 12 is the current one, on the star-fixed tree;
-loop 11 came back twenty-four green in a row on the fixed tree).
+with `parse.py` and read before anything is touched; the loop keeps
+running as the standing watch, and loop 12 on the star-fixed tree came
+back twenty-four green in a row, loop 11 the same on the lake-squares
+fixed tree.
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -951,34 +954,55 @@ copy of the rotation. The view direction the game itself uses is
 (sin yaw, -cos yaw) (game.js:597), and R(-yaw) sends it to (0, -1) --
 straight up on the screen -- for every yaw, so the terrain reads as a
 correct forward-up map; the dots agree with the terrain only when -yaw is
-a multiple of pi.
+a multiple of pi. There is a second defect on the same lines: the
+terrain image is drawn one pixel per cell -- the drawImage carries no
+scale factor -- while the dots are stretched by (S/2)/R2, 1.3871 pixels
+per cell, so even at a heading where the rotations cancel, a dot stands
+38.7 % out from the marker it is meant to sit on.
 
-**Measured (pure math, no GPU; /tmp/m26flake/minimap.js).** At yaw 0 the
-dots and the terrain agree; at yaw pi/2 the dots sit a quarter turn off
-(terrain forward (0,-1), dots forward (-1,0)); at the opening yaw they are
-exactly mirrored. Concrete case: the player at the street spawn
-(136.5, 128.5) at the opening yaw (-pi/2, facing -X), Frogshall's marker
-at (92, 120) -- in front of the player, 45.3 cells off, 62.8 px on the
-172 px map. The terrain paints it 61.7 px above the map centre (in front:
-correct); the dots paint it 61.7 px below (behind: wrong). The creature
-dots are wound the same way.
+**Measured (pure math, no GPU; /tmp/m26flake/minimap.js; in the page,
+/tmp/m26flake/minimap3.js).** At yaw 0 the
+rotations cancel and the dots sit on the 1.3871-stretched radius; at yaw
+pi/2 the dots carry a quarter turn on top of it (terrain forward (0,-1),
+dots forward (-1,0)); at the opening yaw they are exactly mirrored.
+Concrete case: the player at the street spawn (136.5, 128.5) at the
+opening yaw (-pi/2, facing -X), Frogshall's marker at (92, 120) -- 45.3
+cells in front. The terrain paints it 44.5 px above the map centre
+(in front: correct); the dots paint it at 61.7 px right and 11.8 px
+below -- the terrain position rotated a quarter turn and stretched
+1.387 times, which is what the two defects do to it. The creature dots
+are wound the same way.
 
-**Fix (queued behind the standing watch; `game/src/ui.js`,
-`drawMinimap`).** The dots are drawn where the terrain is drawn: in the
-rotated frame, at the world offset directly -- `(dx, dz) * scale` -- with
-no hand rotation (the cull stays on the same radius, which a rotation
-does not change). Then the dots share the terrain's transform and agree
-with it for every yaw; the hand rotation and its lines go. Verified the
-way the bug was found (the pure-math chain agrees at 720 headings after
-the fix), then pinned in the page: a new law reads the minimap's own
-canvas pixels at two stand positions (the street spawn, and the dry
-column at (55.5, 78.5) west of the lake) and three headings, and checks
-every in-range marker's dot against the terrain-predicted position
-(world, yaw and canvas are all deterministic, so the read is).
+**Fix (landed; `game/src/ui.js`, `drawMinimap`).** The dots are drawn
+where the terrain is drawn: in the already-rotated frame, at the raw
+world offset `(dx, dz)` -- one pixel per cell, the way the terrain image
+is placed -- with no hand rotation and no stretch (the cull stays on the
+same radius in cells, which neither a rotation nor a stretch changes, so
+the same places and creatures show dots as before, only on their own
+marks). The `scale` line, its no-op `ctx.scale(1, 1)` and the
+hand-rotation lines go. Measured in the page on both sides (two stands:
+the street spawn and the dry column at (55.5, 78.5) west of the lake;
+three headings: pi, pi/2, 0): before the fix, every in-range marker's
+dot sat 16.5 to 17.9 px from the place the terrain gives it, and the
+nearest warm cluster at the terrain position was the one-pixel sliver of
+the marker baked into the map image -- or nothing at all for the markers
+over water, where the sliver reads too blue to count; after the fix the
+same read puts every one 0.7 px from it, in a nine-pixel cluster -- the
+dot on its own marker. Pinned in the page: a new law
+(`theMinimapDotsTurnWithTheMap`) reads the minimap's own canvas pixels at
+the two stands and three headings and checks that every in-range place
+shows a dot-sized warm mark within 3 px of its terrain position --
+dot-sized on purpose, since the one-pixel baked marker satisfies the
+position but not the size, so the law fails on a re-introduced rotation,
+on a re-introduced stretch, and on a deleted dot loop alike (world, yaw
+and canvas are all deterministic, so the read is). The canary ran the
+suite with the fix reverted: exactly one red line, this check, and the
+save round-trip that follows the step came back ok.
 
-Status: root-caused and measured; the fix is queued behind the standing
-watch (no edit of a `game/` source while its Chrome runs), full gates on
-landing, then a pin.
+Status: root-caused, fixed and pinned. The standing watch had finished
+its loop on the tree before the edit (twenty-four green in a row), so no
+`game/` source was touched while its Chrome ran; the full gates run on
+the landing tree before the push.
 
 ## Standing contract (every session, in order)
 

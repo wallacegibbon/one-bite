@@ -11600,6 +11600,81 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('nor is a joint in motion a joint made of one colour on both sides of the line',
     mrows.every((r) => r.pctSame <= 5), mrows);
 
+  /* The minimap paints its places and its creatures on top of the terrain it
+     spins with. The terrain image sits one pixel per cell in a frame that is
+     already rotated to the heading, so a dot drawn at the raw offset stands on
+     its own place; a dot rotated a second time by hand and stretched by the
+     map's zoom turns twice as fast as the ground under it and drifts off the
+     marker it is meant to sit on. This reads the map's own canvas back: from
+     two stands, at three headings, every in-range place has to show a dot-sized
+     warm mark where the terrain puts it. The faint marker baked into the terrain
+     alone is one pixel; a dot standing on it is nine. One pixel is a place
+     remembered; nine is a place pointed at. */
+  const mapDots = await step('theMinimapDotsTurnWithTheMap', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, sp = N.spawn;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      time: g.time, mode: g.mode, third: g.thirdPerson, hover: g.hover, form: p.form,
+      creatures: g.creatures, drops: g.drops, parts: g.particles ? g.particles.n : 0 };
+    const mm = document.getElementById('minimap');
+    const ctx = mm.getContext('2d');
+    const S = mm.width, C = S / 2;
+    const rot = (t, v) => { const c = Math.cos(t), s = Math.sin(t); return [c * v[0] - s * v[1], s * v[0] + c * v[1]]; };
+    const poses = [[sp.x, sp.y, sp.z], [55.5, 21.05, 78.5]];
+    const shots = [];
+    for (const pose of poses) for (const yaw of [Math.PI, Math.PI / 2, 0]) {
+      p.x = pose[0]; p.y = pose[1]; p.z = pose[2]; p.yaw = yaw; p.pitch = 0;
+      p.vx = p.vy = p.vz = 0; g.mode = 'play'; g.thirdPerson = false; g.hover = null; p.form = null;
+      g.creatures = []; g.drops = []; if (g.particles) g.particles.n = 0;
+      g._camFrame = g.shootCamera(p); g.updateEnv(); g.render(); g.ui.update();
+      const img = ctx.getImageData(0, 0, S, S).data;
+      const warm = new Uint8Array(S * S);
+      for (let Y = 0; Y < S; Y++) for (let X = 0; X < S; X++) {
+        const i = (Y * S + X) * 4;
+        if (img[i] > 240 && img[i + 1] > 200 && img[i + 2] < 185 && img[i + 3] >= 200) warm[Y * S + X] = 1;
+      }
+      const seen = new Uint8Array(S * S);
+      const clusters = [];
+      for (let Y = 0; Y < S; Y++) for (let X = 0; X < S; X++) {
+        const i = Y * S + X;
+        if (!warm[i] || seen[i]) continue;
+        const stack = [[X, Y]]; seen[i] = 1;
+        let n = 0, sx = 0, sy = 0;
+        while (stack.length) {
+          const q2 = stack.pop(); n++; sx += q2[0]; sy += q2[1];
+          for (const k of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = q2[0] + k[0], ny = q2[1] + k[1];
+            if (nx < 0 || ny < 0 || nx >= S || ny >= S) continue;
+            const j = ny * S + nx;
+            if (!seen[j] && warm[j]) { seen[j] = 1; stack.push([nx, ny]); }
+          }
+        }
+        clusters.push({ dx: sx / n - C, dy: sy / n - C, n });
+      }
+      const pois = [];
+      for (const q of N.POIS) {
+        const d = [q.x - pose[0], q.z - pose[2]];
+        const dist = Math.hypot(d[0], d[1]);
+        if (dist <= 12 || dist >= 62) continue;
+        const at = rot(-yaw, d);
+        let near = 1e9, size = 0;
+        for (const cl of clusters) {
+          const dd = Math.hypot(cl.dx - at[0], cl.dy - at[1]);
+          if (dd < near) { near = dd; size = cl.n; }
+        }
+        pois.push({ id: q.id, d: +dist.toFixed(2), near: +near.toFixed(2), size });
+      }
+      shots.push({ x: pose[0], z: pose[2], yaw: +yaw.toFixed(4), pois });
+    }
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch;
+    p.vx = was.vx; p.vy = was.vy; p.vz = was.vz; g.time = was.time; g.mode = was.mode;
+    g.thirdPerson = was.third; g.hover = was.hover; p.form = was.form;
+    g.creatures = was.creatures; g.drops = was.drops;
+    if (g.particles) g.particles.n = was.parts; g._camFrame = null;
+    return { shots };
+  });
+  check('the minimap dots stand where the map puts the places: from two stands at three headings, every in-range place shows a dot-sized mark within 3 px of its terrain position',
+    mapDots.shots.every((s) => s.pois.length > 0 && s.pois.every((q) => q.near < 3 && q.size >= 4)),
+    mapDots.shots);
 
   /* A save is the only thing standing between a day of walking and nothing at
      all. The step that used to cover it read one field back -- the id -- and the

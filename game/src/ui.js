@@ -92,29 +92,27 @@
       ctx.save();
       ctx.beginPath(); ctx.arc(S / 2, D / 2, S / 2 - 1, 0, 6.283); ctx.clip();
       ctx.fillStyle = '#0b1018'; ctx.fillRect(0, 0, S, D);
-      const scale = (S / 2) / R2;
+      /* The map image sits one pixel per cell in this already-rotated frame,
+         so the dots take the same raw offsets. Hand-rotating them a second
+         time and stretching them by (S/2)/R2 spun the dots twice as fast as
+         the map and parked them off their own markers. */
       ctx.translate(S / 2, D / 2);
       ctx.rotate(-p.yaw);
       ctx.drawImage(this.mmBase, -p.x, -p.z, W.w, W.d);
-      ctx.scale(1, 1);
       // POI
       for (const q of N.POIS) {
         const dx = (q.x - p.x), dz = (q.z - p.z);
-        const rx = dx * Math.cos(-p.yaw) - dz * Math.sin(-p.yaw);
-        const rz = dx * Math.sin(-p.yaw) + dz * Math.cos(-p.yaw);
-        if (Math.hypot(rx, rz) > R2) continue;
+        if (Math.hypot(dx, dz) > R2) continue;
         ctx.fillStyle = 'rgba(255,236,170,0.95)';
-        ctx.beginPath(); ctx.arc(rx * scale, rz * scale, 2.2, 0, 6.283); ctx.fill();
+        ctx.beginPath(); ctx.arc(dx, dz, 2.2, 0, 6.283); ctx.fill();
       }
       // creatures
       for (const c of this.g.creatures) {
         const dx = (c.x - p.x), dz = (c.z - p.z);
         if (Math.hypot(dx, dz) > R2) continue;
-        const rx = dx * Math.cos(-p.yaw) - dz * Math.sin(-p.yaw);
-        const rz = dx * Math.sin(-p.yaw) + dz * Math.cos(-p.yaw);
         const hostile = (c.sp.attitude || {}).default === 'hostile' || c.state === 'chase';
         ctx.fillStyle = hostile ? 'rgba(255,110,90,0.9)' : 'rgba(150,230,255,0.75)';
-        ctx.fillRect(rx * scale - 1, rz * scale - 1, 2, 2);
+        ctx.fillRect(dx - 1, dz - 1, 2, 2);
       }
       ctx.restore();
       // player heading
