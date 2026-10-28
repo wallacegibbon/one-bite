@@ -2132,6 +2132,71 @@ const { sim } = require('./simwait');
   check('and no bright mass stands in the night sky: the largest bright patch is one stretched star cell, not a grid',
     starField.largest < 500, starField);
 
+  /* 10s. each star keeps its own clock. The star mask picks the cells whose
+     hash sits in the sliver [0.9965, 1) -- and the twinkle took its phase from
+     that very value times 40, which spans a mere 0.14 radians. Every star
+     shared one phase and one speed, so the whole sky brightened and dimmed in
+     unison: the human saw all the stars light up and fade at once. Phase and
+     speed now come from two more full-range hashes of the cell (engine.js,
+     FS_SKY): the phase uniform on the circle, the speed a fifth to a quarter
+     of a turn per second, so the stars twinkle on their own clocks while the
+     mask is untouched and the scatter above stays the same scatter. Measured
+     at the scatter law's lens (30 m over the lake, 77 degrees up, the moon out
+     of the frame) at four game times one second apart: in every step 749..823
+     star pixels brightened while 726..808 dimmed at the same time, all 1686
+     star pixels that ever lit swung more than 30 of luminance across the four
+     seconds, and no star moved from its place. A single phase again sends one
+     side of every step to zero. */
+  const twinkle = await step('starsTwinkleOnTheirsOwnClocks', () => {
+    const g = window.game, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
+      time: g.time, mode: g.mode, frame: g._camFrame, third: g.thirdPerson };
+    g.mode = 'play'; g.thirdPerson = false; g.hover = null;
+    p.form = null; p.vx = p.vy = p.vz = 0;
+    /* The scatter law's sky-only lens: the moon sits out of the frame, so a
+       bright pixel is a star and its luminance moves only if the twinkle
+       moves it. Four grabs one game-second apart. */
+    p.x = 100; p.z = 90; p.y = 30; p.yaw = 0.4; p.pitch = 1.35;
+    const grab = (t) => {
+      g.time = t; g.updateEnv();
+      g._camFrame = g.shootCamera(p); g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const L = new Float32Array(w * h);
+      for (let i = 0, j = 0; i < px.length; i += 4, j++) L[j] = px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
+      return { L, w, h };
+    };
+    const frames = [50, 51, 52, 53].map((t) => grab(t));
+    const { w, h } = frames[0];
+    const everLit = new Uint8Array(w * h);
+    for (const f of frames) for (let i = 0; i < w * h; i++) if (f.L[i] > 110) everLit[i] = 1;
+    let ever = 0, swinging = 0;
+    const perStep = [];
+    for (let s = 1; s < frames.length; s++) perStep.push({ up: 0, down: 0 });
+    for (let i = 0; i < w * h; i++) {
+      if (!everLit[i]) continue;
+      ever++;
+      let lo = 999, hi = 0;
+      for (const f of frames) { if (f.L[i] < lo) lo = f.L[i]; if (f.L[i] > hi) hi = f.L[i]; }
+      if (hi - lo > 30) swinging++;
+      for (let s = 1; s < frames.length; s++) {
+        const d = frames[s].L[i] - frames[s - 1].L[i];
+        if (d > 10) perStep[s - 1].up++;
+        else if (d < -10) perStep[s - 1].down++;
+      }
+    }
+    g._camFrame = null; g.render();
+    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
+    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
+    g.thirdPerson = was.third;
+    return { ever, swinging, perStep };
+  });
+  check('while some stars brighten others dim in the same second: the sky does not breathe as one lamp',
+    twinkle.perStep.every((s) => s.up > 200 && s.down > 200), twinkle);
+  check('and the twinkle has amplitude: well over a quarter of the stars that lit moved a third of the twinkle range or more across four seconds',
+    twinkle.swinging > 400, twinkle);
+
   /* 10s. the dark of a night is the sky's light, not a grey. The world shader lit
      every surface by `uDay` -- 0.16 of its own colour at midnight -- and nothing
      else, so a dark material (conifer 0.14/0.30/0.20, dark leaf, roof tile) came

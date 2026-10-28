@@ -455,7 +455,15 @@
     if (starLit > 0.05 && d.y > 0.02) {
       vec3 g = floor(d*160.0);
       float h = hash(g);
-      float star = step(0.9965, h) * (0.6 + 0.4*sin(uTime*2.0 + h*40.0));
+      // The mask above pins every lit cell's h into the 0.0035 sliver
+      // [0.9965, 1), so h*40.0 left the whole sky with one shared phase and
+      // one shared speed: every star brightened and dimmed in unison, like a
+      // single lamp breathing. Phase and speed now come from two more
+      // full-range hashes of the same cell, so each star keeps its own clock
+      // while the mask is untouched and the scatter stays the same scatter.
+      float ph = 6.28318 * hash(g + vec3(0.5, 0.0, 0.0));
+      float sp = 0.5 + 2.0 * hash(g + vec3(0.0, 0.5, 0.0));
+      float star = step(0.9965, h) * (0.6 + 0.4*sin(uTime * sp + ph));
       col += vec3(star) * starLit * smoothstep(0.02, 0.35, d.y);
     }
     gl_FragColor = vec4(col, 1.0);
