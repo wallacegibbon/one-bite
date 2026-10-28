@@ -6,8 +6,8 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `251c5af` (the lake-squares fix of
-issue 5, pushed to both remotes, round-end gates green twice). Issue 1 (night sky read as black blocks) is
+State at time of writing: round 26, tree `969e62b` (the star-twinkle fix of
+issue 7 and its pinning law, pushed to both remotes, round-end gates green twice). Issue 1 (night sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
 only. The meshing red of loop 3 run 7 is root-caused to CPU preemption and
@@ -79,9 +79,35 @@ pixel for pixel. The fix surfaced a fifth red in the round: the kelp law's
 non-vacuity read was riding on two far stalks at the edge of the frame whose
 contrast the cull took, and it is resolved by the test-only amendment that
 puts the lens under the surface a metre and a half above a stalk and reads
-it at two lum. The round now has one hundred and nine faithful full green
-runs, the four earlier red lines stand as recorded and this fifth is
-resolved, and the standing watch is loop 11 on the fixed tree.
+it at two lum. The watch of the lake-squares tree (loop 11) came back
+twenty-four green in a row -- no red, nothing to parse. The user's star
+report (issue 7: all the stars lit and dimmed in unison) is root-caused to
+the star mask's own value doubling as the twinkle's phase -- the mask pins
+each star's hash in a sliver of 0.0035, and the phase fed to the twinkle,
+that value times forty, spans 0.14 radians, so every star shared one phase
+and one speed and the whole sky breathed as one lamp -- and is fixed with
+two more full-range hashes of the star's cell, one for the phase (uniform on
+the circle) and one for the speed (a fifth to a quarter of a turn per
+second), the mask untouched, and pinned by a new law of the sky family:
+measured at the scatter's lens over four game seconds, in every second
+454..524 star pixels brightened while 408..491 dimmed at the same time (the
+suite's 900x560 frame; at the 1200x700 probe frame the same read counts
+749..823 against 726..808), all the star pixels that ever lit swung more
+than thirty of luminance across the four seconds, the scatter at its own
+time reads 0.151% of the frame with its largest bright patch 30 pixels,
+the midnight count reads 710 against its bound of fifty, and no star moved
+a pixel from its place between the grabs. The user's underwater-glow
+question (issue 6: blocks under the water still lit) is measured to be the
+lake's own lamps, not a leftover of the kelp panes: the census counts zero
+self-lit blocks under the water, the kelp law still reads its close-up
+stalk with its emissive removal at exactly zero, and the dots the user
+photographed are the ten lamp jellies drifting a metre or two under the
+surface on the sunken tower's outline (their own dex: from the surface, the
+tower glows) and the eight frogpears on the tower's window sills, which the
+water's own path turns from the lamps' blue to the green the user saw. The
+round now has one hundred and thirty-eight faithful full green runs, the
+four earlier red lines stand as recorded and the kelp-law fifth stands
+resolved, and the standing watch is loop 12 on the star-fixed tree.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -453,10 +479,10 @@ Faithful repro = full `node game/test/play.js` under Chrome/puppeteer
 (swiftshader), one run ~6-7 minutes. Loop scripts in `/tmp/m26flake/` (not in
 the repo): `loop.sh` / `loop2.sh` / `loop3.sh` / `loop4.sh` / `loop5.sh` run
 12 sequential full suites into
-`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` / `loop8.sh` / `loop9.sh` / `loop10.sh` / `loop11.sh` run 24 each into
-`{r6-*,r7-*,r8-*,r9-*,r10-*,r11-*}.log`. All stop at the first
+`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` / `loop8.sh` / `loop9.sh` / `loop10.sh` / `loop11.sh` / `loop12.sh` run 24 each into
+`{r6-*,r7-*,r8-*,r9-*,r10-*,r11-*,r12-*}.log`. All stop at the first
 red and append `GREEN/RED on run N` + `CHECKFAILED=<n>` to
-`status{,2,3,4,5,6,7,8,9,10,11}`.
+`status{,2,3,4,5,6,7,8,9,10,11,12}`.
 Parse a red log with `python3 /tmp/m26flake/parse.py <log>` — never `tail`
 or `sed` the whole line (one step prints one ~100 KB JSON line). The parser
 prints the soak's entry window (per-frame lines near the tower column:
@@ -482,6 +508,8 @@ the walking-soak law (2f below), a new line, outside every measured range;
 the read found the walk-stop-walk the wander state gives a bear between
 errands and no fault in the bear's code, so the game was not changed and
 the rig now carries the per-body read so the next red of it is readable.
+Loop 11 (on the lake-squares fixed tree) — runs 1-24 green: no red,
+nothing to parse.
 Across all of it the laws have gone red five times in the round -- twice on
 the recorded lines of round 25 (2c in loop 2 run 6, 2a in loop 9 run 2),
 once on the meshing budget (2d, not a soak law, loop 3 run 7), once on the
@@ -489,18 +517,21 @@ new walking-soak line (2f, loop 10 run 4), and a fifth, the kelp law's
 non-vacuity read (section 5), which the pane fix of issue 5 surfaced and
 the test-only close-up amendment resolved -- and the first three are
 root-caused and fixed, the fourth is read, recorded and watched, and the
-fifth stands resolved with its close-up read: one hundred and nine
+fifth stands resolved with its close-up read: one hundred and thirty-eight
 faithful full green runs in the round (fifty-five on the tree before the
-correction, forty-nine on the corrected one, and five on the fixed tree
-this session -- the standalone play and the four all.sh runs, the two
-gate runs of each of the fixed tree's two commits -- the counts included
-the way the forty-one did), the tower-masonry entry (2c)
+correction, forty-nine on the corrected one, five on the lake-squares
+fixed tree -- the standalone play and the four all.sh runs, the two gate
+runs of each of its two commits -- twenty-four on that tree's watch, loop
+11, and five on the star-fixed tree this session -- the standalone play
+and the four all.sh runs, the two gate runs of each of its two commits --
+the counts included the way the forty-one did), the tower-masonry entry (2c)
 is root-caused, corrected and pinned, the dust half (2a) re-opened by the
 red of loop 9 run 2 is closed with the fix, the walking-soak line (2f)
 stands recorded with its per-body read, and the kelp-law line stands
 resolved with its close-up read. The next red, whatever it is, gets parsed
 with `parse.py` and read before anything is touched; the loop keeps running
-as the standing watch (loop 11 is the current one, on the fixed tree).
+as the standing watch (loop 12 is the current one, on the star-fixed tree;
+loop 11 came back twenty-four green in a row on the fixed tree).
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -776,7 +807,106 @@ runs of the fixed tree, with the emissive-removal read still exactly 0 in
 every one.
 
 Status: root-caused and fixed; the round-end gates on the fixed tree came
-back green twice, and the standing watch runs loop 11 on that tree.
+back green twice, and the standing watch ran loop 11 on that tree and came
+back twenty-four green in a row.
+
+## 6. Glowing dots over the water of Mirrorlake at night (round 26; user report)
+
+**Reported by the user (one night screenshot, in conversation, not in the
+repo).** Scene: Mirrorlake, just after midnight, looking across the water
+at the dark mass on the far side. What the user sees: a handful (seven or
+eight) of small green glowing dots over the water, clustered round that
+mass. The user's read: some blocks under the water are still lit -- the
+kelp-glow problem of issue 5 was mostly fixed, but a few are left over.
+
+**What they are not (measured).** Not a leftover of issue 5. The census of
+the seed world (headless, no GL) counts **zero** self-lit blocks under the
+water -- no emissive block with a water cell anywhere above it in its
+column -- while 551 stand above the water (100 glowstone, 25 owlberry, 52
+frogpear, 25 bruinfig, 220 glowcap, 95 glowseed, 34 glow-mushroom ring),
+all on the dry land. The kelp that wore the panes carries no self-light at
+all (block 75 has no emissive flag), the pane cull is in the tree, and the
+kelp law still reads its close-up stalk with the emissive-removal read at
+exactly zero in every run since the fix: the sixty-two glowing stalks of
+the original defect are gone, and the law goes red if one comes back.
+
+**What they are (measured).** The lake's own lamps. The ten lamp jellies of
+Mirrorlake drift a metre or two under the surface, their habitat the
+outline of the sunken tower, and their own dex says of the field: *from the
+surface, the tower glows*. At 00:50 a lens 45 m over the lake projects all
+ten -- world x 62-67, z 114-120, y 12.6-13.9 -- onto the very cluster the
+user photographed, and the eight frogpears the tower carries on its window
+sills (two rows of four, one block under each of the two upper rows of the
+tower's three rows of windows, set in the wall, of the rare purple tint)
+project onto the same cluster. A lens over the water at the same hour shows
+the ten bells round the tower's dark mass, blue-violet up close; the same
+lens with the creatures hidden shows the bells gone and only the tower's
+own faint sill-light standing in the water. And from the user's own
+vantage -- a lens at the surface line, two metres off the tower's west
+face, looking along the field -- the bells nearest the eye read
+blue-violet and the far one reads green: the water the view passes through
+turns the lamps' blue over a few metres into the green the user saw in the
+photo.
+
+**Status: by design, nothing to fix.** The kelp defect is closed and
+pinned; the dots are the field the dex describes and the fruit the tower's
+own comment describes (three rows of windows, the glow of the field
+showing through them). Whether the field should burn dimmer, or the
+sills' pear be taken off the tower, is the user's design call -- recorded
+here so the question is not answered again from scratch.
+
+## 7. All the stars lit and dimmed in unison (round 26; user report)
+
+**Reported by the user (in conversation, no screenshot).** The stars of the
+night sky all light up and fade at the same time. The user's expectation:
+they should twinkle at random, each at its own pace.
+
+**Root cause (the shader, `engine.js`, `FS_SKY`).** The star mask takes a
+cell of the `floor(d*160)` grid only when its hash `h` stands above
+0.9965 -- so every lit star's `h` sits in the sliver [0.9965, 1). The
+twinkle took its phase from that same value, `h * 40.0`, which spans
+39.86..40.0 radians: a sliver of 0.14 radians. Every star therefore shared
+one phase, and the speed was a constant 2.0 radians per second (a period
+of pi seconds). The whole sky was one lamp breathing. The intent was
+clearly a per-star phase out of the cell's hash, but the mask had already
+spent the hash and left no spread in it.
+
+**Fix (landed, `engine.js`, `FS_SKY`).** The phase now comes from a second,
+full-range hash of the same cell (uniform on the circle) and the speed
+from a third (a fifth to a quarter of a turn per second): each star keeps
+its own clock. The mask is untouched, so the scatter issue 4 pinned is the
+same scatter -- measured, no star moved a pixel from its place between
+four grabs one second apart, and a same-time regrab differs by zero
+pixels.
+
+**Measured (the scatter law's lens: 30 m over the open lake at (100,90),
+77 degrees up, the moon out of the frame; four grabs one game-second apart
+at 02:51-02:54).** In every second of the read the brightening count and
+the dimming count are both large at once -- at the suite's 900x560 frame
+454..524 brighten while 408..491 dim in the same step; at the 1200x700
+probe frame 749..823 against 726..808. A single phase again sends one side
+of every step to zero, which is the failure this report describes. All the
+star pixels that ever lit (1015 at the suite frame, 1686 at the probe
+frame) swing more than thirty of luminance across the four seconds; a
+static starfield reads near zero there. At the scatter law's own time the
+scatter reads 0.151% of the frame (issue 4's 0.20% at the same time, when
+every star stood at its brightest; the law's bound is half a tenth to one
+percent) and its largest bright patch is 30 pixels (bound 500; the probe
+frame's is the same 46 as before the fix). At midnight the sharp-star
+count reads 710 (the stars-only-in-dark bound is fifty).
+
+**Pinned (test-only, `game/test/play.js`, `starsTwinkleOnTheirsOwnClocks`,
+the 10s sky family).** The same lens, four grabs one game-second apart:
+in every step both the brightening count and the dimming count stand above
+two hundred (measured 408-524 against the bound -- a whole-sky pulse
+brightens or dims nearly all of them and leaves the other side at
+nothing), and the count of star pixels that swung more than thirty of
+luminance across the four seconds stands above four hundred (measured
+1015). The scatter and the midnight pins of the existing family are
+untouched and pass on the fixed tree as recorded above.
+
+Status: root-caused, fixed, pinned; the round-end gates on the star-fixed
+tree came back green twice, and the standing watch is loop 12 on that tree.
 
 ## Standing contract (every session, in order)
 
