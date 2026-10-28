@@ -6,8 +6,10 @@ survives summarization and session boundaries. Measured claims about the game
 live in `docs/` (both languages); round-by-round history lives in the commit
 log. Update this file the moment a problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `969e62b` (the star-twinkle fix of
-issue 7 and its pinning law, pushed to both remotes, round-end gates green twice). Issue 1 (night sky read as black blocks) is
+State at time of writing: round 26, tree `e0b20c2` (the kelp comment of the
+block table aligned to the amended law's lens, on top of the minimap's dots
+turned with the map (issue 8) and the star-twinkle fix of issue 7, all pushed
+to both remotes with their gate runs green). Issue 1 (night sky read as black blocks) is
 root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
 (POI heights + teleport waypoint) is measured and fixed, data and docs
 only. The meshing red of loop 3 run 7 is root-caused to CPU preemption and
@@ -105,9 +107,37 @@ photographed are the ten lamp jellies drifting a metre or two under the
 surface on the sunken tower's outline (their own dex: from the surface, the
 tower glows) and the eight frogpears on the tower's window sills, which the
 water's own path turns from the lamps' blue to the green the user saw. The
-round now has one hundred and thirty-eight faithful full green runs, the
-four earlier red lines stand as recorded and the kelp-law fifth stands
-resolved, and the standing watch is loop 12 on the star-fixed tree.
+minimap's defect (issue 8, found by re-reading while the standing watch ran:
+the dots of the corner map spin twice as fast as the map they stand on, and
+sit stretched off the markers they are meant to sit on) is root-caused to the
+dots being rotated by hand in a frame the context has already rotated to the
+heading -- the terrain image sits one pixel per cell in that frame, so the
+dots needed no turn of their own and no stretch, and the hand rotation spun
+them twice as fast while the stretch of 1.3871 pixels per cell parked them
+38.7 % out from their own markers -- and fixed (the hand rotation and the
+stretch go, the dots keep their alpha and their size) and pinned by a new
+law that reads the minimap's own canvas at two stands and three headings and
+checks every in-range place shows a dot-sized warm mark on its terrain
+position; the proof is the same read on both sides, 16.5-17.9 px from the
+mark before the fix, 0.7 px after. The comment the fix owed -- the kelp note
+of the block table, still telling the pre-amendment story as if it were
+current -- was aligned to the amended law's lens at `e0b20c2`. The watch of
+the star-fixed tree (loop 12) came back twenty-four green in a row. The watch
+started on that tree this session (loop 13) came back five green and red on
+its sixth run, on a new line (section 2g below): the flock's crown law read
+sixty-nine of the owls' frames at or over the top of everything in their
+column, against a bound of seventy -- the documented bottom of the post-fix
+range -- and the read found two of the six owls holding a low line in the
+leaf layer of the crowns they crossed, the altitude the flight gives them,
+with the hard-world reads of the same window at their own record; the game
+was not changed and the law was not moved, and the rig now carries the
+per-owl crown read so the next red of the line names the bird dragging the
+mean. The round now has one hundred and seventy-three faithful full green
+runs, the six red lines of the round stand as recorded -- the first three
+root-caused and fixed, the kelp-law fifth resolved with its close-up read,
+the walking-soak fourth and the crown-line sixth read, recorded and watched
+(2f and 2g) -- and the standing watch is loop 14 on the tree of this commit,
+started after loop 13 came back five green and red on its sixth run.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -188,15 +218,17 @@ round's final tree.
 The suite's soak laws went red in roughly one run in three to six. Three
 laws were in the flake pool; the first two were recorded in round 25 (B34)
 and the third went red for the first time in round 26, loop 2, run 6. State
-at time of writing: one hundred and four faithful full green runs on the
-corrected trees (loops 1-8, the first of loop 9 and the first three of loop
-10); 2c is root-caused, fixed and pinned, 2a re-opened by the red of loop 9
+at time of writing: one hundred and seventy-three faithful full green runs
+(loops 1-13; loop 13 came back five green and red on its sixth run); 2c is
+root-caused, fixed and pinned, 2a re-opened by the red of loop 9
 run 2 and closed with the fix (the wall is asked of the cell the mote is
 stored in), 2b is watched with the loop (its recorded red line is a
-mid-development artifact), and 2f (the walking-soak law, the red of loop 10
+mid-development artifact), 2f (the walking-soak law, the red of loop 10
 run 4, a new line) is read as the walk-stop-walk outside every measured
 range, recorded with the per-body instrumentation, and watched with the
-loop.
+loop, and 2g (the flock's crown line, the red of loop 13 run 6, a new
+line) is read as the crown read at the documented bottom of its range,
+recorded with the per-owl read, and watched with the loop.
 
 ### 2a. Dust law (B34, half one) — `aMoteKeepsToTheAirItWasGiven`
 
@@ -479,10 +511,10 @@ Faithful repro = full `node game/test/play.js` under Chrome/puppeteer
 (swiftshader), one run ~6-7 minutes. Loop scripts in `/tmp/m26flake/` (not in
 the repo): `loop.sh` / `loop2.sh` / `loop3.sh` / `loop4.sh` / `loop5.sh` run
 12 sequential full suites into
-`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` / `loop8.sh` / `loop9.sh` / `loop10.sh` / `loop11.sh` / `loop12.sh` run 24 each into
-`{r6-*,r7-*,r8-*,r9-*,r10-*,r11-*,r12-*}.log`. All stop at the first
+`/tmp/m26flake/{run,r2-*,r3-*,r4-*,r5-*}.log`; `loop6.sh` / `loop7.sh` / `loop8.sh` / `loop9.sh` / `loop10.sh` / `loop11.sh` / `loop12.sh` / `loop13.sh` run 24 each into
+`{r6-*,r7-*,r8-*,r9-*,r10-*,r11-*,r12-*,r13-*}.log`. All stop at the first
 red and append `GREEN/RED on run N` + `CHECKFAILED=<n>` to
-`status{,2,3,4,5,6,7,8,9,10,11,12}`.
+`status{,2,3,4,5,6,7,8,9,10,11,12,13}`.
 Parse a red log with `python3 /tmp/m26flake/parse.py <log>` — never `tail`
 or `sed` the whole line (one step prints one ~100 KB JSON line). The parser
 prints the soak's entry window (per-frame lines near the tower column:
@@ -510,40 +542,60 @@ errands and no fault in the bear's code, so the game was not changed and
 the rig now carries the per-body read so the next red of it is readable.
 Loop 11 (on the lake-squares fixed tree) — runs 1-24 green: no red,
 nothing to parse. Loop 12 (on the star-fixed tree) — runs 1-24 green: no
-red, nothing to parse.
-Across all of it the laws have gone red five times in the round -- twice on
+red, nothing to parse. Loop 13 (on the tree of `e0b20c2`) — runs 1-5
+green, run 6 red: the flock's crown line (2g below), a new line, the
+window's crown read at the documented bottom of its range; the read found
+two of the six owls holding a low line in the leaf layer of the crowns
+they crossed -- the altitude the flight gives them -- and no fault in the
+flight, so the game was not changed and the rig now carries the per-owl
+crown read so the next red of it names the bird dragging the mean. The
+first gate run of the tree of this commit came back red on three lines at
+once, and its log was overwritten by the next run before it could be
+parsed, so the three lines are not named; the same tree passed the whole
+gate twice after that, ten green each, and three lines at once on a tree
+that then passes clean is the shape of a load flake, so it is recorded as
+such and watched.
+Across all of it the laws have gone red six times in the round -- twice on
 the recorded lines of round 25 (2c in loop 2 run 6, 2a in loop 9 run 2),
 once on the meshing budget (2d, not a soak law, loop 3 run 7), once on the
-new walking-soak line (2f, loop 10 run 4), and a fifth, the kelp law's
+new walking-soak line (2f, loop 10 run 4), once on the kelp law's
 non-vacuity read (section 5), which the pane fix of issue 5 surfaced and
-the test-only close-up amendment resolved -- and the first three are
-root-caused and fixed, the fourth is read, recorded and watched, and the
-fifth stands resolved with its close-up read: one hundred and sixty-six
-faithful full green runs in the round (fifty-five on the tree before the
+the test-only close-up amendment resolved, and a sixth, the flock's crown
+line (2g, loop 13 run 6), which the read placed at the documented bottom
+of its range -- and the first three are root-caused and fixed, the fourth
+and the sixth stand read, recorded and watched, and the fifth stands
+resolved with its close-up read: one hundred and seventy-three faithful
+full green runs in the round (fifty-five on the tree before the
 correction, forty-nine on the corrected one, five on the lake-squares
 fixed tree -- the standalone play and the four all.sh runs, the two gate
 runs of each of its two commits -- twenty-four on that tree's watch, loop
-11, and thirty-three on the star-fixed tree this session -- the standalone
-play and the eight all.sh runs, the two gate runs of each of its four
-commits, and twenty-four on the star-fixed tree's watch, loop 12 -- the
-counts included the way the forty-one did), the tower-masonry entry (2c)
-is root-caused, corrected and pinned, the dust half (2a) re-opened by the
-red of loop 9 run 2 is closed with the fix, the walking-soak line (2f)
-stands recorded with its per-body read, and the kelp-law line stands
-resolved with its close-up read. The next red, whatever it is, gets parsed
-with `parse.py` and read before anything is touched; the loop keeps
-running as the standing watch, and loop 12 on the star-fixed tree came
-back twenty-four green in a row, loop 11 the same on the lake-squares
-fixed tree, and the four all.sh gate runs of the minimap fix and of the
-kelp comment it owed came back green on the trees they landed on.
+11, and forty on the star-fixed tree this session -- the standalone play
+and the ten all.sh runs, the two gate runs of each of its five commits,
+twenty-four on its watch loop 12, and five on its watch loop 13, which
+stopped on the red of its sixth run -- the counts included the way the
+forty-one did), the tower-masonry entry (2c) is root-caused, corrected and
+pinned, the dust half (2a) re-opened by the red of loop 9 run 2 is closed
+with the fix, the walking-soak line (2f) stands recorded with its per-body
+read, the kelp-law line stands resolved with its close-up read, and the
+crown line (2g) stands recorded with its per-owl read. The next red,
+whatever it is, gets parsed with `parse.py` and read before anything is
+touched; the loop keeps running as the standing watch (loop 14 on the tree
+of this commit), and loop 12 on the star-fixed tree came back twenty-four
+green in a row, loop 11 the same on the lake-squares fixed tree, loop 13
+came back five green and red on its sixth run (the line 2g below), and the
+four all.sh gate runs of the minimap fix and of the kelp comment it owed
+came back green on the trees they landed on.
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
 the soak's per-frame entry window with frame and frog identity and the
 column dump near the tower (2c), the soak's inside count aligned to the
 hard world (a leaf at the feet is the bush the body is hopping through),
-the pinned-door canary law (2c), and the walking-soak rig's per-body read
-(2f: where each bear stood, what it walked, and where it stood still). The `skim` law's raw-`solidAt` feet
+the pinned-door canary law (2c), the walking-soak rig's per-body read
+(2f: where each bear stood, what it walked, and where it stood still), and
+the flock soak's per-owl crown read (2g: the share of each bird's own
+frames at or over the top of its column, so a red of the crown line names
+the bird dragging the mean). The `skim` law's raw-`solidAt` feet
 count is the same outlier pattern as 2c pre-fix, but it has never gone red
 and the lake holds no trees: it is left as is and watched, not widened.
 
@@ -609,6 +661,82 @@ the behaviour the data gives a bear between errands -- but the round's
 fourth red, on a new line, outside every measured range. No game change;
 the rig carries the per-body read, and the standing watch is loop 11 on the
 same tree.
+
+### 2g. Flock crown law (NEW, loop 13 run 6) — `it flies above the crowns it crosses, not wedged under them`
+
+Rig: `game/test/play.js` ~line 6852 (the flock soak `flockIsNotAFormation`:
+forty seconds of the valley with nobody near, twelve frogs and six owls set
+to wander; `flown` counts every owl-frame of the window, 6 x 2400).
+`crownPct` is the share of those frames with the owl at or over the top of
+everything in its own column: `top(c)` is the top face of the highest solid
+in the column, leaves among them, so over a tree it is the crown's top
+face; `jamPct` is the share with a hard block directly over the head;
+`crownIn` is the share whose feet cell is a non-hard solid, the leaf layer.
+The check is `crownPct > 70 && jamPct < 10` (play.js ~line 7134). The bound
+is the pin against the pre-fix regime: before the ahead-climb term of the
+flight (the climb of the ground seven metres ahead of the bird, plus 1.6 m,
+held down to the room over its own head; `entities.js` ~line 1838) the same
+read ran 36-79% over a minute on five valleys, and with the fix the
+documented range is 69-94% (`entities.js` ~line 1867, the comment that
+records the measurement the fix owed).
+
+Red line, run 6 of round 26 loop 13 (the tree of `e0b20c2`), verbatim (the
+start; the line carries the whole read as one JSON object):
+
+```
+CHECK FAILED: it flies above the crowns it crosses, not wedged under them {"seconds":40,"frogs":12,"owls":6,"wetFrames":2400,"inside":0,...
+```
+
+The only failure of that run: the frog law and the dust law of the same run
+read green (the dust 0 of 61,092 samples, the fix holding), the meshing
+budget of the same run read green, and every other read of the same window
+sits inside its own record -- `inside 0` and `headInPct 0` (no bird body,
+feet to head, inside a block it cannot pass through; the pre-fix shape was
+11132 such frames in the same window), `jamPct 0` (no hard block over any
+head; the bound asks for under 10), `holdRunMax 1.8` s (the longest a bird
+went without moving its height), `pinned` empty, `heightSpread 10.8` m (the
+bound asks for over 2), and all six owls climbing and descending 10.15-17.77
+m over the window (their `absRange`) while going 77.1-109.1 m (their
+`path`). The number that red: `crownPct 69` against the bound of 70, with
+`crownIn 14` -- fourteen percent of the owl-frames with the feet in the
+leaf layer, against 1-4 in the green runs of the same watch and the watch
+before it.
+
+Read before anything was touched. The window's crown read is one mean over
+all six owls, and the mean of this run decomposes the way the documented
+behaviour says it should: four owls held their mean height at 37.3-41.2 m,
+over the crowns; two held theirs at 30.3 m and 31.3 m, a few metres above
+the forest floor, in the leaf layer of the crowns they crossed, for most of
+the window. If two of the six count about a fifth to a seventh of their
+frames at or over the top of their column and the other four about
+nine-tenths, the mean of the six lands where the red read it -- and 69 is
+the documented bottom of the post-fix range, one point under a bound that
+sits one point above that floor. The pre-fix shape the law was set to catch
+-- birds pinned under the needles, hold runs in the seconds, the wedge over
+the head -- is nowhere in the run: `inside 0`, `jamPct 0`, `pinned` empty,
+every bird climbing and descending the whole window. That a wandering owl
+holds a low line under the crowns for a stretch of the window is the
+altitude the flight gives it: its own height, held and eased, the
+ahead-climb lifting it over a crown it is about to cross over the reach of
+seven metres, and not holding it above every crown around it -- a bird
+weaving between two crowns at its own height keeps its height. It is not a
+body the world is holding down: the hard-world reads of the window are
+clean, and the bird climbs and descends the whole time.
+
+Status: not root-caused as a defect -- every other read of the window is at
+the law's own record, the failed number is the documented bottom of its
+range, and the shape that dragged it there is the flight the data gives an
+owl -- so the game was not changed and the law was not moved: the bound of
+70 is the pin against the pre-fix 36-79% regime, and loosening it toward
+the bottom of the range it guards would take the pin down with it. What the
+pooled number cannot say -- which of the six owls the red belongs to -- the
+rig now says: the per-owl read (test-only, no bound moved, the check lines
+byte-identical) counts, for every owl of the flock, the share of its own
+frames spent at or over the top of its column, so the next red of this line
+names the bird dragging the mean down, against its own height and its path.
+The standing watch is loop 14 on the tree of this commit; if the line reds
+again, the per-owl read decides whether it is the same low-line shape or
+something the window has not been given the words for.
 
 ## 3. POI heights and the teleport waypoint (theme queue item 10)
 

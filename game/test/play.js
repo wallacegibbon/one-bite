@@ -6887,7 +6887,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     // the one the complaint was about -- a bird that holds one absolute height
     // while the ground under it rises and falls is a bird on a wire.
     for (const c of [...frogs, ...owls])
-      each.set(c, { lo: 1e9, hi: -1e9, alo: 1e9, ahi: -1e9, hold: 0, holdMax: 0 });
+      each.set(c, { lo: 1e9, hi: -1e9, alo: 1e9, ahi: -1e9, hold: 0, holdMax: 0, cr: 0 });
     const yPrev = new Map();
     for (const c of owls) yPrev.set(c, c.y);
     const n = Math.round(40 * 60);
@@ -7002,7 +7002,7 @@ What was measured before any of this was fixed, over 180 frames of walking
           if (headHits.length < 6) { const [hx, hy, hz] = cell(c);
             for (let k = hy; k <= Math.floor(c.y + HEAD); k++) {
               if (hard(hx, k, hz)) { headHits.push([W.get(hx, k, hz), hx, k, hz, +c.y.toFixed(2)]); break; } } } }
-        if (c.y >= top(c)) crown++;
+        if (c.y >= top(c)) { crown++; e.cr++; }
         const [ox, oy, oz] = cell(c);
         // wedged: a block the body cannot rise through, directly over its head
         if (hard(ox, oy + 1, oz)) jam++;
@@ -7057,13 +7057,16 @@ What was measured before any of this was fixed, over 180 frames of walking
       frogDepth: frogs.map(c => { const e = each.get(c);
         return e.hi < e.lo ? null : +(e.hi - e.lo).toFixed(2); }),
       // what one bird does over the whole window: how much its height over the
-      // surface it crosses swings, how much its own height swings, and how far
-      // it actually goes
+      // surface it crosses swings, how much its own height swings, how far it
+      // actually goes, and the share of its own frames spent at or over the top
+      // of everything in its column -- the window's crown read is one mean over
+      // all the birds, so a red of that law now names the bird dragging it down
       owl: owls.map(c => { const e = each.get(c);
         return { range: e.hi < e.lo ? null : +(e.hi - e.lo).toFixed(2),
           absRange: e.ahi < e.alo ? null : +(e.ahi - e.alo).toFixed(2),
           yMean: +((e.ahi + e.alo) / 2).toFixed(1),
-          path: +owlPath.get(c).toFixed(1) }; }),
+          path: +owlPath.get(c).toFixed(1),
+          crownPct: Math.round(e.cr / Math.max(1, n) * 100) }; }),
       // the longest a bird of this flock went without moving its height at all
       holdRunMax: +(Math.max(...owls.map(c => each.get(c).holdMax)) / 60).toFixed(1),
       // the birds of one valley do not all fly at one height above the map
