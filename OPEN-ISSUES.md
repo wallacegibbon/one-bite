@@ -936,7 +936,8 @@ tree came back green twice, and the standing watch is loop 12 on that tree.
 "walk the project again" pass, while the standing watch ran. Not a user
 report: the minimap is a 172 px canvas, its dots are 2-4 px, and the
 defect only shows at headings far from yaw 0 -- the opening heading
-(yaw = pi, the player's default, game.js:132) is the worst case.
+(the spawn's own yaw, -pi/2, game/data/world.js; the game.js fallback is
+pi when a spawn names none) is a worst case.
 
 **What is wrong.** `drawMinimap()` rotates the canvas context by `-yaw`
 and draws the whole terrain in that rotated frame (`drawImage` of the
@@ -954,13 +955,13 @@ a multiple of pi.
 
 **Measured (pure math, no GPU; /tmp/m26flake/minimap.js).** At yaw 0 the
 dots and the terrain agree; at yaw pi/2 the dots sit a quarter turn off
-(terrain forward (0,-1), dots forward (-1,0)); at the opening yaw pi they
-are exactly mirrored. Concrete case: the player at the street spawn
-(136.5, 128.5) at the opening yaw, Mirrorlake's marker at (78, 106) --
-behind the player. The terrain paints that lake 56.7 px below and 21.8 px
-left of the map centre (behind: correct); the dots paint it 56.7 px
-**above** and 21.8 px right (in front: wrong) on the 172 px map. The
-creature dots are wound the same way.
+(terrain forward (0,-1), dots forward (-1,0)); at the opening yaw they are
+exactly mirrored. Concrete case: the player at the street spawn
+(136.5, 128.5) at the opening yaw (-pi/2, facing -X), Frogshall's marker
+at (92, 120) -- in front of the player, 45.3 cells off, 62.8 px on the
+172 px map. The terrain paints it 61.7 px above the map centre (in front:
+correct); the dots paint it 61.7 px below (behind: wrong). The creature
+dots are wound the same way.
 
 **Fix (queued behind the standing watch; `game/src/ui.js`,
 `drawMinimap`).** The dots are drawn where the terrain is drawn: in the
@@ -970,9 +971,10 @@ does not change). Then the dots share the terrain's transform and agree
 with it for every yaw; the hand rotation and its lines go. Verified the
 way the bug was found (the pure-math chain agrees at 720 headings after
 the fix), then pinned in the page: a new law reads the minimap's own
-canvas pixels at three headings and checks every warm POI dot against the
-terrain-predicted position (world, yaw and canvas are all deterministic,
-so the read is).
+canvas pixels at two stand positions (the street spawn, and the dry
+column at (55.5, 78.5) west of the lake) and three headings, and checks
+every in-range marker's dot against the terrain-predicted position
+(world, yaw and canvas are all deterministic, so the read is).
 
 Status: root-caused and measured; the fix is queued behind the standing
 watch (no edit of a `game/` source while its Chrome runs), full gates on
