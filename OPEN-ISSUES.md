@@ -1135,6 +1135,63 @@ its loop on the tree before the edit (twenty-four green in a row), so no
 `game/` source was touched while its Chrome ran; the full gates run on
 the landing tree before the push.
 
+## 9. Docs prose drift found by the full re-read (round 26; no code at fault)
+
+How found: while the standing watch ran, a full prose re-read of
+`docs/en/00..07` (the CN files at the same sites) checked every numeric and
+mechanical claim against the code. Eight claims no longer matched what the
+code does. All eight are prose drift: the code is right, the docs said the
+old thing (mostly the pre-simplification numbers, or a feature that was
+never implemented and never had to be).
+
+1. 04, both langs: the form table's fields were called **nineteen**; the
+   table has eighteen rows and `reach.js` counts twenty keys on the form
+   record in all (the eighteen plus the form's display name in each
+   language). Stale since `tongue` was deleted (the doc itself records the
+   deletion). Now: eighteen, with the twenty-keys-in-all arithmetic said
+   out loud so the two numbers cannot look like a contradiction.
+2. 06, both langs, the codex section: the docs described **three tabs**
+   (fruit codex 4 cells, creature codex 3 species showing a live attitude,
+   quest list). `renderJournal` in `ui.js` is one scrolling panel, four
+   sections: You (epithet, name if set, the stored id), Quests (all six,
+   hints, done marked), fruit codex (3 cells, undiscovered `???`), creature
+   codex (4 species, dex text or "not yet observed"). No attitude is shown
+   anywhere in the journal; the codex card lists no form-ability list.
+   Now: the section describes the panel as it renders.
+3. 06, both langs, veil row: "no death, only an announcement + the
+   minimap fails". The code (`onVeil`, `game.js`) clamps at the border,
+   announces, and drains vitality while the player presses against the
+   wall; with vitality maxed at 5 that is death in about 21 s. And
+   `drawMinimap` has no veil branch: a minimap failure never existed in the
+   171 commits of history (the claim entered the docs at `a4ec642` and was
+   carried forward). Now: it is the edge of the world, and it drains you
+   until you can die of it; the "full design" column is unchanged.
+4. 02, both langs, the threat table's veil cell: "vitality drains, no
+   sense of direction (minimap off)" -- same never-implemented minimap
+   failure. Now: the edge of the world, vitality drain.
+5. 07, both langs, the debt table: "random deflection on hitting a wall,
+   so they get stuck on terrain". The movement code is a deterministic
+   contour: when the step in front is solid the animal takes the way round
+   that closes on the errand most, resting only when no way round does
+   (measured: 94 %/93 % walking frames for the bear/frog walks the soak
+   runs). "No pathfinding" itself is still true and stays.
+6. 07, both langs: "the 160³ world". The world is 160×48×160
+   (1.23 MB); the same doc says it correctly in its own §3.3.
+7+8. items 2 and 3 of 06's codex list carried two of the wrong counts
+   (4 cells / 3 species); fixed in the same edit as item 2.
+
+Direction: the docs were fixed to say what the code does, not the other
+way around -- the attitude matrix is fully documented in 03 §2, the
+codex is deliberately minimal (no reward display, the manual for the
+gates), and adding a minimap failure or an attitude readout to the UI
+would be new scope, not a fix. No code was touched.
+
+Status: fixed in `docs/en/{02,04,06,07}` and `docs/cn/{02,04,06,07}`
+(8 files, +24/-21). Docs-only commit: gates 1-4 green (extract-comments
+`[]`/0/0, docs-sync all-consistent, docs-drift every injection detected,
+tree restored). The full gate-5 double still runs on this round's final
+tree per the standing contract.
+
 ## Standing contract (every session, in order)
 
 Human instructions, verbatim, still in force:

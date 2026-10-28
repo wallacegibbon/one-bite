@@ -202,8 +202,8 @@ Two consequences worth knowing:
 |---|---|
 | No occlusion culling | blocks outside are still drawn while you are inside a cave |
 | No async meshing | chunk meshing is budgeted at 22 ms per frame during boot; a player edit flags its chunk and the flagged chunks are re-meshed on a 6 ms per frame budget -- and a chunk rebuild costs about **1.2 ms** here, so one harvest never spends the whole budget (**22.5 ms** for the two chunks a pick flagged before the water table was built up front) |
-| Creatures have no pathfinding | only "steer toward target + height correction + random deflection on hitting a wall", so they get stuck on terrain |
-| No LOD / no streaming | the 160³ world is fully resident in memory; the full scale needs chunk streaming |
+| Creatures have no pathfinding | no graph, no A*: they steer toward their errand at their own turn rate, and when the step in front is solid they take the way round that closes on the errand most -- the contour of the obstacle, not a fresh errand -- resting only when no way round does |
+| No LOD / no streaming | the 160×48×160 world is fully resident in memory; the full scale needs chunk streaming |
 | No NPC dialogue trees | Old Mei / One-Eye only have log text, no branching dialogue |
 | Cellar trees are never destroyed | the bear tear-down roll is not wired up (raids and owl post are implemented) |
 | The frog does not dry out on screen | `dryTimer` is in the data and the check is wired up, but there is no skin-moisture bar in the HUD (04 §3) |

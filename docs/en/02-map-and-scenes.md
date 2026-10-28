@@ -194,4 +194,4 @@ And this table is not a height a spawn may copy. Asked of the world, the row it 
 | Ashscale Ridge | 3 | the height, the cold (it starts above y26 and reaches its full bite at y36; a bear body never feels it), a brown bear that ignores you and will not step aside |
 | Mirrorlake | 3 | drowning (18 s for a human; only a frog body needs no air underwater), a frog drying out on land |
 | Cloudspire | 4 | falling |
-| The Grey Veil | 5 | vitality drains, no sense of direction (minimap off) |
+| The Grey Veil | 5 | it is the edge of the world, and it drains your vitality while you press against it |

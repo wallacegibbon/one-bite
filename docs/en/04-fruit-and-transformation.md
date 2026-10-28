@@ -112,10 +112,11 @@ frog's niche is swimming and breathing water, and a second way of reaching
 things would have made the size gate — a frog fits a 1×1 gap a bear will not —
 one door among several instead of the only one.
 
-All nineteen fields on the three forms are read by the code. `game/test/reach.js`
-re-asks that question on every run and fails if a field is added to the data and
-nothing in `game/src/` reads it, so this column cannot quietly rot back into
-advertising.
+All eighteen fields on the three forms are read by the code. `game/test/reach.js`
+re-asks that question on every run -- twenty keys on the form record in all, the
+eighteen plus the form's own display name in each language -- and fails if a
+field is added to the data and nothing in `game/src/` reads it, so this column
+cannot quietly rot back into advertising.
 
 **Note that `size` is a hard gate**: a frog at 0.5×0.5 fits a 1×1 root hole and the gaps between reeds; a bear at 1.4×1.5 does not — that is the physical implementation of "weight collapses the bridge" and "this body will not fit that door", not just flavour text.
 
