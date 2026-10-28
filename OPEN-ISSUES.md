@@ -518,13 +518,13 @@ new walking-soak line (2f, loop 10 run 4), and a fifth, the kelp law's
 non-vacuity read (section 5), which the pane fix of issue 5 surfaced and
 the test-only close-up amendment resolved -- and the first three are
 root-caused and fixed, the fourth is read, recorded and watched, and the
-fifth stands resolved with its close-up read: one hundred and sixty-two
+fifth stands resolved with its close-up read: one hundred and sixty-six
 faithful full green runs in the round (fifty-five on the tree before the
 correction, forty-nine on the corrected one, five on the lake-squares
 fixed tree -- the standalone play and the four all.sh runs, the two gate
 runs of each of its two commits -- twenty-four on that tree's watch, loop
-11, and twenty-nine on the star-fixed tree this session -- the standalone
-play and the four all.sh runs, the two gate runs of each of its two
+11, and thirty-three on the star-fixed tree this session -- the standalone
+play and the eight all.sh runs, the two gate runs of each of its four
 commits, and twenty-four on the star-fixed tree's watch, loop 12 -- the
 counts included the way the forty-one did), the tower-masonry entry (2c)
 is root-caused, corrected and pinned, the dust half (2a) re-opened by the
@@ -534,7 +534,8 @@ resolved with its close-up read. The next red, whatever it is, gets parsed
 with `parse.py` and read before anything is touched; the loop keeps
 running as the standing watch, and loop 12 on the star-fixed tree came
 back twenty-four green in a row, loop 11 the same on the lake-squares
-fixed tree.
+fixed tree, and the four all.sh gate runs of the minimap fix and of the
+kelp comment it owed came back green on the trees they landed on.
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -810,22 +811,24 @@ runs of the fixed tree, with the emissive-removal read still exactly 0 in
 every one.
 
 **The comment it owes (found during the docs alignment, same day).** The
-comment on the kelp row of the block table (`game/src/world.js`) still tells
+comment on the kelp row of the block table (`game/src/world.js`) told
 the pre-amendment story: the noon frame a metre above the surface, 574
 pixels taken out with the emissive mesh. That reading is the discovery
 measurement of the lit-stalks bug, and it is kept in the rewritten comment
 as history, but the comment must also tell where the law reads now: under
 the surface, 1.2 m over the top of the stem of the stalk nearest the water
 seven metres deep, 0 pixels with the emissive mesh out and 3,549 with the
-ordinary one (largest difference 4.9, bound 200). Queued behind the
-standing watch (no edit of a `game/` source while its Chrome runs); full
-gates on landing. The kelp line of the technical doc in both languages was
+ordinary one (largest difference 4.9, bound 200). The queued edit waited
+out the standing watch (no edit of a `game/` source while its Chrome ran)
+and landed after the loop finished; the full gates ran twice on the
+landing tree. The kelp line of the technical doc in both languages was
 rewritten to the amended lens the same day (docs-only diff, gates 1-4).
 
 Status: root-caused and fixed; the round-end gates on the fixed tree came
-back green twice, and the standing watch ran loop 11 on that tree and came
-back twenty-four green in a row. The comment alignment above is queued
-behind the standing watch; the technical-doc line is already aligned.
+back green twice, and the standing watch ran loop 11 on that tree and
+loop 12 on the star-fixed tree, twenty-four green in a row each. The
+comment alignment above is landed; the technical-doc line was aligned the
+same day.
 
 ## 6. Glowing dots over the water of Mirrorlake at night (round 26; user report)
 

@@ -135,14 +135,20 @@
      lake and gives back what is left of it, which is the whole reason the bed it
      stands on reads teal. It used to state `emis: 1` -- copied from the glowcap
      ring on the line below -- and nothing ever showed, because the kelp that
-     would have drawn it was never placed. With the lakebed growing it again, 62
-     stalks lit themselves in full daylight: in a noon frame taken from a metre
-     above the surface of Mirrorlake, taking the emissive mesh out of it took 574
-     pixels with it and taking the ordinary micro mesh out took none; put back
-     into the ordinary mesh, the same two switches read 0 and 574 -- the stalks
-     are still in the frame, and it is the lake that lights them. The glowcap
-     ring and the glowcap itself glow because that is what they are; this is
-     grass under water. */
+     would have drawn it was never placed. With the lakebed growing it again the
+     flag showed at last: in a noon frame taken from a metre above the surface
+     of Mirrorlake, taking the emissive mesh out took 574 pixels with it and
+     taking the ordinary micro mesh out took none -- that is how the lit stalks
+     were found. The flag is gone now, and the law reads the stalks from under
+     the surface, the lens 1.2 m over the top of the stem of the stalk nearest
+     the water seven metres deep: a lens just above the water sees no stalk at
+     all any more, because the cull that removed the flat water panes backing
+     them took the stalks' last sliver of contrast through seven metres of
+     lake. There the emissive mesh takes 0 pixels out of the noon frame and the
+     ordinary micro mesh 3,549 -- largest difference 4.9, against a bound of
+     200 -- which is the stalks, and it is the lake that lights them. The
+     glowcap ring and the glowcap itself glow because that is what they are;
+     this is grass under water. */
   def(75, { cn: '水草', solid: false, opaque: false, c: [0.3, 0.75, 0.55], micro: [[0.4, 0.0, 0.4, 0.2, 0.9, 0.2], [0.25, 0.2, 0.5, 0.16, 0.5, 0.16]] });
   def(76, { cn: '荧光菇环', solid: false, opaque: false, emis: 1, c: [0.6, 1.0, 0.7], micro: [[0.44, 0.0, 0.44, 0.14, 0.4, 0.14], [0.2, 0.38, 0.2, 0.6, 0.26, 0.6]] });
   def(77, { cn: '窖树核心', solid: false, opaque: false, emis: 1, c: [1.0, 0.85, 0.45], micro: [[0.3, 0.1, 0.3, 0.4, 0.5, 0.4]] });
