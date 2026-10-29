@@ -2,9 +2,9 @@
  *  FRUTARIA
  *  Fruit / plant / rarity data -- the single source of truth shared by the design docs and the game
  *  Mirrors: docs/04-fruit-and-transformation.md and docs/05-backpack-and-storage.md
- *  One fruit per species, and one species per niche: three fruits, three bodies.
+ *  One fruit per species, and one species per niche: two fruits, two bodies.
  *  The rarity ladder still has five rungs; the valley currently only grows
- *  three of them (common / rare / legendary).
+ *  two of them (rare / legendary).
  * ========================================================================== */
 (function (N) {
 
@@ -35,20 +35,11 @@
    *   swim        : underwater movement multiplier. 1.1 on the frog body puts it
    *                 at 4.65 m/s -- the wild frog's own `swimSpeed` -- because the
    *                 body you wear and the animal you wear are one animal.
-   *   fly         : flight thrust (0 / undefined = cannot fly)
-   *   flySpeed    : the speed a body with wings holds in level flight, m/s. It
-   *                 is not derived from walking speed: an owl that putters along
-   *                 at a jog is a body with a speed problem. This is the wild
-   *                 owl's own `flySpeed` from data/creatures.js written down a
-   *                 second time, and play.js checks the two agree.
    *   turn        : the most radians a second the body can add to its heading at
-   *                 its own cruising speed. Air and water hold a body up by
-   *                 carrying it forward, so neither can change course on the
-   *                 spot -- the course bends (Player.update, Creature.update).
+   *                 its own cruising speed. Water holds a body up by carrying
+   *                 it forward, so it cannot change course on the spot -- the
+   *                 course bends (Player.update, Creature.update).
    *                 The same number the species has in data/creatures.js.
-   *   glide       : the fraction of the normal fall speed a body accepts when it
-   *                 is not flapping -- 0.35 = it comes down at a third of the
-   *                 speed you do. Unpowered: it buys distance, never height.
    *   breatheAir  : whether air is required (false = can breathe underwater)
    *   dryTimer    : seconds out of water before the skin starts to dry (amphibian bodies)
    *   nightVision : 0..1 brightening in the dark, and the same eye washed out by daylight
@@ -75,22 +66,6 @@
    * ------------------------------------------------------------------ */
 
   const FRUITS = [
-    /* ============ common ============ */
-    {
-      id: 'owlberry', cn: '猫头鹰果', en: 'Owlberry', rarity: 'common', creature: 'owl',
-      habitat: ['whisperwood', 'starfall'], habitatCn: '低语林 · 钟塔树洞', habitatEn: 'Whisperwood · bell-tower hollow',
-      duration: 240,
-      form: {
-        cn: '猫头鹰', en: 'owl', size: [0.55, 0.7], speed: 0.9, jump: 0.8, fly: 5.2, flySpeed: 7.0,
-        turn: 1.4, glide: 0.35,
-        nightVision: 0.75, stealth: 0.45, fov: 88, step: 0.3
-      },
-      cost: ['白昼畏光：夜视在白天反成致盲', '爪无法操作门闩与果袋（不能开仓库）'],
-      costEn: ['photophobic by day: night vision turns blinding in daylight', 'talons cannot work latches or fruit bags (cannot open storage)'],
-      lore: '灰紫色的小果，长在老橡树洞里，只在夜里能看见它微微反光。守夜人说：“摘猫头鹰果最好的办法，是先变成猫头鹰。”',
-      loreEn: 'A small grey-violet fruit, grown in an old oak hollow, only visible at night as a faint reflection. The night watch says: "The best way to pick an Owlberry is to become an owl first."'
-    },
-
     /* ============ rare ============ */
     {
       id: 'frogpear', cn: '蛙果', en: 'Frog Pear', rarity: 'rare', creature: 'frog',

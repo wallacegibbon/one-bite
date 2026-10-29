@@ -227,12 +227,10 @@
       if (!s) return;
       // Same trick as renderInv: the panel is rebuilt every frame while it is
       // open, and it only ever changes when something on a shelf changes.
-      // Freshness is bucketed to 5 units and transit to whole days, which is
-      // exactly what the bar and the "x days left" text show.
+      // Freshness is bucketed to 5 units, which is exactly what the bar shows.
       const sig = s.id + '|' + s.items.map(i => i.kind + i.id + Math.round(i.fresh / 5)).join(',') +
         '|' + g.stashSel + '|' + g.inv.map(i => i.kind + i.id + Math.round(i.fresh / 5)).join(',') +
-        '|' + g.invSel + '|' + g.posts.map(p => p.it.id + Math.max(1, Math.ceil(p.t / 420))).join(',') +
-        '|' + (g.owlUnlocked() ? 1 : 0) + '|' + N.locale();
+        '|' + g.invSel + '|' + N.locale();
       if (sig === this._cellarSig) return;
       this._cellarSig = sig;
       el('cellarTitle').textContent = N.t('store.' + (s.kind === 'tree' ? 'tree' : 'cellar'));
@@ -241,17 +239,6 @@
         '<div class="empty">' + N.t('cellar.emptyShelf') + '</div>';
       el('packItems').innerHTML = g.inv.map((it, i) => this.itemHTML(it, i, i === g.invSel)).join('') ||
         '<div class="empty">' + N.t('cellar.emptyPack') + '</div>';
-      // owl post
-      const pr = el('postRow');
-      const transit = N.tlist(g.posts.map(p => N.t('cellar.transitItem', { n: N.disp(FRU[p.it.id] || { cn: p.it.id, en: p.it.id }), d: Math.max(1, Math.ceil(p.t / 420)) })));
-      let txt = '';
-      if (g.posts.length) txt += N.t('cellar.transit', { x: transit });
-      if (s.kind === 'tree') {
-        if (g.owlUnlocked()) txt += (txt ? ' · ' : '') + N.t('cellar.postCan');
-        else txt += (txt ? ' · ' : '') + N.t('cellar.postNot');
-      }
-      pr.innerHTML = txt;
-      pr.classList.toggle('hidden', !txt);
     }
 
     /* ---------------- codex ---------------- */

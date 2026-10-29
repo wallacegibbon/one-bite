@@ -24,7 +24,7 @@ There is no mystery to solve, no one to rescue, no villain. You are here for two
 
 | Survive | Experience |
 |---|---|
-| Fruit spoils, the backpack has 24 slots, and the valley is bigger than the life of a single fruit — so you arrange, you store, you choose | Fly the night wood as an owl, sink to the bottom of Mirrorlake as a frog, force a path open as a bear: every body shows you a part of the valley you could not otherwise see |
+| Fruit spoils, the backpack has 24 slots, and the valley is bigger than the life of a single fruit — so you arrange, you store, you choose | Sink to the bottom of Mirrorlake as a frog, force a path open as a bear: every body shows you a part of the valley you could not otherwise see |
 
 Failing is simple too: drowning, the cold on the northern ridge, a frog body drying out on the shore, the fog at the edge, and time running out. There is no failure cutscene — you wake up in town, and what you were carrying lies where you fell.
 
@@ -49,7 +49,7 @@ A grey band of fog around the valley, roughly 400 m thick and too tall to see th
 
 - The world does not explain itself. Every piece of setting arrives through **fruit descriptions**, **journal entries**, **town rules** and **quest-failure text**.
 - How journal text is written: one verifiable fact, then one unverifiable rumour.
-  > e.g. "A small grey-purple fruit, in a hollow of old oak, only faintly visible at night. The night watch says: the best way to pick an owlberry is to become an owl first."
+  > e.g. "A small green fruit on a stem, in the reeds of Mirrorlake, only visible from the water. The night watch says: the best way to pick a frog pear is to become a frog first."
 - Banned words: mana, level, XP, quest reward, upgrade.
 - The humour is dry and administrative:
   > "Cellar trees: 3 at most — the valley cannot remember more places than that."

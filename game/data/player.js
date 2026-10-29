@@ -5,8 +5,8 @@
  *
  *  Why identity is split in three layers:
  *    id      -- stable machine identity, generated once per save/account.
- *               The world stores this (cellar-tree ownership, owl post, the
- *               lake's memory). It is the only layer that survives a move to
+ *               The world stores this (cellar-tree ownership, the lake's
+ *               memory). It is the only layer that survives a move to
  *               multiple players.
  *    epithet -- what the valley calls you. World-given, changes with deeds,
  *               never chosen by the player. All fiction text quotes this.
@@ -32,7 +32,6 @@
     // the valley renames you as you do things; the LAST completed one wins
     epithets: [
       { quest: 'q1',  cn: '存果人',           en: 'the cellar-keeper' },
-      { quest: 'q3',  cn: '夜翼',             en: 'nightwing' },
       { quest: 'q4',  cn: '泅过镜湖的人',      en: 'the one who swam Mirrorlake' },
       { quest: 'q5',  cn: '背下北岭的人',        en: 'the one who carried the ridge home' },
       { quest: 'all', cn: '谷地记得的人',      en: 'the one the valley remembers' }

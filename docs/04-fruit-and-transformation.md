@@ -44,16 +44,10 @@ A fruit starts counting down the moment it is picked.
 ```
 
 - Decay rate in the backpack ×1.0; in the main cellar ×0.1; in a cellar tree ×0.33 (see 05).
-- The game announces dormancy explicitly: "Owlberry went dormant — all that is left is a pit. Plant it and it may still fruit."
+- The game announces dormancy explicitly: "Frog Pear went dormant — all that is left is a pit. Plant it and it may still fruit."
 - **There are no "preservation" items.** The only way to slow decay is storage.
 
-## 3. The full fruit table (4 kinds)
-
-### Common (1 slot)
-
-| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
-|---|---|---|---|---|---|---|
-| `owlberry` | Owlberry | owl | 240 s | Whisperwood · bell-tower hollow | fly 5.2, flySpeed 7.0, glide 0.35, night vision 0.75, stealth 0.45, fov 88, size 0.55×0.7 | Photophobic by day (night vision inverts into blinding); talons cannot work latches or fruit bags (**cannot open storage**) |
+## 3. The full fruit table (2 kinds)
 
 ### Rare (4 slots)
 
@@ -67,9 +61,9 @@ A fruit starts counting down the moment it is picked.
 |---|---|---|---|---|---|---|
 | `bruinfig` | Bruin Fig | bear | 480 s | Northern Ridge rock face · hibernation den | cold immune, aura 8, step 1.1, size 1.4×1.5 | **No fine motor control** (cannot pick small fruit, cannot open storage); **weight**: thin ice breaks, wooden bridges collapse |
 
-**Which of those costs the prototype enforces**: the frog's skin, the owl's daylight and the ridge cold. `dryTimer` drains vitality 90 s after a frog body leaves the water; `nightVision` brightens the dark for the body that has it and washes that same body's daylight out; the Ashscale cold takes vitality above y26 and a bear body never feels it. What is still only written down: talons and claws "cannot open storage" (every body opens it), a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body), thin ice does not break, no bridge collapses. Every ability in the Key abilities column is read by the code — see §4.
+**Which of those costs the prototype enforces**: the frog's skin and the ridge cold. `dryTimer` drains vitality 90 s after a frog body leaves the water; `nightVision` brightens the dark for the body that has it and washes that same body's daylight out; the Ashscale cold takes vitality above y26 and a bear body never feels it. What is still only written down: claws "cannot open storage" (every body opens it), a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body), thin ice does not break, no bridge collapses. Every ability in the Key abilities column is read by the code — see §4.
 
-**Why there is no fifth**: the fruit table is a mirror of the animal table. Adding a fruit means adding a niche, a row in the attitude matrix and a new set of gates (03 §3). Four is what can be read in ten seconds; the next one has to earn that.
+**Why there is no third**: the fruit table is a mirror of the animal table. Adding a fruit means adding a niche, a row in the attitude matrix and a new set of gates (03 §3). Two is what can be read in ten seconds; the next one has to earn that.
 
 ## 4. Form ability fields
 
@@ -81,17 +75,14 @@ sit here looking implemented while nothing reads it.
 |---|---|---|---|
 | `size[w,h]` | collision box in metres | how low a hole you can enter; decides whether a 1×1 passage fits | live |
 | `speed` | land movement multiplier | bear 1.1 / frog 0.9 | live |
-| `turn` | the most radians a second this body may add to its heading, at its own cruising speed | every body has one: human 1.6 / owl 1.4 / frog 1.9 / bear 1.6 — the same number the animal itself carries, because the animal and the body worn from it are one body | live |
+| `turn` | the most radians a second this body may add to its heading, at its own cruising speed | every body has one: human 1.6 / frog 1.9 / bear 1.6 — the same number the animal itself carries, because the animal and the body worn from it are one body | live |
 | `jump` | jump force multiplier | frog 1.3 / bear 0.9 | live |
 | `hop {up,kick,period}` | the body does not walk on land, it hops: the auto-hop's fraction of its own jump, the fraction of land speed the launch throws it at, and the seconds its feet stay down between hops | only the frog: a 1.4 m arc about every second, and the same ground speed a human gets | live |
 | `swim` | underwater movement multiplier; a body with no such field gets 0.62 | frog 1.1 — a frog body is barely quicker in the lake than on the shore, because it is a small body and the water is thick; a human body moves at 0.62 of its land speed there | live |
-| `fly` | flight thrust (0 = cannot fly); it is also the record that excuses this body from foliage, because a body with wings has to be able to climb up through a crown, while a body without them keeps every wall it had (03 §3) | only the owl, 5.2 | live |
-| `flySpeed` | the speed a body with wings holds in level flight, m/s — not derived from walking speed | only the owl, 7.0: an owl is a fast animal wearing a slow body, and this number is the owl's own | live |
-| `glide` | unpowered gliding: the fall speed cap, as a fraction of normal | owl 0.35 — let go of the key and the owl stops hanging in the air: it comes down at a third of the speed you do, keeping the ground speed it had | live |
 | `breatheAir:false` | breathe underwater | only the frog | live |
 | `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 | live |
-| `nightVision` | brightening in the dark, 0–1, and the same eye overwhelmed by daylight | owl 0.75 / frog 0.3 | live |
-| `stealth` | creature alert-radius multiplier | owl 0.45 / frog 0.5 = hard to spot | live |
+| `nightVision` | brightening in the dark, 0–1, and the same eye overwhelmed by daylight | frog 0.3 | live |
+| `stealth` | creature alert-radius multiplier | frog 0.5 = hard to spot | live |
 | `aura` | intimidation radius | bear 8 = small animals scatter as you approach | live |
 | `coldImmune` | the altitude cold of the northern ridge does not bite | bear | live |
 | `poisonImmune` | the lamp jellyfish sting does not bite | only the frog | live |
@@ -130,8 +121,8 @@ Costs come from exactly two places:
 
 | Source | Examples | Why |
 |---|---|---|
-| **this body cannot** | claws and jaws cannot do fine work (no picking small fruit, no opening storage); a 1.4×1.5 body will not fit a low hole; weight breaks thin ice and wooden bridges; the skin dries after 90 s out of water; photophobic by day | you changed body, so you changed the ability table |
-| **how the world reacts to this body** | an owl leaves when you walk up — as a human, and just as fast as a brown bear; the frogs on the shore ignore a human body, run from an owl body, and do not move at all when you are wearing one of their own | they do not recognise *you*, they recognise this body |
+| **this body cannot** | claws and jaws cannot do fine work (no picking small fruit, no opening storage); a 1.4×1.5 body will not fit a low hole; weight breaks thin ice and wooden bridges; the skin dries after 90 s out of water | you changed body, so you changed the ability table |
+| **how the world reacts to this body** | the frogs on the shore ignore a human body and a bear body alike, and settle only when you are wearing one of their own; the bears of the ridge do the same toward every other body; the lamps in the lake ignore all of it and treat every body as water | they do not recognise *you*, they recognise this body |
 
 **The mind is untouched.** A form never makes you want anything and never stops you wanting anything. Inside a bear's body you are still you: what you think, what you fear, what you decide — exactly as in a human shape.
 
@@ -151,9 +142,9 @@ The one exception is a **body reflex**: this body startles before you have decid
 
 | Step | Presentation |
 |---|---|
-| Crosshair on a fruit block | highlight + prompt "E — pick Owlberry (common, 1 slot)" |
+| Crosshair on a fruit block | highlight + prompt "E — pick Frog Pear (rare, 4 slots)" |
 | Press E | the fruit block disappears, backpack +1, rarity and slot cost announced |
 | Backpack full | "Backpack full (24/24 slots) — go back to the cellar first." The fruit does **not** drop, it stays where it is |
 | The fruit block | a faintly self-lit small box (0.44³ body + two small leaves), colour = the rarity ring colour |
 
-Fruit block ids 40–42 (3 kinds), non-solid, non-opaque, `emis:1` — at night you can only see them because they glow themselves. That is the implementation of "at night you can see the Owlberry faintly reflecting light".
+Fruit block ids 40–41 (2 kinds), non-solid, non-opaque, `emis:1` — at night you can only see them because they glow themselves.

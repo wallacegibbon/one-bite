@@ -1,6 +1,6 @@
 /* ==========================================================================
  *  worldgen.js -- valley generation: terrain / Mirrorlake / Starfall Keep / Whisperwood / Echo Hollow /
- *                  Lanternrow / the old orchard / Cloudspire isles / fruit and plant distribution
+ *                  Lanternrow / the old orchard / fruit and plant distribution
  *                  Every fruit is placed where its own species lives (docs/02 s6).
  * ========================================================================== */
 (function (N) {
@@ -184,32 +184,6 @@
     blob(x, y + 0.8, z, 1.6, 0.9, 1.6, 2);
   }
 
-  /* hang fruit on the sides of a trunk (region scan + shuffled order) */
-  function onTrunk(fruitId, x0, z0, x1, z1, trunkBlock, count) {
-    const cols = [];
-    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) cols.push((z << 8) | x);
-    for (let i = cols.length - 1; i > 0; i--) { const j = (rnd() * (i + 1)) | 0; const t = cols[i]; cols[i] = cols[j]; cols[j] = t; }
-    let placed = 0;
-    for (const c of cols) {
-      if (placed >= count) break;
-      const x = c & 255, z = c >> 8;
-      const y = gy(x, z);
-      for (let yy = y + 1; yy <= y + 9; yy++) {
-        if (get(x, yy, z) !== trunkBlock) continue;
-        const spots = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-        const st = (rnd() * 4) | 0;
-        for (let k = 0; k < 4; k++) {
-          const dx = spots[(st + k) % 4][0], dz = spots[(st + k) % 4][1];
-          if (!get(x + dx, yy, z + dz)) {
-            set(x + dx, yy, z + dz, N.FRUIT_BLOCK_REV[fruitId]); placed++; break;
-          }
-        }
-        break;
-      }
-    }
-    return placed;
-  }
-
   /* ---------------- Starfall Keep ---------------- */
   function castle() {
     const keep = N.ZONE_BY_ID.starfall;
@@ -261,7 +235,7 @@
     const gx = cx + 6, gz = cz + 6;
     box(gx - 2, base, gz - 2, gx + 2, base + 4, gz + 2, 21, true);
     set(gx, base + 1, gz, 14);
-    set(gx - 1, base + 1, gz - 1, N.FRUIT_BLOCK_REV['owlberry']);
+    set(gx - 1, base + 1, gz - 1, N.FRUIT_BLOCK_REV['bruinfig']);
     set(gx + 1, base + 1, gz + 1, N.FRUIT_BLOCK_REV['frogpear']);
     // cellar entrance (marked)
     set(cx, base, cz + 4, N.BLOCK_ID.cellarCrate);
@@ -419,30 +393,8 @@
     }
   }
 
-  /* ---------------- Cloudspire isles ---------------- */
+  /* ---------------- clouds ---------------- */
   function sky() {
-    for (const isle of N.SKY_ISLES) {
-      const { x, z, r, top } = isle;
-      for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
-        const d = dist(x + dx, z + dz, x, z);
-        if (d > r) continue;
-        const th = Math.round((1 - Math.pow(d / r, 2)) * (r * 0.9)) + 1;
-        set(x + dx, top, z + dz, 1);
-        for (let y = top - 1; y >= top - th; y--) set(x + dx, y, z + dz, y > top - th + 1 ? 3 : 24);
-      }
-      if (isle.beams) {
-        for (let i = 0; i < 5; i++) tree(x - 4 + (rnd() * 8 | 0), z - 4 + (rnd() * 8 | 0), 'pine');
-        // the old beams: a roof that has been holding itself up for centuries
-        for (let a = 0; a < 6.283; a += 0.5) {
-          const rr = 4 + rnd() * 2;
-          const bx = Math.round(x + Math.cos(a) * rr), bz = Math.round(z + Math.sin(a) * rr);
-          for (let k = 0; k < 3; k++) set(bx + k, top + 1, bz, 26);
-        }
-        for (let k = -2; k <= 2; k++) { set(x + k, top + 3, z, 26); set(x, top + 3, z + k, 26); }
-      } else {
-        for (let i = 0; i < (r > 5 ? 5 : 2); i++) tree(x - r + 2 + (rnd() * (2 * r - 4) | 0), z - r + 2 + (rnd() * (2 * r - 4) | 0), 'pine');
-      }
-    }
     // clouds: several overlapping puffy blobs, above the canopy
     for (let i = 0; i < 16; i++) {
       const x = 10 + rnd() * 140, z = 10 + rnd() * 140, y = 38 + rnd() * 5;
@@ -452,66 +404,6 @@
         const ox = x + (rnd() - 0.5) * 11, oz = z + (rnd() - 0.5) * 11, oy = y + (rnd() - 0.5) * 2.4;
         const rr = 3.4 + rnd() * 3.6;
         blob(ox, oy, oz, rr, rr * (0.5 + rnd() * 0.22), rr, 16);
-      }
-    }
-  }
-
-  /* ---------------- the isles' decks: hold up what walks on them ----------------
-     An isle is laid before the clouds drift and before the wood is planted, and
-     both of those later passes write straight through its floor. A cloud blob
-     leaves block 16 -- which is in the block table as `solid: false`, because a
-     cloud is something you walk through, not something you stand on -- where the
-     deck's own grass was, and a pine rooted on the valley floor under an isle
-     has its crown at the height of the deck above it. The deck is thinnest at an
-     isle's rim, where the island's own thickness under the deck row is one cell:
-     two cells of floor all the way through the island there, and up to twelve at
-     the middle of a big isle (over the 850 columns of these six isles that
-     thickness runs 1..11). A cloud blob's vertical radius, read out of the pass
-     that lays it, runs 1.7..5.0 rows -- enough to eat a rim clean through, and
-     enough to eat cells out of the middle of a thick deck as well. Measured in
-     the band under those 850 deck rows at the seed the game opens with, the
-     island's own material was already gone from 406 cells of it: 230 of cloud,
-     85 of leaf, 54 of needles, 37 of dark leaf.
-
-     Measured at that seed, over the 850 columns of deck the six isles hold inside
-     the world, and read with the rule the player's own body uses (World.solidAt,
-     the call the collision box asks every frame): 700 columns stood a body on the
-     deck, 76 stood it one row low, and **74 were holes a body fell through** --
-     the worst of them 12 rows down, at (38,30) on beamisle, where the deck the
-     map chapter puts at y37 had nothing under it until y25. Read with the rule
-     the animals use for a column (terrainY, which does not accept a crown as
-     ground) the answer was worse still: 618 of the 850 answer the deck row, 30
-     answer one row above it and 202 answer under it, and those 202 fall a mean
-     2.17 rows, the worst 13. Five sixths of the hidden route the chapter
-     advertises for players who would rather not fly was floor; the rest was sky.
-
-     So the deck is re-laid after everything that can eat it. It lays the island's
-     own material in the island's own thickness -- grass at the deck row, stone
-     through the middle of the thickness and mountain rock at its bottom, exactly
-     the way `sky()` lays an untouched isle -- and only in a cell that has stopped
-     being the island: it never cuts a trunk rooted on the ground below (a severed
-     trunk would leave its crown hanging in the air, which is a worse defect than
-     the one being fixed) and it never touches a cell the island already holds.
-     It calls no random number, so it cannot move a tree, a cellar or an isle in
-     any world this seed can build: 406 cells out of the 5,038 cells of those six
-     decks, and everything else byte for byte as it was. Measured the same way at
-     four other seeds it rewrites 235 to 820 cells, and every deck column that
-     dropped a body holds again -- 145 columns of 850 needed it at seed 7, 72 at
-     seed 20261009, and two of the four seeds had nothing to fix at all.  */
-  function decks() {
-    const OWN = { 1: 1, 2: 1, 3: 1, 24: 1 };   // grass, dirt, stone, mountain rock: the island's own
-    for (const isle of N.SKY_ISLES) {
-      const { x, z, r, top } = isle;
-      for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
-        const d = dist(x + dx, z + dz, x, z);
-        if (d > r) continue;
-        const th = Math.round((1 - Math.pow(d / r, 2)) * (r * 0.9)) + 1;
-        for (let y = top; y >= top - th; y--) {
-          const b = get(x + dx, y, z + dz);
-          if (OWN[b]) continue;                     // the island already holds this cell
-          if (b === 6) continue;                    // a trunk rooted under the island stays rooted
-          set(x + dx, y, z + dz, y === top ? 1 : (y > top - th + 1 ? 3 : 24));
-        }
       }
     }
   }
@@ -576,8 +468,6 @@
         set(xx, y + 1, zz, 6);
       }
     }
-    // owlberry: beside hollow old oaks
-    onTrunk('owlberry', 10, 10, 150, 70, 6, 24);
     // frogpear: the glade stays damp, so the frogs live there too
     for (let i = 0; i < 26; i++) {
       const a = rnd() * 6.28, r = 4 + rnd() * 9;
@@ -624,9 +514,6 @@
       for (let y = h + 1; y <= SEA; y++) set(x, y, z, 5);
     }
     cave(); castle(); village(); orchard(); lakebed(); sky(); forest();
-    // the isles' decks last: cloud drift and the wood below both write through
-    // them, and a deck that is not a floor is a hole in a floating island
-    decks();
     // boundary: flatten the outermost ring and raise the Grey Veil pillars
     for (let i = 0; i < W.w; i += 7) {
       for (const [x, z] of [[i, 4], [i, W.d - 5], [4, i], [W.w - 5, i]]) {

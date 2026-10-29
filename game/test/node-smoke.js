@@ -153,7 +153,7 @@ const extents = (modelId, sc) => {
   }
   /* the same rule read off the bodies as the model builder really builds them,
      crease shades and all */
-  for (const id of ['human', 'owl', 'frog', 'bear', 'jelly']) {
+  for (const id of ['human', 'frog', 'bear', 'jelly']) {
     let outward = 0, mine = 0;
     for (const part of F.MODELS[id].parts) {
       const m = new F.MeshBuilder();
@@ -191,7 +191,7 @@ const extents = (modelId, sc) => {
   /* The one self-lit model in the game, and the only one: no body you can wear
      carries a light (docs/07 s1). */
   if (!F.MODELS.jelly.parts.every(p => p.emis)) bad.push('a lamp part is not lit');
-  for (const id of ['human', 'owl', 'frog', 'bear'])
+  for (const id of ['human', 'frog', 'bear'])
     if (F.MODELS[id].parts.some(p => p.emis)) bad.push(`${id} glows`);
   console.log('灯水母', bad.length ? '!! ' + bad.join(', ') : `OK ${e.r * 2} m 宽 / ${e.top - e.bottom} m 高`);
   if (bad.length) process.exitCode = 1;
@@ -292,7 +292,6 @@ for (const p of F.POIS) console.log('POI', p.cn, 'topY=', topAt(p.x, p.z));
    drift is visible, and guarded so it cannot drift again unnoticed. */
 {
   const LEAF = { 7: 1, 8: 1, 9: 1, 27: 1, 28: 1 };
-  const onIsle = (x, z) => F.SKY_ISLES.some(i => Math.hypot(x - i.x, z - i.z) <= i.r);
   const topSolid = (x, z, skipPlants) => {
     for (let y = w.h - 1; y >= 0; y--) {
       const b = w.get(x, y, z);
@@ -326,22 +325,21 @@ for (const p of F.POIS) console.log('POI', p.cn, 'topY=', topAt(p.x, p.z));
       ? (x, z) => x >= zn.x0 && x <= zn.x1 && z >= zn.z0 && z <= zn.z1
       : (x, z) => Math.hypot(x - zn.cx, z - zn.cz) <= zn.r;
   };
-  const floor = (x, z) => !onIsle(x, z);
+  const floor = (x, z) => true;
   const ground = range(floor, true), ridge = range(inZone('mountains'), true);
   const town = range((x, z) => inZone('lanternrow')(x, z) || inZone('orchard')(x, z), true);
   const canopyFloor = leafTop(floor), canopyTown = leafTop(inZone('lanternrow'));
   let wlo = 999, whi = -1;
   for (let i = 0; i < w.blocks.length; i++) if (w.blocks[i] === 5) { const y = (i / (w.w * w.d)) | 0; if (y < wlo) wlo = y; if (y > whi) whi = y; }
-  console.log('层 地面(不含岛)', JSON.stringify(ground), '镇/果园', JSON.stringify(town));
+  console.log('层 地面', JSON.stringify(ground), '镇/果园', JSON.stringify(town));
   console.log('层 树冠', '谷地最高', canopyFloor, '镇上方', canopyTown, '水', `${wlo}..${whi}`);
-  console.log('层 北岭', JSON.stringify(ridge), '云顶岛面', F.SKY_ISLES.map(i => i.top).join('/'));
+  console.log('层 北岭', JSON.stringify(ridge));
   const bad = [];
   // what docs 02 s4 claims, in the same words the chapter uses
   if (wlo !== 4 || whi !== 14) bad.push(`water y${wlo}..${whi}, the chapter says 4..14`);
   if (canopyTown > 35) bad.push(`town canopy tops at ${canopyTown}, the chapter says 20-35`);
   if (canopyFloor < 45 || canopyFloor > 48) bad.push(`valley canopy tops at ${canopyFloor}, the chapter says 47`);
   if (ridge.lo < 22 || ridge.hi > 37) bad.push(`ridge surface y${ridge.lo}..${ridge.hi}, the chapter says 23-36`);
-  for (const i of F.SKY_ISLES) if (i.top < 29 || i.top > 40) bad.push(`isle ${i.id} surface y${i.top}, the chapter says 29-40`);
   // the ridge's cold: the chapter says the full bite lands at the top of it
   const cold = F.ZONE_BY_ID['mountains'].cold;
   if (ridge.hi < cold.above + cold.ramp - 2) bad.push(`ridge tops at ${ridge.hi} but the cold only reaches full bite at ${cold.above + cold.ramp}`);

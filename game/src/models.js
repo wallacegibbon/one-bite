@@ -8,8 +8,7 @@
  *  against the collision box rather than against the model.
  *  A part may have a `parent`: its own rotation is applied first, then the
  *  parent's, so a limb can have a joint (shoulder -> elbow, hip -> knee).
- *  Parts are authored in the bind pose. For the wings the bind pose is the
- *  folded one -- a perched owl is the shape you see most of the day.
+ *  Parts are authored in the bind pose.
  *  A part may also declare `air:[rx,ry,rz]` and `crouch:[rx,ry,rz]`: the pose
  *  it takes when the body is off the ground, and when it is loading a jump.
  *  The weights (st.air, st.crouch) come from what the physics actually did to
@@ -118,121 +117,6 @@
           [-0.85, 5.5, -1.4, 1.7, 0.35, 0.7, '#9a7a4a'],          // flap
           [-0.2, 5.0, -1.45, 0.4, 0.4, 0.14, '#c8a45a']           // buckle
         ] }
-      ]
-    },
-
-    /* ---------------- owl ----------------
-       0.70 m tall, and the wings are the whole point. The old ones were panels
-       as tall as the body hanging off the ribs, so flapping swept them through
-       the legs and out the far side. Now: a short upper wing hinged at the
-       shoulder, a forearm of primaries hinged at the elbow, and the span runs
-       sideways instead of downwards. The tail and the folded primaries are kept
-       inside the 0.55 m box, so an owl walking into a crack is the size the
-       data says it is. */
-    owl: {
-      eye: 0.60,
-      parts: [
-        /* The body is carved standing, because standing is what it does by day
-           wedged in a hollow. A body that flies does not stand: it lies along
-           the way it is going, head in front, tail and folded legs behind. The
-           pitch that lays it down belongs to the model and not to the caller:
-           the caller's `tilt` is the angle of the path it is travelling (see
-           entities.js), and if that one number also carried the posture then a
-           level flight would have no posture at all -- which is exactly what it
-           had. Read off the matrices the draw uploads, an owl crossing the valley
-           at 7 m/s held its spine 72 degrees up from the horizontal, its head
-           87 degrees above its own body and its feet 0.24 m under its centre:
-           the same body, wings aside, that stands on a branch. So the body says
-           here how far it lays itself down, and the hinge it lays itself around
-           is the hip the legs hang from, so the legs and the tail go where a
-           body turning nose-over-heels takes them instead of being left behind.
-           The head answers back: a body laid 72 degrees over would otherwise spend
-           the whole of its flight looking at the ground it is hunting over, so the
-           face comes back to 5 degrees under the horizon -- where an owl after a
-           vole wants it. Blended by the air under the body (`air`, eased, like
-           every other pose), so a bird leaving a branch lies down over a few frames
-           instead of snapping flat in one. */
-        { name: 'body', anim: 'bob', pivot: [0, 0.95, 0.1], fly: [1.25, 0, 0], boxes: [
-          [-1.1, 0.9, -1.0, 2.2, 2.15, 2.0, '#8a7256'],
-          [-0.85, 1.05, 0.86, 1.7, 1.75, 0.3, '#d8c9a8'],         // breast
-          /* the pale belly, showing where an owl perched upright shows it: below
-             the breast plate and between the legs. It used to sit wholly inside
-             the trunk box -- six faces built, not one pixel drawn. Moving it out
-             sideways buys nothing either, because the folded primaries hang down
-             the flanks and cover it there, so it comes out at the front: it stands
-             12 mm proud of the trunk and the breast plate overhangs it by 4 mm,
-             which is how the front of a perched owl is built -- a plate of feather
-             over a rounded belly. */
-          [-0.8, 0.6, 0.95, 1.6, 0.5, 0.17, '#c6b594'],           // belly, under the breast
-          [-0.55, 2.75, -0.9, 1.1, 0.35, 1.6, '#7a6248']          // mantle
-        ] },
-        { name: 'head', parent: 'body', pivot: [0, 3.0, 0], anim: 'nod', fly: [-1.16, 0, 0], boxes: [
-          [-1.2, 3.0, -1.0, 2.4, 1.6, 1.9, '#9a8266'],
-          [-1.15, 3.1, 0.78, 1.0, 1.3, 0.26, '#e6d7b4'],          // facial disc
-          [0.15, 3.1, 0.78, 1.0, 1.3, 0.26, '#e6d7b4'],
-          [-1.28, 3.0, 0.72, 0.26, 1.5, 0.22, '#6a5540'],         // disc rim
-          [1.02, 3.0, 0.72, 0.26, 1.5, 0.22, '#6a5540'],
-          [-0.86, 3.66, 0.92, 0.62, 0.6, 0.24, '#241a10'],        // eyes, forward
-          [0.24, 3.66, 0.92, 0.62, 0.6, 0.24, '#241a10'],
-          [-0.95, 4.32, 0.86, 0.8, 0.22, 0.26, '#6a5540'],        // brows
-          [0.15, 4.32, 0.86, 0.8, 0.22, 0.26, '#6a5540'],
-          [-0.22, 3.3, 0.98, 0.44, 0.5, 0.36, '#d8a040'],         // beak
-          [-1.12, 4.3, -0.35, 0.46, 0.4, 0.62, '#6a5540'],        // ear tufts
-          [0.66, 4.3, -0.35, 0.46, 0.4, 0.62, '#6a5540']
-        ] },
-        /* the coverts are the trunk's brown at the trunk's own ratios, so a
-           folded wing used to be one colour at two strengths: across the 189
-           pixels of that joint the frame showed, the colour difference measured
-           0.008 (a channel's share of its own pixel's light, which no scalar
-           multiplication can move) and 0% of the seam read as two colours. A
-           greyer coverts (#75604a -> #6e6352) takes the difference to 0.090 and
-           the whole seam to two colours -- and the primaries, which were always a
-           brown of their own and lie along the coverts rather than along the
-           trunk, then read as well (0.109 to 0.112 across 62 pixels of
-           primaries-to-wing seam). The tail keeps its colour: trunk against tail
-           is 112 pixels of seam standing 12.9 levels of brightness apart, and
-           that is the one joint of this body claimed in neither direction. */
-        { name: 'wingL', parent: 'body', pivot: [-1.05, 2.75, -0.1], anim: 'flap', sign: -1,
-          air: [0, 0, -1.32], boxes: [[-1.5, 1.5, -0.8, 0.45, 1.35, 1.55, '#6e6352']] },
-        { name: 'foreL', parent: 'wingL', pivot: [-1.27, 1.55, -0.1], anim: 'fold', sign: -1,
-          air: [0, 0, -0.95], boxes: [
-            [-1.45, 0.5, -1.3, 0.42, 1.1, 1.95, '#5f4c38'],       // primaries
-            [-1.45, 0.42, 0.62, 0.42, 0.5, 0.72, '#54432f']       // leading edge
-          ] },
-        { name: 'wingR', parent: 'body', pivot: [1.05, 2.75, -0.1], anim: 'flap', sign: 1,
-          air: [0, 0, 1.32], boxes: [[1.05, 1.5, -0.8, 0.45, 1.35, 1.55, '#6e6352']] },
-        { name: 'foreR', parent: 'wingR', pivot: [1.27, 1.55, -0.1], anim: 'fold', sign: 1,
-          air: [0, 0, 0.95], boxes: [
-            [1.03, 0.5, -1.3, 0.42, 1.1, 1.95, '#5f4c38'],
-            [1.03, 0.42, 0.62, 0.42, 0.5, 0.72, '#54432f']
-          ] },
-        /* The tail is carved at the rear of the trunk, which is where a standing
-           bird carries it and the wrong place for a flying one: laid 72 degrees
-           over, that rear corner is on top, and the tail flies like a flag. Its own
-           pose brings the fan back to the line of the body. Measured, not guessed,
-           off the same matrices and read as the elevation of the direction the fan
-           points away from its hinge: with nothing said it lies 27 degrees above
-           the horizon while the body it hangs from lies 18 degrees above it -- 9
-           degrees above the line of the body, and its centre 0.17 m above the
-           trunk's -- at -0.95 it droops 28 degrees below the horizon and 46 degrees
-           under that line, and -0.45 leaves it 1 degree above the horizon and 18
-           degrees under the line, which is a folded tail streaming behind. The legs
-           need no pose of their own here: the `air` tuck they already hold, turned
-           by the body lying down, becomes a fold under the breast instead of a limb
-           dangling where a standing bird leaves it. */
-        { name: 'tail', parent: 'body', pivot: [0, 1.35, -1.0], anim: 'wag', fly: [-0.45, 0, 0], boxes: [
-          [-0.62, 0.45, -1.7, 1.24, 0.95, 0.8, '#6a543c']
-        ] },
-        { name: 'legL', parent: 'body', pivot: [-0.5, 0.95, 0.1], anim: 'walk', sign: -1, stands: 1,
-          air: [0.9, 0, 0], boxes: [
-            [-0.72, 0.16, -0.12, 0.44, 1.24, 0.5, '#c8a050'],    // up into the body: the limb is
-            [-0.78, 0, 0.3, 0.56, 0.18, 0.55, '#b8903f']          // foot
-          ] },
-        { name: 'legR', parent: 'body', pivot: [0.5, 0.95, 0.1], anim: 'walk', sign: 1, stands: 1,
-          air: [0.9, 0, 0], boxes: [
-            [0.28, 0.16, -0.12, 0.44, 1.24, 0.5, '#c8a050'],
-            [0.22, 0, 0.3, 0.56, 0.18, 0.55, '#b8903f']
-          ] }
       ]
     },
 
@@ -446,8 +330,8 @@
      down through that line. Nothing about the gait is wrong when that happens;
      the model is simply missing a joint, and the limb has to make up for it by
      lifting. Read off the draw: a bear walking on flat ground had its hind foot
-     0.09 m inside the ground in a third of the frames, an owl its toe 0.06 m
-     inside in three frames of five, a person its boot 0.03 m in a sixth.
+     0.09 m inside the ground in a third of the frames, a person its boot 0.03 m
+     in a sixth.
      So every part that turns in the land gait, and whose limb reaches the
      ground line, carries the corners of the boxes it turns -- its own and every
      part hanging under it, because a thigh that swings carries the foot at the
@@ -612,7 +496,6 @@
   const WALK_STRIDE = 0.9;  // how far a walking leg reaches at the hip, at a full stride
   const STANCE_WALK = 0.62;  // the share of a stride a foot is on the ground, at a walk
   const STANCE_RUN = 0.30;   // ... and at the fastest the body travels: it flies between steps
-  const FLAP_RATE = 11;   // wing beat per second in the air
   const SWIM_RATE = 4.2;  // the stroke's own clock, in rad/s: one stroke every 1.5 s
   /* How much harder the leg on the outside of a turn strokes than the leg on the
      inside, and the turn rate at which that difference is complete: a body
@@ -638,7 +521,7 @@
      foot is drawn up beside the hip and out past the flank, under the rear of
      the body and never under its middle; they are then **driven** back and in
      together, the whole foot against the water the whole way, and shut on the
-     centre line behind the body; and the body rides the glide that is left.
+     centre line behind the body; and the body rides the drift that is left.
      Read off the matrices the draw uploads, the new cycle runs each foot 0.33 m
      fore and aft but only 0.19 m up and down, opens the pair from 0.17 m apart
      at the end of a drive to 0.54 m across at the gather, folds the knee to 52
@@ -762,7 +645,7 @@
      made with the signs changed. And the hinge turns the other way round from
      the reach, because a positive angle about x carries a foot hanging under it
      towards -z (see rotX in engine.js) and every model here faces +z -- a
-     muzzle, a beak and a toe all say so. */
+     muzzle and a toe both say so. */
   function hipAt(A, u, stance) { return -Math.asin(Math.sin(A) * footAt(u, stance)); }
   /* Which way round the body rides its own stride, and the one place a walk and
      a run are not the same gesture.
@@ -770,10 +653,11 @@
      struts is at its highest over the middle of a stance, where the strut is
      straight and under it, and at its lowest where it trades one strut for the
      other. Once a stance is less than half a cycle there is a moment in every
-     stride with no foot down at all: the body is flying, and the leg is a spring
-     instead of a strut -- it comes down onto a foot, bends it, and is thrown
-     back off it, so it is at its LOWEST over the middle of a stance and at its
-     highest in the middle of the flight. The same cosine the other way round.
+     stride with no foot down at all: the body is airborne, and the leg is a
+     spring instead of a strut -- it comes down onto a foot, bends it, and is
+     thrown back off it, so it is at its LOWEST over the middle of a stance and
+     at its highest in the middle of the airborne phase. The same cosine the
+     other way round.
      It turns over where the stance is half a cycle, and is fully turned by
      STANCE_RUN, which is the share at which the body is off the ground for
      two strides in five. */
@@ -867,10 +751,10 @@
   }
 
   /* The angles one part takes this frame, in model space.
-     st: { t, gait, phase, move, air, off, crouch, beat, swim } -- `air` is whether
+     st: { t, gait, phase, move, air, off, crouch, swim } -- `air` is whether
      the body is off the ground, `off` how far above it in body heights, `crouch`
-     how loaded its legs are, `beat` the shared wing phase, `swim` that the body is
-     moving through water with the bodies built for it. All of them are read off
+     how loaded its legs are, `swim` that the body is moving through water with
+     the bodies built for it. All of them are read off
      the body's own motion by the caller.
      `gait` is where the body is in its own stride, in whole cycles, and it is the
      one of them that is not a clock at all: the caller advances it by the ground
@@ -899,27 +783,7 @@
        from the pose blends below: the lift that goes with a swing belongs to the
        swing alone (see the FOOT block above the models) */
     let gait = 0;
-    /* The beat, scaled by how hard the body is actually beating: a body that is
-       riding its wings down holds them spread with a faint stroke, and the heave
-       the stroke gives the body goes with the stroke, not with the clock. */
-    const beat = Math.sin(t * (st.fly ? FLAP_RATE : 2.2) + ph) * (st.flap === undefined ? 1 : st.flap);
-    if (anim === 'flap') {
-      /* The wing is authored folded; the `air` pose holds it out (that part is
-         the generic pose blend below, and it carries its own sign). The beat
-         then swings it around that held-out pose instead of around the ribs.
-         The downstroke is hard and the recovery soft -- a symmetric sine is what
-         made the old one look like a windmill. */
-      const s = st.beat !== undefined ? st.beat : beat;
-      const stroke = s > 0 ? s : s * 0.42;
-      /* the sign is the mirror of the hold: a positive beat is the downstroke,
-         and from a held-out wing the downstroke is the other way round from the
-         raise that `air` pose does */
-      rz = -sg * stroke * (0.22 + 0.78 * air);
-      ry = sg * air * 0.12;
-    } else if (anim === 'fold') {
-      const s = st.beat !== undefined ? st.beat : beat;
-      rz = sg * (s < 0 ? -s * 0.5 : 0) * air;
-    } else if (anim === 'walk') {
+    if (anim === 'walk') {
       /* the swing of a leg (or arm) that walks: one cycle per stride, the two
          sides of the body half a stride apart, and sized by how fast the body is
          actually travelling. `stride` is the part's own share of it -- a frog's
@@ -978,11 +842,8 @@
     } else if (anim === 'nod') {
       rx = Math.sin(t * 1.9 + ph) * (st.move * 0.06 + 0.02);
     } else if (anim === 'wag') {
-      ry = Math.sin(t * (st.fly ? 3.0 : 1.6) + ph) * (st.move * 0.5 + 0.12);
+      ry = Math.sin(t * 1.6 + ph) * (st.move * 0.5 + 0.12);
     } else if (anim === 'bob') {
-      /* when the body is flying, the heave is the wing beat: the body drops as
-         the wings push down. Two unrelated sines is what made a flying body look
-         like a body with two loose parts bolted to it. */
       /* On the ground the heave is the stride: the body is at its highest over
          the middle of a stance, where the leg under it is straight and holding
          it up, and at its lowest at the ends of one, where the leg is angled
@@ -993,16 +854,16 @@
          came up and down 0.35 times a second. The idle part stays on the clock,
          because a body standing still still breathes; and a body with no leg
          that walks has no stride to ride either, so it keeps the sine whole.
-         `rideOf` turns the same cosine over once the stride grows a flight phase
-         (see above), and a body that has never had a part carrying the heave
+         `rideOf` turns the same cosine over once the stride grows an airborne
+         phase (see above), and a body that has never had a part carrying the
+         heave
          gets one now: the person's own body had no `bob` part at all, so the
          one body in the valley you look at for an hour was the one body that
          slid along grass at a height nothing ever changed. */
-      dy = st.fly ? -Math.max(0, st.beat !== undefined ? st.beat : beat) * 0.16
-                  : (st.gait === undefined || st.gait === null
-                     ? Math.sin(t * 2.2 + ph) * st.move * BOB
-                     : rideOf(stance) * Math.cos((u - stance / 2) * 4 * Math.PI) * st.move * BOB) +
-                    Math.sin(t * 2.2 + ph) * 0.05;
+      dy = (st.gait === undefined || st.gait === null
+           ? Math.sin(t * 2.2 + ph) * st.move * BOB
+           : rideOf(stance) * Math.cos((u - stance / 2) * 4 * Math.PI) * st.move * BOB) +
+          Math.sin(t * 2.2 + ph) * 0.05;
     } else if (anim === 'pulse') {
       sc = 1 + (0.10 + 0.16 * st.move) * (0.5 + 0.5 * Math.sin(t * 2.6 + ph));
     }
@@ -1012,7 +873,8 @@
        the timing here and kept for the side -- a synchronous pair is not
        mirrored in time, and the two halves of a body are mirrored in space. The
        stroke itself is the STROKE cycle above: knees out and heels drawn back
-       beside the hips, then driven back and inwards together, then a glide.
+       beside the hips, then driven back and inwards together, and the body
+       rides the drift that is left.
        `held` is the water holding the body up -- in water, breathing it, and not
        standing on the bottom. That is what folds the knee, puts the feet
        **behind** the body instead of under it, and rolls the whole leg out
@@ -1125,18 +987,6 @@
     const lift = p.stands ? Math.min(air, st.off === undefined ? 1 : st.off) : air;
     if (lift > 0.01 && p.air) { rx += p.air[0] * lift; ry += p.air[1] * lift; rz += p.air[2] * lift; }
     if (cr > 0.01 && p.crouch) { rx += p.crouch[0] * cr; ry += p.crouch[1] * cr; rz += p.crouch[2] * cr; }
-    /* The pose of a body the air is holding up: an animal built for the air lies
-       along the way it is going. It is asked for by `fly` -- the caller already
-       says which body is flying -- and it is *carried* by `air`, the same eased
-       0..1 the wings and the tucked legs are carried by, so a bird coming off a
-       branch lies down over a few frames the way a bird does and not in the one
-       frame the flag changes. The part that says nothing says nothing: a body
-       with wings that is standing keeps the pose it was carved in, and the owl's
-       legs need no pose of their own here, because laying the body over turns the
-       `air` tuck they already hold into a fold under the breast instead of a
-       dangling limb. */
-    const flying = st.fly ? Math.min(1, air) : 0;
-    if (flying > 0.01 && p.fly) { rx += p.fly[0] * flying; ry += p.fly[1] * flying; rz += p.fly[2] * flying; }
     /* The lift that goes with a swing, and the answer to the heave. See the
        FOOT block above the models: this is the joint the model does not have,
        and this is the limb refusing to be carried down when the body above it

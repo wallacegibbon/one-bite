@@ -22,9 +22,10 @@ const path = require('path');
     // 1) baseline slot usage
     g.inv = [];
     out.base = { cap: g.cap(), used: g.used() };
-    for (const id of ['owlberry', 'frogpear']) g.addItem('fruit', id);
+    for (const id of ['frogpear', 'frogpear', 'frogpear']) g.addItem('fruit', id);
     out.after3 = { cap: g.cap(), used: g.used(), slots: g.inv.map(i => g.slotOf(i)) };
-    // 2) one legendary (12 slots) brings the pack to 17 of 24; a second cannot fit
+    // 2) three rares fill the pack to 12, one legendary (12 slots) brings it to
+    //    24 of 24 exactly; a second cannot fit
     out.legendary = g.addItem('fruit', 'bruinfig');
     out.rejSecond = g.addItem('fruit', 'bruinfig');
     // 3) side pouch +6 is not yet enough for a second legendary
@@ -41,8 +42,9 @@ const path = require('path');
     g.upg.divider = true;
     const after = probe.map(id => g.slotOf({ kind: 'fruit', id }));
     out.divider = { before, after, cap: g.cap() };
-    // 6) common fruit is unaffected
-    out.common = { before: 1, after: g.slotOf({ kind: 'fruit', id: 'owlberry' }) };
+    // 6) nothing below the divider's line is touched: no common fruit is left
+    //    in the valley, so a common plant carries the check
+    out.common = { before: g.slotOf({ kind: 'plant', id: 'glowcap' }), after: g.slotOf({ kind: 'plant', id: 'glowcap' }) };
     // 7) pits cost half, plus the divider
     out.pit = { frogpear: g.slotOf({ kind: 'pit', id: 'frogpear' }), bruinfig: g.slotOf({ kind: 'pit', id: 'bruinfig' }) };
     // 8) walking to the greenhouse door should finish q6 and grant the divider

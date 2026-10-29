@@ -37,8 +37,8 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
   const made = await step('make', () => {
     const g = window.game, N = window.FRUTARIA;
     g.inv.length = 0;
-    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'frogpear'); g.addItem('plant', 'cellarseed');
-    // the town cellar gets a fruit, so q1 / owl post state is non-trivial
+    g.addItem('fruit', 'frogpear'); g.addItem('plant', 'cellarseed');
+    // the town cellar gets a fruit, so q1 state is non-trivial
     g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 500, maxFresh: 900 });
     // a cellar tree. The spot is found, not remembered: it has to be open
     // ground with ten clear cells above it, because the pit planted in the same
@@ -60,13 +60,33 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     g.player.x = spot.x + 0.5; g.player.y = spot.y; g.player.z = spot.z + 0.5;
     g.buildCellarTree();
     // a planted pit: the growth queue is the thing a save used to forget
-    g.addItem('pit', 'owlberry');
+    g.addItem('pit', 'frogpear');
     g.plantPit(g.inv[g.inv.length - 1], g.inv.length - 1);
     // fruit scattered by a death
     g.drops.push({ x: spot.x, y: spot.y, z: spot.z - 2, item: { kind: 'fruit', id: 'frogpear', fresh: 700, maxFresh: 900 }, t: 600 });
-    // a plant buff and a form in progress
+    // a plant buff and a form in progress. The bear body is 1.4 x 1.5 m and
+    // the cellar tree it just built stands inside that box, so the eat gate --
+    // a body that cannot fit where it stands is refused and the fruit is not
+    // spent -- would refuse it on the spot. Stand a few cells off the tree
+    // before the bite. The fig goes in after the pit: the pack is 24 slots
+    // and frogpear (4) + cellar stone (4) + fig (12) only fit once the pit's
+    // 2 slots are gone.
     g.buffs.stealth = 60;
-    g.addItem('fruit', 'owlberry');
+    g.addItem('fruit', 'bruinfig');
+    let stand = null;
+    for (let dx = 4; dx <= 9; dx++) {
+      const ex = spot.x + dx;
+      const ey = N.groundY(g.world, ex, spot.z, 40);
+      if (ey < 15 || ey > 34) continue;
+      // the bear's box at (ex + 0.5, ey, spot.z + 0.5) covers exactly these
+      // cells; the eat gate asks solidAt of each of them, so ask them here
+      let clear = true;
+      for (let zz = -1; zz <= 1 && clear; zz++) for (let xx = -1; xx <= 1; xx++)
+        for (let yy = 0; yy <= 1; yy++) if (g.world.solidAt(ex + xx, ey + yy, spot.z + zz)) { clear = false; break; }
+      if (clear) { stand = { x: ex, y: ey }; break; }
+    }
+    if (!stand) throw new Error('no clear ground within 9 cells of the cellar tree');
+    g.player.x = stand.x + 0.5; g.player.y = stand.y; g.player.z = spot.z + 0.5;
     g.sel = g.inv.length - 1; g.useSelected();
     const tree = g.stashes.find(s => s.kind === 'tree');
     return {
@@ -296,7 +316,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
         vital: fin(p.vital) ? +p.vital.toFixed(1) : String(p.vital),
         form: p.form === null ? 'human' : String(p.form),
         inv: Array.isArray(g.inv) ? g.inv.length : typeof g.inv,
-        queues: [g.growQueue, g.drops, g.posts, g.regrow].map(q => Array.isArray(q) ? q.length : typeof q),
+        queues: [g.growQueue, g.drops, g.regrow].map(q => Array.isArray(q) ? q.length : typeof q),
         diffs: g.diffs.length
       };
     })));

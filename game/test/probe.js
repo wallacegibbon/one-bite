@@ -27,11 +27,10 @@ const openWater = (x, z) => {                   // open water: the lakebed lies 
   return { wt, bed: s ? s.y : -1 };
 };
 
-/* zone centre: rect -> midpoint, circle -> cx/cz, sky -> an isle, border -> skip */
+/* zone centre: rect -> midpoint, circle -> cx/cz, border -> skip */
 function zoneCenter(z) {
   if (z.kind === 'border') return null;
   if (z.kind === 'rect') return { x: Math.round((z.x0 + z.x1) / 2), z: Math.round((z.z0 + z.z1) / 2) };
-  if (z.kind === 'sky') return { x: N.SKY_ISLES[0].x, z: N.SKY_ISLES[0].z, isle: true };
   return { x: Math.round(z.cx), z: Math.round(z.cz) };
 }
 
@@ -46,13 +45,10 @@ console.log('\nZONES 中心采样:');
 for (const z of N.ZONES) {
   const c = zoneCenter(z);
   if (!c) { console.log(' ', z.id.padEnd(12), '(border — 无中心)'); continue; }
-  const s = c.isle ? { y: N.SKY_ISLES[0].top, b: 'sky' } : stand(c.x, c.z);
+  const s = stand(c.x, c.z);
   console.log(' ', z.id.padEnd(12), `(${c.x},${c.z})`, 'y=' + (s ? s.y : '?'), 'b=' + (s ? s.b : '?'),
     'water=' + waterTop(c.x, c.z));
 }
-
-console.log('\nSKY_ISLES:');
-for (const i of N.SKY_ISLES) console.log(' ', i.id.padEnd(10), `(${i.x},${i.z}) r=${i.r} top=${i.top}`);
 
 /* open water in the lake: prefer deep water, then distance from the centre */
 const lake = N.ZONE_BY_ID['mirrorlake'];

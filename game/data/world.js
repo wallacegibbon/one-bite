@@ -46,7 +46,7 @@
       // it bites harder the higher you go (rate is reached `ramp` metres above
       // the line). A bear body is its own weatherproofing.
       cold: { above: 26, rate: 0.06, ramp: 10 },
-      desc: '棕熊的坡，风把雪粒横着吹。山顶能看到云顶浮岛，也能看见灰雾墙在远处缓慢地“呼吸”。'
+      desc: '棕熊的坡，风把雪粒横着吹。山顶能看见灰雾墙在远处缓慢地“呼吸”。'
     },
     {
       id: 'mirrorlake', cn: '镜湖', en: 'Mirrorlake', kind: 'circle',
@@ -77,11 +77,6 @@
       cx: 24, cz: 104, r: 15,
       danger: 2,
       desc: '所有果实树的祖地，如今只剩一圈断墙、几堆废弃的旧洞，和最老的那棵树。'
-    },
-    {
-      id: 'cloudspire', cn: '云顶浮岛', en: 'Cloudspire', kind: 'sky',
-      danger: 4,
-      desc: '一串悬浮的岩岛，最高的那座上架着旧梁。没有飞行形态，这里只是天空里的一个影子。'
     }
   ];
 
@@ -111,14 +106,14 @@
      answers 0 air up to that marker row too, but the room it opens onto is
      there -- air at y21, y22 and y23, three rows of it, under the floor the town
      builds on at y24. That is a room, and the word says a room.
-     The other six markers are sights, not doors, and no code reads their y
+     The other seven markers are sights, not doors, and no code reads their y
      (the minimap takes only x/z): each carries the row the place stands at,
      measured off the seed the game opens with (20261008), and the tables in the
      docs print exactly what is written here. The bell tower's top slab is city
      brick at y36 -- the 9x9 is closed at that row (77 brick, the four corners
      roof tile where the eave overwrites them) and a body standing on it stands
      at y37; the eaves and the bell hang above it at y37..y42 as single tiles,
-     so only a flying body lands on them. The ridge tops out at y36 over 258
+     so no body can land on them. The ridge tops out at y36 over 258
      columns, which the slab ties rather than beats, and the forest's crowns
      (47) stand higher still. The sunken tower's floor row is y6: its 7x7 shell
      runs y6..y15 on a plinth capped at y5, water inside to y14. The huts'
@@ -135,25 +130,13 @@
     { id: 'frogshall',   cn: '蛙鸣泽',     en: 'the Frogshall',        x: 92,  z: 120, y: 7,  icon: 'water' },
     { id: 'groveheart',  cn: '深鹿林之心', en: 'Heart of the Deep Grove', x: 104, z: 32, y: 24, icon: 'tree' },
     { id: 'cavemouth',   cn: '回声洞口',   en: 'Echo Hollow Mouth',    x: 28,  z: 34,  y: 27, icon: 'cave' },
-    { id: 'beams',       cn: '旧梁',       en: 'the Old Beams',        x: 40,  z: 20,  y: 38, icon: 'sky' },
     { id: 'oldtree',     cn: '最老的树',   en: 'the Oldest Tree',      x: 24,  z: 104, y: 20, icon: 'tree' },
     { id: 'mushring',    cn: '荧光菇环',   en: 'Glowcap Ring',         x: 60,  z: 56,  y: 24, icon: 'shroom' }
-  ];
-
-  /* Cloudspire isles: x, z, radius, top surface height */
-  const SKY_ISLES = [
-    { id: 'beamisle',  x: 40,  z: 20, r: 11, top: 37, beams: true },
-    { id: 'highroost', x: 96,  z: 12, r: 7,  top: 40 },
-    { id: 'windbell',  x: 128, z: 58, r: 8,  top: 34 },
-    { id: 'stepping1', x: 66,  z: 40, r: 4,  top: 31 },
-    { id: 'stepping2', x: 84,  z: 56, r: 3,  top: 29 },
-    { id: 'stepping3', x: 20,  z: 62, r: 4,  top: 30 }
   ];
 
   N.WORLD = WORLD;
   N.ZONES = ZONES;
   N.ZONE_BY_ID = ZONES.reduce((m, z) => (m[z.id] = z, m), {});
   N.POIS = POIS;
-  N.SKY_ISLES = SKY_ISLES;
 
 })(window.FRUTARIA = window.FRUTARIA || {});

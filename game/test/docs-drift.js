@@ -24,8 +24,6 @@ const DRIFTS = [
   ['05-backpack-and-storage.md', '| Min distance | 20 m |', '| Min distance | 21 m |', 'cellar-tree min distance'],
   ['05-backpack-and-storage.md', 'takes 1–3 fruits', 'takes 1–4 fruits', 'raid take maximum'],
   ['02-map-and-scenes.md', '| `cellar` | Main Cellar | (136,134) | 20 |', '| `cellar` | Main Cellar | (136,134) | 21 |', 'POI y'],
-  ['02-map-and-scenes.md', '| `beamisle` | (40,20) | 11 | 37 |', '| `beamisle` | (40,20) | 11 | 36 |', 'isle top'],
-  ['02-map-and-scenes.md', '| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 4 |', '| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 3 |', 'zone danger'],
   ['02-map-and-scenes.md', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r38 | (78,106) |', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r30 | (78,106) |', 'zone radius'],
   ['03-characters-and-creatures.md', '| `thorn` | 刺刺菇 | Thorncap |', '| `thorn` | 刺刺菇 | Thorny Cap |', 'plant name coverage'],
   ['05-backpack-and-storage.md', 'press F to use', 'press Q to use', 'unbound key claim'],
@@ -35,7 +33,7 @@ const DRIFTS = [
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed stomach lets both bodies act at once.', 'cut design back in (mixed stomach)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed form is possible with the right talent.', 'cut design back in (mixed form)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nBeast residue accumulates per form.', 'cut design back in (beast residue)'],
-  ['00-overview-and-design-pillars.md', '| Fruits | 3 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count'],
+  ['00-overview-and-design-pillars.md', '| Fruits | 2 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count'],
   // the map chapter's heights, which only the world built from data/ can answer.
   // Each of these is a number the chapter carries as a measurement; none of them
   // appears in game/data/, so the table checks above cannot see any of them.
@@ -44,10 +42,9 @@ const DRIFTS = [
   ['02-map-and-scenes.md', 'the deepest at (72,83) where the water runs y4..y14', 'the deepest at (72,84) where the water runs y4..y14', 'which column is the lake\'s deepest'],
   ['02-map-and-scenes.md', '258 columns stand at or above that line', '268 columns stand at or above that line', 'ridge columns at the full-bite line'],
   ['02-map-and-scenes.md', 'surface is **y23–36** (mean 30', 'surface is **y23–37** (mean 30', 'ridge surface band'],
-  ['02-map-and-scenes.md', '88% of the ridge\'s columns are already cold', '90% of the ridge\'s columns are already cold', 'ridge cold share'],
-  ['02-map-and-scenes.md', 'the 25 bruin figs hang at **y29..37**', 'the 25 bruin figs hang at **y29..38**', 'bruin fig rows'],
+  ['02-map-and-scenes.md', '87% of the ridge\'s columns are already cold', '89% of the ridge\'s columns are already cold', 'ridge cold share'],
+  ['02-map-and-scenes.md', 'the 24 bruin figs hang at **y23..37**', 'the 24 bruin figs hang at **y23..38**', 'bruin fig rows'],
   ['02-map-and-scenes.md', 'most of them at 37', 'most of them at 36', 'the row most figs hang at'],
-  ['02-map-and-scenes.md', 'isle surfaces 29–40; what stands on them up to 47', 'isle surfaces 29–40; what stands on them up to 46', 'what stands on the isles'],
   ['02-map-and-scenes.md', '**Greenhouse** y21', '**Greenhouse** y23', 'the row the keep greenhouse marker stands on'],
   // what the island under that door holds, and the room the town's door does
   // open onto: the chapter states both as counts, and the counts are what say
@@ -57,18 +54,6 @@ const DRIFTS = [
   ['02-map-and-scenes.md', '**5×5 glass box, from y22 to y26**', '**5×6 glass box, from y22 to y26**', 'the keep glass case plan'],
   ['02-map-and-scenes.md', 'standing 6.3 m from that door', 'standing 7.3 m from that door', 'how far the case stands from its door'],
   ['02-map-and-scenes.md', 'of its 27 inner cells, 16 are the keep\'s own city brick', 'of its 27 inner cells, 15 are the keep\'s own city brick', 'what fills the inside of the keep glass case'],
-  // the isles' decks: how thick they are, whether they hold, and what the height
-  // the chapter prints for them answers when it is asked of the world instead of
-  // read off the table. None of these numbers is in game/data/ either.
-  ['02-map-and-scenes.md', 'over the **850** columns of deck the six isles hold inside the valley', 'over the **849** columns of deck the six isles hold inside the valley', 'how many columns of isle deck the valley holds'],
-  ['02-map-and-scenes.md', '**850** of them hold at that row and **0** are a hole under it', '**849** of them hold at that row and **1** are a hole under it', 'whether the decks hold where the chapter says they do'],
-  ['02-map-and-scenes.md', '**820** answer that row, **30** answer a row above it', '**821** answer that row, **30** answer a row above it', 'what the animals\' rule answers over the decks'],
-  ['02-map-and-scenes.md', '**52** of the 850 columns are exactly two cells thick', '**53** of the 850 columns are exactly two cells thick', 'how thick an isle deck is at its rim'],
-  ['02-map-and-scenes.md', 'it answers **y46** for the row a body would be set down on, where the deck would set it down at **y38**', 'it answers **y45** for the row a body would be set down on, where the deck would set it down at **y38**', 'the read that takes the top of a column for its floor'],
-  ['02-map-and-scenes.md', 'no sky over the column in **470** more, and leaves **662** where', 'no sky over the column in **471** more, and leaves **662** where', 'the isle table\'s row asked of the world as a spawn height'],
-  ['02-map-and-scenes.md', 'only **380** of the 850 keep the sky a body built for flight needs', 'only **379** of the 850 keep the sky a body built for flight needs', 'how much deck keeps the sky a flyer needs'],
-  ['02-map-and-scenes.md', 'rounds to **1,016** different columns, and **166** of them belong to no isle at all', 'rounds to **1,015** different columns, and **166** of them belong to no isle at all', 'the columns an isle disc sample can round to'],
-  ['02-map-and-scenes.md', "a pine's needles over **438** of them", "a pine's needles over **437** of them", 'what crowns the deck where the top-of-column read misses it'],
   // the names the POI table prints: the y, the icon and the coordinates of a
   // marker were compared and its name was not, so a display name could grow a
   // word the world refuses that place and stay green
@@ -77,8 +62,7 @@ const DRIFTS = [
   // the quest chapter's two text columns: the codex prints these strings, the
   // chapter copies them out of game.js, and every other column of that table
   // was compared while these two were not
-  ['06-quests-and-progression.md', "| `q6` | The silver mesh in the greenhouse | go to Starfall's fruit greenhouse, on the deck over the island, and find the silver divider |", "| `q6` | The silver mesh in the cellar | go to Starfall's fruit greenhouse cellar, on the deck over the island, and find the silver divider |", 'a quest title and hint the game no longer shows'],
-  ['06-quests-and-progression.md', '| `q2` | Three Owlberries | find 3 Owlberries in the oak hollows of the Whisperwood |', '| `q2` | Three Owlberries | find 4 Owlberries in the oak hollws of the Whisperwood |', 'a quest hint mis-told in the chapter that quotes it']
+  ['06-quests-and-progression.md', "| `q6` | The silver mesh in the greenhouse | go to Starfall's fruit greenhouse, on the deck over the island, and find the silver divider |", "| `q6` | The silver mesh in the cellar | go to Starfall's fruit greenhouse cellar, on the deck over the island, and find the silver divider |", 'a quest title and hint the game no longer shows']
 ];
 
 let missed = 0;

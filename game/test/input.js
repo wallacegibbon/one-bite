@@ -1,4 +1,4 @@
-/* real key-press test: walk / jump / fly / form timer / interact key */
+/* real key-press test: walk / jump / form timer / interact key */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const { sim } = require('./simwait');
@@ -46,18 +46,12 @@ const { sim } = require('./simwait');
   await sim(page, 0.9);
   out.push('land ' + JSON.stringify(await P()));
 
-  // transform into an owl and fly
+  // transform into a frog
   await page.evaluate(() => {
     const g = window.game;
-    g.inv.length = 0; g.addItem('fruit', 'owlberry'); g.sel = 0; g.useSelected();
+    g.inv.length = 0; g.addItem('fruit', 'frogpear'); g.sel = 0; g.useSelected();
   });
   out.push('form ' + JSON.stringify(await P()));
-  await page.keyboard.down(' ');
-  await sim(page, 1.6);
-  await page.keyboard.up(' ');
-  out.push('flyUp ' + JSON.stringify(await P()));
-  await sim(page, 1.2);
-  out.push('flyHover ' + JSON.stringify(await P()));
 
   // the form timer drains
   const t1 = await page.evaluate(() => window.game.player.formT);

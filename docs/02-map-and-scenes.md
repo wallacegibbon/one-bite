@@ -1,6 +1,6 @@
 # 02 · Map and Scenes
 
-Source of truth: `game/data/world.js` (zones / POIs / isles), `game/src/worldgen.js` (generation and fruit placement).
+Source of truth: `game/data/world.js` (zones / POIs), `game/src/worldgen.js` (generation and fruit placement).
 
 World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** The prototype world is 160×48×160 voxels (the full setting is 1024×128×1024).
 
@@ -13,9 +13,7 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
    16   │ ░ Echo Hollow ⛰          The Deep Grove (silver)  North Ridge ❄Ashscale ░ │
         │ ░  (28,30)               (104,32) r18             (142,18) r26          ░ │
    32   │ ░   ⌂cavemouth           ✦groveheart             ▲mountains            ░ │
-        │ ░      ☁stepping1(66,40)      ☁highroost(96,12)                        ░ │
-   48   │ ░   Glowglade ❍(60,56)        ☁windbell(128,58)                       ░ │
-        │ ░      ☁stepping3(20,62)      ☁stepping2(84,56)                       ░ │
+   48   │ ░   Glowglade ❍(60,56)                                                 ░ │
    64   │ ░─────────── south edge of the Whisperwood ────────────────────────── ░ │
         │ ░  Old Orchard ♠(24,104)     ~Mirrorlake~      Lanternrow ▣          ░ │
    80   │ ░   oldtree                  ~~~~~~~~~~~~~~~~  (116..154,            ░ │
@@ -29,12 +27,8 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
   152   │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
   160   └──────────────────────────────────────────────────┘
 
-  ☁ = Cloudspire isle (floating in the air; this is its shadow position;
-      ☁beamisle sits at (40,20))
   ⛰ = a hill hollowed out   ~ = water surface
 ```
-
-**How to read the map**: the Cloudspire isles project onto the map **above the forest** (z 12–62), but they sit in empty air at y29–40. From the ground they are only shadows; only a flying form can reach them.
 
 ## 2. Zone Table
 
@@ -50,8 +44,6 @@ World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** Th
 | `starfall` | Starfall Keep | 星坠堡 | circle r12 | (78,106) | 1 | The school on the island: four towers and a bell, a glass case on the deck |
 | `lanternrow` | Lanternrow | 灯笼镇 | rect | (116,114)–(154,152) | 0 | Where the main cellar stands |
 | `orchard` | The Old Orchard | 果园遗迹 | circle r15 | (24,104) | 2 | The ancestral ground of every fruit tree: broken walls, old burrows, the oldest tree |
-| `cloudspire` | Cloudspire | 云顶浮岛 | air | y29–40 | 4 | Without a flying form this is only a shadow in the sky |
-
 Zone ids are historical, and so are the display names: `deepgrove` is still the Deep Grove although the herd that named it is gone, and `batcave` is a hill that somebody hollowed out. The ids stay (saves and code use them).
 
 ## 3. Points of Interest (POI)
@@ -65,26 +57,24 @@ Zone ids are historical, and so are the display names: `deepgrove` is still the 
 | `frogshall` | Frogshall | (92,120) | 7 | water | Mirrorlake |
 | `groveheart` | Heart of the Deep Grove | (104,32) | 24 | tree | The Deep Grove |
 | `cavemouth` | Echo Hollow Mouth | (28,34) | 27 | cave | Echo Hollow |
-| `beams` | The Old Beams | (40,20) | 38 | sky | Cloudspire |
 | `oldtree` | The Oldest Tree | (24,104) | 20 | tree | The Old Orchard |
 | `mushring` | Glowcap Ring | (60,56) | 24 | shroom | Glowglade |
 
 ## 4. Vertical layers
 
-The valley is not a floor, it is four:
+The valley is not a floor, it is three:
 
 | Layer | y | What is there | How you get there |
 |---|---|---|---|
-| **Cloudspire** | isle surfaces 29–40; what stands on them up to 47 | 6 isles, the old beams | Owl (fly 5.2), or the stepping isles + Leaper |
 | **Canopy** | 20–31 over the town, to 47 where the forest stands on the northern slopes | Crowns, the bell tower's roof (42), the top of the Deep Grove (35) | Jump + Leaper |
 | **Ground** | 20–29 in the town and the orchard (mean 22) | Forest, town, keep, orchard | Walking |
 | **Underwater** | 0–14; the water itself is y4..14 | Mirrorlake, sunken tower, sunken huts | Only the frog (skin breathing) |
 
-**These numbers are measured off the generated world, not remembered** (seed 20261008): the topmost solid block per column, plants excluded for the ground rows and leaves counted for the canopy. `node-smoke.js` prints all of it and fails if the chapter's numbers stop matching, and `game/test/docs-sync.js` now asks the chapter's heights itself -- every number in the three paragraphs above, both door markers' rows, the band quest 6 derives from one of them, and the keep's glass case -- against the world the data generates. A census has to ask only columns this world holds: Ashscale's own disc reaches x168 in a valley 160 wide, and if the block getter is allowed to answer the 413 columns that hang over the wall with clamped ground, the same census reports the ridge as y23--47, mean 33, 90% cold, 671 columns at the full-bite line. Those four numbers would have been wrong, and nothing would have noticed. The table used to say Canopy 20–28 and Ground 15–24; measured, the town's crowns top out at 31 and the forest's at **47**, because the trees there stand on the northern slopes rather than on the valley floor. And the isles sit **inside** Whisperwood's rectangle — beamisle (40,20), highroost (96,12), stepping3 (20,62) — so a zone query over Whisperwood answers with sky: its leaves run 20..47.
+**These numbers are measured off the generated world, not remembered** (seed 20261008): the topmost solid block per column, plants excluded for the ground rows and leaves counted for the canopy. `node-smoke.js` prints all of it and fails if the chapter's numbers stop matching, and `game/test/docs-sync.js` now asks the chapter's heights itself -- every number in the three paragraphs above, both door markers' rows, the band quest 6 derives from one of them, and the keep's glass case -- against the world the data generates. A census has to ask only columns this world holds: Ashscale's own disc reaches x168 in a valley 160 wide, and if the block getter is allowed to answer the 413 columns that hang over the wall with clamped ground, the same census reports the ridge as y23--47, mean 33, 90% cold, 671 columns at the full-bite line. Those four numbers would have been wrong, and nothing would have noticed. The table used to say Canopy 20–28 and Ground 15–24; measured, the town's crowns top out at 31 and the forest's at **47**, because the trees there stand on the northern slopes rather than on the valley floor.
 
 **Mirrorlake depth**: surface y14, and the lakebed is a slope rather than a floor — the water stands anywhere from **1 to 11 blocks** deep (measured over all 2,970 water columns: 27% of them are 4 blocks or less, **53% are 8 or more**, the deepest at (72,83) where the water runs y4..y14; the bed cannot go below y3, so 11 is the deepest column this world can carve). A human holds breath for 18 seconds, exactly enough to reach the tower windows and come back up, not enough to pick a fruit off the sill. That is the whole argument for "become the frog first": in this water exactly one animal breathes for you.
 
-**The ridge is not on that ladder.** Ashscale's own surface is **y23–36** (mean 30, measured over the zone's columns), and its cold starts at y26 — 88% of the ridge's columns are already cold — and reaches its full bite at y36, which is the top of it: 258 columns stand at or above that line, and the 25 bruin figs hang at **y29..37**, one block above the ground they grow on, most of them at 37. A human can cross the ridge and come back with a fig if it hurries; a bear body simply is not cold.
+**The ridge is not on that ladder.** Ashscale's own surface is **y23–36** (mean 30, measured over the zone's columns), and its cold starts at y26 — 87% of the ridge's columns are already cold — and reaches its full bite at y36, which is the top of it: 258 columns stand at or above that line, and the 24 bruin figs hang at **y23..37**, one block above the ground they grow on, most of them at 37 — twenty-three of them on the ridge, the last in the glass case on the keep's deck. A human can cross the ridge and come back with a fig if it hurries; a bear body simply is not cold.
 
 ## 5. Scene detail
 
@@ -92,8 +82,8 @@ The valley is not a floor, it is four:
 
 On the island at the lake's centre: four towers and a bell, a fruit greenhouse standing on the keep's own deck. What the school teaches is fruit reading: which fruit, how many slots, how long before dormancy.
 
-- **Bell tower**: the top of the keep is a slab of city brick at **y36** (a body standing on it stands at y37); the eaves and the bell hang above it at y37–y42 as single floating tiles, and only a flying body lands on them. It is the highest standing ground in the valley (isles excepted, the floating tiles excepted) -- tied with the rock top of Ashscale, which also reaches y36 (258 columns at that row); the forest's crowns run higher, to y47. The checkpoint of the quest "Nightwing" is that slab.
-- **Greenhouse** y21: the row the marker stands on, one cell under the cellar crate (block 78) the generator puts in the marker's own column to mark this door -- the same rule `game.js` reads for the town cellar's store, which asks the world for `poi.y + 1`. The fruit is kept where no hand reaches: a **5×5 glass box, from y22 to y26** standing 6.3 m from that door, 98 glass cells closed on all six faces, its floor the deck the keep stands on. It is not an empty room, and the chapter should not let a reader picture one: of its 27 inner cells, 16 are the keep's own city brick, 5 are ground under grass and 3 are empty. The generator set the case over the corner of its own ringwall, and what it plants inside stands in the hollow that was left -- one **owlberry**, one **frog pear**, one glowstone lamp. That is the living lesson that a lake fruit is still a fruit away from the lake, and the reason the keep pays no fruit: the picking ray stops at the first solid block it enters, and glass is solid. There are no trees in the keep at all, so the chapter used to describe a glass roof over demonstration trees that were never built. It is called a fruit greenhouse and nothing else, in both languages and in every string the game carries for it: the name the data gives that marker, the zone's own description, the line quest 6 prints in the codex. Keeping the word "cellar" would have meant answering a question first, and the world answered it: the keep's **441** columns, from y0 to y21, hold **9,702** cells and **0** of them are air -- the island is solid, there is no room under that door for anything to open onto, and the fruit stands on the deck, inside the case above. The town's Main Cellar keeps its word because the same measure says it earned it: asked from the floor of the world up to its own marker row it answers 0 air as well, but the room it opens onto is there -- 9x9 of dark brick with air at y21, y22 and y23, three rows of it, under the floor the town builds on at y24 -- that is a cellar.
+- **Bell tower**: the top of the keep is a slab of city brick at **y36** (a body standing on it stands at y37); the eaves and the bell hang above it at y37–y42 as single floating tiles, and no body can land on them. It is the highest standing ground in the valley (the floating tiles excepted) -- tied with the rock top of Ashscale, which also reaches y36 (258 columns at that row); the forest's crowns run higher, to y47.
+- **Greenhouse** y21: the row the marker stands on, one cell under the cellar crate (block 78) the generator puts in the marker's own column to mark this door -- the same rule `game.js` reads for the town cellar's store, which asks the world for `poi.y + 1`. The fruit is kept where no hand reaches: a **5×5 glass box, from y22 to y26** standing 6.3 m from that door, 98 glass cells closed on all six faces, its floor the deck the keep stands on. It is not an empty room, and the chapter should not let a reader picture one: of its 27 inner cells, 16 are the keep's own city brick, 5 are ground under grass and 3 are empty. The generator set the case over the corner of its own ringwall, and what it plants inside stands in the hollow that was left -- one **bruin fig**, one **frog pear**, one glowstone lamp. That is the living lesson that a lake fruit is still a fruit away from the lake, and the reason the keep pays no fruit: the picking ray stops at the first solid block it enters, and glass is solid. There are no trees in the keep at all, so the chapter used to describe a glass roof over demonstration trees that were never built. It is called a fruit greenhouse and nothing else, in both languages and in every string the game carries for it: the name the data gives that marker, the zone's own description, the line quest 6 prints in the codex. Keeping the word "cellar" would have meant answering a question first, and the world answered it: the keep's **441** columns, from y0 to y21, hold **9,702** cells and **0** of them are air -- the island is solid, there is no room under that door for anything to open onto, and the fruit stands on the deck, inside the case above. The town's Main Cellar keeps its word because the same measure says it earned it: asked from the floor of the world up to its own marker row it answers 0 air as well, but the room it opens onto is there -- 9x9 of dark brick with air at y21, y22 and y23, three rows of it, under the floor the town builds on at y24 -- that is a cellar.
 - **The four towers** each display one rarity. The legendary tower is empty and holds one line: "A bruin fig sat here once. It pressed the other three into pulp."
 - The walls carry **glowstone lamps** (block 14, emissive): at night the brightest light in the valley.
 
@@ -101,7 +91,7 @@ On the island at the lake's centre: four towers and a bell, a fruit greenhouse s
 
 A rectangle over the whole northern half. Three bands:
 
-- **Rim** (z 60–72): moonlit meadow, the mushroom-ring entrance, the old mounds. Common fruit: owlberry.
+- **Rim** (z 60–72): moonlit meadow, the mushroom-ring entrance, the old mounds.
 - **Middle** (z 30–60): old trees and the tracks the deer pressed into the ground. The fallen logs are still there; what grew on them is not.
 - **Deep**: the Deep Grove (its own zone, see §5.6).
 
@@ -136,27 +126,6 @@ Radius 38, deepest at the centre at 11 blocks, with **62** stalks of kelp on the
 
 **The Old Orchard** (24,104, r15): a ring of broken wall (30 across) plus the oldest tree in the valley (`oldtree`). Every root heap is an old burrow. The beams of the ruins are still standing. They stay up.
 
-### 5.7 Cloudspire Isles
-
-| Isle | Position | Radius | Top y | What is there |
-|---|---|---|---|---|
-| `beamisle` | (40,20) | 11 | 37 | **The Old Beams**: old timber that is still standing, and the view |
-| `highroost` | (96,12) | 7 | 40 | The highest isle, windy, no fruit; the owls moult here |
-| `windbell` | (128,58) | 8 | 34 | Windbell isle, no fruit, viewpoint |
-| `stepping1` | (66,40) | 4 | 31 | Stepping isle |
-| `stepping2` | (84,56) | 3 | 29 | Stepping isle (the lowest air point in the valley) |
-| `stepping3` | (20,62) | 4 | 30 | Stepping isle |
-
-The stepping isles form a route from the forest canopy (y28) up to Cloudspire — **you can reach the top without a flying form, but you have to climb + jump + not slip**. That is the hidden route for players who would rather not fly.
-
-**The `Top y` column names the row a body stands on, and whether that row holds is a fact about the world, not about this table.** Asked of the generated world, over the **850** columns of deck the six isles hold inside the valley: read with the rule the player's collision box asks the world every frame (`World.solidAt`), **850** of them hold at that row and **0** are a hole under it. Read with the rule the animals use for a column (`terrainY`, which refuses to take a crown for ground), **820** answer that row, **30** answer a row above it -- a burrow mound heaped on the deck in **18** of those columns, one of the old beams' dark planks standing on it in **12** -- and **0** answer under it; **28** of those 30 sit one cell over the deck and **2** three cells over. **52** of the 850 columns are exactly two cells thick, the deck and one cell under it; the other 798 are thicker.
-
-It did not used to hold, and nothing noticed. An isle is laid before the clouds drift and before the wood is planted, and both of those later passes write straight through its floor: a cloud leaves block 16 there, which the block table marks not solid, because a cloud is something you walk through and not something you stand on; and a pine rooted on the valley floor under an isle carries its crown up through the deck over it. Measured on this same seed before it was closed: 700 of the 850 held, 150 let a body through the deck row, and 74 of those dropped it two rows or more -- worst **12** rows, at (38,30) on `beamisle`, where this table says the deck is y37 and nothing at all held until y25. The decks are therefore re-laid after everything that can eat them, in the island's own material and the island's own thickness, and only in the cells that had stopped being the island. A trunk rooted on the ground below is left rooted, because a severed trunk would leave its crown hanging in the air, which is a worse defect than the one being closed; and the pass draws no random number, so it moves nothing else in any world this seed can build -- 406 cells of the 5,038 cells those six decks are made of, and no cell anywhere else.
-
-Two reads look right here and are not. The read that takes the top of a column for its floor (`groundY`) answers the deck row in only **76** of the 850 columns: the other 774 have something growing over the deck: a pine's needles over **438** of them, the leaf of a tree rooted on the deck over **248**, the old beams' dark leaf over **88**, from **2** to **11** rows up; and at `beamisle`'s own centre (40,20) it answers **y46** for the row a body would be set down on, where the deck would set it down at **y38** -- eight rows up in the needles. And a check that reads this table instead of the world answers **850** of **850** as floor, and notices nothing when the generator digs a deck out of a column -- so the check now digs one: the two-cell deck at (40,37,9), at the rim of `beamisle`. It reads the column back and reports the drop it finds.
-
-And this table is not a height a spawn may copy. Asked of the world, the row it names one cell over the deck puts a body **inside** a block in **156** of the 850 columns -- a pine trunk, needles, one of the old beams -- leaves no sky over the column in **470** more, and leaves **662** where the cell stands open at the body's rows with something holding under it; only **380** of the 850 keep the sky a body built for flight needs. A point drawn out of an isle's disc rounds to **1,016** different columns, and **166** of them belong to no isle at all: the valley floor under one, which is ground like any other. So `game.js` no longer answers a sky spawn out of this table -- it picks a column out of the disc, requires that column to be an isle's deck, and then asks the world the same question every other zone asks.
-
 ## 6. Fruit gating map (what progression actually depends on)
 
 ```
@@ -167,11 +136,6 @@ And this table is not a height a spawn may copy. Asked of the world, the row it 
     │
     ├─ Mirrorlake ──────────────→ frog (breatheAir:false, skin breathing)
     │      └─ tower sills ──────→ frog pear (q4)
-    │
-    ├─ canopy / bell tower ─────→ owl (fly 5.2)
-    │      └─ above 30 m ───────→ quest "Nightwing" (q3)
-    │
-    ├─ Cloudspire isles ────────→ owl (fly) or stepping isles + Leaper (jump)
     │
     └─ Ashscale Ridge ledges ───→ bear (step 1.1 m: it walks up what you must jump, and the cold never touches it)
            └─ rock face, y>20 ──→ bruin fig (q5)
@@ -191,5 +155,4 @@ And this table is not a height a spawn may copy. Asked of the world, the row it 
 | Deep Grove | 3 | nothing that hunts you: dense silver trunks, and a bear standing in the path you came in by |
 | Ashscale Ridge | 3 | the height, the cold (it starts above y26 and reaches its full bite at y36; a bear body never feels it), a brown bear that ignores you and will not step aside |
 | Mirrorlake | 3 | drowning (18 s for a human; only a frog body needs no air underwater), a frog drying out on land |
-| Cloudspire | 4 | falling |
 | The Grey Veil | 5 | it is the edge of the world, and it drains your vitality while you press against it |

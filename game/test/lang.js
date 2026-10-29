@@ -66,7 +66,7 @@ console.log(fallbackBad.join('\n'));
     g.player.x = 136.5; g.player.z = 130.5;
     for (let k = 46; k > 0; k--) if (g.world.solidAt(136, k, 130)) { g.player.y = k + 1; break; }
     g.player.yaw = 3.14; g.player.pitch = 0;
-    g.addItem('fruit', 'owlberry'); g.addItem('fruit', 'bruinfig');
+    g.addItem('fruit', 'frogpear'); g.addItem('fruit', 'bruinfig');
     g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 400, maxFresh: 900 });
     window.startGame();
   });

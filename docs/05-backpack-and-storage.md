@@ -56,7 +56,7 @@ This single idea answers Q1–Q5 at once:
 
 - Q1 cost = one pit (you get those anyway) + time (it has to grow)
 - Q2 location = anywhere it can take root (soil, light, not on the roots of another cellar tree)
-- Q3 transfer = **owl post** (see §5)
+- Q3 transfer = **carrying it yourself** (the backpack is the transport vehicle, §5.1)
 - Q4 degradation = a cellar tree's decay rate is 1/3 (not 0), and **bears and fruit thieves come stealing**
 - Q5 cap = **at most 3 cellar trees**, for a worldview reason rather than a numeric one: "At most 3 cellar trees — the valley cannot remember more places than that."
 
@@ -143,18 +143,7 @@ A round trip "Mirrorlake → Lanternrow" takes about 3–4 minutes. So:
 
 The backpack is the transport vehicle. Subtract the consumables you need on the road (mushrooms, glowing seeds) from the 24 slots and real carrying capacity is about 18–20 slots.
 
-### 5.2 Owl post (cellar tree ↔ main cellar)
-
-- Precondition: you have stored at least 1 Owlberry in the main cellar (this unlocks "Pendulum").
-- Open the cellar tree's storage panel (press E on the tree), select a fruit on the shelf with the arrow keys, then **press P to post it** — "have Pendulum carry one away". P is bound only while a storage panel is open, and posting from the main cellar is refused: the owl flies between a cellar tree and the main cellar, never out of the main cellar.
-- One fruit at a time, **delivered 3 game days later** at the main cellar.
-- On arrival the fruit **has already decayed for 3 days** (counted at the main cellar's ×0.1), so posting only makes sense for rarity ≥ rare.
-- 10% failure rate: "Pendulum did not come back. On the fourth day it flew back by itself, mouth empty."
-- Implementation notes: **at most 3 in transit at once** (Pendulum cannot carry more); if the main cellar is full on arrival, Pendulum carries the fruit **back to the source cellar tree** instead of dropping it; both the unlock state (`_owlUnlocked`) and the in-transit queue (`posts`) are saved.
-
-Design intent: posting **does not remove the hauling**, it only ships "the one most precious fruit". It is slower than hauling and costlier than hauling (you have to feed the owl), but it is the only way that does not require you to walk the trip yourself.
-
-### 5.3 Explicitly not doing
+### 5.2 Explicitly not doing
 
 - ❌ Teleporting between warehouses (would destroy the meaning of the map)
 - ❌ Unlimited capacity (would destroy P3)
@@ -181,7 +170,6 @@ These three turn "the warehouse" from a static UI into **something you manage, s
 | storage UI (two-way transfer) | ✅ implemented (`openStashUI/moveItem`, `ui.renderCellar`) |
 | backpack upgrades (Pouch / Deep Pouch / Silver Divider) | ✅ implemented (`Game.upg` + `cap()/slotOf()`; q1→Pouch, q4→Deep Pouch, q6→Silver Divider; saved) |
 | fruit block regrowth | ✅ implemented (`Game.regrow[]`, `RARITY.regrow` game days ×±20%, saved) |
-| owl post | ✅ implemented (`Game.postItem/updatePosts`, 1 fruit / 3 game days / 10% lost, decays at ×0.1 in flight, in-transit saved) |
 | bear / fruit-thief rolls | ✅ implemented (`Game.dailyRolls()`, 30% per game day, player within 45 m always scares them off, 1–3 fruits taken) |
 | cellar-tree spacing (min 20 m) | ✅ implemented (`Game.buildCellarTree()` refuses a tree planted inside a sibling's roots) |
 | every number in the rule table above | ✅ lives in `N.STORAGE.treestash` (`minDist` / `raidChance` / `raidMin` / `raidMax` / `raidScareRadius`); `docs-sync.js` compares the prose against the data, and `docs-drift.js` proves it can fail |

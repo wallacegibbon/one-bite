@@ -9,15 +9,14 @@
      fields of every body record. The alias keeps the code below readable. */
   const HUMAN = N.HUMAN_FORM;
 
-  /* The speed a body that does nothing about it falls at. `glide` is a fraction
-     of this, so the number in the data file is a ratio and not a speed. */
+  /* The speed a body that does nothing about it falls at. */
   const MAX_FALL = 42;
   const GRAVITY = 23;
-  /* The pull a wing works against when it leans into a turn. The game's own
+  /* The pull a body works against when it leans into a turn. The game's own
      gravity is 23 m/s^2 because an arcade fall has to feel like one; the tilt a
      body shows is not about whether it holds the arc (the code holds the arc),
      it is about how much of the turn the body shows, and at these speeds a real
-     wing shows atan(sideways / 9.8). */
+     body shows atan(sideways / 9.8). */
   const LEAN_G = 9.8;
   /* A heading read twice a frame off a body crawling through water and bumping
      its banks jitters by a degree or two, and a lean built on that jitter would
@@ -84,14 +83,6 @@
      wild body does not need. */
   const WALK_TOP = 5;
 
-  /* How far ahead of itself a flying body looks for ground it would have to
-     climb, in metres. It is the reach of the body's own climb: the climb is
-     eased at 2.2/s, so a body closes 63% of the height it wants in 0.45 s, and
-     at the seven metres a second an owl crosses the valley at that is about the
-     three metres of ground coming at it. Look further than that and the body is
-     climbing for a hill it could simply have gone round. */
-  const AHEAD = 7;
-
   /* ============================ player ============================ */
   /* The walk clock. A body's gait is where it is in its own stride, and it is
      advanced by the ground the body covered and not by the clock: one cycle of
@@ -102,8 +93,8 @@
      The distance is the body's own displacement and not its velocity times the
      frame: a body pushing on a wall covers no ground, and its legs have to stop
      with its body instead of running on the spot against it. And the ground a
-     body covers while the air is holding it up does not count either -- an owl
-     crossing the valley is not walking across it.
+     body covers while the water is holding it up does not count either -- a
+     frog swimming across the lake is not walking across it.
      A body with no leg that walks reaches nowhere: a frog hops and a jelly
      drifts, and their gait is left unset, which is how the draw knows there is
      no stride for that body to ride. */
@@ -137,9 +128,6 @@
          takes. Only a body the air or the water is holding up has one -- feet
          keep a body level. */
       this.tilt = 0;
-      // and the wing beat, 0..1: a body riding its wings down beats far less
-      // than one climbing for height
-      this.flap = 1;
       this.grounded = false;
       this.form = null;            // fruitId
       this.formT = 0;              // time remaining
@@ -229,30 +217,13 @@
       const x0 = Math.floor(x - hw), x1 = Math.floor(x + hw);
       const y0 = Math.floor(y + 0.001), y1 = Math.floor(y + s[1] - 0.001);
       const z0 = Math.floor(z - hw), z1 = Math.floor(z + hw);
-      const thr = this.throughFoliage();
       for (let yy = y0; yy <= y1; yy++)
         for (let zz = z0; zz <= z1; zz++)
           for (let xx = x0; xx <= x1; xx++)
-            if (this.stopsAt(xx, yy, zz, thr)) return true;
+            if (this.stopsAt(xx, yy, zz)) return true;
       return false;
     }
-    /* Foliage is neither a wall nor a roof to a body built for the air
-       (docs/03 s3). The owl animal has always had that -- every gate it is
-       asked through exempts the blocks a tree is made of -- and the body worn
-       from that same animal did not: standing in a crown with the climb key
-       held, it rose 2.3 m in the first 1.5 s and then did not move again for
-       the next 1.5 s, its speed zeroed by needles it could not get past, while
-       the animal it is carved from leaves the same crown without slowing.
-       A trunk is not foliage: it stays a wall and a roof to both. And nothing
-       here touches a body on foot, which still climbs a tree and stands on the
-       crown it grew -- `throughFoliage` asks the body what it is built for, not
-       whether it happens to be off the ground, so a worn body cannot perch: it
-       settles onto the floor under the crown, exactly as a bird at rest does. */
-    throughFoliage() { return !!this.formDef.fly; }
-    stopsAt(x, y, z, thr) {
-      if (!this.world.solidAt(x, y, z)) return false;
-      return !(thr && N.FOLIAGE[this.world.get(x, y, z)]);
-    }
+    stopsAt(x, y, z) { return this.world.solidAt(x, y, z); }
     /* move along one axis; returns whether it hit a wall */
     axis(a, amt) {
       if (!amt) return false;
@@ -304,8 +275,7 @@
       const s = this.size(), hw = s[0] / 2;
       const x0 = Math.floor(x - hw), x1 = Math.floor(x + hw);
       const z0 = Math.floor(z - hw), z1 = Math.floor(z + hw);
-      const thr = this.throughFoliage();
-      for (let zz = z0; zz <= z1; zz++) for (let xx = x0; xx <= x1; xx++) if (this.stopsAt(xx, y, zz, thr)) return true;
+      for (let zz = z0; zz <= z1; zz++) for (let xx = x0; xx <= x1; xx++) if (this.stopsAt(xx, y, zz)) return true;
       return false;
     }
     /* A body change, or a tree growing where you were standing, can leave you
@@ -417,38 +387,26 @@
 
       // ---- intended velocity ----
       const sprint = inp.sprint && this.air > 0 && !this.inWater;
-      const fly = f.fly && !this.inWater;
       /* Whether the feet were on the ground when the frame started. Two things
          make this harder than reading `grounded`.
-         The vertical branch below answers "is this body in the air or in the
-         water" for the whole frame, and for a body with wings it answers "in the
-         air" whatever the collision said a moment ago -- so anything that wants
-         to know whether the body is standing has to ask before that branch runs,
-         not after.
-         And for a body with wings `grounded` is the wrong question anyway: the
-         wing branch clears the flag every frame, so an owl running along a field
-         is never once reported standing on it. A rule that asks the flag gives
-         that owl the attitude of a body in a dive -- and the arithmetic makes it
-         worse the slower it goes, because the one frame of falling the ground
-         then undoes (-0.38 m/s) is divided by a horizontal speed that is going to
-         nothing. Read off the draw: an owl standing still held 0.43 rad of
-         nose-down, and its toes reached 5 cm under the floor it was standing on.
-         So the question is put to the ground instead: how far above the level it
-         would be standing at in this column is this body. The 2 cm of slack is
-         the same one the step-up and the water's hold use. */
+         The vertical branch below decides "is this body in the air or in the
+         water" for the whole frame, so anything that wants to know whether the
+         body is standing has to ask before that branch runs, not after.
+         And the flag is the answer of the frame that is over: `grounded` is
+         reset only by the displacement below, so a body that has just stepped
+         off a ledge is still reported standing on it while its fall begins.
+         Put the question to the ground instead: how far above the level it would
+         be standing at in this column is this body. The 2 cm of slack is the
+         same one the step-up and the water's hold use. */
       const onFoot = this.grounded || this.y - standY(W, cx, cz, this.y) < 0.02;
-      /* What the body is trying to travel at. A body with wings travels at the
-         speed its species flies at, not at the speed it walks at: the wild owls
-         of the valley cross the valley at 7 m/s (data/creatures.js `flySpeed`)
-         while you are wearing one, and an owl that putters along at walking
-         pace is a body with a speed problem. On foot the body's own `speed`
-         multiplier still decides, because on foot every body is measured
-         against the human body's 4.7 m/s. */
-      let speed = (fly && f.flySpeed ? f.flySpeed : 4.7 * (f.speed || 1)) * (sprint ? 1.45 : 1);
+      /* What the body is trying to travel at. On foot the body's own `speed`
+         multiplier decides, because on foot every body is measured against the
+         human body's 4.7 m/s; in water the `swim` fraction below takes over. */
+      let speed = 4.7 * (f.speed || 1) * (sprint ? 1.45 : 1);
       if (this.inWater) speed *= (f.swim || 0.62);
       // a body that hops is thrown forward by the hop; it does not bleed speed
       // in the air the way a body that merely fell off a ledge does
-      if (!this.grounded && !fly && !this.inWater) speed *= (f.hop ? 1 : 0.92);
+      if (!this.grounded && !this.inWater) speed *= (f.hop ? 1 : 0.92);
       let dx = 0, dz = 0;
       const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
       const rx = Math.cos(this.yaw), rz = Math.sin(this.yaw);
@@ -463,15 +421,15 @@
       // guess about which animal the body is.
       this.cruise = speed;
 
-      /* ---- a body the fluid is holding up goes where it is going ----
-         Wings stay up by moving forward, and a body in water has nothing to
-         push against but the water. Neither can change course on the spot: the
-         course bends. `turn` is how fast the body can bend it -- the most
+      /* ---- a body the water is holding up goes where it is going ----
+         A body in water has nothing to push against but the water, and it
+         cannot change course on the spot: the course bends. `turn` is how fast
+         the body can bend it -- the most
          radians a second it adds to its heading at its own cruising speed --
          and above that speed the arc it holds gets wider, not the turn faster,
          because the same sideways push has more body to swing about.
          What this replaces: the velocity was eased straight toward wherever the
-         mouse pointed, with 22 units of push in air and 12 in water. Measured,
+         mouse pointed, with 12 units of push in water. Measured,
          a swimming body peaked at a course change of 94 rad/s, came about 45
          degrees in 0.17 s and 90 degrees in 1.9 s, and its path was a polyline
          whose corners the easing had merely softened.
@@ -480,7 +438,7 @@
          mouse, not an animal's answer to momentum. */
       const arc = f.turn || 0;
       const hd0 = Math.hypot(this.vx, this.vz) > 0.05 ? Math.atan2(this.vx, -this.vz) : this.faceYaw;
-      if (arc > 0 && (fly || this.inWater)) {
+      if (arc > 0 && this.inWater) {
         let spd = Math.hypot(this.vx, this.vz);
         // at rest there is no course to bend: a body that starts from nothing
         // starts in the direction it is pushing, the way an animal pushes off
@@ -502,7 +460,7 @@
         this.vx = Math.sin(hd) * spd;
         this.vz = -Math.cos(hd) * spd;
       } else {
-        const accel = fly ? 22 : (this.grounded ? 34 : (f.hop ? 18 : 12));
+        const accel = this.grounded ? 34 : (f.hop ? 18 : 12);
         this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt / Math.max(speed, 1));
         this.vz += (dz * speed - this.vz) * Math.min(1, accel * dt / Math.max(speed, 1));
       }
@@ -536,7 +494,7 @@
          kicks with: see `turn` in `partAngles`. */
       const bend = spd > 0.3 ? N.angleDelta(hd0, hd1) / Math.max(dt, 0.001) : 0;
       this.bend = Math.abs(bend) < BEND_DEAD ? 0 : bend;
-      const lean = (fly || this.inWater)
+      const lean = this.inWater
         ? Math.max(-0.45, Math.min(0.45, Math.atan(bend * spd / LEAN_G)))
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
@@ -562,35 +520,7 @@
       const heldUp = canBreathe && wt > bedTop;
 
       // ---- vertical ----
-      if (fly) {
-        const up = inp.jump ? f.fly : 0, down = inp.sneak ? f.fly * 0.75 : 0;
-        if (up || down) {
-          this.vy += (up - down) * dt * 1.9;
-          this.vy -= this.vy * Math.min(0.92, 4.2 * dt);
-          this.vy = Math.max(-f.fly * 0.8, Math.min(f.fly * 0.75, this.vy));
-        } else if (f.glide) {
-          /* Wings spread, no flap. A flying body does not hang in the air: let
-             go of the key and it comes down. `glide` is the fraction of normal
-             fall speed it accepts, so an owl descends at about a third of the
-             rate you do and keeps the ground speed it had while it does --
-             height is what pays for distance (docs/04 s4). */
-          this.vy -= GRAVITY * dt;
-          this.vy = Math.max(-MAX_FALL * f.glide, this.vy);
-        } else {
-          // wings that cannot glide just fall
-          this.vy -= GRAVITY * dt;
-          this.vy = Math.max(-MAX_FALL, this.vy);
-        }
-        /* The beat belongs to what the body asks for. A body with wings that can
-           glide, and that is not asking for height, rides them: the stroke eases
-           out to a faint one and the wings stay spread. Wings that cannot glide
-           have to beat or they come down, so for them the beat never leaves.
-           Before this a flying body beat at the same 1.75 strokes a second
-           whether it was climbing or falling at 15 m/s with its wings spread. */
-        const flapWant = (up || down) ? 1 : (f.glide ? 0.15 : 1);
-        this.flap += (flapWant - this.flap) * N.ease(3.5, dt);
-        this.grounded = false;
-      } else if (this.inWater && (heldUp || !this.grounded)) {
+      if (this.inWater && (heldUp || !this.grounded)) {
         /* Up and down in water is the same push that drives a body forward,
            aimed differently, so how much authority a body has over its own
            depth is a fraction of how fast it moves through the water: a frog
@@ -673,9 +603,7 @@
            whose top face is at 15.0, and the body bobbed there for as long as
            the key was held. */
         this.vy -= GRAVITY * dt;
-        // glide is a property of the body, not of flapping: an owl that walks
-        // off a ledge spreads its wings too
-        this.vy = Math.max(-MAX_FALL * (f.glide || 1), this.vy);
+        this.vy = Math.max(-MAX_FALL, this.vy);
         const hop = f.hop;
         if (inp.jump && this.grounded) {
           this.vy = 8.3 * (f.jump || 1); this.grounded = false;
@@ -708,21 +636,20 @@
 
       /* ---- the body points along the path it is taking ----
          A body on foot stays level whatever it does, because its feet hold it
-         level. A body the air or the water is holding up climbs nose-up and
-         dives nose-down, and the angle is simply the one its own path makes.
-         Nothing did this before: an owl that let go of the climb key came down
-         at its glide speed with its body dead level, and a frog crossing to the
-         bottom swam along horizontally like a periscope -- the path curved and
-         the body did not know it. `tilt` is nose-down positive, because that is
-         the angle rotX takes, and it is eased like every other angle. */
+         level. A body the water is holding up climbs nose-up and dives
+         nose-down, and the angle is simply the one its own path makes. Nothing
+         did this before: a frog crossing to the bottom swam along horizontally
+         like a periscope -- the path curved and the body did not know it.
+         `tilt` is nose-down positive, because that is the angle rotX takes, and
+         it is eased like every other angle. */
       const hs = Math.hypot(this.vx, this.vz);
-      /* `!onFoot` is the whole of the rule above, and it was missing: a standing
-         owl read the one frame of falling the ground then undid as a descent,
-         held 0.6 rad of nose-down for as long as it stood there, and its legs
-         reached 8 cm through the floor. What "on foot" means, and why it is not
-         the flag the collision leaves behind, is argued where it is measured --
-         in the intended velocity block above. */
-      const tiltWant = !onFoot && (fly || this.inWater) && (hs > 0.3 || Math.abs(this.vy) > 0.3)
+      /* `!onFoot` is the whole of the rule above, and it was missing: a body
+         standing still read the one frame of falling the ground then undoes as
+         a descent, and holds nose-down for as long as it stands there. What
+         "on foot" means, and why it is not the flag the collision leaves
+         behind, is argued where it is measured -- in the intended velocity
+         block above. */
+      const tiltWant = !onFoot && this.inWater && (hs > 0.3 || Math.abs(this.vy) > 0.3)
         ? Math.max(-0.6, Math.min(0.6, Math.atan2(-this.vy, Math.max(hs, 0.5))))
         : 0;
       this.tilt += (tiltWant - this.tilt) * N.ease(4.5, dt);
@@ -737,7 +664,7 @@
       for (let i = 0; i < steps; i++) {
         const sdt = dt / steps;
         // auto step-up
-        if (step > 0 && (wasGrounded || this.grounded) && !fly && !this.inWater) {
+        if (step > 0 && (wasGrounded || this.grounded) && !this.inWater) {
           const ox = this.x, oz = this.z;
           /* The move the body asked for, read off the speed **before** `axis`
              runs: `axis` zeroes the speed along the axis it had to stop, so the
@@ -802,7 +729,7 @@
          body accumulates once it has actually left a surface -- 0.006 m in the
          first frame of a drop, 0.10 m by the fifth -- so a body that walked off
          a step is airborne again within a frame or two. */
-      if (!this.grounded && !fly && this.vy <= 0 && this.colAt(this.x, Math.floor(this.y - 0.02), this.z)) this.grounded = true;
+      if (!this.grounded && this.vy <= 0 && this.colAt(this.x, Math.floor(this.y - 0.02), this.z)) this.grounded = true;
       // what the animation is allowed to know
       // eased, not snapped: a body resting on the ground flickers out of
       // `grounded` for a frame at a time, and a pose that hiccups with it looks
@@ -821,8 +748,8 @@
         this.squash = Math.min(0.3, Math.max(0, -vyBefore) / 55);
         /* and the ground arrests the body's turn the way it arrests its fall.
            The pitch is the angle of the path the body was taking through the air
-           or the water, and that path ends at the moment the feet arrive: an owl
-           that came down off a 1 m drop at 0.43 rad carried its nose for a
+           or the water, and that path ends at the moment the feet arrive: a
+           body that came down off a 1 m drop at 0.43 rad carried its nose for a
            quarter of a second afterwards with its feet flat on the floor, and
            the nose carried its toes 5 cm under it. */
         this.tilt = 0;
@@ -864,8 +791,7 @@
      but they are not the surface of the valley, and an animal put down on one
      is an animal in a tree. The spawn code scans from the top of the world, and
      without this it found a canopy instead of the ground in 509 of 600 tries:
-     two bears standing on spruce crowns at y=45, frogs in the leaves, and a
-     flyer given a flight height of 53 in a world 48 tall. */
+     two bears standing on spruce crowns at y=45 and frogs in the leaves. */
   function terrainY(w, x, z, from) {
     const bx = x | 0, bz = z | 0;
     for (let y = from; y > 0; y--) {
@@ -932,9 +858,9 @@
      place: the surface of that column less the body's own height less the depth
      its row states (plus any drift it rides on), and never through the bottom.
      The animal's own branch asks this every frame; the spawn code asks it once,
-     because a body that swims has to be **born in the water** for the same reason
-     a body that flies has to be born in the air. It was not: the ten lamps of
-     Mirrorlake were born standing on the lakebed under their own water, and their
+     because a body that swims has to be **born in the water**. It was not: the
+     ten lamps of Mirrorlake were born standing on the lakebed under their own
+     water, and their
      first frames were spent being pulled up to it -- the crown read **8.73 m**
      under the film at the animal's very first update, the height closed at
      **0.72 m a frame**, which is 14.4 m/s against the 2.2 m/s their own row
@@ -949,60 +875,22 @@
       fromY === undefined ? w.h - 1 : Math.floor(fromY));
     return Math.max(gy + 0.35, floatLevel(wt + 1, tall, hoverOf(sp) + (extra || 0)));
   }
-  /* Whether a body held up by air may be at this place at all: the cell it would
-     occupy has to be neither rock nor water. A flying body is the only kind that
-     has no ground under it, so this is the one question its movement has to keep
-     answering -- sideways, and up.
-     Foliage is not rock here, any more than it is for a body on foot two pages
-     above: a bear walks through a bush with its shoulders in it. Read as a wall
-     and as a ceiling at once, a crown makes a room with no door -- the body is
-     refused sideways into the leaves and refused up through them, and what it is
-     left with is the height the roof hands it. Measured over forty seconds of a
-     night: one of six owls flew 114 m at one height it could not leave, and the
-     flock had a crown over its head in 6-30% of its frames.
-     The exemption is the material table (`N.FOLIAGE` in src/world.js -- the
-     blocks the block table calls soft), NOT `N.TREE_BLOCK`. It used to be
-     TREE_BLOCK, which also covers the trunk and bone, and that made wood air to
-     a bird: measured over ten minutes of the valley running, 350 of the 216,000
-     frames of six owls (0.16%) had an owl's own cell occupied by a trunk -- not
-     passing through but parked there, frame after frame at (30,38,16) at y38.7
-     with vy 0, a bird hovering inside solid wood. And the body worn from that
-     same bird was stopped by the very same trunk (see `Player.stopsAt` above):
-     two bodies made of one animal disagreed about whether a tree is air.
-     A body on foot asks this same table, and its walk gate now asks the span of
-     the body rather than the one cell over the surface under the column. That one
-     cell was the whole of the difference between a wall and air for a walker, and
-     that is why the shape hid: of the 2,684 wood cells of this valley 1,830 sit on
-     wood and 843 stand on the ground, so the cell over the surface a body stands on
-     is wood in every one of them and the gate refused them all; it is the other 11
-     -- wood with open air straight under it, over the surface a walker stands on --
-     that read as air, and the body walked through the block with its shoulders.
-     The flock of this valley never walks into that shape on its own: 30 animals,
-     18,000 frames each, inside wood in 0 frames before this and 0 after, paths,
-     stands and falls the same to the centimetre. See the walk gate in
-     `Creature.update` and the rig
-     `aBodyOnFootAsksTheWoodOverItsOwnSpanAndTheRoofOverItsHead` in test/play.js. */
-  function airCell(w, x, y, z) {
-    const bx = x | 0, by = y | 0, bz = z | 0;
-    if (w.liquidAt(bx, by, bz)) return false;
-    return !w.solidAt(bx, by, bz) || !!N.FOLIAGE[w.get(bx, by, bz)];
-  }
   /* The lowest thing a body could put its head through in the column it stands
      in: the underside of a roof, the beam of a room, the glass of a tower. The
      search starts over the body's own cell and answers `top` when it finds
      nothing, which is what the sky's own roof is: for a body in the open that is
      the top of the world, one block under the top of the grid, so a body is not
      allowed to stand with its head through the ceiling of the valley. Foliage is
-     not in it -- a body on foot walks through a bush with its shoulders in it and
-     a bird flies through a crown (docs/03 s5).
+     not in it -- a body on foot walks through a bush with its shoulders in it
+     and through a crown (docs/03 s5).
      Which blocks a body is allowed through is a second question, and the two
-     gates that ask this one answer it differently. `soft` is what this body may
-     put its head through: the whole of `TREE_BLOCK` for a body held up by air,
-     whose sideways and upward gates already refuse a trunk on its own span (see
-     `aFlyerEasedUpUnderAnOverhangingTrunkKeepsItsWholeBodyOutOfTheWood`, which is
-     what stops a climbing bird at the underside of a trunk rather than here), and
-     `N.FOLIAGE` for a body on foot, which is the same table every other question
-     about wood asks.
+     gates that ask this one answer it differently. `soft` is what the caller
+     says this body may put its head through: the lift above asks out of the
+     whole of `TREE_BLOCK`, because a body lifted over its own floor is a body
+     on foot, and a crown is what a body on foot walks under; the hop gate asks
+     out of `N.FOLIAGE`, because a frog hopping under a trunk is not hopping
+     into the trunk -- which is what stops a hopper at the underside of a trunk
+     rather than here.
      Left at one table for both, the ceiling over a body's own floor was asked out
      of `TREE_BLOCK` and read as open sky: a 0.43 m frog standing under a trunk
      block set two cells over that floor found room for an arc there, hopped, and
@@ -1037,11 +925,10 @@
      down into deeper water (see the dive cycle below) and at (56.5,94.5) they
      were 1.3 m down and 4 m down, and the body you wear with them. Three reads
      have now been pulled off this index and onto the film: the level the water
-     holds a body at, the level a wild aquatic animal hovers at, and the floor a
-     flying body holds a few metres above -- each of which subtracts or compares a
-     number of metres, and each of which was therefore a block wrong while it was
-     reading a cell. Anything that counts blocks or asks about a cell keeps using
-     this one. */
+     holds a body at, and the level a wild aquatic animal hovers at -- each of
+     which subtracts or compares a number of metres, and each of which was
+     therefore a block wrong while it was reading a cell. Anything that counts
+     blocks or asks about a cell keeps using this one. */
   function waterTop(w, x, z, from) {
     for (let y = from; y >= 0; y--) if (w.liquidAt(x, y, z)) return y;
     return -1;
@@ -1102,20 +989,14 @@
   }
   /* Can this body be put at (x, z) at the height it is at? The same question the
      body's own movement asks of a step, asked of a place it has already been
-     pushed into by another body: a body in the air needs the room its whole body
-     takes up, feet to head; a body that cannot leave the water needs a column
-     with somewhere to hover; a body on foot needs a surface under its feet that
-     is not a wall it cannot climb. The world keeps the last word: a body is
-     never shoved into a bank or out of the lake it cannot leave, because another
-     body was standing where it wanted to be. */
+     pushed into by another body: a body that cannot leave the water needs a
+     column with somewhere to hover; a body on foot needs a surface under its
+     feet that is not a wall it cannot climb. The world keeps the last word: a
+     body is never shoved into a bank or out of the lake it cannot leave,
+     because another body was standing where it wanted to be. */
   function bodyRoom(w, c, x, z) {
     const bx = Math.floor(x), bz = Math.floor(z);
     if (bx < 7 || bz < 7 || bx > w.w - 7 || bz > w.d - 7) return false;
-    if (c.isFlyer()) {
-      for (let y = Math.floor(c.y); y <= Math.floor(c.y + c.tall); y++)
-        if (!airCell(w, bx, y, bz)) return false;
-      return true;
-    }
     /* A body that cannot leave the water is asked the water's own question --
        the same one its movement asks, and the same one its spawn makes: is this
        a column with somewhere to hover. Asking it instead about the single cell
@@ -1155,7 +1036,7 @@
       this.x = x; this.y = y; this.z = z;
       /* How tall this body stands in the world: the model's own height at the
          scale the data gives it. A body is not a point, and a rule that only
-         asks about the cell a body's feet are in lets an owl walk into a room
+         asks about the cell a body's feet are in lets a body walk into a room
          with a low roof and stand there with its head in the beam. */
       this.tall = (N.MODEL_H[spec.model] || 4) * (spec.scale || 0.2);
       /* And how wide the same body is: the rectangle its own trunk takes up, at
@@ -1180,18 +1061,13 @@
       this.speed = 0;
       this.alarm = 0;
       this.homeX = x; this.homeZ = z;
-      this.flyY = y;
       /* What a body likes, per body, so that a flock is not a formation. A
-         bird's ceiling is the height it was born at; the height it actually
-         holds is a few metres above whatever is under it, and how many is its
-         own. A frog holds a depth of its own in the water, dives to a depth of
-         its own, and comes back up to breathe on a cycle of its own. Without
-         these three numbers every frog in the valley swims in one line 30 cm
-         under the surface and every owl crosses the valley at one absolute
-         height, which is what the report "it can only swim in a fixed layer"
-         is: measured over ten minutes of the world running, all twelve frogs
-         sat at a mean depth of 0.30 m, every one of them. */
-      this.huntH = 2.6 + Math.random() * 3.4;      // metres above the ground it flies over
+         frog holds a depth of its own in the water, and comes back up to
+         breathe on a cycle of its own. Without these two numbers every frog in
+         the valley swims in one line 30 cm under the surface, which is what
+         the report "it can only swim in a fixed layer" is: measured over ten
+         minutes of the world running, all twelve frogs sat at a mean depth of
+         0.30 m, every one of them. */
       this.diveTo = 1.5 + Math.random() * 2.5;     // how deep this frog hangs, m under the surface
       this.diveRate = 0.05 + Math.random() * 0.10; // and how fast that cycle runs, rad/s
       // the vertical velocity, and the same three signals the player carries, for
@@ -1211,9 +1087,7 @@
       this.held = 0;
       // and the seventh: the same body points along the path it is taking
       this.tilt = 0;
-      // and the eighth: the wing beat, 0..1
-      this.flap = 1;
-      /* and the ninth: the surface of the step this body is in the middle of
+      /* and the eighth: the surface of the step this body is in the middle of
          climbing, or null. It is not a per-frame decision: a body that has begun
          to raise itself onto a step has to be allowed to finish, or it takes the
          step at the height it had got to and ends up inside the ground. */
@@ -1231,7 +1105,6 @@
     /* which species the player is wearing right now (null in a human shape) */
     speciesOf(formId) { return formId && N.FRUIT_BY_ID[formId] ? N.FRUIT_BY_ID[formId].creature : null; }
     sameSpeciesAs(formId) { return this.speciesOf(formId) === this.sp.id; }
-    isFlyer() { return this.sp.locomotion === 'fly'; }
     isAquatic() { return this.sp.locomotion === 'water'; }        // never leaves the water
     isAmphibian() { return this.sp.locomotion === 'amphibian'; }  // bank and water both
 
@@ -1249,7 +1122,7 @@
       const alert = (sp.alert || 12) * (pl.formDef.stealth || 1) * (game.playerStealth || 1);
 
       let want = 0, tgtX = this.tx, tgtZ = this.tz;
-      if (sleeping) { this.state = 'roost'; }
+      if (sleeping) { this.state = 'sleep'; }
       else if (att === 'flee' && dp < alert) {
         this.state = 'flee';
         tgtX = this.x - dxp * 4; tgtZ = this.z - dzp * 4;
@@ -1387,11 +1260,11 @@
           return false;
         };
         if (tooDeep(x, z)) return true;
-        /* A body that covers ground in one frame -- an owl at a full sprint
-           covers 20 cm of it -- must not go through a neighbour on the way: the
-           place it lands in can be clear while the place it went through was
-           not, and the gate would never see the crossing. A step shorter than
-           half a trunk cannot skip a body, and is not tested twice. */
+        /* A body that covers ground in one frame must not go through a
+           neighbour on the way: the place it lands in can be clear while the
+           place it went through was not, and the gate would never see the
+           crossing. A step shorter than half a trunk cannot skip a body, and is
+           not tested twice. */
         return Math.hypot(x - this.x, z - this.z) > 0.12 &&
                tooDeep((x + this.x) / 2, (z + this.z) / 2);
       };
@@ -1400,12 +1273,9 @@
       let spd = 0;
       if (this.vy < -0.5) { this.climbTo = null; this.climbRate = 0; }   // off the ledge: the fall decides
       if (d > 0.8) {
-        /* The table gives a speed on foot and, for the bodies that have them, a
-           speed in the air and in the water (docs/03 s3: "3.2 (fly 7.0)").
-           The owl that crosses the valley is not doing it at walking pace. */
-        const cruise = this.isFlyer() ? (sp.flySpeed || sp.speed || 3)
-                     : (inWater && sp.swimSpeed) ? sp.swimSpeed
-                     : (sp.speed || 3);
+        /* The table gives a speed on foot and, for the bodies that have one, a
+           speed in the water (docs/03 s3). */
+        const cruise = (inWater && sp.swimSpeed) ? sp.swimSpeed : (sp.speed || 3);
         const base = this.state === 'flee' || this.state === 'chase' ? cruise * 1.7 : cruise * 0.42;
         spd = sleeping ? 0 : base;
         /* The animal goes where it is going, and the course bends. `turn` is
@@ -1413,11 +1283,10 @@
            cruising speed, and above that speed the arc it holds gets wider
            rather than the turn getting faster -- the same push has more body to
            swing about. This is the rule the player's own body obeys
-           (Player.update); an owl crossing the valley and a frog crossing the
-           lake are the same kind of body. What it replaces was an ease toward
-           the target bearing at 4 a second, measured: an owl started a turn at
-           6.3 rad/s -- a full revolution a second -- and came about 90 degrees
-           in 1.03 s, and a frog in the water did it in 0.57 s. */
+           (Player.update); a frog crossing the lake and a lamp crossing its
+           field are the same kind of body. What it replaces was an ease toward
+           the target bearing at 4 a second, measured: a frog in the water came
+           about 90 degrees in 0.57 s. */
         const tgtYaw = Math.atan2(dx, -dz);
         const dy = N.angleDelta(this.yaw, tgtYaw);
         const arc = sp.turn || 0;
@@ -1440,7 +1309,7 @@
            over the sine of that error. The naive bound -- the distance over the
            sine, without the half -- is exactly the speed at which the animal
            circles the place for ever at its own arc width, which is the failure
-           the slowing exists to end (measured: an owl sent to a place 1.8 m to
+           the slowing exists to end (measured: a body sent to a place 1.8 m to
            one side walked 41 m around it in 25 seconds and never came inside
            0.87 m). It costs nothing out in the open, where the target is far and
            the sine is small; near the place it reads as an animal easing as it
@@ -1462,8 +1331,8 @@
         /* The edge of the valley is folded into the step before anything asks
            whether the step can be taken, not applied to the body afterwards. A
            clamp that runs after the test tests one column and lands the body in
-           another: an owl walking the west wall was tested against the air at
-           x=6.99 and left standing in the leaves at x=7. */
+           another: a body walking the west wall was tested at x=6.99 and left
+           standing in the leaves at x=7. */
         const edge = (v, hi) => Math.max(7, Math.min(hi - 7, v));
         readDeep();                 // the heading is settled; now what is in the way
         const nx = edge(this.x + Math.sin(this.yaw) * spd * dt, world.w);
@@ -1625,17 +1494,6 @@
               if (world.solidAt(bx, k, bz) && !N.FOLIAGE[world.get(bx, k, bz)]) return false;
             return true;
           };
-          /* A body in the air asks a different question: not "what would I stand
-             on" but "is the place I am about to put myself in empty". It has to
-             ask it before it moves and not after -- the altitude rule below keeps a
-             flying body above the thing it is inside, but a body that only applies
-             that rule once it has arrived spends the second it takes to climb back
-             out inside the tree it flew into. Read that way, six owls stood inside
-             a crown, a hillside or a tower in 11132 of 216000 frames. The same
-             predicate answers for the way round an obstacle below, which is what a
-             bird does with a hill it cannot climb in time: it goes round it, and
-             the heading follows the step. Water counts as not-empty too: a body
-             held up by air does not fly into the lake. */
           /* A step is climbed before it is walked on. `stand` answers what the
              feet would stand on and whether there is room over that surface; it
              never asks what is at the height the body itself is at, so a body
@@ -1667,19 +1525,7 @@
             if (!rockAt(bx, cell, bz)) return 0;
             return standY(world, bx, bz, this.y);
           };
-          /* A body in the air needs the room its whole body takes up, not just
-             the cell its feet are in: an owl stands 0.7 m from feet to head, and
-             a gate that asks only about the feet lets it fly into a room it does
-             not fit in and stand there with its head in the roof. Measured over
-             forty seconds of the night, one of six birds did exactly that for
-             9-17% of the frames it was abroad. */
-          const air = (x, z) => {
-            for (let k = Math.floor(this.y); k <= Math.floor(this.y + this.tall); k++)
-              if (!airCell(world, x, k, z)) return false;
-            return true;
-          };
-          const flyer = this.isFlyer();
-          const placeable = flyer ? air : stand;
+          const placeable = stand;
           /* Where this body may go: 0 for "walk there", a height for "raise the
              feet onto that surface first, where it stands", null for "that is a
              wall". A body cannot raise itself through a ceiling, so a step with
@@ -1689,7 +1535,6 @@
             /* A neighbour's own trunk is as much an obstacle as a bank is, and
                the contour below takes the body round it the same way. */
             if (crowded(x, z)) return null;
-            if (flyer) return 0;
             const r = riser(x, z);
             if (!r) return 0;
             /* A body that is being carried down does not climb the step it drifts
@@ -1798,184 +1643,25 @@
       this.speed = spd;
       this.squash = Math.max(0, this.squash - dt * 3.2);
 
-      /* A body that is supported by air or by water turns by tilting; a body on
-         foot does not, because nothing at these speeds leans into a turn. Same
-         rule and same numbers as the player's own lean (Player.update): the
-         tilt is the sideways push the arc needs over the pull of the earth, so
-         an animal that is only correcting a few degrees leans a few degrees and
-         one at the tightest arc its data allows leans the full 0.45. An owl
-         crossing the valley with its yaw swinging through ninety degrees and the
-         body dead level was the tell, and it is the one body the player spends
-         the most time watching. */
+      /* A body the water is holding up turns by tilting; a body on foot does
+         not, because nothing at these speeds leans into a turn. Same rule and
+         same numbers as the player's own lean (Player.update): the tilt is the
+         sideways push the arc needs over the pull of the earth, so an animal
+         that is only correcting a few degrees leans a few degrees and one at
+         the tightest arc its data allows leans the full 0.45. A frog crossing
+         the lake with its heading swinging through ninety degrees and the body
+         dead level was the tell, and it is the one body the player spends the
+         most time watching. */
       const bend = spd > 0.3 ? N.angleDelta(yaw0, this.yaw) / Math.max(dt, 0.001) : 0;
       this.bend = Math.abs(bend) < BEND_DEAD ? 0 : bend;   // signed: see Player.update
-      const lean = (this.isFlyer() && this.state !== 'roost') || inWater
+      const lean = inWater
         ? Math.max(-0.45, Math.min(0.45, Math.atan(bend * spd / LEAN_G)))
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
       // altitude
       const y0 = this.y;      // before the altitude is set, so the rate is measurable
-      if (this.isFlyer()) {
-        const bx = Math.floor(this.x), bz = Math.floor(this.z);
-        /* The floor is what this body would fall to, so it is read from the body's
-           own cell and down, never from a cell above it. Read from one block over
-           its head, `groundY` answers "the highest solid in this column", and the
-           rule that exists to keep a bird out of a tree then lifts it straight up
-           through the crown it was flying under -- and through a sky terrace, and
-           through the top of a tower. Read that way, a bird under a canopy is told
-           the canopy is its floor, asked to stand 1.6 m on top of it, refused the
-           rise by the rule below, and stays pinned a metre under the needles for as
-           long as it is there: two of six birds did exactly that for three minutes.
-           The water is a floor the same way the ground is: an owl crossing
-           Mirrorlake crosses the surface, not the lakebed seven metres under it.
-           Measured to the lakebed, a bird hunting a lake hunts it from underneath.
-           And it is read as the surface, not as the index of the topmost water
-           block: the ground read beside it answers a height (the top face, `y + 1`),
-           while a cell index sits a whole block under the film, so the two answers
-           were a metre apart and the floor over water came out a metre lower than
-           the floor over land. The lowest height a hunting bird is ever asked to
-           hold is 1.6 m over the floor, so over the lake that was 0.6 m above the
-           film, and the body rides a bob of 0.9 m on top of that floor: six birds
-           put over Mirrorlake for a night spent 247 of 12895 samples with their
-           feet on the film itself (lowest height over the water **0 m**, mean
-           **3.72 m**), and the same six after spend no sample there (lowest
-           **0.89 m**, mean **5.61 m**), where the sentence says a bird holds a few
-           metres above whatever is under it. */
-        const fl0 = Math.max(groundY(world, bx, bz, Math.floor(this.y)),
-          world.liquidSurfaceAt(bx, bz));
-        /* `flyY` is the ceiling a bird will not ask to be above, not the height
-           it flies at, and it has to be a height the world has: an owl put down on
-           a canopy used to be given a flight height of 51.5 in a world 48 tall, so
-           every one of its samples was outside the map. A hunting owl holds a few
-           metres above whatever is under it -- over the lake, over the crowns, over
-           the ridge -- and changes that height slowly, low over open water, up where
-           the ground goes up. Held to one absolute height it crossed the valley with
-           the ground 25 m under it and the whole flight was one straight line.
-           The same question is asked a short way ahead, because a body that only
-           asks where it is now begins climbing a second after it arrives and spends
-           that second inside the hill. Ahead, the thing to climb is the top of the
-           solid the body would be standing inside -- not the highest thing in the
-           column: a terrace 8 m over a bird's head is not in its way, and a column
-           that is air at the height of the flight has nothing to climb at all.
-           That climb is then held down to the room this body actually has: the
-           lowest thing over its own head, minus the layer it stands in. Asked
-           without that, it is a bird being told to clear a canopy while it is
-           standing under one -- the height it wants is above the ceiling over its
-           own head, the rule below refuses the rise, and the bird is pinned under
-           the needles for as long as it is there. Measured over a minute on five
-           valleys, both halves earn their place: without the ahead term the birds
-           fly under the crowns instead of over them (the share of frames a bird is
-           above everything in its own column falls from 69-94% to 36-79%), and
-           without the cap birds get pinned. The reach is seven metres: the climb is
-           eased at 2.2/s, so a body closes 63% of the height it wants in 0.45 s,
-           and at the seven metres a second an owl crosses the valley at that is
-           about the three metres of ground coming at it. Look further than that and
-           the body is climbing for a hill it could simply have gone round. */
-        const climb = (x, z) => {
-          const cx = Math.floor(x), cz = Math.floor(z), cy = Math.floor(this.y);
-          if (!world.solidAt(cx, cy, cz)) return -1;
-          let k = cy;
-          while (k < world.h && world.solidAt(cx, k, cz)) k++;
-          return k;
-        };
-        const ax = Math.floor(this.x + Math.sin(this.yaw) * AHEAD);
-        const az = Math.floor(this.z - Math.cos(this.yaw) * AHEAD);
-        /* The lowest thing over this body's own head: the underside of a roof,
-           the beam of a room. A bird is asked to keep a metre or two over whatever
-           is under it, and in a room one block tall that asks it to stand in the
-           roof: the step is refused, the bird stays where it is with its head in
-           the beam, and -- once the step gate asks about the whole body -- it is
-           refused every step sideways as well and spends the night in one place.
-           So the ceiling answers last: the body keeps the room it is in. And the
-           top of the map is a room: a bird given the height this rule works out at
-           the top of the world stands with its head through the ceiling of the
-           valley, so the sky's own roof is one block under the top of the grid.
-           Leaves are not a roof, which is the same answer the body on foot gets. */
-        const ceil = roofY(world, bx, bz, Math.floor(this.y) + 1, world.h - 1) - this.tall - 0.05;
-        let up = climb(ax, az) + 1.6;
-        if (up > ceil) up = -1;      // it is not somewhere it can get above from here
-        const hunt = this.huntH + Math.sin(this.t * 0.35 + this.phase) * 1.8;
-        /* A bird asleep settles on the floor under it and stays there: it is not
-           moving, and it is not the body the hunting rules above are there for.
-           The floor is the same one an awake body reads -- from the body's own
-           cell and down. Read from six metres over its head instead, a bird
-           asleep under a crown is told the crown is its floor and lifted up
-           through it: over the 93 columns of this valley whose crowns reach 47,
-           that is a bird eased to y=48, standing on the top of the world with
-           its head through the ceiling of the valley, wings folded, for 882 of
-           the 900 frames of a morning measured. */
-        const base = sleeping ? fl0 + 1.2
-          : Math.max(Math.min(this.flyY, fl0 + hunt), fl0 + 1.6, up);
-        /* The ceiling answers last, asleep or awake: falling asleep is not a
-           pass through the roof. Held to the room it is in, the same bird
-           settles at 46.25, in the crown it went to sleep in. */
-        const cap = ceil;
-        const target = Math.min(cap, base + Math.sin(this.t * 1.1 + this.phase) * 0.9);
-        const yWas = this.y;
-        /* The height is eased, and an ease closes a distance at a rate
-           proportional to the distance left -- so when the floor under the body
-           drops away (the lip of the valley, the edge of a ridge, the far side of
-           a bank) the height it wants drops with it and the answer is a dive.
-           Measured over two days and 302,394 frames of flight: the height rate
-           reaches **26.8 m/s** (p99 9.7, p50 0.63) for a body whose own row gives
-           it **7 m/s** of air speed and which is crossing the valley at 2.94;
-           **6,000** frames are faster than the animal can fly, and **1,841** fall
-           more than four times faster than they go forward. From the bank that is
-           a stone and not a bird, and the pose says so: the nose is still level
-           and the wings still on the beat through the fastest part of the fall,
-           because the attitude is eased at 4.5/s and the stroke at 3.5/s while
-           the drop itself takes a tenth of a second.
-           A body in air pays for height out of the speed it has, so it rises or
-           falls no faster than it is going through the air. The ease is capped at
-           the speed this body is holding, never above the air speed its row
-           gives it, and never below 1.2 m/s -- a body that has stopped at its
-           waypoint still has to settle onto its roost, and a body that has just
-           woken up still has to come off it. */
-        const glide = Math.min(sp.flySpeed || sp.speed || 3, Math.max(1.2, this.speed));
-        const rise = (target - this.y) * Math.min(1, dt * 2.2);
-        const reach = glide * dt;
-        this.y += Math.abs(rise) > reach ? (rise > 0 ? reach : -reach) : rise;
-        /* and it arrives. An ease closes the distance and never touches it, so a
-           body eased to the top of a crown whose highest needle is at 46 came to
-           rest at 46.99 -- which is inside the needle it was being kept out of,
-           for as long as it stayed there. */
-        if (Math.abs(target - this.y) < 0.01) this.y = target;
-        /* The height is only taken if the place it lands in is empty, and the
-           place it lands in is the room its whole body takes up, feet to head --
-           the same question the step gate above asks of a sideways move. Asked
-           of the feet cell alone, which is what it was, a body eased up under a
-           beam keeps its feet in air and puts its head through the beam: the
-           ceiling law above answers through `roofY`, and `roofY` does not count a
-           trunk as a roof at all, so a bird climbing under a trunk that stands on
-           a step climbs into the wood. The valley holds 11 cells of trunk with
-           open air straight under them, and one bird driven at a trunk in
-           `game/test/play.js` was caught with its head through one of them for 51
-           of its 240 frames, up to 0.69 m of its body inside the block, while its
-           feet stayed in air the whole time. A body that was already somewhere it
-           should not be keeps its move, so a bird put down inside a crown can
-           still work its way out. */
-        const spanClear = (yy) => {
-          for (let k = Math.floor(yy); k <= Math.floor(yy + this.tall); k++)
-            if (!airCell(world, this.x, k, this.z)) return false;
-          return true;
-        };
-        if (spanClear(yWas) && !spanClear(this.y)) this.y = yWas;
-        /* Whether this body is standing on something or being held up by air is
-           read off the surface **under its own feet**, not off the column read
-           from above it: a crown growing one block over a bird's head is not
-           the branch it is standing on, and reading it as the ground folds the
-           wings of a bird that is flying. */
-        const gyU = groundY(world, Math.floor(this.x), Math.floor(this.z), Math.floor(this.y));
-        // a roosting owl is a bird on a branch: wings folded, no beat
-        /* Eased and not snapped, for the same reason the hop's air pose is (see
-           the amphibian below): a bird coming off a branch or settling onto one
-           takes its poses with it, and a flag that flips in one frame flips the
-           wings, the tucked legs and the whole length of the body from standing
-           to prone in that frame. */
-        const airWant = sleeping || this.y <= gyU + 0.4 ? 0 : 1;
-        this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
-      } else if (this.isAquatic()) {
+      if (this.isAquatic()) {
         /* The level is asked of the column, in one place, with the same law the
            water's hold is told by everywhere else in this file: the depth an
            animal of this kind hangs at is on its own row, it is measured to the
@@ -1999,8 +1685,8 @@
            the trunk and climb it out of the lake, block by block, into the sky. */
         const bob = Math.sin(this.t + this.phase) * 0.8;
         const target = hoverLevel(this.sp, world, this.x, this.z, this.tall, this.y, bob);
-        /* The same law the air branch above carries, for the same reason. An ease
-           closes a distance at a rate proportional to the distance left, so when
+        /* An ease closes a distance at a rate proportional to the distance
+           left, so when
            the level the water states for this column is far from the height the
            body is at -- a bell dropped off a bank into deep water, a bell held down
            and let go, a column whose level the world has only just started
@@ -2012,11 +1698,11 @@
            **0.2586 m** in a single frame, **15.51 m/s**, against the **2.2 m/s**
            its own row swims, with **67** of its 600 frames faster than that. A
            body in water pays for height out of the speed it has: it rises or
-           sinks no faster than it swims, and it arrives, for the same reason a
-           bird settles onto its roost -- capped, the same bell covers the same
-           **8.91 m** inside the same ten seconds at **0.0367 m** a frame, and the
-           check that pins this also insists it arrives, because a law satisfied
-           by never moving the body at all would pass the rate and fail that. */
+           sinks no faster than it swims, and it arrives -- capped, the same bell
+           covers the same **8.91 m** inside the same ten seconds at **0.0367 m**
+           a frame, and the check that pins this also insists it arrives,
+           because a law satisfied by never moving the body at all would pass
+           the rate and fail that. */
         const swim = sp.swimSpeed || sp.speed || 3;
         const rise = (target - this.y) * Math.min(1, dt * 1.6);
         const reach = swim * dt;
@@ -2048,8 +1734,8 @@
            material table, all wood excused, over the body's own column, which is
            the whole of the lift's arc, for the lift is vertical and in place --
            and the feet are kept under it by the body's own height plus the same
-           hand's width the ceiling over a bird's head keeps, so it is the head
-           that meets the block the feet do not. The table excuses the trunk and
+           hand's width the ceiling over the body's head keeps, so it is the
+           head that meets the block the feet do not. The table excuses the trunk and
            the bone, not only the leaf, because the gate that set this lift is
            the step gate, and its law is rock over the step top: a trunk over
            the top is the tree the walker goes under, not a wall. Asked the hop
@@ -2254,9 +1940,7 @@
          Wood and leaves are not in this. A body on foot walks through a bush with
          its shoulders in it and a crown is not ground to be pushed off
          (docs/03 s5); pushing two bears out of the crowns they walk through
-         measured 171 one-metre pops in three minutes. A flying body is held by
-         the rule above, which refuses the height instead of putting the body
-         inside something and then taking it out again.
+         measured 171 one-metre pops in three minutes.
          A trunk is no longer in this list for a different reason than a leaf is:
          the gate that lets a walker into a column refuses wood on the body's own
          span now, so this rule is not what keeps a body out of a trunk -- it is
@@ -2264,7 +1948,7 @@
          alone it still leaves alone: in the window the walk gate was measured
          over, no body of this valley was thrown anywhere by this correction, 0
          frames of a body moving more than 0.9 m in one frame, before and after. */
-      if (!this.isFlyer()) {
+      {
         const gx = Math.floor(this.x), gy2 = Math.floor(this.y), gz = Math.floor(this.z);
         if (world.solidAt(gx, gy2, gz) && !N.TREE_BLOCK[world.get(gx, gy2, gz)]) {
           /* Out, and at a rate. The distance is closed at up to 0.1 m a frame:
@@ -2321,8 +2005,7 @@
            speed: the crowd may move a body, but never faster than the body can
            move itself, and a deep overlap then takes a few more frames to undo
            along the same way out rather than being paid for in one fling. */
-        const topSpeed = this.isFlyer() ? (sp.flySpeed || sp.speed || 3)
-                       : (inWater && sp.swimSpeed) ? sp.swimSpeed : (sp.speed || 3);
+        const topSpeed = (inWater && sp.swimSpeed) ? sp.swimSpeed : (sp.speed || 3);
         let shoveLeft = Math.max(0.02, topSpeed * dt);
         // how deep this body is in anybody at all, before anything is shoved
         let nowIn = 0;
@@ -2379,28 +2062,20 @@
         }
       }
 
-      /* The same attitude rule the player's own body has: a body the air or the
-         water is holding up points along the path it is actually taking, and a
-         body on foot stays level. The vertical rate here is the height the body
-         just gained or lost, because for these animals the altitude is set
-         rather than integrated -- the owl that is climbing to its flight height
-         is climbing, whatever its velocity says. */
+      /* The same attitude rule the player's own body has: a body the water is
+         holding up points along the path it is actually taking, and a body on
+         foot stays level. The vertical rate here is the height the body just
+         gained or lost, because for the water animal the altitude is set
+         rather than integrated -- a frog settling onto its level is settling,
+         whatever its velocity says. */
       const vRate = (this.y - y0) / Math.max(dt, 0.001);
       /* The lamp jellyfish is not in this: a bell that pulses has no nose to
          point, and tilting one is a lampshade tipping over. */
-      const carried = (this.isFlyer() && !sleeping) || (inWater && this.isAmphibian());
+      const carried = inWater && this.isAmphibian();
       const tiltWant = carried && this.speed > 0.3
         ? Math.max(-0.6, Math.min(0.6, Math.atan2(-vRate, Math.max(this.speed, 0.5))))
         : 0;
       this.tilt += (tiltWant - this.tilt) * N.ease(4.5, dt);
-      /* The beat belongs to the climb. An owl that is coming down eases its
-         stroke out and rides its wings -- the same rule the player's own body
-         obeys when it lets go of the climb key (Player.update). */
-      if (this.isFlyer()) {
-        const flapWant = sleeping ? 0 : (vRate > -0.3 ? 1 : 0.15);
-        this.flap += (flapWant - this.flap) * N.ease(3.5, dt);
-      }
-
       // contact effects
       if (dp < (this.sp.scale || 0.2) * 8 + 0.8) {
         if (this.state === 'chase') game.onCreatureTouch(this, dt);
@@ -2416,7 +2091,7 @@
       // The same species is exempt -- a bear does not run from a bear, and the
       // attitude table already says "calm" for one of its own.
       const aura = pl.formDef.aura || 0;
-      if (aura > 0 && dp < aura && att !== 'hostile' && !this.sameSpeciesAs(pl.form) && this.state !== 'flee' && !this.isFlyer()) {
+      if (aura > 0 && dp < aura && att !== 'hostile' && !this.sameSpeciesAs(pl.form) && this.state !== 'flee') {
         this.state = 'flee'; this.alarm = 1;
       }
 
@@ -2478,11 +2153,8 @@
            see it. The valley was spending a great deal of its light that way, and
            `play.js` measures it at four spots, following every mote it is given for
            the whole of a life. Standing on a lake shore at night: **703** of
-           **12,917** mote-samples inside a block. The dust of the highest isle:
-           **20,793** of **65,627** (**31.7%**), and **87** of its **371** grains
-           were already inside a block at the moment they were born, because the
-           span they are scattered over is a box and the isle is standing in it. A
-           spark burst thrown at the ground it stands on: **286** of **4,109**
+           **12,917** mote-samples inside a block. A spark burst thrown at the
+           ground it stands on: **286** of **4,109**
            samples under that ground; thrown up under a crown: **426** of **4,080**
            inside the needles over its own head. And the ring the night's motes are
            scattered over reaches eighteen metres out from the body, which near the
@@ -2493,9 +2165,8 @@
            So the world is a wall to a mote the same way it is a wall to a body: the
            move into a solid is refused and the mote spends itself against the face
            it reached -- one read, the same one the bubble rule below already pays.
-           A mote that is *already* inside one keeps its move, so it can still work
-           its way out (**19** frames out of a needle); that is the answer a flying
-           body gets from the height gate in `Creature.update` too. */
+           A mote that is *already* inside one keeps its move, so it can still
+           work its way out (**19** frames out of a needle). */
         const nx = this.px[i] + this.vx[i] * dt;
         const ny = this.py[i] + this.vy[i] * dt;
         const nz = this.pz[i] + this.vz[i] * dt;
@@ -2503,15 +2174,13 @@
            and that is the whole of the wall question: a destination a hair
            below a cell boundary in double stores as the boundary itself, so a
            mote asked of the double sees the near face and is left standing on
-           the far side of the wall it was let through. The canopy of the
-           beams' isle is that wall one run in a while: a mote born in the air
-           below it, rising at 0.5 m/s, crossed the face of a leaf cell whose
-           double destination was still the air cell under it, the stored
-           position was the leaf, and the rule below then kept its move (a
-           mote the world has closed around keeps its move) so it walked
-           through the canopy it was let into and spent the rest of its life
-           inside it -- 130 of 61,626 samples in one run, 152 of 61,073 in the
-           red the canary kept. The wall is therefore asked of the cell the
+           the far side of the wall it was let through. The canopy of a crown is
+           that wall one run in a while: a mote born in the air below it, rising
+           at 0.5 m/s, crossed the face of a leaf cell whose double destination
+           was still the air cell under it, the stored position was the leaf, and
+           the rule below then kept its move (a mote the world has closed around
+           keeps its move) so it walked through the canopy it was let into and
+           spent the rest of its life inside it. The wall is therefore asked of the cell the
            mote is *stored* in: the move is made first (the store is the
            rounding), and a mote that was not already inside a block is put
            back where it stood and spends its speed where the stored cell is

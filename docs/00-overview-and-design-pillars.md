@@ -4,7 +4,7 @@
 
 1. A magic exploration game, **voxel style**: the map skeleton of castle / forest / lake / sky.
 2. Scenes: **castle, forest, lake, sky**, freely explorable.
-3. The forest holds **unicorns, owls** and similar animals, plus magic plants such as **mushrooms and glowing seeds**; the lake holds **merrow**; the sky holds isles you can reach by flight. Species are pruned by ecological niche — **one species per niche** (list in 03).
+3. The forest holds **frogs and brown bears**, plus magic plants such as **mushrooms and glowing seeds**; the lake holds **lamp jellyfish**. Species are pruned by ecological niche — **one species per niche** (list in 03).
 4. There is exactly one kind of magic: **magic fruit**. Eat it and you become the animal the fruit corresponds to, reverting after a while. Each animal's fruit only appears in its own habitat.
 5. The player has a **magic backpack with limited capacity**; **the rarer the fruit, the more space it occupies**, so you cannot carry many at once.
 6. The player has a **fixed-location warehouse**; warehouses **can be newly built**, but **the exact mechanism was left open** — this is the design this project had to complete.
@@ -19,7 +19,7 @@ This pillar decides directly: the casting animation = a bite; the material compo
 ### P2 · The body is the key
 
 Terrain is not opened by blowing it up, it is opened by *becoming the right shape*.
-A low root-hole only a frog can enter; the underwater window sills of the sunken tower only a frog can reach; the cloud tops only an owl can reach; the ridge ledges only a bear can stand on.
+A low root-hole only a frog can enter; the underwater window sills of the sunken tower only a frog can reach; the ridge ledges only a bear can stand on.
 **Progression = find the fruit + fit the fruit + survive long enough to get there.**
 Transformation is **inheritance**: you get everything that animal can do and everything it cannot. The mind is untouched — you still decide what to do (see 04 §5.0).
 
@@ -35,7 +35,7 @@ This turns hoarding into loss, turns the warehouse into a place that must be con
 
 ### P5 · The valley does not cooperate with you
 
-Every animal has its own opinion about *the shape you are in right now*. Walk up to an owl as a human and it leaves; walk up as a brown bear and it leaves faster. Become a frog and the frogs on the shore ignore you completely.
+Every animal has its own opinion about *the shape you are in right now*. Become a frog and the frogs on the shore ignore you completely — the valley reads the body, not you.
 Transformation is not a pure buff, it is **swapping your social identity**.
 
 ## 3. Anti-goals (explicitly not doing)
@@ -74,7 +74,7 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 
 ## 7. MVP boundary (prototype scope)
 
-**Inside the MVP**: terrain generation, free walking/swimming/flying, fruit picking and spoilage, backpack capacity, transformation and ability switching, creature attitudes, fixed store + field stores, day/night, quests, codex, saving, the identity layer (id / epithet / name, see 03 §6).
+**Inside the MVP**: terrain generation, free walking/swimming, fruit picking and spoilage, backpack capacity, transformation and ability switching, creature attitudes, fixed store + field stores, day/night, quests, codex, saving, the identity layer (id / epithet / name, see 03 §6).
 
 **Explicitly outside the MVP**: NPC dialogue trees, multiplayer, vehicles, weather, building, UI animation beyond the minimap, procedural audio.
 
@@ -83,8 +83,8 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 | Item | Prototype | Full target |
 |---|---|---|
 | World | 160×48×160 voxels | 1024×128×1024 |
-| Zones | 11 | 20–24 |
-| Fruits | 3 | 12–16 |
-| Creatures | 4 species (3 with a fruit) | 12–16 species + named individuals |
-| Main line | 6 quests | 7 chapters × 4–6 quests |
+| Zones | 10 | 20–24 |
+| Fruits | 2 | 12–16 |
+| Creatures | 3 species (2 with a fruit) | 12–16 species + named individuals |
+| Main line | 4 quests | 7 chapters × 4–6 quests |
 | One day | 420 seconds | 1200 seconds |

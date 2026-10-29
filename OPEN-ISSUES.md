@@ -1330,8 +1330,33 @@ valley no longer has. This is a development prototype; the start screen
 offers to clear the save. Recorded here so it is a decision, not a
 surprise.
 
-Status: staged. The docs one-language commit (issue 10) lands first, then
-stages A, B, C in order; the standing watch resumes on the final tree.
+Stage A log (flight + the owl) — code, data, tests, docs 00-07 and both
+READMEs done; the gate contract runs next on this tree:
+- What died: the player's flight physics and the glide (P no longer binds),
+  the owl species, its owlberry fruit, its form and its model, the owl post
+  and its mail, the Cloudspire zone with its six sky isles and the Old Beams
+  POI (the beams stood on the beamise isle), quests q2 and q3, the owl's
+  epithet and its nightwing text, the i18n and help strings that named any
+  of it, and every test and doc claim that still said the valley could fly.
+- What shrank: the fruit table to two at this stage (frog pear rare, bruin
+  fig legendary), the spawn table from 30 animals (owl 6, frog 12, bear 2,
+  jelly 10) to 24 (frog 12, bear 2, jelly 10), the zone table to ten zones,
+  the POI table to nine, the model table to four (human, frog, bear, jelly),
+  and the quest list from six to four (q2 and q3 gone; q5 goes with the bear
+  in Stage B).
+- What Stage A deliberately kept: the frog's `diveTo`/`diveRate` fields
+  (entities.js; frog-only now), the gait row's "flight phase" wording in
+  docs/07, the `// flap` box comment in models.js, the sixteen decorative
+  cloud blobs, the keep island in worldgen.js, the orchard-ruin beams
+  sentence in docs/02, the save fixture's `posts: []` line, and everything
+  Stage B owns: the bear and its fruit, form, model and epithet, the
+  mountains' cold and the ridge-cold block, the raids, and quest q5. The
+  frog pear stays rare until Stage C demotes it to common.
+- Issue 10 landed as 1dadbf4, the stated precondition of this round.
+
+Status: Stage A's gate contract runs on this tree, then the stage commits and
+stages B and C follow in order; the standing watch stays on the pre-round
+tree until Stage C's final double.
 
 ## Standing contract (every session, in order)
 

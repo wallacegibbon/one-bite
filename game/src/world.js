@@ -196,11 +196,11 @@
      Leaf blocks are soft too. */
   const SOFT_S = FACES.map(f => 0.55 + 0.45 * f.s);
   /* How far a face has to look clear, along its own normal, before it is taken
-     to face open sky. Four cells: a roof rim hangs over a street, a sky isle
-     hangs over a valley, the flank of a cliff looks down it -- all of them
-     clear for more than this. A face that really is in a crevice, the lip of a
-     cave, the underside of a stair, a face between two roofs, is blocked by the
-     next block within two. See the exposure term in buildChunk. */
+     to face open sky. Four cells: a roof rim hangs over a street, the keep's
+     floating isle hangs over the valley, the flank of a cliff looks down it --
+     all of them clear for more than this. A face that really is in a crevice,
+     the lip of a cave, the underside of a stair, a face between two roofs, is
+     blocked by the next block within two. See the exposure term in buildChunk. */
   const OPEN_R = 4;
 
   /* ------------------------- world ------------------------- */
@@ -583,32 +583,16 @@
   N.WATER = WATER;
   N.BLOCK_ID = BLOCK_ID;
   N.TREE_BLOCK = TREE_BLOCK;
-  /* Which floating isle, if any, this column belongs to: the disc rule the
-     isles are built with (`sky()` and the deck pass in worldgen.js sweep exactly
-     this disc and nothing outside it), asked the other way round. `game.js`
-     needs it because a sky zone has to mean an isle's deck -- a column outside
-     the six discs is the valley floor fifteen rows under one -- and a test needs
-     it because "every column of deck the six isles hold" is only a census if the
-     census and the generator use one disc rule. It answers the isle row from
-     `data/world.js`, so the row's `top` is the deck row of that column. */
-  N.isleDeckAt = function (x, z) {
-    for (const isle of N.SKY_ISLES) {
-      if (Math.hypot(x - isle.x, z - isle.z) <= isle.r) return isle;
-    }
-    return null;
-  };
-  /* Which blocks a body built for the air does not stop against: the material
-     the mesher already calls `soft` -- leaves, needles, silver leaves, dark
-     leaves, willow. (Cloud is soft too and is not solid at all, so it never
-     comes up here.) This is deliberately NOT TREE_BLOCK, which answers another
-     question: which blocks are not the surface of the valley. A trunk (6) is not
-     soft, so it stays a wall and a roof to the body the player wears, and a body
-     on foot still climbs a tree and stands on the crown it grew. The gates the
-     animals themselves are moved through ask a wider question than this table
-     does -- `airCell` in src/entities.js lets a flying animal through the whole
-     of TREE_BLOCK, trunk included -- so a wild bird crosses a trunk that would
-     stop the body worn from that same bird. That asymmetry is recorded as open
-     work and is not repeated here: this table is the material, not the animal. */
+  /* Which blocks a body on foot does not stop against: the material the mesher
+     already calls `soft` and that is still solid -- leaves, needles, silver
+     leaves, dark leaves, willow. (Cloud is soft too and is not solid at all, so
+     it never comes up here.) The standing gate of a walking body -- a wild one
+     or the one the player wears -- asks this table, so a frog can stand in a
+     crown and hop through a bush while a trunk stays a wall and a roof: a trunk
+     (6) is not soft, so it stays solid to the body, and that body still climbs a
+     tree and stands on the crown it grew. This is deliberately NOT TREE_BLOCK,
+     which answers another question: which blocks are not the surface of the
+     valley. The table is the material, not the animal. */
   const FOLIAGE = {};
   for (let id = 0; id < B.length; id++) if (B[id] && B[id].soft && B[id].solid) FOLIAGE[id] = 1;
   N.FOLIAGE = FOLIAGE;

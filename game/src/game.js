@@ -80,7 +80,6 @@
       this.stashes = [];                   // storage (the first entry is the main fruit cellar)
       this.growQueue = [];                 // planting growth
       this.regrow = [];                    // fruit regrowth
-      this.posts = [];                     // owl post in transit
       this.diffs = [];                     // block edits (for saving)
       this.seen = {};                      // codex
       this.dexFruit = {};
@@ -143,12 +142,6 @@
         { id: 'q1', cn: '认识主果窖', en: 'Know the main cellar', done: false,
           hint: { cn: '去灯笼镇的果窖（按 E 打开），把任意果实存进去',
                   en: 'go to the Lanternrow cellar (press E to open) and store any fruit' } },
-        { id: 'q2', cn: '三颗猫头鹰果', en: 'Three Owlberries', done: false,
-          hint: { cn: '低语林的橡树洞里找 3 颗猫头鹰果',
-                  en: 'find 3 Owlberries in the oak hollows of the Whisperwood' } },
-        { id: 'q3', cn: '夜之翼', en: 'Wing of Night', done: false,
-          hint: { cn: '夜里吃下猫头鹰果，飞到 30 米以上',
-                  en: 'at night eat an Owlberry and fly above 30 metres' } },
         { id: 'q4', cn: '镜湖的门票', en: 'The ticket to Mirrorlake', done: false,
           hint: { cn: '变成雨蛙下水，在沉塔的窗台上取一颗蛙果',
                   en: 'become a frog, get in the water, take a Frog Pear from the sill of the sunken tower' } },
@@ -181,7 +174,7 @@
     }
 
     spawnCreatures() {
-      const counts = { owl: 6, frog: 12, bear: 2, jelly: 10 };
+      const counts = { frog: 12, bear: 2, jelly: 10 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
         /* A species may name a landmark of its habitat zone instead of the
@@ -215,7 +208,7 @@
           const room = (Math.max(mw[0], mw[1]) * (sp.scale || 0.2)) * 2 + 0.4;
           let p = null, bestGap = -1;
           for (let t = 0; t < 10; t++) {
-            const q = this.samplePos(sp.habitat[0], at, sp.spread || 4, sp.locomotion === 'fly');
+            const q = this.samplePos(sp.habitat[0], at, sp.spread || 4);
             if (!q) break;
             let gap = 1e9;
             for (const c of this.creatures) {
@@ -228,39 +221,7 @@
           }
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);
-          /* The height a flying animal means to keep, and it has to be a height
-             the world has. An owl sampled on top of a canopy was given five to
-             thirteen metres above that: 51.5 in a world 48 tall. It also has to
-             be a height that is not inside a tree: the ceiling used to be set
-             five to thirteen metres above the ground under the bird, and where a
-             spruce stood there that put it in the middle of the crown. The bird
-             was then pushed up toward the top of the crown by the rule that keeps
-             a flying body out of the ground, held back by the top of the world,
-             and shut in on every side by the rule that will not let a flying body
-             step into ground it is not above: one owl, five minutes, 18000 frames
-             hovering at 46.99 inside the needles, never once moving. So the
-             ceiling goes above the tallest thing in the column, and a column with
-             no sky left over its crown is not a place to put a bird at all. */
-          if (c.isFlyer()) {
-            const bx = Math.floor(p.x), bz = Math.floor(p.z);
-            /* The highest thing in the column: a crown, a tower, the lake's own
-               surface. A flying body has to be **born in the air**. It used to be
-               born on the ground of the column it was sampled in, and five of the
-               six owls of a valley were born under a crown: the height they were
-               asked to keep was inside the crown, the rule that will not put a
-               flying body inside anything refused every rise, and the bird lived
-               its whole life in the two metres between the leaf litter and the
-               needles -- measured, five of six birds spent the whole of a minute
-               with a solid block one layer over their heads. So the body starts
-               above whatever is in the column, and the ceiling it will not ask to
-               be above starts above that. */
-            const top = Math.max(N.groundY(this.world, bx, bz, this.world.h - 1),
-              this.world.liquidSurfaceAt(bx, bz));
-            c.y = Math.min(top + 1.5 + Math.random() * 4, this.world.h - 3);
-            c.flyY = Math.min(Math.max(c.y + 5 + Math.random() * 8, top + 2), this.world.h - 3);
-          }
-          /* A body that swims has to be **born in the water**, for the same reason
-             a body that flies has to be born in the air. The sample puts its feet
+          /* A body that swims has to be **born in the water**. The sample puts its feet
              on the ground of the column, and the ten lamps of Mirrorlake were born
              standing on the lakebed under eight metres of their own lake: their
              first updates were spent being yanked up to the depth their row states
@@ -276,7 +237,7 @@
         }
       }
     }
-    samplePos(zoneId, at, spread, needsSky) {
+    samplePos(zoneId, at, spread) {
       const z = N.ZONE_BY_ID[zoneId] || N.ZONE_BY_ID.whisperwood;
       const W = this.world;
       for (let t = 0; t < 300; t++) {
@@ -294,32 +255,6 @@
           x = z.cx + Math.cos(a) * r; zz = z.cz + Math.sin(a) * r;
         } else if (z.kind === 'rect') {
           x = z.x0 + Math.random() * (z.x1 - z.x0); zz = z.z0 + Math.random() * (z.z1 - z.z0);
-        } else if (z.kind === 'sky') {
-          /* A sky zone picks a column out of an isle's disc, and then asks the
-             world the same question every other zone asks. It used to answer the
-             height itself -- `isle.top + 1`, straight out of the isle table --
-             and return before the shared validation below ever ran. That made it
-             the only branch in this function that never once looked at the world
-             it was standing in: the table row says where an isle's deck is, not
-             whether the cell over that deck is open or whether the deck holds.
-             Measured at the seed the game opens with, over the 850 columns of
-             deck the six isles hold inside the valley, that copied height puts a
-             body inside a block in **156** of them -- a pine's trunk, a spray of
-             needles, a cell of dirt, one of the old beams -- and leaves it with
-             no sky over its head in **470** more, while only **662** of the 850
-             are both clear at the body's rows and supported under it.
-             No creature reaches this branch today: `game.js` asks for a habitat
-             with `sp.habitat[0]`, and no species in `data/creatures.js` names a
-             sky zone first -- the owl's first habitat is whisperwood (cloudspire
-             is fourth on its list), the bear's is mountains, the frog's and the
-             jellyfish's are mirrorlake -- so the defect is latent rather than
-             live, which is exactly why it is worth closing now, before an owl is
-             ever moved up there. Asking the world instead costs nothing: 380 of
-             those 850 columns do have the sky a flyer needs, so the loop's 300
-             tries find one. */
-          const isle = N.SKY_ISLES[(Math.random() * N.SKY_ISLES.length) | 0];
-          const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * isle.r;
-          x = isle.x + Math.cos(a) * r; zz = isle.z + Math.sin(a) * r;
         } else { // border
           const side = (Math.random() * 4) | 0;
           if (side === 0) { x = 8 + Math.random() * (W.w - 16); zz = 9; }
@@ -328,24 +263,11 @@
           else { x = W.w - 10; zz = 8 + Math.random() * (W.d - 16); }
         }
         x = Math.max(8, Math.min(W.w - 8, x)); zz = Math.max(8, Math.min(W.d - 8, zz));
-        /* A sky zone means an isle's deck, and nothing else. A point drawn out
-           of an isle's disc rounds to 1,016 different columns, and **166** of
-           them belong to no isle at all -- the disc is a disc of points, and the
-           column a point lands in is named by its corner. Every rejection below
-           is happy with one of those 166 columns, because the valley floor under
-           an isle is ground like any other, so a body asked for in the sky is put
-           down in the wood. The disc is therefore checked with the same rule the
-           isles are built with. */
-        if (z.kind === 'sky' && !N.isleDeckAt(Math.floor(x), Math.floor(zz))) continue;
         /* The ground, not the crown above it -- see terrainY. And the ground
            cell itself has to be air: an animal put down inside a trunk is an
            animal standing in a tree. */
         const gy = N.terrainY(W, Math.floor(x), Math.floor(zz), W.h - 1);
         if (W.solidAt(Math.floor(x), gy, Math.floor(zz))) continue;
-        /* A body that flies needs sky over its head, not just ground under its
-           feet: the tallest spruce in this valley reaches 47 of the world's 48
-           rows, and a bird put under a crown like that has nowhere to go. */
-        if (needsSky && N.groundY(W, Math.floor(x), Math.floor(zz), W.h - 1) + 3 >= W.h) continue;
         const water = W.liquidAt(Math.floor(x), gy, Math.floor(zz));
         if (z.id === 'mirrorlake') {
           let depth = 0; for (let y = gy; y < W.h && W.liquidAt(Math.floor(x), y, Math.floor(zz)); y++) depth++;
@@ -481,8 +403,8 @@
       }
       /* Night vision belongs to the eye, not to the sky. `daylight` and `night`
          stay what the sky is -- animals and the HUD read those -- and only the
-         rendered brightness changes, so an owl and a frog standing in the same
-         dark see two different rooms. The cost the owl's fruit lists is the
+         rendered brightness changes, so a frog and a human standing in the same
+         dark see two different rooms. The cost the frog's fruit lists is the
          same eye seen from the other side: one built for the dark is
          overwhelmed by daylight, so in the sun the world washes out white. */
       let eyeDay = this.daylight;
@@ -791,50 +713,6 @@
       if (this.quests) this.checkQuests();
     }
 
-    /* ------------------------- owl post (docs/05 section 5.2) ------------------------- */
-    /* cellar tree -> main cellar, one fruit at a time, delivered after 3 in-game days, 10% lost.
-       Requires at least one owlberry stored in the main cellar (unlocks "Pendulum"). */
-    owlUnlocked() { return this.cellar().items.some(i => i.id === 'owlberry') || this._owlUnlocked; }
-    postItem() {
-      const s = this.openStash;
-      if (!s) return;
-      if (s.kind !== 'tree') { this.logMsg(N.t('log.postTreeOnly'), 'warn'); return; }
-      if (!this.owlUnlocked()) { this.logMsg(N.t('log.postLocked'), 'warn'); return; }
-      if (this.posts.length >= 3) { this.logMsg(N.t('log.postBusy'), 'warn'); return; }
-      const it = s.items[this.stashSel || 0];
-      if (!it) { this.logMsg(N.t('log.postNone'), 'warn'); return; }
-      s.items.splice(this.stashSel || 0, 1);
-      this.stashSel = Math.max(0, (this.stashSel || 0) - 1);
-      this.posts.push({ it, t: 3 * DAY_LEN, from: s.id });
-      this._owlUnlocked = true;
-      this.logMsg(N.t('log.postSent', { n: itemName(it.id) }), 'good');
-      if (this.ui) this.ui.renderCellar();
-    }
-    updatePosts(dt) {
-      for (let i = this.posts.length - 1; i >= 0; i--) {
-        const po = this.posts[i];
-        po.t -= dt;
-        // in the owl's claws it spoils at the main cellar's rate, and it can go
-        // dormant on the way: the same rule as on any shelf, not a second one
-        this.decayOne(po.it, dt, STO.cellar.decay);
-        if (po.t > 0) continue;
-        this.posts.splice(i, 1);
-        const name = itemName(po.it.id);
-        if (Math.random() < 0.10) {
-          this.logMsg(N.t('log.postLost', { n: name }), 'bad');
-          this.stats.postLost = (this.stats.postLost || 0) + 1;
-        } else if (this.used(this.cellar().items) + this.slotOf(po.it) > this.cellar().slots) {
-          this.logMsg(N.t('log.postFull', { n: name }), 'warn');
-          const back = this.stashes.find(s => s.id === po.from);
-          (back || this.cellar()).items.push(po.it);
-        } else {
-          this.cellar().items.push(po.it);
-          this.logMsg(N.t('log.postArrived', { n: name }), 'good');
-          this.stats.postSent = (this.stats.postSent || 0) + 1;
-        }
-      }
-    }
-
     /* ------------------------- damage / status ------------------------- */
     damage(a, cause) {
       const p = this.player;
@@ -962,8 +840,6 @@
         this.logMsg(N.t('log.upgrade', { n: N.disp(u), e: u.slots ? N.t('log.upgSlots', { n: u.slots }) : N.t('log.upgRare'), d: N.descOf(u) }), 'good');
       };
       if (this.cellar().items.length > 0) { done(q('q1')); grant('pouch1'); }
-      if (n('owlberry') >= 3) done(q('q2'));
-      if (p.form === 'owlberry' && p.y > 30) done(q('q3'), N.t('log.q3msg'));
       if (n('frogpear') >= 1) { done(q('q4')); grant('pouch2'); }
       // q5 asks for the fruit, not the body: a legendary one costs 12 of 24
       // slots and sleeps in 420 s, so the quest is the carry, not the climb
@@ -988,17 +864,12 @@
       let best = null, score = -1e9;
       for (const z of N.ZONES) {
         if (z.kind === 'border') continue;
-        if (z.kind === 'sky') { if (p.y > 28) { const d = Math.min(...N.SKY_ISLES.map(i => Math.hypot(i.x - p.x, i.z - p.z))); if (d < 30 && 100 - d > score) { score = 100 - d; best = z; } } continue; }
         if (z.kind === 'circle') {
           const d = Math.hypot(z.cx - p.x, z.cz - p.z);
           if (d < z.r) { const s = (z.r - d) / z.r * 100 + (z.id === 'starfall' ? 40 : 0); if (s > score) { score = s; best = z; } }
         } else if (z.kind === 'rect') {
           if (p.x > z.x0 && p.x < z.x1 && p.z > z.z0 && p.z < z.z1) { const s = 60; if (s > score) { score = s; best = z; } }
         }
-      }
-      if (p.y > 28 && (!best || best.kind !== 'sky')) {
-        const d = Math.min(...N.SKY_ISLES.map(i => Math.hypot(i.x - p.x, i.z - p.z)));
-        if (d < 26) return N.disp(N.ZONE_BY_ID.cloudspire);
       }
       return best ? N.disp(best) : N.t('log.wilderness');
     }
@@ -1070,8 +941,6 @@
         const r = this.regrow[i]; r.t -= dt;
         if (r.t <= 0) { if (!this.world.get(r.x, r.y, r.z)) this.setBlock(r.x, r.y, r.z, r.b); this.regrow.splice(i, 1); }
       }
-      // owl post
-      if (this.posts.length) this.updatePosts(dt);
       // planting growth
       for (let i = this.growQueue.length - 1; i >= 0; i--) {
         const g = this.growQueue[i]; g.t -= dt;
@@ -1182,23 +1051,6 @@
         const hi = (p.wSurf >= 0 ? p.wSurf - 0.25 : p.y + 2);
         P.spawn(p.x + Math.cos(a) * r, p.y + Math.random() * Math.max(0.4, hi - p.y), p.z + Math.sin(a) * r,
           0, 0.8 + Math.random(), 0, 2.5, [0.5, 0.85, 1], 0.14, -0.5);
-      }
-      // dust and silk drifting off the old beams on the highest isle. The grain
-      // is let go at the first air above the height the beams stand at, which is
-      // the same question the firefly above it asks: the span used to be a box
-      // centred on the isle, and the isle is standing in it -- **87** of **371**
-      // grains were born inside a block, where a mote is not seen through a block
-      // but simply is not, and **20,793** of the **65,627** samples the dust did
-      // survive (**31.7%**) were spent inside one.
-      const beams = N.POIS.find(q => q.id === 'beams');
-      if (Math.hypot(beams.x - p.x, beams.z - p.z) < 40 && Math.random() < 0.8) {
-        const bx = beams.x + (Math.random() - 0.5) * 10, bz = beams.z + (Math.random() - 0.5) * 10;
-        const fx = Math.floor(bx), fz = Math.floor(bz);
-        let by = beams.y + 1;
-        while (by < beams.y + 8 && this.world.solidAt(fx, by | 0, fz)) by++;
-        if (!this.world.solidAt(fx, by | 0, fz))
-          P.spawn(bx, by, bz,
-            (Math.random() - 0.5) * 0.4, 0.3 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4, 2 + Math.random() * 2, [0.85, 0.85, 0.75], 0.16, 0.05);
       }
     }
 
@@ -1343,15 +1195,13 @@
           // the stride this body is in, and how hard it is asking for one: both
           // are measured by the body's own update, off the ground it covered
           gait: c.gait, move: N.walkMove(c.speed, c.sp.speed),
-          fly: c.isFlyer() && c.state !== 'roost',
           air: c.airAmt || 0, crouch: c.crouch || 0, phase: c.phase,
           /* how far above the ground it would stand on this body is, in its own
              body heights. A limb the body stands on has to be where its feet
-             will land, so its flight pose waits for the ground to get out of
-             the way -- see partAngles in models.js, and the `stands` flag. */
+             will land, so its off-ground pose waits for the ground to get out
+             of the way -- see partAngles in models.js, and the `stands` flag. */
           off: Math.max(0, Math.min(1,
             (c.y - N.groundY(W, Math.floor(c.x), Math.floor(c.z), Math.floor(c.y))) / (N.MODEL_H[c.sp.model] * sc))),
-          flap: c.flap === undefined ? 1 : c.flap,
           // only a body the data gives a swim speed to: a bear wading still walks
           swim: strokeOf(c.held, c.speed, c.sp.swimSpeed),
           held: c.held || 0,
@@ -1397,12 +1247,10 @@
         const st = {
           t: this.time,
           gait: p.gait, move: p.walkMove(),
-          fly: !!p.formDef.fly && !p.grounded,
           air: p.airAmt || 0, crouch: p.crouch || 0, phase: 0,
           // the same clearance the creatures' bodies get: see above
           off: Math.max(0, Math.min(1,
             (p.y - N.groundY(W, Math.floor(p.x), Math.floor(p.z), Math.floor(p.y))) / (N.MODEL_H[p.modelId] * sc))),
-          flap: p.flap === undefined ? 1 : p.flap,
           /* the form decides, not the water: a human in the lake wades, a frog
              kicks. The stroke is sized by the water the body is actually pushing
              -- see `strokeOf` above the draw -- and this is the one body in the
@@ -1509,8 +1357,8 @@
     }
 
     /* Everything that would otherwise be lost on a reload is written here: the
-       block diff rather than the voxels, the queues (regrowth, planting, owl
-       post, fruit scattered on death), the stores, the identity and the clock.
+       block diff rather than the voxels, the queues (regrowth, planting, fruit
+       scattered on death), the stores, the identity and the clock.
        Nothing translated is stored -- a store is named by its kind, a quest
        keeps its text next to the check that completes it. */
     save() {
@@ -1524,9 +1372,8 @@
           inv: this.inv,
           stashes: this.stashes.map(s2 => ({ id: s2.id, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
           diffs: this.diffs, seen: this.seen, dex: this.dexFruit,
-          regrow: this.regrow, growQueue: this.growQueue, posts: this.posts, drops: this.drops,
+          regrow: this.regrow, growQueue: this.growQueue, drops: this.drops,
           buffs: this.buffs,
-          owl: this._owlUnlocked || false,
           quests: this.quests.map(q => [q.id, q.done]), stats: this.stats, upg: this.upg
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(s));
@@ -1564,7 +1411,6 @@
       this.growQueue = rows(s.growQueue);      // a planted pit must still be growing after a reload
       this.drops = rows(s.drops);              // fruit scattered on death stays recoverable
       this.buffs = plain(s.buffs) ? s.buffs : {};
-      this.posts = rows(s.posts); this._owlUnlocked = !!s.owl;
       const p = this.player, sp = plain(s.p) ? s.p : {};
       Object.assign(p, { x: num(sp.x, p.x), y: num(sp.y, p.y), z: num(sp.z, p.z),
         yaw: num(sp.yaw, p.yaw), pitch: num(sp.pitch, p.pitch),

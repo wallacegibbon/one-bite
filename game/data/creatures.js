@@ -1,20 +1,20 @@
 /* ==========================================================================
  *  Creature data -- mirrors docs/03-characters-and-creatures.md
- *  Four species, one per niche. Three of them bear a fruit and so are a body the
- *  player can wear; the fourth -- the lamps of Mirrorlake -- bears nothing. It
+ *  Three species, one per niche. Two of them bear a fruit and so are bodies the
+ *  player can wear; the third -- the lamps of Mirrorlake -- bears nothing. It
  *  is the exception that shows what the rule costs: a fruitless species still
  *  costs a model, a habitat, a row in the attitude matrix and a place in the
  *  world, but it never changes what a door or a crevice means.
  *  attitude  : reaction to the player's current form; self=same species, default=fallback
- *  locomotion: walk / fly / water / amphibian -- how the body moves. The code
- *              asks this instead of asking "is this the owl?", so a second flying
- *              species would fly without anyone editing the movement code.
+ *  locomotion: walk / water / amphibian -- how the body moves. The code asks
+ *              this instead of asking about a species, so the movement code stays
+ *              the same when a species joins.
  *  turn      : the most radians a second this animal can add to its heading at
  *              its own cruising speed. Nothing with a body turns on the spot --
  *              the course bends, and this is the animal's agility. The form
  *              record of the same species carries the same number, because the
  *              animal and the body worn from it are one body (play.js checks
- *              that the two agree, for this field and for flySpeed).
+ *              that the two agree).
  *  at/spread : spawn at a named landmark of the habitat zone (not anywhere in
  *              the zone) within `spread` metres -- the lamp field is the sunken
  *              tower's outline, so it is placed by the tower, not by the lake.
@@ -32,16 +32,6 @@
 
   const CREATURES = [
     {
-      /* niche: the night sky -- flight */
-      id: 'owl', cn: '猫头鹰', en: 'Screech Owl', model: 'owl', scale: 0.15,
-      habitat: ['whisperwood', 'starfall', 'glowglade', 'cloudspire'], active: 'night',
-      locomotion: 'fly', speed: 3.2, flySpeed: 7.0, turn: 1.4, alert: 12, herd: 1,
-      fruit: 'owlberry',
-      attitude: { self: 'calm', default: 'flee', frog: 'curious', bear: 'flee' },
-      dex: '白天塞在树洞里，像一截会呼吸的木头。夜里它是整片林子的耳朵。谷地里的猫头鹰不抓老鼠——它们抓"失窃的果实"，是灯笼镇义务巡逻队。',
-      dexEn: 'By day it is wedged in a tree hollow like a piece of wood that breathes. At night it is the ear of the whole wood. The owls of the valley do not catch mice — they catch "stolen fruit", and they are Lanternrow\'s volunteer patrol.'
-    },
-    {
       /* niche: the shallows -- jumping, and breathing through the skin */
       id: 'frog', cn: '雨蛙', en: 'Mirrorlake Frog', model: 'frog', scale: 0.13,
       habitat: ['mirrorlake', 'glowglade', 'starfall'], active: 'both',
@@ -51,7 +41,7 @@
          body worn from this animal's fruit is held at the same depth. */
       hover: 1.6,
       fruit: 'frogpear',
-      attitude: { self: 'calm', default: 'ignore', owl: 'flee', bear: 'ignore' },
+      attitude: { self: 'calm', default: 'ignore', bear: 'ignore' },
       dex: '雨后整片湖岸一起叫，声音能压过钟塔。它们不喝水——它们靠皮肤喝。',
       dexEn: 'After rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.'
     },
