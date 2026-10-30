@@ -1681,82 +1681,6 @@ const { sim } = require('./simwait');
   check('the opening frame is not a wall pressed against the lens', opening.nearShare <= 0.15, opening);
   check('and the opening frame has sky in it', opening.skyShare >= 0.08, opening);
 
-  /* 10q. a cloud is not a hole in the sky. The face/AO table is the brightness
-     of a face relative to the ground it stands on: a bottom face is dark
-     because it is under a slab and never sees the sky. A cloud's bottom face is
-     the face you look at from the ground, and a cloud blob is nothing but
-     corners, so the table drove the underside of every cloud to 0.19 of its own
-     colour -- measured RGB (61,65,72) against a sky at (102,127,163). Dark grey
-     lumps hanging in a bright sky: "black blocks in the sky". Cloud blocks are
-     soft now (SOFT_S in src/world.js). The reading stands under one and looks
-     up, and the cloud has to come out brighter than the sky behind it.
-     world.raycast cannot say what a pixel is here: a cloud is non-solid on
-     purpose, so the picking ray does not stop on weather. The ray is marched by
-     hand through the block grid instead. */
-  const cloud = await step('cloudIsNotAHole', () => {
-    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, R = g.R, p = g.player;
-    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
-      time: g.time, mode: g.mode, frame: g._camFrame };
-    let spot = null;
-    for (let z = 8; z < W.d - 8 && !spot; z += 2) for (let x = 8; x < W.w - 8; x += 2) {
-      const g0 = N.groundY(W, x, z, 26);
-      if (g0 < 16 || g0 > 26) continue;
-      // groundY stops at solid ground, so it walks straight through a canopy of
-      // leaves and through the cloud deck: the first block above the ground has
-      // to be cloud, or the lens is under a tree and every ray hits leaves
-      let y = g0;
-      while (y < W.h && !W.get(x, y, z)) y++;
-      if (y >= W.h || W.get(x, y, z) !== 16 || y > 46) continue;
-      spot = { x: x + 0.5, z: z + 0.5, y: g0 + 0.2 };
-      break;
-    }
-    if (!spot) return {};
-    p.form = null; p.x = spot.x; p.y = spot.y; p.z = spot.z; p.vx = p.vy = p.vz = 0;
-    p.yaw = Math.PI; p.pitch = 1.15;                  // up at the underside of the blob
-    // the environment reads the lens this frame draws with: the game loop's
-    // last one was wherever the game's player was left, so point it at this
-    // eye first
-    g._lens = { x: p.x, y: p.eyePos(), z: p.z };
-    g.mode = 'play'; g.time = N.DAY_LEN * (7 / 24); g.updateEnv();
-    const cf = g._camFrame = g.shootCamera(p);
-    g.render();
-    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
-    const px = new Uint8Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
-    const tanY = Math.tan(cf.fov * Math.PI / 360), tanX = tanY * R.aspect;
-    const first = (ox, oy, oz, dx, dy, dz) => {
-      for (let t = 0.3; t < 90; t += 0.4) {
-        const b = W.get(Math.floor(ox + dx * t), Math.floor(oy + dy * t), Math.floor(oz + dz * t));
-        if (b) return b;
-      }
-      return 0;
-    };
-    const lum = (i) => px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
-    let cn = 0, cs = 0, cmin = 1e9, sn = 0, ss = 0;
-    for (let Y = 0; Y < h; Y += 2) {
-      const gy = h - 1 - Y, ndcY = 1 - (Y + 0.5) / h * 2;
-      for (let X = 0; X < w; X += 2) {
-        const ndcX = (X + 0.5) / w * 2 - 1;
-        let dx = R.fwd[0] + R.right[0] * ndcX * tanX + R.up[0] * ndcY * tanY;
-        let dy = R.fwd[1] + R.right[1] * ndcX * tanX + R.up[1] * ndcY * tanY;
-        let dz = R.fwd[2] + R.right[2] * ndcX * tanX + R.up[2] * ndcY * tanY;
-        const L = Math.hypot(dx, dy, dz); dx /= L; dy /= L; dz /= L;
-        const id = first(R.cam.x, R.cam.y, R.cam.z, dx, dy, dz);
-        const i = (gy * w + X) * 4;
-        if (id === 16) { cn++; cs += lum(i); cmin = Math.min(cmin, lum(i)); }
-        else if (id === 0) { sn++; ss += lum(i); }
-      }
-    }
-    g._camFrame = null; g.render();
-    p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
-    p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
-    return { spot, cloudPx: cn, skyPx: sn, cloudMean: +(cs / Math.max(1, cn)).toFixed(1),
-      skyMean: +(ss / Math.max(1, sn)).toFixed(1), cloudMin: cmin === 1e9 ? 0 : +cmin.toFixed(1) };
-  });
-  check('there is a cloud overhead to look at', cloud.cloudPx > 2000, cloud);
-  check('a cloud is brighter than the sky behind it, not a dark lump in it',
-    cloud.cloudMean > cloud.skyMean && cloud.cloudMean >= 100, cloud);
-
   /* 10r. the sky is not mirrored. The renderer keeps a camera basis for the sky
      quad, and the sky quad is the only thing in the frame that reads it, so an
      error there hides everywhere else: it was built as fwd x right instead of
@@ -1920,16 +1844,8 @@ const { sim } = require('./simwait');
     p.form = null; p.vx = p.vy = p.vz = 0;
     /* The scatter law's sky-only lens: the moon sits out of the frame, so a
        bright pixel is a star and its luminance moves only if the twinkle
-       moves it. Four grabs one game-second apart. The cloud deck is scenery,
-       not sky: this lens sits under it, and the deck the seed laid down stands
-       in the frame's cone, where its own faces hide most of the stars behind
-       them. The step measures the sky shader's twinkle, so the deck is taken
-       down for the grabs and put back after. */
+       moves it. Four grabs one game-second apart. */
     p.x = 100; p.z = 90; p.y = 30; p.yaw = 0.4; p.pitch = 1.35;
-    const cloudOff = [];
-    for (let y = 34; y < W.h; y++) for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++)
-      if (W.get(x, y, z) === 16) { cloudOff.push([x, y, z]); W.set(x, y, z, 0); }
-    W.rebuildDirty(gl, 1e9);
     const grab = (t) => {
       // the environment reads the lens this frame draws with: the game loop's
       // last one was wherever the game's player was left, so point it at this
@@ -1963,8 +1879,6 @@ const { sim } = require('./simwait');
         else if (d < -10) perStep[s - 1].down++;
       }
     }
-    for (const [x, y, z] of cloudOff) W.set(x, y, z, 16);
-    W.rebuildDirty(gl, 1e9);
     g._camFrame = null; g.render();
     p.x = was.x; p.y = was.y; p.z = was.z; p.yaw = was.yaw; p.pitch = was.pitch; p.vy = was.vy;
     p.form = was.form; g.time = was.time; g.mode = was.mode; g._camFrame = was.frame;
@@ -4031,9 +3945,9 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the flag is not glue: walking off a step leaves the ground at once',
     !wade.off.error && wade.off.airFrames >= 2 && wade.off.airMax > 0.2 && wade.off.drop > 0.3, wade);
 
-  /* 10x. an underside is not a hole in the sky. 10q fixed the cloud; the same
-     face table was still driving everything else that hangs in open air to
-     black. Face shade times crevice darkening is 0.42 x 0.46 = 0.19 of a
+  /* 10x. an underside is not a hole in the sky. 10q fixed the cloud, whose
+     deck and law the user cut from the sky afterwards; the same face table
+     was still driving everything else that hangs in open air to black. Face shade times crevice darkening is 0.42 x 0.46 = 0.19 of a
      block's own colour, and the crevice test reads a canopy as a crevice --
      the ring of solid it samples under a tree IS the tree. Measured over the
      whole map: 60,506 of the 107,880 faces that have eight blocks of clear air

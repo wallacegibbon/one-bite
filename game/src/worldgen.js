@@ -411,21 +411,6 @@
     }
   }
 
-  /* ---------------- clouds ---------------- */
-  function sky() {
-    // clouds: several overlapping puffy blobs, above the canopy
-    for (let i = 0; i < 16; i++) {
-      const x = 10 + rnd() * 140, z = 10 + rnd() * 140, y = 38 + rnd() * 5;
-      if (dist(x, z, ISLE.x, ISLE.z) < 20) continue;
-      const n = 3 + (rnd() * 3 | 0);
-      for (let k = 0; k < n; k++) {
-        const ox = x + (rnd() - 0.5) * 11, oz = z + (rnd() - 0.5) * 11, oy = y + (rnd() - 0.5) * 2.4;
-        const rr = 3.4 + rnd() * 3.6;
-        blob(ox, oy, oz, rr, rr * (0.5 + rnd() * 0.22), rr, 16);
-      }
-    }
-  }
-
   /* ---------------- forest / plants / fruit ---------------- */
   function forest() {
     /* jittered grid planting: ground stays visible between canopies */
@@ -509,7 +494,7 @@
       }
       for (let y = h + 1; y <= SEA; y++) set(x, y, z, 5);
     }
-    cave(); castle(); village(); orchard(); lakebed(); sky(); forest();
+    cave(); castle(); village(); orchard(); lakebed(); forest();
     // boundary: flatten the outermost ring and raise the Grey Veil pillars
     for (let i = 0; i < W.w; i += 7) {
       for (const [x, z] of [[i, 4], [i, W.d - 5], [4, i], [W.w - 5, i]]) {
