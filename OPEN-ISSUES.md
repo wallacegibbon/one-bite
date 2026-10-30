@@ -67,7 +67,11 @@ mixed stomach / magic stomach / beast residue, and the list's fourth was
 the twelve side quests, a thing the check does not guard); and the
 worldview chapter's banned-word list still banned the word the storage
 mechanics now own (a handover is an `upgrades` entry in the data, and the
-log line that announces it says so). The issues 1-8 of round 26 stand
+log line that announces it says so). A fourth line came out of the round's
+own cut: removing the word for the buff system from the technical chapter's
+save-line in `cc08b55` doubled the word it sat inside (`all come backar all
+come back`), and the re-read un-mangled it to what the save round trip
+actually returns (`ebf6a22`). The issues 1-8 of round 26 stand
 closed as recorded; 2f (the walking soak) and 2g (the flock crown) stand
 recorded and watched with the loop.
 
