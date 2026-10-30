@@ -7,10 +7,13 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: round 27, tree `9433859` (the crossing read's
-settle window, landed after the standing watch reds on the cut's tree --
-the red is recorded at the end of this paragraph), on the tree of
-`cc08b55` (the quest skin and the
+State at time of writing: round 27, tree `a0f12f9` (the hop gate's ask
+of the cells the body's box reaches into at push-off, landed after the
+standing watch reds on the tree of `9433859` -- the red is recorded at
+the end of this paragraph), on the tree of `9433859` (the crossing
+read's settle window, landed after the standing watch reds on the
+cut's tree, its red recorded there as well), on the tree of `cc08b55`
+(the quest skin and the
 buff mushrooms cut, pushed to both remotes with the gates green twice on
 its own tree). The round's driving change was the user's: the valley's
 three quests keep what they give and lose what they say -- they become the
@@ -129,7 +132,54 @@ errand fixed); the wait is set at 300 frames, twice the measured worst
 case, and a body still turning hard after five more seconds is a body the
 law should see. On the fixed tree the suite came back green end to end
 and the gate's double run came back green twice (`9433859`), and the
-standing watch on it is loop 16. The issues 1-8 of round 26 stand
+standing watch on it is loop 16. The standing watch on that tree, loop
+16, came back green on its first seven runs and red on the eighth, on
+the cavity line of the frog's own ceiling (a body on foot does not push
+off into a ceiling it cannot reach through, and its body never passes
+through the ceiling of the place it is in). The rig places a frog in the
+pocket of a ledge at (119, 10) -- floor 26, ceiling 27, a metre of air,
+the trunk standing in the column across the mouth at (118, 9) -- and
+reads the hop the way the game asks it. The red run's frog walked under
+the roof the whole time the gate could see it: its own column read the
+pocket's ceiling, the room was a metre against the 1.21 the arc needs,
+and the gate held it to walking. At frame 51 the centre crossed the
+mouth a hand's width in -- 5 mm over the edge -- and the overdue hop
+was due: the gate asked its own column and the span of the arc, and the
+span's integer rounding at the frog's heading asked the column next
+door and skipped the trunk's, so both of the cells it asked read open
+and the launch was let through. The arc was no straight drift: the frog
+kept steering at the herd's errand over the top of it (the rig does not
+clear the herd centres, and the wander state walks at the herd's own
+centre, 73.73, 99.36), and the step into the trunk's column was refused
+at the feet, so the body spent the apex back across the edge it had
+left: at frame 65 the centre was in the pocket's own column again with
+the top of its head 0.16 m through the ceiling for one frame. The reads
+beside it all sat on their own records -- both launches legal on every
+read the rig carries, the second of them clean -- so the red is the one
+the game owes: the gate asked the column the centre stands in and the
+span the arc crosses, and it did not ask the cells the body's box
+reaches into at push-off, the cells that say the body is still under
+the roof it thinks it has left. The fix is the gate's own ask extended
+to those cells (`game/src/entities.js`, the hop gate, `a0f12f9`): the
+roof is now also the lowest of the cells the body's box covers while it
+pushes off -- the trunk rectangle the body's own hw, hl, ox, oz give
+it, taken the way the body's clash takes them -- min'd with the reads
+it already made. A body that cannot clear the roof it is still under
+walks out instead, and its legs do not load for the hop they are not
+going to make; the wind is held to the same answer. The rig's recompute
+of the gate mirrors it, box cells and all, with its check lines
+byte-identical to before. Measured on the fixed tree: the red run's own
+placement holds 139 frames with the box under the low cell while the
+gate keeps its answer, and the frog launches only once the box clears
+the mouth; the same frog 2.5 m out of the pocket hops at frame 12 on
+schedule -- the extension blocks the shape without blocking the hop.
+One more line of the round's re-read landed beside the fix (comment
+only): the comment on the ambient pass named the embers and the
+splashes the pass never lets go, and it now names the fireflies at
+night and the bubbles under water, the way the pass lets them go. On
+the fixed tree the suite came back green end to end and the gate's
+double run came back green twice (`a0f12f9`), and the standing watch on
+it is loop 17. The issues 1-8 of round 26 stand
 closed as recorded; 2f (the walking soak) and 2g (the flock crown) stand
 recorded and watched with the loop.
 
@@ -1361,7 +1411,9 @@ stays), so it stands as the user's open design call, recorded here so the
 stage is not read as done. The standing watch on `cc08b55` was loop 15,
 which came back green on its first six runs and red on the seventh (the
 crossing read's swing, recorded at the head of this file); the watch on
-the fixed tree is loop 16.
+the fixed tree was loop 16, green on its first seven runs and red on
+the eighth (the cavity line of the hop gate, recorded at the head of
+this file); the watch on that fixed tree is loop 17.
 
 ## Standing contract (every session, in order)
 
