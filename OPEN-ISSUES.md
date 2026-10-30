@@ -7,7 +7,24 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: round 27, tree `a0f12f9` (the hop gate's ask
+State at time of writing: round 28, tree `dd16d24` (the sky's cloud
+deck cut at the user's word -- the `sky()` generator that laid
+sixteen puffs of block 16 at y38-43 above the canopy and the law
+10q that read a cloud against the sky are gone; block 16 stays
+where the Grey Veil pillars are built out of it, so no renumbering
+and no save migration, and the twinkle step no longer takes the
+deck down for its sky grabs; the soft table keeps the underside
+law that reads a crown and a roof against the sky. The round also
+answered a question: the user noticed the lakebed seen from the
+surface or the bank reads clearer than a forward view from inside
+the water, and four lenses at noon measured it -- straight down on
+a 2 m bed, spread 58 (legible sand); across from the bank, 35;
+0.5 m under the surface looking forward, 3.3; on the bed itself,
+2.6; the same underwater frames with every effect of the water
+taken away read 167-172 of mean with 17-19 of spread. That is the
+per-metre absorption the lake was tuned to (0.4 a metre for the
+green the eye reads brightest, visibility near 2.5 m), not a bug;
+nothing was changed), on the tree of `a0f12f9` (the hop gate's ask
 of the cells the body's box reaches into at push-off, landed after the
 standing watch reds on the tree of `9433859` -- the red is recorded at
 the end of this paragraph), on the tree of `9433859` (the crossing
