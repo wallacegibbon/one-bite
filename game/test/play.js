@@ -2877,6 +2877,39 @@ const { sim } = require('./simwait');
           over = Math.min(over, wf.y - bed);
           room = Math.min(room, (surfAt(wf.x, wf.z) - 1) - bed);
         }
+        /* The law is about a frog that is crossing, and a frog still swinging
+           onto its errand is turning, not crossing: the turn it is making is
+           asked by its own law (the outside leg of a turn), and the inside
+           leg -- the one this rig reads -- sweeps less. Measured off the
+           model's own table at the wild frog's own effort: the settled read is
+           0.181, the full-rate inside read 0.144, and the bound below sits at
+           0.15 between them. The record before the round's cut (1.9 rad/s)
+           settled the widest possible course error before the fixed 2 s read,
+           so the read never met the swing; at 0.9 a frog placed more than a
+           third of a turn from its errand still holds the full rate at the
+           read, and the swing is the one thing that moves the read across the
+           bound with nothing in the game changed. So the read waits for the
+           heading to settle onto the errand, and the wait is kept beside the
+           reading rather than hidden in it. With the herd's errand cleared the
+           way the rig clears it and the errand fixed for the leg, the widest
+           course error settles before 3.2 s of the 0.9 rate, and the live
+           game with the keep-apart of the other frogs weaving the way settles
+           the widest placement 112 frames after the send: the 300-frame
+           window is twice that, and a body that is still turning hard after
+           five more seconds is a body the law should see, so a window that
+           reaches the cap reads what it found rather than guessing. */
+        let settle = 0;
+        for (let i = 0; i < 300 && Math.abs(wf.bend || 0) > 0.3; i++) {
+          wf.update(1 / 60, p, W, g); p.update(1 / 60, {}, g);
+          settle++;
+          if (!wf.inWater) continue;
+          if (wf.held < 0.5) lost++;
+          const bed = bedAt(wf.x, wf.z);
+          over = Math.min(over, wf.y - bed);
+          room = Math.min(room, (surfAt(wf.x, wf.z) - 1) - bed);
+        }
+        out.wildSettle = settle;
+        out.wildBend = +(wf.bend || 0).toFixed(2);
         /* the frame is turned onto the middle of that band before the body is
            asked out of it, so the read does not depend on how deep this
            particular body happens to have been born hanging */
