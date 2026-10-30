@@ -373,7 +373,30 @@ run of the round ran on. The rig records the whole 150-frame window,
 so the next red -- if it comes from the post-suite state the flake needs --
 says in which frame the body was told there was room. Watched with the
 loop; not closed, because there is no proof of airtight for that
-post-suite state.
+post-suite state. The standing watch of round 27 found the shape the
+gate had not been given the words for: loop 16, run 8, the second line
+of this law red on the pocket of a ledge at (119, 10) -- floor 26,
+ceiling 27, a metre of air, the trunk standing in the column across the
+mouth at (118, 9). A frog that walked under the roof the whole time the
+gate could see it crossed the mouth with its centre 5 mm over the edge
+and pushed off there: the gate asked its own column and the span of the
+arc, and the span's integer rounding at the frog's heading asked the
+column next door and skipped the trunk's, so both of the cells it asked
+read open. The arc was no straight drift -- the frog kept steering at
+the herd's errand over the top of it, and the step into the trunk's
+column was refused at the feet -- so the body spent the apex back
+across the edge it had left, in the pocket's own column, with the top
+of its head 0.16 m through the ceiling for one frame; the reads beside
+it all sat on their own records (both launches legal on every read the
+rig carries, the second of them clean). The fix (round 27, `a0f12f9`)
+extends the gate's ask to the cells the body's box reaches into at
+push-off -- the trunk rectangle the body's own hw, hl, ox, oz give it,
+taken the way the body's clash takes them -- min'd with the reads it
+already made. The rig's recompute of the gate mirrors it with its check
+lines byte-identical; the red run's own placement now holds 139 frames
+with the box under the low cell while the same frog 2.5 m out of the
+pocket hops on schedule, so the extension blocks the shape without
+blocking the hop. The full record stands at the head of this file.
 
 ### 2c. Day-soak law (NEW, loop 2 run 6) — `and none of them spends a frame inside the world`
 
