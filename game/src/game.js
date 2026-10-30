@@ -892,7 +892,7 @@
         const d = Math.hypot(c.x - p.x, c.z - p.z);
         if (d < 160) c.update(dt, p, this.world, this);
       }
-      // particles (fireflies / embers / splashes)
+      // particles (fireflies / bubbles)
       this.ambient(dt);
       this.particles.update(dt, this.world);
 
