@@ -80,7 +80,11 @@ gating diagram and the technical chapter's test table: the cut keyed the
 upgrades to the deeds the valley keeps (cellar, lake, greenhouse), and
 the loader keeps the old ids only for the saves that carry them, so the
 lines now name the deeds the way the grant and the test do, fixed beside
-this record. The standing watch on the cut's tree,
+this record. One more line of the re-read's: the fruit chapter's
+interaction table quoted the crosshair prompt with the rarity and slot
+cost the prompt does not carry -- the prompt is 'E — pick' plus the
+fruit's name, and the rarity and the slots are the log line the pick
+announces -- fixed beside this record. The standing watch on the cut's tree,
 loop 15, did its work and found the one thing the round's own cut owed:
 green on its first six runs and red on the seventh, on the crossing law
 (a wild frog crossing the lake kicks the same way, feet behind it). The

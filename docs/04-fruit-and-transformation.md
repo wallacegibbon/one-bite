@@ -133,7 +133,7 @@ The one exception is a **body reflex**: this body startles before you have decid
 
 | Step | Presentation |
 |---|---|
-| Crosshair on a fruit block | highlight + prompt "E — pick Frog Pear (rare, 4 slots)" |
+| Crosshair on a fruit block | highlight + prompt "E — pick Frog Pear" |
 | Press E | the fruit block disappears, backpack +1, rarity and slot cost announced |
 | Backpack full | "Backpack full (24/24 slots) — go back to the cellar first." The fruit does **not** drop, it stays where it is |
 | The fruit block | a faintly self-lit small box (0.44³ body + two small leaves), colour = the rarity ring colour |
