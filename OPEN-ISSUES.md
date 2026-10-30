@@ -7,7 +7,10 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: round 27, tree `cc08b55` (the quest skin and the
+State at time of writing: round 27, tree `9433859` (the crossing read's
+settle window, landed after the standing watch reds on the cut's tree --
+the red is recorded at the end of this paragraph), on the tree of
+`cc08b55` (the quest skin and the
 buff mushrooms cut, pushed to both remotes with the gates green twice on
 its own tree). The round's driving change was the user's: the valley's
 three quests keep what they give and lose what they say -- they become the
@@ -71,7 +74,52 @@ log line that announces it says so). A fourth line came out of the round's
 own cut: removing the word for the buff system from the technical chapter's
 save-line in `cc08b55` doubled the word it sat inside (`all come backar all
 come back`), and the re-read un-mangled it to what the save round trip
-actually returns (`ebf6a22`). The issues 1-8 of round 26 stand
+actually returns (`ebf6a22`). The standing watch on the cut's tree,
+loop 15, did its work and found the one thing the round's own cut owed:
+green on its first six runs and red on the seventh, on the crossing law
+(a wild frog crossing the lake kicks the same way, feet behind it). The
+rig places a body of the crowd at the centre of the lake and points it at
+an errand in the deep water sixteen metres off, drives the fixed two
+seconds, and reads the stroke off the frame the draw uploads; the red
+run's read came back with the water holding the body, moving at its own
+cruise and inside the body it should be inside, and the stroke swept
+0.144 of a metre fore and aft against the law's 0.15, while the rest of
+the payload sat on its own records: the same model at the same place with
+nothing moving sweeps 0.079, and the settled read of the same leg
+measured off the model's own table reads 0.181. The gap between the two
+is the turn. The round's cut took the frog's turn from 1.9 to 0.9 rad/s
+-- the models' table carries the reason beside the number: 0.9 is the
+tightest arc a body with a kick holds, and the record held 1.9 for a
+while -- and the rig's fixed two-second read is a read of the middle of a
+swing. Before the cut the widest course error a placement could leave
+settled at 1.9 rad/s before the read finished, so the read never met the
+swing; at 0.9 a frog placed more than two-fifths of a turn from its
+errand still holds most of the rate at the read, and the inside leg --
+the one the rig reads -- sweeps less the harder the body turns. That is
+the one thing that moves the read across the bound with nothing in the
+game changed, and it is why the red came where it came: the placement
+takes the body's heading out of the running game at random, and the read
+meets the swing in about one run of six. The read was the wrong read, not
+the game wrong: the law is about a frog that is crossing, and a frog
+still swinging onto its errand is turning, not crossing, and the turn it
+is making is asked by its own law (the outside leg of a turn). The answer
+is the rig's premise, test-only with the check line byte-identical: the
+read waits for the heading to settle onto the errand, and the wait is kept
+beside the reading rather than hidden in it -- the payload gains the
+length of the wait and the turn it read at. With the herd's errand
+cleared the way the rig clears it (a target set in the rig is outranked
+by the herd's own, and the rig clears it before it places the body) and
+the errand fixed for the leg, the widest course error settles before
+3.2 s of the 0.9 rate, and the live game with the keep-apart of the other
+frogs weaving the way settles the widest placement 112 frames after the
+two-second send, while every placement inside 1.88 rad of the errand had
+already settled by the end of the send, measured in the rig's own
+premises (the herd centres cleared, the lens parked on the bank, the
+errand fixed); the wait is set at 300 frames, twice the measured worst
+case, and a body still turning hard after five more seconds is a body the
+law should see. On the fixed tree the suite came back green end to end
+and the gate's double run came back green twice (`9433859`), and the
+standing watch on it is loop 16. The issues 1-8 of round 26 stand
 closed as recorded; 2f (the walking soak) and 2g (the flock crown) stand
 recorded and watched with the loop.
 
@@ -1300,7 +1348,10 @@ full contract twice on its own tree, pushed to both remotes). The stage C
 demotion of the frog pear to common did not land: the valley grows one
 fruit and it is rare (docs/04 and the data agree, the five-rung ladder
 stays), so it stands as the user's open design call, recorded here so the
-stage is not read as done. The standing watch is loop 15 on `cc08b55`.
+stage is not read as done. The standing watch on `cc08b55` was loop 15,
+which came back green on its first six runs and red on the seventh (the
+crossing read's swing, recorded at the head of this file); the watch on
+the fixed tree is loop 16.
 
 ## Standing contract (every session, in order)
 
