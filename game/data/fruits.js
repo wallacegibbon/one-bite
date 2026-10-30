@@ -4,7 +4,7 @@
  *  Mirrors: docs/04-fruit-and-transformation.md and docs/05-backpack-and-storage.md
  *  One fruit per species, and one species per niche: one fruit, one body.
  *  The rarity ladder still has five rungs; the valley currently only grows
- *  one of them (rare).
+ *  one of them (common).
  * ========================================================================== */
 (function (N) {
 
@@ -67,9 +67,9 @@
    * ------------------------------------------------------------------ */
 
   const FRUITS = [
-    /* ============ rare ============ */
+    /* ============ common ============ */
     {
-      id: 'frogpear', cn: '蛙果', en: 'Frog Pear', rarity: 'rare', creature: 'frog',
+      id: 'frogpear', cn: '蛙果', en: 'Frog Pear', rarity: 'common', creature: 'frog',
       habitat: ['mirrorlake', 'glowglade', 'starfall'], habitatCn: '镜湖芦苇 · 雨后水洼', habitatEn: 'Mirrorlake reeds · rain pools',
       duration: 420,
       form: {

@@ -69,7 +69,7 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 | 0–2 | Leave from the nearest store, check spare slots and remaining fruit time |
 | 2–6 | Travel toward the target, casually picking 1–2 common fruit on the way (they cost slots but are cheap: consumables) |
 | 6–9 | Hit gated terrain → eat the matching fruit → pass through with the new body |
-| 9–12 | On the far side of the gate, obtain a rare fruit (4–12 slots; the backpack becomes tight instantly) |
+| 9–12 | On the far side of the gate, obtain a higher-rung fruit (4–12 slots on the ladder; the backpack becomes tight instantly) |
 | 12–15 | Decide: walk back to a store / plant the pit here / risk a detour. The time bar and the spoilage bar close in at the same time |
 
 ## 7. MVP boundary (prototype scope)

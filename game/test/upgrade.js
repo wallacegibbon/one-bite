@@ -22,20 +22,22 @@ const path = require('path');
     // 1) baseline slot usage
     g.inv = [];
     out.base = { cap: g.cap(), used: g.used() };
-    for (const id of ['frogpear', 'frogpear', 'frogpear', 'frogpear', 'frogpear', 'frogpear']) g.addItem('fruit', id);
+    for (let i = 0; i < 24; i++) g.addItem('fruit', 'frogpear');
     out.after6 = { cap: g.cap(), used: g.used(), slots: g.inv.map(i => g.slotOf(i)) };
-    // 2) six of the valley's fruits (rare, 4 slots) fill the pack to 24 of 24
-    //    exactly; a seventh cannot fit
+    // 2) twenty-four of the valley's fruits (common, 1 slot) fill the pack
+    //    to 24 of 24 exactly; a twenty-fifth cannot fit
     out.rejSeventh = g.addItem('fruit', 'frogpear');
-    // 3) side pouch +6 leaves room for a seventh
+    // 3) side pouch +6 leaves room for a twenty-fifth
     g.upg.pouch1 = true;
     out.pouch1 = { cap: g.cap(), fits: g.addItem('fruit', 'frogpear') };
-    // 4) deep pouch +6 -> 36 slots, leaves room for an eighth
+    // 4) deep pouch +6 -> 36 slots, leaves room for a twenty-sixth
     g.upg.pouch2 = true;
     out.pouch2 = { cap: g.cap(), fits: g.addItem('fruit', 'frogpear') };
-    // 5) silver divider: rare and above cost 1 less
-    const probe = ['frogpear'];
-    const before = probe.map(id => g.slotOf({ kind: 'fruit', id }));
+    // 5) silver divider: rare and above cost 1 less. The valley's only rare
+    //    fruit is gone with the demotion, so the line is demonstrated on the
+    //    one rare that still exists: the cellar plant (4 -> 3)
+    const probe = ['cellarseed'];
+    const before = probe.map(id => g.slotOf({ kind: 'plant', id }));
     g.upg.divider = true;
     const after = probe.map(id => g.slotOf({ kind: 'fruit', id }));
     out.divider = { before, after, cap: g.cap() };

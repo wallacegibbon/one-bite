@@ -39,7 +39,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     g.inv.length = 0;
     g.addItem('fruit', 'frogpear'); g.addItem('plant', 'cellarseed');
     // the town cellar gets a fruit, so the first deed is non-trivial
-    g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 500, maxFresh: 900 });
+    g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 500, maxFresh: 1500 });
     // a cellar tree. The spot is found, not remembered: it has to be open
     // ground with ten clear cells above it, because the pit planted in the same
     // breath grows into a tree and the checks that follow read that tree. A
@@ -63,14 +63,14 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     g.addItem('pit', 'frogpear');
     g.plantPit(g.inv[g.inv.length - 1], g.inv.length - 1);
     // fruit scattered by a death
-    g.drops.push({ x: spot.x, y: spot.y, z: spot.z - 2, item: { kind: 'fruit', id: 'frogpear', fresh: 700, maxFresh: 900 }, t: 600 });
+    g.drops.push({ x: spot.x, y: spot.y, z: spot.z - 2, item: { kind: 'fruit', id: 'frogpear', fresh: 700, maxFresh: 1500 }, t: 600 });
     // a form in progress. The tree it just built stands in
     // the planter's own feet cell -- the core block and the trunk that grows
     // up through the body that planted it -- so the eat gate, a body that
     // cannot fit where it stands is refused and the fruit is not spent, would
     // refuse any form asked for there. Stand a few cells off the tree before
     // the bite. The pear goes in after the pit: the pack is 24 slots and frog
-    // pear (4) + cellar stone (4) fit round it.
+    // pear (1) + cellar stone (4) fit round it.
     g.addItem('fruit', 'frogpear');
     let stand = null;
     for (let dx = 4; dx <= 9; dx++) {

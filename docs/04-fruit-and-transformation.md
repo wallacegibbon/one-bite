@@ -18,9 +18,9 @@ Rarity is not a "value tier", it is **two physical parameters**:
 
 **The backpack is 24 slots** → at most: 24 common / 12 uncommon / 6 rare / 3 epic / **2 legendary**.
 
-The valley currently grows **one of these five rungs** — rare. The ladder stays: it is a law of storage, not a shopping list.
+The valley currently grows **one of these five rungs** — common. The ladder stays: it is a law of storage, not a shopping list.
 
-One important corollary: the Frog Pear costs 4 slots, so the backpack's 24 slots hold exactly six of them — anything you cannot carry with you has to be spent, eaten, planted, or stored before its time bar runs out.
+One important corollary: the Frog Pear costs 1 slot, so the backpack's 24 slots hold twenty-four of them — the constraint is no longer space but time, since each one decays after 1500 s (25 min).
 
 ### 1.1 Regrowth
 
@@ -49,7 +49,7 @@ A fruit starts counting down the moment it is picked.
 
 ## 3. The full fruit table (1 kind)
 
-### Rare (4 slots)
+### Common (1 slot)
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|

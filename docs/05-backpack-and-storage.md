@@ -82,7 +82,7 @@ This single idea answers Q1–Q5 at once:
   | Silver Divider (银丝隔层) | rare and above occupy **−1** slot | the silver mesh in the castle greenhouse |
 - Cap 36 slots = 3 legendary fruits. The Silver Divider makes "rare 4→3, epic 7→6, legendary 12→11", so 36 slots fit 3 legendary fruits plus spare room.
 
-**Why the backpack is never made bigger**: 24 slots = 6 Frog Pears. That number makes the choice of what to carry a permanent trade-off.
+**Why the backpack is never made bigger**: space is no longer the constraint — 24 slots hold 24 Frog Pears. The constraint is the time bar: each one decays after 1500 s (25 min) of carrying, so the choice of what to carry is still a permanent trade-off.
 
 ### 3.2 The main cellar (the fixed warehouse)
 
@@ -122,18 +122,18 @@ This single idea answers Q1–Q5 at once:
 
 ## 4. The economics of storage (one table to see the trade-off)
 
-The lifespan of one **Frog Pear** (rare, 4 slots, 900 s):
+The lifespan of one **Frog Pear** (common, 1 slot, 1500 s):
 
 | Stored in | Effective lifespan | Equal to, in-game |
 |---|---|---|
-| backpack | 900 s | 2 days |
-| cellar tree | 2700 s | 6.4 days |
-| main cellar | 9000 s | 21 days |
+| backpack | 1500 s | 3.6 days |
+| cellar tree | 4500 s | 10.7 days |
+| main cellar | 15000 s | 36 days |
 
 A round trip "Mirrorlake → Lanternrow" takes about 3–4 minutes. So:
 
-- A Frog Pear **cannot** be walked all the way from Mirrorlake to the cellar (900 s is enough on paper, but the route also involves digging, diving and transforming).
-- You must plant a cellar tree near Mirrorlake as a waystation → this is the real motive for "building a new warehouse": **not greed, but the journey is longer than the shelf life.**
+- A single Frog Pear **can** be walked all the way from Mirrorlake to the cellar: the 25-min time bar covers several 3–4-min round trips, so one trip is no longer a race.
+- What still demands a waystation is **volume**, not one fruit: a large harvest does not fit the 25 minutes of several round trips, so a cellar tree planted near Mirrorlake is what moves it → this is the real motive for "building a new warehouse": **not greed, but the harvest is bigger than one load of freshness.**
 
 ## 5. Moving goods between warehouses
 
