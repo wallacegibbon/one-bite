@@ -1941,6 +1941,30 @@
             for (let k = 1; k <= span; k++)
               roof = Math.min(roof, roofY(world, cx + Math.round(fx * k), cz + Math.round(fz * k),
                 over, world.h, N.FOLIAGE));
+            /* The cells the body's box reaches into at push-off, not only the
+               column its centre stands in. The centre can be a hand's width
+               over the edge of a low ceiling with the column it stands in
+               reading open while half the back is still under the roof: the
+               body is under that ceiling, and its arc is no straight drift to
+               begin with -- it keeps steering over the top, and what it spends
+               there is the cell it left, not the cell it aimed at. Measured at
+               the pocket of the ledge at (119, 10) -- floor 26, ceiling 27, a
+               trunk standing in the column across the mouth at (118, 9) -- a
+               frog pushed off with its centre 5 mm over the mouth, with both
+               of the cells the gate asked open, bent back across the edge over
+               the top of the arc while it steered at the herd, and carried the
+               top of its head 0.16 m into the ceiling for a frame; the
+               standing watch caught it once in eight runs. A body that cannot
+               clear the roof it is still under walks out instead, and its legs
+               do not load for the hop they are not going to make: the wind is
+               held to the same answer. */
+            const bcx = this.x + fx * this.oz - fz * this.ox;
+            const bcz = this.z + fz * this.oz + fx * this.ox;
+            const hxx = this.hl * Math.abs(fx) + this.hw * Math.abs(fz);
+            const hzz = this.hl * Math.abs(fz) + this.hw * Math.abs(fx);
+            for (let bx = Math.floor(bcx - hxx); bx <= Math.floor(bcx + hxx); bx++)
+              for (let bz = Math.floor(bcz - hzz); bz <= Math.floor(bcz + hzz); bz++)
+                roof = Math.min(roof, roofY(world, bx, bz, over, world.h, N.FOLIAGE));
             const room = roof - this.y >= hop.up * hop.up / (2 * GRAVITY) + this.tall;
             this.wind = room ? Math.min(1, this.wind + dt / 0.18) : 0;
             if (this.hopT <= 0 && room && this.y <= gyH + 0.02) {

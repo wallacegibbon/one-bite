@@ -7317,9 +7317,10 @@ What was measured before any of this was fixed, over 180 frames of walking
       let roof = W.h;
       for (let k = by + 1; k < W.h; k++) if (hard(bx, k, bz)) { roof = k; break; }
       const room = roof - frog.y;
-      // the ceiling the hop gate reads: the lowest of the cells its own column
-      // and the span of the arc hold, from one cell over the feet up, with the
-      // material table's excuse for leaves
+      // the ceiling the hop gate reads: the lowest of the cells its own column,
+      // the span of the arc, and the cells the body's box reaches into at
+      // push-off hold, from one cell over the feet up, with the material
+      // table's excuse for leaves
       let gate = W.h;
       const fxx = Math.sin(frog.yaw), fzz = -Math.cos(frog.yaw);
       const span = Math.max(1, Math.ceil((frog.speed || 0) * hopUp / 23));
@@ -7328,6 +7329,16 @@ What was measured before any of this was fixed, over 180 frames of walking
         for (let q = Math.floor(frog.y) + 1; q < W.h; q++)
           if (W.solidAt(gx2, q, gz2) && !N.FOLIAGE[W.get(gx2, q, gz2)]) { if (q < gate) gate = q; break; }
       }
+      // the box cells, the same way the gate takes them: the trunk rectangle
+      // the body's own numbers give it, at the scale the data gives it
+      const gbcx = frog.x + fxx * frog.oz - fzz * frog.ox;
+      const gbcz = frog.z + fzz * frog.oz + fxx * frog.ox;
+      const ghxx = frog.hl * Math.abs(fxx) + frog.hw * Math.abs(fzz);
+      const ghzz = frog.hl * Math.abs(fzz) + frog.hw * Math.abs(fxx);
+      for (let gx0 = Math.floor(gbcx - ghxx); gx0 <= Math.floor(gbcx + ghxx); gx0++)
+        for (let gz0 = Math.floor(gbcz - ghzz); gz0 <= Math.floor(gbcz + ghzz); gz0++)
+          for (let q = Math.floor(frog.y) + 1; q < W.h; q++)
+            if (W.solidAt(gx0, q, gz0) && !N.FOLIAGE[W.get(gx0, q, gz0)]) { if (q < gate) gate = q; break; }
       const near = [];
       for (const q of g.creatures) {
         if (q === frog) continue;
