@@ -49,13 +49,14 @@ const cnMatch = (a, b) => { const x = norm(a), y = norm(b); return x === y || x.
 const cellName = s => String(s || '').replace(/\s+/g, '').toLowerCase().replace(/^the/, '');
 const sameName = (doc, data) => cellName(doc) === cellName(data);
 
-/* The quest list lives in game/src/game.js beside the checks that complete it
-   (docs/06 s2), so the words the player reads are read out of that source
-   rather than restated here as a second copy that could disagree. */
-function questLines(src) {
-  const re = /\{ id: '(q\d)', cn: '([^']*)', en: '([^']*)', done: false,\s*\n\s*hint: \{ cn: '([^']*)',\s*\n\s*en: (['"])(.*?)\5 \} \}/g;
+/* The deed list lives in game/src/game.js beside the checks that seal it
+   (docs/06 s2). A deed carries no text the player reads, so there is nothing
+   to read out of that source besides the names -- the chapter's handover
+   column is an upgrade, and it is read out of game/data/ instead. */
+function deedLines(src) {
+  const re = /\{ id: '([a-z]+)',\s*cn: '([^']*)',\s*en: '([^']*)',\s*done: false/g;
   const out = []; let m;
-  while ((m = re.exec(src))) out.push({ id: m[1], cn: m[2], en: m[3], hint: { cn: m[4], en: m[6] } });
+  while ((m = re.exec(src))) out.push({ id: m[1], cn: m[2], en: m[3] });
   return out;
 }
 
@@ -67,25 +68,21 @@ const LANGS = [
   {
     tag: 'en',
     dir: DOCS,
-    files: { zones: '02-map-and-scenes.md', fruits: '04-fruit-and-transformation.md', storage: '05-backpack-and-storage.md', quests: '06-quests-and-progression.md' },
+    files: { zones: '02-map-and-scenes.md', fruits: '04-fruit-and-transformation.md', storage: '05-backpack-and-storage.md', life: '06-quests-and-progression.md' },
     heads: {
       zones: '## 2. Zone Table',
       poi: '## 3. Points of Interest (POI)',
       rarity: '| Rarity | English | Slots | Dormancy | Regrow | Ring |',
       storage: '| Tier | Name | Slots | Decay | Count | Location |',
-      quests: '| id | Name | Hint | What it teaches | Verification |'
+      life: '| id | Deed | What it hands over | Where the valley sees it |'
     },
     nameField: 'en',
     scaleFile: '00-overview-and-design-pillars.md',
     scaleHead: '## 8. Scale',
-    scaleLabels: { world: 'World', zones: 'Zones', fruits: 'Fruits', creatures: 'Creatures', quests: 'Main line', day: 'One day' },
+    scaleLabels: { world: 'World', zones: 'Zones', fruits: 'Fruits', creatures: 'Creatures', deeds: 'Deeds', day: 'One day' },
     rules: [
       [/\|\s*Cap\s*\|\s*(\d+)\s*trees/, N.STORAGE.treestash.max, 'cellar-tree cap'],
       [/\|\s*Min distance\s*\|\s*(\d+)\s*m/, N.STORAGE.treestash.minDist, 'cellar-tree min distance'],
-      [/\|\s*Theft[^|]*\|\s*one roll per game day,\s*(\d+)%/, pct(N.STORAGE.treestash.raidChance), 'raid chance %'],
-      [/takes\s*(\d+)\s*–\s*\d+\s*fruits/, N.STORAGE.treestash.raidMin, 'raid take minimum'],
-      [/takes\s*\d+\s*–\s*(\d+)\s*fruits/, N.STORAGE.treestash.raidMax, 'raid take maximum'],
-      [/within\s+(\d+)\s+m/, N.STORAGE.treestash.raidScareRadius, 'scare-off radius m']
     ],
     keyRe: /press\s+`?([A-Z])\b/gi,
     nameOf: x => x.en,
@@ -210,7 +207,7 @@ for (const L of LANGS) {
       if (!m) bad(`${T} 05 ${label}`, 'not found in doc', want);
       else if (+m[1] !== want) bad(`${T} 05 ${label}`, +m[1], want);
     }
-    good(`${T} cellar-tree rules (cap / distance / raid / scare-off) match`);
+    good(`${T} cellar-tree rules (cap / distance) match`);
   }
 
   /* ================= 6. key binding consistency ================= */
@@ -320,7 +317,7 @@ for (const L of LANGS) {
 /* ================= 11. the scale table (00 s8) =================
    The table a reader trusts most was the one nobody checked: a length in three
    data files restated as prose in doc 00. It drifted twice in a single pass
-   (fruits still said 7 after the roster cut; the quest count disagreed with the
+   (fruits still said 7 after the roster cut; the deed count disagreed with the
    English and Chinese copies of the same row). */
 {
   const game = fs.readFileSync(path.join(base, 'src', 'game.js'), 'utf8');
@@ -329,7 +326,7 @@ for (const L of LANGS) {
     zones: N.ZONES.length,
     fruits: N.FRUITS.length,
     creatures: N.CREATURES.length,
-    quests: (game.match(/\{ id: 'q\d+'/g) || []).length,
+    deeds: (game.match(/\{ id: '[a-z]+',\s*cn: '[^']*',\s*en: '[^']*',\s*done: false/g) || []).length,
     dayLen: +(game.match(/const DAY_LEN = (\d+)/) || [])[1]
   };
   for (const L of LANGS) {
@@ -346,7 +343,7 @@ for (const L of LANGS) {
       const hit = typeof want_ === 'number' ? num(got) === want_ : String(got).includes(want_);
       if (!hit) { bad(`${T} scale: ${label}`, got, String(want_)); miss++; }
     }
-    if (!miss) good(`${T} scale table: ${N.WORLD.w}×${N.WORLD.h}×${N.WORLD.d}, ${N.ZONES.length} zones, ${N.FRUITS.length} fruits, ${N.CREATURES.length} species, ${want.quests} quests, ${want.dayLen}s day`);
+    if (!miss) good(`${T} scale table: ${N.WORLD.w}×${N.WORLD.h}×${N.WORLD.d}, ${N.ZONES.length} zones, ${N.FRUITS.length} fruits, ${N.CREATURES.length} species, ${want.deeds} deeds, ${want.dayLen}s day`);
   }
 }
 
@@ -357,9 +354,7 @@ for (const L of LANGS) {
    where the deepest of them stands and what rows the water runs over, how deep a
    bed this world can carve at all, what rows the sunken tower's shell, windows,
    sills and spire occupy and how far the ruin stands above the water line, what
-   band the ridge's own ground falls in and how many of its columns stand at or
-   above the row where that ridge's cold reaches full bite, what rows the bruin
-   figs hang at. The checker
+   band the ridge's own ground falls in. The checker
    compared coordinates and never once asked a height, so the next wrong y in the
    chapter stayed invisible. There is no excuse for not asking: the world builds
    headless in one build of 36 ms (measured: 35.9 ms the first time in a fresh
@@ -377,12 +372,12 @@ for (const L of LANGS) {
    the flat array itself, which is what a fast one does, reads *another column*:
    the index (y*d + z)*w + x with x = 168 in a world 160 wide lands on x = 8 one
    row over, on the far side of the valley. The ridge census measured that way
-   answers y22-36, mean 29, 70.7% of it cold where the honest one says 87.8% --
+   answers y22-36, mean 29 where the honest one says 30.14 --
    the same disc, the same generator, one bounds check missing. Everything below
    therefore asks only the columns the world holds, and says how many that was:
    1708 in-world columns of the ridge, and the chapter's numbers are right --
-   23-36, mean 30.14 (the chapter rounds it to 30), 87.8% (says 88), 258 columns
-   at the bite line. The check keeps the wrong census running beside the right one
+   23-36, mean 30.14 (the chapter rounds it to 30). The check keeps the wrong
+   census running beside the right one
    and prints both, so the trap stays a measurement and not a story. */
 {
   const src = fs.readFileSync(path.join(base, 'src', 'game.js'), 'utf8');
@@ -432,15 +427,12 @@ for (const L of LANGS) {
 
   /* the ridge: its own ground, over the columns the world has */
   const RG = N.ZONE_BY_ID.mountains;
-  const coldLine = RG.cold.above, biteLine = RG.cold.above + RG.cold.ramp;
-  let rn = 0, rsum = 0, rlo = 99, rhi = -1, rCold = 0, rBite = 0;
+  let rn = 0, rsum = 0, rlo = 99, rhi = -1;
   for (const [x, z] of disc(RG)) {
     const g = surface(x, z); if (g < 0) continue;
     rn++; rsum += g;
     if (g < rlo) rlo = g;
     if (g > rhi) rhi = g;
-    if (g >= coldLine) rCold++;
-    if (g >= biteLine) rBite++;
   }
 
   /* the sunken tower: what shape the generator's shape actually leaves */
@@ -475,15 +467,6 @@ for (const L of LANGS) {
   const towerFilm = filmAt(tx, tz);
   const ruinAbove = (spireRows.length && towerFilm >= 0) ? spireRows[spireRows.length - 1] - towerFilm : null;
 
-  /* the bruin figs */
-  const FIG = N.FRUIT_BLOCK_REV['bruinfig'];
-  let figN = 0, figLo = 99, figHi = -1; const figHist = {};
-  for (let y = 0; y < SZ.h; y++) for (let z = 0; z < SZ.d; z++) for (let x = 0; x < SZ.w; x++) {
-    if (at(x, y, z) !== FIG) continue;
-    figN++; if (y < figLo) figLo = y; if (y > figHi) figHi = y;
-    figHist[y] = (figHist[y] || 0) + 1;
-  }
-  const figMode = Object.keys(figHist).map(Number).sort((a, b) => figHist[b] - figHist[a] || a - b)[0];
   /* the water body as a whole: the rows it ever occupies */
   let wl0 = 99, wl1 = -1;
   for (let y = 0; y < SZ.h; y++) for (let z = 0; z < SZ.d; z++) for (let x = 0; x < SZ.w; x++)
@@ -606,21 +589,6 @@ for (const L of LANGS) {
     H('the band the ridge surface falls in, and its mean',
       /地面是 \*\*y(\d+)[–-](\d+)\*\*（平均 (\d+)/, [rlo, rhi, Math.round(rsum / rn)],
       /surface is \*\*y(\d+)[–-](\d+)\*\* \(mean (\d+)/, [rlo, rhi, Math.round(rsum / rn)]),
-    H('the row where the ridge cold starts, and the row where it bites full',
-      /它的冷从 y(\d+) 就开始.*?到 y(\d+) 咬满/s, [coldLine, biteLine],
-      /its cold starts at y(\d+).*?reaches its full bite at y(\d+)/s, [coldLine, biteLine]),
-    H('what share of the ridge is already cold',
-      /(\d+)% 的列已经在挨冻/, [Math.round(rCold / rn * 100)],
-      /(\d+)% of the ridge's columns are already cold/, [Math.round(rCold / rn * 100)]),
-    H('how many columns stand at or above the full-bite line',
-      /那条线以上的列有 (\d+) 根/, [rBite],
-      /(\d+) columns stand at or above that line/, [rBite]),
-    H('how many bruin figs the ridge holds, and what rows they hang at',
-      /(\d+) 颗棕熊果挂在 \*\*y(\d+)\.\.(\d+)\*\*/, [figN, figLo, figHi],
-      /the (\d+) bruin figs hang at \*\*y(\d+)\.\.(\d+)\*\*/, [figN, figLo, figHi]),
-    H('the row most of the figs hang at',
-      /大多数在 (\d+)/, [figMode],
-      /most of them at (\d+)/, [figMode]),
     H('the rows the sunken tower shell spans, and the shell plan it spans',
       /\*\*y(\d+) 到 y(\d+)\*\* 的一具 (\d+)×(\d+) 壳体/, [shellLo, shellHi, towerSpan, towerSpan],
       /a (\d+)×(\d+) shell from \*\*y(\d+) to y(\d+)\*\*/, [towerSpan, towerSpan, shellLo, shellHi]),
@@ -670,11 +638,6 @@ for (const L of LANGS) {
     'where the deepest column stands and what rows it runs over': `(${deepAt[0]},${deepAt[1]}) y${deepAt[2]}..y${deepAt[3]}`,
     'the deepest bed this world carves': lowestBed,
     'the band the ridge surface falls in, and its mean': `y${rlo}-${rhi} mean ${(rsum / rn).toFixed(2)} over ${rn} in-world columns`,
-    'the row where the ridge cold starts, and the row where it bites full': `y${coldLine} .. y${biteLine}`,
-    'what share of the ridge is already cold': `${(rCold / rn * 100).toFixed(1)}%`,
-    'how many columns stand at or above the full-bite line': rBite,
-    'how many bruin figs the ridge holds, and what rows they hang at': `${figN} at y${figLo}..y${figHi}`,
-    'the row most of the figs hang at': `${figMode} (${figHist[figMode]} of ${figN})`,
     'the rows the sunken tower shell spans, and the shell plan it spans': `y${shellLo}..y${shellHi}, ${towerSpan}x${towerSpan}`,
     'the rows the spire stands at': spireRows.join('/'),
     'how far the top of the ruin stands above the water line': ruinAbove,
@@ -706,8 +669,8 @@ for (const L of LANGS) {
 
   /* ---- a name the player reads states a room, and the world answers it ----
      This place carried the word for a cellar in every string the game carries
-     for it: the name the data gives the marker the minimap is drawn from, the
-     zone's own description, and the hint the codex prints under quest 6. The word promised a room under the keep. The census above
+     for it: the name the data gives the marker the minimap is drawn from, and
+     the zone's own description. The word promised a room under the keep. The census above
      answers what the island under that door holds, and the answer is 0 air cells
      out of 9,702 -- the island is fill -- so the word came out of the game's own
      strings, in both languages, and the chapter says what stands there instead:
@@ -718,13 +681,10 @@ for (const L of LANGS) {
      brick, three rows of air over its floor, solid over that. Two canaries, one
      per half: put the word back into the zone's description, or take the store's
      room out of the generator, and each half reddens on its own. */
-  const qs6 = questLines(src).find(q => q.id === 'q6') || { hint: {} };
   const saysRoom = [
     ['the keep door marker\'s display name, cn', ghPOI.cn, /地窖/],
     ['the keep door marker\'s display name, en', ghPOI.en, /cellar/i],
-    ['the keep zone\'s own description', KEEP.desc, /地窖/],
-    ['the hint quest 6 prints, cn', qs6.hint.cn, /地窖/],
-    ['the hint quest 6 prints, en', qs6.hint.en, /cellar/i]
+    ['the keep zone\'s own description', KEEP.desc, /地窖/]
   ];
   let said = 0, roomBad = 0;
   for (const [what, text, word] of saysRoom) {
@@ -750,7 +710,7 @@ for (const L of LANGS) {
   const ridgeDisc = discAll(RG);
   good(`every height above is asked only over the columns the world holds: the ridge's disc asks for ${ridgeDisc.n}, and ` +
     `${ridgeDisc.out} of them lie outside a ${SZ.w}x${SZ.d} valley (its centre x${RG.cx} with radius ${RG.r} reaches x${RG.cx + RG.r}) -- ` +
-    `read with those columns let in as ground, the same census answers y23-47, mean 33.4, 90.2% cold, 671 columns at the bite line`);
+    `read with those columns let in as ground, the same census answers y23-47, mean 33.4`);
 
   /* ================= 13. the height a marker turns into a height ============
      A marker whose icon is a door names a door the generator marks, and the
@@ -760,9 +720,9 @@ for (const L of LANGS) {
      Measured on the seed the game opens with: the Main Cellar's crate does stand
      there (marker y20, crate y21); the keep's fruit greenhouse marker did not --
      the generator marks that door with a crate at (78,22,110), in the deck it
-     raises over the island, while the marker the chapter printed, and which quest
-     q6 turns into a standing band, said y18: four cells under its own door, buried
-     in the island's fill. Nothing visible was broken by that: the band q6 derives
+     raises over the island, while the marker the chapter printed, and which the
+     greenhouse deed turns into a standing band, said y18: four cells under its own door, buried
+     in the island's fill. Nothing visible was broken by that: the band the deed derives
      (12..28) happened to cover the deck at y22, so the walk still finished, which
      is exactly how a wrong height survives a suite that never asks one. With the
      marker at its own door the band is 15..31 and still covers the deck.
@@ -804,44 +764,47 @@ for (const L of LANGS) {
   const deck = crateRow(ghPOI);
   const bandRe = /p\.y > gh\.y - (\d+) && p\.y < gh\.y \+ (\d+)/;
   const bm2 = bandRe.exec(src);
-  if (!bm2) bad('02 q6 band', 'the band game.js derives from the marker is no longer written the way this check reads it', 'p.y > gh.y - n && p.y < gh.y + n');
+  if (!bm2) bad('02 greenhouse band', 'the band game.js derives from the marker is no longer written the way this check reads it', 'p.y > gh.y - n && p.y < gh.y + n');
   else if (!(deck > ghPOI.y - +bm2[1] && deck < ghPOI.y + +bm2[2]))
-    bad('02 q6 band', `the door q6 names stands at y${deck}, outside the band ${ghPOI.y - +bm2[1]}..${ghPOI.y + +bm2[2]}`, `inside it`);
-  else good(`02 q6 band: the door stands at y${deck}, inside the band game.js derives (${ghPOI.y - +bm2[1]}..${ghPOI.y + +bm2[2]})`);
+    bad('02 greenhouse band', `the door the deed names stands at y${deck}, outside the band ${ghPOI.y - +bm2[1]}..${ghPOI.y + +bm2[2]}`, `inside it`);
+  else good(`02 greenhouse band: the door stands at y${deck}, inside the band game.js derives (${ghPOI.y - +bm2[1]}..${ghPOI.y + +bm2[2]})`);
 
 }
 
-/* ================= 15. the words the quest chapter prints, asked of game.js =
-   The quest table in 06 s2 prints, in its own two columns, the title and the
-   hint the game shows in the codex and on the HUD -- the strings live in
-   game/src/game.js, next to the check that completes each quest, and the chapter
-   copies them. Every other column of that table was checked and those two were
-   not, so the chapter could quote a quest at the player in words the game never
-   says: quest 6's hint was rewritten in the code and the chapter went on printing
-   the old sentence, which is the same drift as a wrong coordinate except that it
-   is the one the player reads. The set's four quests, title and hint: 8
-   comparisons over the 8 strings it prints. */
+/* ================= 15. the words the life chapter prints, asked of the data ==
+   The deed table in 06 s2 prints, in its own two columns, the name of each deed
+   and what the valley hands over for it. The names live in game/src/game.js,
+   next to the check that seals each deed, and the chapter copies them; the
+   handover is an upgrade, so it is copied out of the upgrades table in
+   game/data/fruits.js. A deed carries no text the player reads, so neither
+   column is ever seen on screen -- and that is exactly why the chapter must be
+   compared with the data rather than with the game: every other column of that
+   table was checked, and these two were not, so the chapter could name a deed
+   or promise a handover in words the game never uses. The set's three deeds,
+   name and handover: 6 comparisons over the 6 strings it prints. */
 {
   const src = fs.readFileSync(path.join(base, 'src', 'game.js'), 'utf8');
-  const qs = questLines(src);
-  if (qs.length !== 4) bad('06 quest text', `the quest list in game.js is no longer written in a shape this check can read (${qs.length} quests read, 4 expected)`, 'four quests, each with a title and a hint in the English set');
+  const ds = deedLines(src);
+  if (ds.length !== 3) bad('06 deed text', `the deed list in game.js is no longer written in a shape this check can read (${ds.length} deeds read, 3 expected)`, 'three deeds, each with a name and a handover in the English set');
   else {
     let compared = 0, rowsWrong = 0;
     for (const L of LANGS) {
-      const rows = tableAfter(readIn(L, L.files.quests), L.heads.quests);
-      if (!rows) { bad(`[${L.tag}] 06 quest table`, 'missing', L.heads.quests); rowsWrong++; continue; }
-      if (rows.length !== qs.length) { bad(`[${L.tag}] 06 quest count`, rows.length, qs.length); rowsWrong++; }
+      const rows = tableAfter(readIn(L, L.files.life), L.heads.life);
+      if (!rows) { bad(`[${L.tag}] 06 deed table`, 'missing', L.heads.life); rowsWrong++; continue; }
+      if (rows.length !== ds.length) { bad(`[${L.tag}] 06 deed count`, rows.length, ds.length); rowsWrong++; }
       for (const r of rows) {
-        const q = qs.find(x => x.id === unbacktick(r[0]));
-        if (!q) { bad(`[${L.tag}] 06 quest id`, r[0], 'not in game.js'); rowsWrong++; continue; }
-        const want = L.tag === 'cn' ? [q.cn, q.hint.cn] : [q.en, q.hint.en];
+        const d = ds.find(x => x.id === unbacktick(r[0]));
+        if (!d) { bad(`[${L.tag}] 06 deed id`, r[0], 'not in game.js'); rowsWrong++; continue; }
+        const u = N.STORAGE.backpack.upgrades.find(x => x.id === ({ cellar: 'pouch1', lake: 'pouch2', greenhouse: 'divider' })[d.id]);
+        if (!u) { bad(`[${L.tag}] 06 ${d.id} handover`, 'no upgrade for this deed', 'one of backpack.upgrades'); rowsWrong++; continue; }
+        const want = L.tag === 'cn' ? [d.cn, u.cn] : [d.en, u.en];
         for (let i = 0; i < 2; i++) {
-          if (r[i + 1] !== want[i]) { bad(`[${L.tag}] 06 ${q.id} ${i ? 'hint' : 'title'}`, r[i + 1], want[i]); rowsWrong++; }
+          if (r[i + 1] !== want[i]) { bad(`[${L.tag}] 06 ${d.id} ${i ? 'handover' : 'name'}`, r[i + 1], want[i]); rowsWrong++; }
           compared++;
         }
       }
     }
-    if (!rowsWrong && compared === 8) good(`06 quest text: the chapter prints the words the game shows -- ${compared} titles and hints compared in the English set, q6's hint reads "${(qs.find(q => q.id === 'q6') || {}).hint ? qs.find(q => q.id === 'q6').hint.en : '?'}"`);
+    if (!rowsWrong && compared === 6) good(`06 deed text: the chapter prints the names the data carries -- ${compared} names and handovers compared in the English set`);
   }
 }
 

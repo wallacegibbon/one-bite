@@ -29,12 +29,13 @@
     // what the valley calls you before you have done anything
     epithetDefault: { cn: '数果子的', en: 'the fruit counter' },
 
-    // the valley renames you as you do things; the LAST completed one wins
+    // the valley renames you as you do things; the LAST sealed deed wins.
+    // A deed is a flag, not a sentence (docs/06 s2): it carries no text the
+    // player reads, so nothing of it is ever stored or translated.
     epithets: [
-      { quest: 'q1',  cn: '存果人',           en: 'the cellar-keeper' },
-      { quest: 'q4',  cn: '泅过镜湖的人',      en: 'the one who swam Mirrorlake' },
-      { quest: 'q5',  cn: '背下北岭的人',        en: 'the one who carried the ridge home' },
-      { quest: 'all', cn: '谷地记得的人',      en: 'the one the valley remembers' }
+      { deed: 'cellar',     cn: '存果人',           en: 'the cellar-keeper' },
+      { deed: 'lake',       cn: '泅过镜湖的人',      en: 'the one who swam Mirrorlake' },
+      { deed: 'all',        cn: '谷地记得的人',      en: 'the one the valley remembers' }
     ]
     // There is no talent list here on purpose. The protagonist holds no talent
     // that bends the transformation rules: two magics never share one body, for

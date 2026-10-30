@@ -68,8 +68,7 @@ const F = window.FRUTARIA;
    box -- docs/04 s4 makes size a hard gate, not flavour. A limb may cross
    the line a little (a swinging arm, a tail, a muzzle carried over the chest),
    so the allowance is 0.1 m. Before this check existed nothing in the build
-   could see it: the bear's head hung 0.56 m outside its box and the frog's
-   snout 0.13 m. */
+   could see it: the frog's snout hung 0.13 m outside its box. */
 const extents = (modelId, sc) => {
     let r = 0, top = 0, bottom = 0;
     for (const part of F.MODELS[modelId].parts) {
@@ -112,13 +111,13 @@ const extents = (modelId, sc) => {
    out: the near side of a body was thrown away before it reached the lens, and
    the lens was shown the inside of the far walls instead, with the constant of
    the far face standing in for the near one. Measured then: a box standing 0.4 m
-   in front of a bear's body, wholly inside the body's own silhouette, still
+   in front of a body, wholly inside the body's own silhouette, still
    moved 7394 pixels of a 640x480 frame when it was deleted, and drawn on its own
    it covered 23515 -- pixels that were a body's colour, but the inside of it.
    Nothing downstream could tell the difference, because the inside of a body is
    still the colour of that body.
    So the winding is read here in pure data, where it costs nothing: the normal
-   of both triangles of all six faces of a box the size of a bear's trunk has to
+   of both triangles of all six faces of that test box has to
    point away from that box's own centre, and so does every triangle of every
    body in the game as the model builder really builds them. */
 {
@@ -153,7 +152,7 @@ const extents = (modelId, sc) => {
   }
   /* the same rule read off the bodies as the model builder really builds them,
      crease shades and all */
-  for (const id of ['human', 'frog', 'bear', 'jelly']) {
+  for (const id of ['human', 'frog', 'lanternfish']) {
     let outward = 0, mine = 0;
     for (const part of F.MODELS[id].parts) {
       const m = new F.MeshBuilder();
@@ -176,24 +175,25 @@ const extents = (modelId, sc) => {
   if (bad.length) process.exitCode = 1;
 }
 
-/* The lamp jellyfish has no fruit, so there is no collision box for the gate
+/* The lanternfish has no fruit, so there is no collision box for the gate
    above to measure it against -- it is the only model in the game nobody
    measures. Its size is pinned anyway, because a model nobody measures is a
-   model that quietly grows: 0.61 m across, 0.74 m from the top of the dome to
-   the tip of the longest arm, at its scale of 0.16 (docs/07 s1). */
+   model that quietly grows: 0.64 m across, 0.24 m from the back fin to the
+   belly, at its scale of 0.16 (docs/07 s1). */
 {
-  const sc = F.CREATURE_BY_ID.jelly.scale, e = extents('jelly', sc);
+  const sc = F.CREATURE_BY_ID.lanternfish.scale, e = extents('lanternfish', sc);
   const bad = [];
-  if (F.FRUITS.some(f => f.creature === 'jelly')) bad.push('a fruit claims a bodyless animal');
-  if (F.CREATURE_BY_ID.jelly.fruit) bad.push('the animal claims a fruit');
-  if (Math.abs(e.r * 2 - 0.61) > 0.02) bad.push(`宽 ${(e.r * 2).toFixed(3)} != 0.61`);
-  if (Math.abs((e.top - e.bottom) - 0.74) > 0.02) bad.push(`高 ${(e.top - e.bottom).toFixed(3)} != 0.74`);
+  if (F.FRUITS.some(f => f.creature === 'lanternfish')) bad.push('a fruit claims a bodyless animal');
+  if (F.CREATURE_BY_ID.lanternfish.fruit) bad.push('the animal claims a fruit');
+  if (Math.abs(e.r * 2 - 0.64) > 0.02) bad.push(`宽 ${(e.r * 2).toFixed(3)} != 0.64`);
+  if (Math.abs((e.top - e.bottom) - 0.24) > 0.02) bad.push(`高 ${(e.top - e.bottom).toFixed(3)} != 0.24`);
   /* The one self-lit model in the game, and the only one: no body you can wear
-     carries a light (docs/07 s1). */
-  if (!F.MODELS.jelly.parts.every(p => p.emis)) bad.push('a lamp part is not lit');
-  for (const id of ['human', 'frog', 'bear'])
+     carries a light in its parts (docs/07 s1). Nothing you pick lends a body a
+     light any more, so asking the model's parts is the whole question. */
+  if (!F.MODELS.lanternfish.parts.every(p => p.emis)) bad.push('a lamp part is not lit');
+  for (const id of ['human', 'frog'])
     if (F.MODELS[id].parts.some(p => p.emis)) bad.push(`${id} glows`);
-  console.log('灯水母', bad.length ? '!! ' + bad.join(', ') : `OK ${e.r * 2} m 宽 / ${e.top - e.bottom} m 高`);
+  console.log('灯鱼', bad.length ? '!! ' + bad.join(', ') : `OK ${e.r * 2} m 宽 / ${e.top - e.bottom} m 高`);
   if (bad.length) process.exitCode = 1;
 }
 
@@ -287,8 +287,7 @@ for (const p of F.POIS) console.log('POI', p.cn, 'topY=', topAt(p.x, p.z));
    plants excluded for the ground and the ridge and leaves counted for the canopy.
    The chapter used to say "Canopy 20-28" and "Ashscale y33-45". Measured, the
    forest crowns reach 47 where they stand on the northern slopes, and the ridge
-   tops out at 36 -- which is also where its cold reaches full bite, so the wrong
-   number was hiding the one design fact that matters up there. Printed so the next
+   tops out at 36. Printed so the next
    drift is visible, and guarded so it cannot drift again unnoticed. */
 {
   const LEAF = { 7: 1, 8: 1, 9: 1, 27: 1, 28: 1 };
@@ -340,9 +339,6 @@ for (const p of F.POIS) console.log('POI', p.cn, 'topY=', topAt(p.x, p.z));
   if (canopyTown > 35) bad.push(`town canopy tops at ${canopyTown}, the chapter says 20-35`);
   if (canopyFloor < 45 || canopyFloor > 48) bad.push(`valley canopy tops at ${canopyFloor}, the chapter says 47`);
   if (ridge.lo < 22 || ridge.hi > 37) bad.push(`ridge surface y${ridge.lo}..${ridge.hi}, the chapter says 23-36`);
-  // the ridge's cold: the chapter says the full bite lands at the top of it
-  const cold = F.ZONE_BY_ID['mountains'].cold;
-  if (ridge.hi < cold.above + cold.ramp - 2) bad.push(`ridge tops at ${ridge.hi} but the cold only reaches full bite at ${cold.above + cold.ramp}`);
   if (bad.length) { console.log('!! 层表与地图不符:', bad.join('; ')); process.exitCode = 1; }
 }
 

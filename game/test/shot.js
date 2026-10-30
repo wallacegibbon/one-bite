@@ -1,5 +1,5 @@
 /* headless screenshot + console error check
-   Usage: node test/shot.js out.png "pos=136,22,128 yaw=3.6 pitch=-0.1 form=owlberry time=210" */
+   Usage: node test/shot.js out.png "pos=136,22,128 yaw=3.6 pitch=-0.1 form=frogpear time=210" */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
@@ -38,18 +38,17 @@ const path = require('path');
     if (c.inv) { for (const id of c.inv.split(',')) g.addItem('fruit', id); }
     if (c.tp) g.thirdPerson = true;
     if (c.name) g.setName(c.name);
-    if (c.epquest) { for (const q of c.epquest.split(',')) g.quests.find(x => x.id === q).done = true; g.checkEpithet(); }
+    if (c.epquest) { for (const q of c.epquest.split(',')) g.deeds.find(x => x.id === q).done = true; g.checkEpithet(); }
     if (c.cellar) {
-      // build a cellar tree, stock it, unlock Pendulum, post one fruit, then open the panel
+      // build a cellar tree, stock it, then open the panel
       const F = window.FRUTARIA;
       g.player.x = 130; g.player.z = 128;
       g.buildCellarTree();
       const tree = g.stashes[g.stashes.length - 1];
-      for (const id of ['frogpear', 'owlberry']) tree.items.push({ kind: 'fruit', id, fresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh, maxFresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh });
-      g.stashes[0].items.push({ kind: 'fruit', id: 'owlberry', fresh: 1500, maxFresh: 1500 });
+      for (const id of ['frogpear']) tree.items.push({ kind: 'fruit', id, fresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh, maxFresh: F.RARITY[F.FRUIT_BY_ID[id].rarity].fresh });
+      g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 1500, maxFresh: 1500 });
       g.openStashUI(tree);
-      g.stashSel = 0; g.postItem();
-      g.posts[0].t = 420 * 2.4;
+      g.stashSel = 0;
     }
     g.updateEnv();
     window.startGame();

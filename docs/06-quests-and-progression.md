@@ -1,67 +1,62 @@
-# 06 · Quests and Progression
+# 06 · Life and Progression
 
 ## 1. Progression philosophy
 
-**There are no levels.** The player's "progress" is only three things:
+**There are no levels, and there is no quest list.** The player's "progress" is only three things:
 
 1. **Terrain you can enter** (decided by your forms)
 2. **Fruit you can carry** (decided by backpack and storage)
 3. **Fruit you can name** (decided by the codex)
 
-Quests are not a reward pipeline, they are **the manual for the gates**: every quest teaches one "what a new body can do".
+The valley hands over storage the way a life answers a life: fruit put into the main cellar is answered with a larger pouch, a fruit brought back from the lake with a deeper one, a body standing at the greenhouse door with a finer mesh. Each handover is announced once, in the valley's own voice — the upgrade's own words, a thank-you or a finding — and never as a completion: there is no checklist, no hint, no "done" line in the log, and no reward popup. The reward is "you can carry more now", and you notice it the next time the pack is full.
 
-## 2. Prototype quests (4, implemented)
+## 2. The three deeds (implemented)
 
-| id | Name | Hint | What it teaches | Verification |
-|---|---|---|---|---|
-| `q1` | Know the main cellar | go to the Lanternrow cellar (press E to open) and store any fruit | the warehouse exists + decay multipliers | `stashes[0].items.length > 0` |
-| `q4` | The ticket to Mirrorlake | become a frog, get in the water, take a Frog Pear from the sill of the sunken tower | the two-stage water gate (breath → breathing through skin) | obtain frogpear |
-| `q5` | One Bruin Fig | pick a Bruin Fig off the ridge rock: it costs 12 slots and sleeps in 7 minutes — get it into a cellar | a legendary fruit is a carry, not a collection | obtain bruinfig |
-| `q6` | The silver mesh in the greenhouse | go to Starfall's fruit greenhouse, on the deck over the island, and find the silver divider | backpack upgrade: rare and above −1 slot | stand within 6 m of `greenhouse` (y inside −6…+10) |
+A **deed** is a fact the valley has seen you do, and only three of them matter. A deed carries no text the player reads — no title, no hint, no verification shown anywhere — so the table below is the whole of what this chapter knows about them, and the names and the handovers are copied out of `game/src/game.js` and `game/data/fruits.js` (the checker in `game/test/docs-sync.js` keeps it that way):
 
-Quests appear as a checklist in the codex panel (J); completing one announces "✔ Done: …". **No reward popup, no XP** — the reward is "you can go there now".
-
-Finishing q4 also grants `pouch2` (Deep Pouch, +6 slots): one dive in Mirrorlake brings back Frog Pears at 4 slots each, and a 24-slot backpack cannot carry a useful amount.
-
-q4 is the only quest that verifies a **body** rather than a fruit: the Frog Pear on the sill of the sunken tower stands under the water of the lake, and a human body does not breathe in it — so q4 is not "you own one", it is "you are in the water in a body that breathes through its skin". q5 is the opposite — it verifies only the fruit, because the hard part of a legendary fruit is not reaching it but carrying it: 12 of your 24 slots, and it goes dormant in 7 minutes.
-
-## 3. The four invitations (quests are not a plot)
-
-There is no main line, no villain and no ending. A quest is an **invitation to use a body**, and it is the only manual the game has: each one teaches one gate — a place you can only reach one way, or a thing you can only carry one way.
-
-| # | Invitation | What it teaches | Body needed |
+| id | Deed | What it hands over | Where the valley sees it |
 |---|---|---|---|
-| q1 | Know the main cellar | fruit dies; storage exists | none |
-| q4 | The lake's ticket | breathing, drowning, skin, drying out | frog |
-| q5 | One bruin fig | a legendary fruit is a logistics problem: 12 of 24 slots, dormant in 420 s | brown bear (steps over 1.1 m ledges) — or two legs, jumping one at a time |
-| q6 | The greenhouse divider | rarity costs one slot less | none |
+| `cellar` | Storing fruit | Pouch | fruit in the main cellar |
+| `lake` | Swimming Mirrorlake | Deep Pouch | a Frog Pear in the pack or a store |
+| `greenhouse` | Reaching the greenhouse | Silver Divider (rare fruit costs one slot less) | standing within 6 m of the greenhouse door (y inside −6…+10) |
 
-Nothing in the valley is waiting to be fixed. Do none of these and the valley is unchanged: the fruit still ripens, the bear still comes, the fog still makes you forget.
+Sealing a deed is silent. The only line the valley says is the handover itself: Old Mei's thanks in Lanternrow, the waterproof satchel in the sunken tower, the silver mesh in the keep's greenhouse.
 
-**End state of all four**: the player can reach every habitat, carry what they need, and read a fruit at a glance. That is the whole of progression.
+`lake` is the only deed that verifies a **body** rather than a fruit: the Frog Pear on the sill of the sunken tower stands under the water of the lake, and a human body does not breathe in it — so the deed is not "you own one", it is "you are in the water in a body that breathes through its skin".
 
-## 4. No side quests
+## 3. No main line
 
-There is no second tier of content. The four invitations are the whole quest set: nothing waits in a hollow, no named animal asks you to fetch a thing for it, no name carved on a beam is waiting to be read.
+There is no main line, no villain and no ending. A deed is not a quest, an invitation or a lesson — it is the valley noticing a life being lived, and the notice is the storage. Do none of the three and the valley is unchanged: the fruit still ripens, the fog still makes you forget, and no place holds its breath.
+
+**End state of all three**: the player can reach every habitat, carry what they need, and read a fruit at a glance. That is the whole of progression.
+
+## 4. No side content
+
+There is no second tier of content. The three deeds are the whole of what the valley notices: nothing waits in a hollow, no named animal asks you to fetch a thing for it, no name carved on a beam is waiting to be read.
 
 This section used to be a 12-row design table. After the roster and the magic were simplified it was the odd thing out: **every row in it was unimplemented**, and together the rows were the reason the map promised more than it paid — the hollow that answers dropped stones, the mounds in the orchard, the beams still standing, the grove with no door. Each of those was a place held open for a quest that was never going to arrive, and two of the rows depended on animals the valley no longer has.
 
 What stands in their place is the sentence the creature chapter already uses: the valley keeps its animals to itself until each one arrives with a fruit, a niche and a door only it can open. Until then a place may simply **be** there — dark, deep, good for nothing. That is not a hole to fill; it is the same kind of absence the fog is made of.
 
-If a place ever earns a quest, that quest has to teach a gate: a place only one body can reach, or a thing only one body can carry. That is the only kind of quest this game has, and there are exactly four of them.
+If a place ever earns a fourth notice, it has to be noticed the way the three are: by a fact the valley can see from where the player stands, answered with storage, never with text. That is the only kind of notice this game has, and there are exactly three of them.
 
 ## 5. The codex (J key)
 
-One scrolling panel, four sections:
+One scrolling panel, three sections:
 
 1. **You**: the epithet the valley uses for you, the name you set if any, and the id the world stores (03 §6).
-2. **Quests**: all four, each with its hint, the done ones marked -- no reward shown.
-3. **Fruit codex**: 2 cells, undiscovered ones show as "???". Discovered ones show: name, rarity, slot cost, dormancy time, lore, side effect, habitat.
-4. **Creature codex**: 3 species, showing the dex text, or "not yet observed" for one you have not met.
+2. **Fruit codex**: 1 cell, showing "???" until the fruit is discovered. Discovered, it shows: name, rarity, slot cost, dormancy time, lore, side effect, habitat.
+3. **Creature codex**: 2 species, showing the dex text, or "not yet observed" for one you have not met.
+
+The deeds are not in the codex. There is no section that lists them, marks them done, or quotes a hint: a deed is a fact, and a fact does not need a panel. What the valley keeps instead is the name it starts to use for you (s6).
 
 Codex completion is the **only growth metric that is recorded**, and it grants no numeric reward.
 
-## 6. Death and failure
+## 6. The epithet (the only place a deed is spoken)
+
+The valley does not keep a record of what you have done; it changes the word it uses for you. The epithet is read off the deed list (the table and the writing rules live in 03 §6): fruit in the cellar and "the fruit counter" becomes "the cellar-keeper", a Frog Pear out of the lake and it becomes "the one who swam Mirrorlake", and when all three are done the valley says "the one the valley remembers". A later one overrides an earlier one, and when it changes the game announces it once in the log — the only line in the game where a deed is spoken at all, and even that line names you, not the deed.
+
+## 7. Death and failure
 
 | Situation | Handling |
 |---|---|
@@ -74,7 +69,7 @@ Codex completion is the **only growth metric that is recorded**, and it grants n
 
 **Drops being retrievable** is deliberate: it turns death into "my things are over there, I have to go back", not "reload". It also meshes death with fruit spoilage — if you get back too late, every dropped fruit has become a pit. And it only works if the fruit lands somewhere a body can walk back to, so a drop comes to rest on the **surface** of the column it lands in — the ground, or the top of the water above it, never the lake floor — and a column whose surface is not level with the place the body fell (a roof, a cliff, the far side of a bank) takes the fruit to the body's own feet instead. `play.js` dies at three kinds of column and asks where each of the eight fruits ended up: none inside solid, none off the surface it should lie on, none under water, none further than 2.5 m from the body. Before this, dying on a lake shore put all eight under water, one of them 29 m down, and dying on a roof left all eight hanging in the air.
 
-## 7. Time
+## 8. Time
 
 | Item | Prototype | Full design |
 |---|---|---|

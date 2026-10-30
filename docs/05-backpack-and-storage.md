@@ -13,7 +13,7 @@ Known constraints (cannot change):
 
 Questions to answer:
 
-- Q1 What is the **cost** of building a new warehouse? (money? materials? fruit? a quest?)
+- Q1 What is the **cost** of building a new warehouse? (money? materials? fruit?)
 - Q2 **Where** can a new warehouse be placed? (anywhere? specific anchors?)
 - Q3 How do you **move goods** between warehouses? (teleport? carry? mail?)
 - Q4 Can a warehouse **degrade or be destroyed**?
@@ -57,7 +57,7 @@ This single idea answers Q1–Q5 at once:
 - Q1 cost = one pit (you get those anyway) + time (it has to grow)
 - Q2 location = anywhere it can take root (soil, light, not on the roots of another cellar tree)
 - Q3 transfer = **carrying it yourself** (the backpack is the transport vehicle, §5.1)
-- Q4 degradation = a cellar tree's decay rate is 1/3 (not 0), and **bears and fruit thieves come stealing**
+- Q4 degradation = a cellar tree's decay rate is 1/3 (not 0)
 - Q5 cap = **at most 3 cellar trees**, for a worldview reason rather than a numeric one: "At most 3 cellar trees — the valley cannot remember more places than that."
 
 **Verdict: adopted.**
@@ -82,7 +82,7 @@ This single idea answers Q1–Q5 at once:
   | Silver Divider (银丝隔层) | rare and above occupy **−1** slot | the silver mesh in the castle greenhouse |
 - Cap 36 slots = 3 legendary fruits. The Silver Divider makes "rare 4→3, epic 7→6, legendary 12→11", so 36 slots fit 3 legendary fruits plus spare room.
 
-**Why the backpack is never made bigger**: 24 slots = 2 legendary fruits. That number makes "do I bring the bear fig" a permanent trade-off.
+**Why the backpack is never made bigger**: 24 slots = 6 Frog Pears. That number makes the choice of what to carry a permanent trade-off.
 
 ### 3.2 The main cellar (the fixed warehouse)
 
@@ -115,8 +115,6 @@ This single idea answers Q1–Q5 at once:
 | Cap | 3 trees | "the valley cannot remember more places" |
 | Min distance | 20 m | roots must not overlap; also forces the player to spread their points out |
 | Decay | ×0.33 | a cellar tree is alive, not a cellar. Fruit inside survives only 1/3 of the backpack's time |
-| Theft | one roll per game day, 30% chance a bear or a fruit thief takes 1–3 fruits; **if the player is within 45 m they are always scared off and nothing is lost**. The town cellar is never rolled against — it is the only storage with walls | field storage has to be **visited regularly** |
-| Destruction | a bear form can tear it down (tearing = everything drops) — **not implemented** | a big body should be able to wreck a thing |
 | Not movable | a dead cellar tree is dead, its goods scatter | there is no "pack up the warehouse" |
 | Body | the tree grows in the cell you are standing in, and the trunk grows up through you: you end up beside it, not inside it | a thing that grows at your feet should leave you standing next to it, not stuck in it |
 
@@ -141,7 +139,7 @@ A round trip "Mirrorlake → Lanternrow" takes about 3–4 minutes. So:
 
 ### 5.1 Carrying it yourself (default)
 
-The backpack is the transport vehicle. Subtract the consumables you need on the road (mushrooms, glowing seeds) from the 24 slots and real carrying capacity is about 18–20 slots.
+The backpack is the transport vehicle, and the cellar stone is the only thing you carry on the road besides fruit: it costs 4 of the 24 slots, so taking a stone is the same trade as dropping fruit — a store you can plant, paid in the fruit you could have carried.
 
 ### 5.2 Explicitly not doing
 
@@ -170,10 +168,8 @@ These three turn "the warehouse" from a static UI into **something you manage, s
 | storage UI (two-way transfer) | ✅ implemented (`openStashUI/moveItem`, `ui.renderCellar`) |
 | backpack upgrades (Pouch / Deep Pouch / Silver Divider) | ✅ implemented (`Game.upg` + `cap()/slotOf()`; q1→Pouch, q4→Deep Pouch, q6→Silver Divider; saved) |
 | fruit block regrowth | ✅ implemented (`Game.regrow[]`, `RARITY.regrow` game days ×±20%, saved) |
-| bear / fruit-thief rolls | ✅ implemented (`Game.dailyRolls()`, 30% per game day, player within 45 m always scares them off, 1–3 fruits taken) |
 | cellar-tree spacing (min 20 m) | ✅ implemented (`Game.buildCellarTree()` refuses a tree planted inside a sibling's roots) |
-| every number in the rule table above | ✅ lives in `N.STORAGE.treestash` (`minDist` / `raidChance` / `raidMin` / `raidMax` / `raidScareRadius`); `docs-sync.js` compares the prose against the data, and `docs-drift.js` proves it can fail |
-| cellar tree destroyed / bear tearing it down | ⬜ not implemented |
+| every number in the rule table above | ✅ lives in `N.STORAGE.treestash` (`max` / `minDist` / `slots` / `decay`); `docs-sync.js` compares the prose against the data, and `docs-drift.js` proves it can fail |
 
 ## 8. In one sentence
 

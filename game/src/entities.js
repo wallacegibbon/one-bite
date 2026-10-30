@@ -95,8 +95,8 @@
      with its body instead of running on the spot against it. And the ground a
      body covers while the water is holding it up does not count either -- a
      frog swimming across the lake is not walking across it.
-     A body with no leg that walks reaches nowhere: a frog hops and a jelly
-     drifts, and their gait is left unset, which is how the draw knows there is
+     A body with no leg that walks reaches nowhere: a frog hops and a
+     lanternfish drifts, and their gait is left unset, which is how the draw knows there is
      no stride for that body to ride. */
   function walkGait(body, modelId, sc, move, dx, dz, spd, dt) {
     const len = N.gaitStride(modelId, sc, move);
@@ -137,7 +137,6 @@
       this.fright = 0;             // fright 0..1
       this.inWater = false; this.headWater = false;
       this.dry = 0;                // seconds this amphibian body has been out of water
-      this.wasCold = false;        // whether the ridge cold is already biting (drives one log line)
       this.moveAmt = 0;            // horizontal movement this frame (drives animation)
       /* where the body is in its own stride, in whole cycles, and how hard it is
          asking for one. The stride is kept by the body and not by the clock --
@@ -364,26 +363,6 @@
           if (this.dead) return;
         }
       } else this.dry = 0;
-
-      // ---- the ridge is cold (docs/02 s7: Ashscale Ridge -- the cold) ----
-      /* The cold belongs to the ground and the height, not to the sky: it bites
-         the same at noon and at midnight, and it bites harder the higher you
-         get, reaching the full rate `ramp` metres above the line. A bear body
-         is its own weatherproofing, and eating one on the slope is the moment
-         the cold lets go. */
-      const zc = N.ZONE_BY_ID.mountains;
-      if (zc.cold) {
-        const over = this.y - zc.cold.above;
-        const biting = over > 0 && Math.hypot(this.x - zc.cx, this.z - zc.cz) < zc.r && !f.coldImmune;
-        if (biting !== this.wasCold) {
-          this.wasCold = biting;
-          game.logMsg(N.t(biting ? 'log.coldIn' : 'log.coldOff'), biting ? 'warn' : 'good');
-        }
-        if (biting) {
-          game.damage(dt * zc.cold.rate * Math.min(1, over / zc.cold.ramp), N.t('log.causeCold'));
-          if (this.dead) return;
-        }
-      }
 
       // ---- intended velocity ----
       const sprint = inp.sprint && this.air > 0 && !this.inWater;
@@ -673,12 +652,11 @@
              body pressed against a wall it cannot climb was raised 0.15 m a
              frame and had to fall back: walked at a bank two metres tall on one
              flat shelf, a human stood on the ground in 34% of the frames and
-             its height swung 0.124 m within a second, a bear in 31%, and even
-             with nothing built in front of them they were on the ground in 89%
-             and 78% with the same swing. That is the wobble at the water's
-             edge. And the lift had never once carried a body up a step it could
-             reach: a bear whose own record says its legs reach 1.1 m, walked at
-             a step of one metre, gained 0.124 m in three seconds. */
+             its height swung 0.124 m within a second, and even with nothing
+             built in front of it the human was on the ground in 89% with the
+             same swing. That is the wobble at the water's edge. And the lift
+             had never once carried a body up a step it could reach: walked at
+             a step of one metre, the body gained 0.124 m in three seconds. */
           const wx = this.vx * sdt, wz = this.vz * sdt;
           let hit = this.axis('x', wx);
           hit = this.axis('z', wz) || hit;
@@ -791,7 +769,7 @@
      but they are not the surface of the valley, and an animal put down on one
      is an animal in a tree. The spawn code scans from the top of the world, and
      without this it found a canopy instead of the ground in 509 of 600 tries:
-     two bears standing on spruce crowns at y=45 and frogs in the leaves. */
+     bodies standing on spruce crowns at y=45 and frogs in the leaves. */
   function terrainY(w, x, z, from) {
     const bx = x | 0, bz = z | 0;
     for (let y = from; y > 0; y--) {
@@ -801,11 +779,11 @@
     return 1;
   }
   /* The surface a body on foot actually stands on. Two things the plain column
-     read gets wrong, and a bear walking the ridge met both. `groundY` answers
+     read gets wrong, and a body walking the ridge met both. `groundY` answers
      "the highest solid thing in this column", and a crown is solid, so foliage
-     at feet level reads as a step: the bear took the step, found the next block
+     at feet level reads as a step: the body took the step, found the next block
      of the same crown at its new feet, took that step too, and climbed the tree
-     -- measured over a day, one bear spent 22061 of 25200 frames standing on
+     -- measured over a day, one walker spent 22061 of 25200 frames standing on
      leaves 12 m above the ground, and went up 105 m and back down 114 m riding
      the crowns along the ridge. And the altitude used to look up 4 m while the
      step test looked up 3, so a needles block five blocks over its head answered
@@ -853,6 +831,28 @@
     if (wt < 0) return -1;
     const gy = groundY(w, Math.floor(x), Math.floor(z), wt);
     return wt + 1 - gy >= 2 ? wt : -1;
+  }
+  /* How far a body's nose reaches from its own centre, in metres: the forward
+     extent of the model at the scale the species draws at. Every model faces
+     +z (see M4.faceY), so the farthest box the model carries along its own
+     fore-and-aft axis is the nose. The step gate below asks it of the ground
+     the nose is about to enter, because the centre column can stay wet while
+     the nose is already in the brick: the snout of the lanternfish stands 1.6
+     of its own units ahead of the centre (the tip of the snout box), 0.256 m
+     at its 0.16 scale, and a column is a metre wide -- the centre stood in
+     the wet column next door while the snout was drawn inside the brick of
+     the sunken tower. Read off the model rather than kept as a constant here,
+     because the claim is about the nose the model draws. */
+  const _nose = {};
+  function noseReach(sp, modelId) {
+    const r = _nose[modelId];
+    if (r !== undefined) return r * (sp.scale || 0.2);
+    let reach = 0;
+    const m = N.MODELS[modelId];
+    if (m) for (const p of m.parts) for (const b of (p.boxes || []))
+      reach = Math.max(reach, b[2] + b[5]);
+    _nose[modelId] = reach;
+    return reach * (sp.scale || 0.2);
   }
   /* The height a body of this kind hangs at in the column it stands in, in one
      place: the surface of that column less the body's own height less the depth
@@ -950,9 +950,10 @@
      trunk is carved from (MODEL_W), turned by its heading: the pair is in one
      place when no direction separates the two rectangles, and the direction they
      overlap least along is the way out -- the shortest way, and the one that
-     fights the way either of them is going least. A body is not a circle: two
-     bears end on are 1.1 m from nose to tail, and a circle wide enough to keep
-     them apart would keep a bear and a frog three metres apart.
+     fights the way either of them is going least. A body is not a circle: a
+     person is 0.41 m side by side and 0.29 m nose to nose, and a frog 0.34 and
+     0.41, so the distance that keeps two of them apart depends on the way they
+     stand to one another.
      TOUCH is how far into a neighbour a body may get at all: two lamps drifting
      against one another touch, and a body that has been pushed into one is let
      back out the way it came rather than refused every place it could go. */
@@ -963,7 +964,7 @@
        a lamp riding on the crown of another's bell is on top of it, not inside
        it, and pushing the pair apart sideways for a 5 mm graze moves a body half
        a metre for nothing. Measured against the shorter of the two bodies, so
-       the rule is the same for a frog and for a bear. */
+       the rule is the same for a frog and for a person. */
     const vOver = Math.min(a.y + a.tall, b.y + b.tall) - Math.max(a.y, b.y);
     if (vOver <= 0.15 * Math.min(a.tall, b.tall)) return null;
     const s = Math.sin(a.yaw), k = -Math.cos(a.yaw);       // a's forward; its right is (-k, s)
@@ -1003,8 +1004,12 @@
        at the body's feet refuses a body that bobs at the surface, which is every
        one of them: the shove out of a neighbour was refused in every direction
        for a lamp riding high in its column, and it stayed 0.49 m inside the
-       other lamp for as long as they both rode there. */
-    if (c.isAquatic()) return waterColumn(w, x, z) >= 0;
+       other lamp for as long as they both rode there. And the cell the body
+       would occupy must not be stone: the shove is the one movement that never
+       asks where the body is going to stand, and a column can answer wet with
+       the body's cell solid -- a pocket under the stone rim of the island, the
+       same pocket the step gate's cell ask refuses; see there. */
+    if (c.isAquatic()) return waterColumn(w, x, z) >= 0 && !bodyInSolid(w, c, x, z);
     /* A body on foot is asked the same question its own movement asks of a step:
        the surface it would stand on may not be a wall it cannot climb. The drop
        is not part of the question -- a body walks off a ledge the same way it is
@@ -1066,8 +1071,9 @@
          breathe on a cycle of its own. Without these two numbers every frog in
          the valley swims in one line 30 cm under the surface, which is what
          the report "it can only swim in a fixed layer" is: measured over ten
-         minutes of the world running, all twelve frogs sat at a mean depth of
-         0.30 m, every one of them. */
+         minutes of the world running, all twelve frogs of that crowd -- the
+         valley drives eight now -- sat at a mean depth of 0.30 m, every one
+         of them. */
       this.diveTo = 1.5 + Math.random() * 2.5;     // how deep this frog hangs, m under the surface
       this.diveRate = 0.05 + Math.random() * 0.10; // and how fast that cycle runs, rad/s
       // the vertical velocity, and the same three signals the player carries, for
@@ -1119,7 +1125,7 @@
       const sleeping = !outAt(sp, game.night);
 
       const att = this.attitudeTo(pl.form);
-      const alert = (sp.alert || 12) * (pl.formDef.stealth || 1) * (game.playerStealth || 1);
+      const alert = (sp.alert || 12) * (pl.formDef.stealth || 1);
 
       let want = 0, tgtX = this.tx, tgtZ = this.tz;
       if (sleeping) { this.state = 'sleep'; }
@@ -1154,6 +1160,23 @@
           const r = this.isAquatic() ? (sp.spread || 6) : 14;
           const at = sp.at ? (N.ZONE_BY_ID[sp.habitat[0]] || {})[sp.at] : null;
           const ox = at ? at[0] : this.homeX, oz = at ? at[1] : this.homeZ;
+          /* How far off its own heading an errand may fall. A body that swims
+             swims forward: the default errand is the course it is already
+             holding, a place a little further along that way. The pick is
+             asked for a bearing, and the bearing is a turn, of which a body
+             makes three kinds. Most keep the course -- the errand falls inside
+             a narrow cone round the heading the body is travelling, and the
+             body goes on the way it was going; a smaller share may bend it, a
+             visible turn; and only one in ten lets the errand fall
+             anywhere, which is the only kind a wide turn comes from. What this
+             replaces was a place picked uniformly in the disc whatever way the
+             body faced: every new pick faced the body a few degrees to a full
+             about-face, and a body that re-picks every two to eight seconds
+             spent its afternoon in short dashes and hard turns. The rate the
+             bend is held to stays the species' own -- the complaint was the
+             pattern of the errands, not the arc. */
+          const u = Math.random();
+          const cone = this.isAquatic() ? 0 : (u < 0.65 ? 0.35 : (u < 0.9 ? 1.0 : 0));
           /* A creature that cannot leave the water should not be sent to a
              place where it would have to. Pick again until the ground is wet;
              after a few tries take it anyway, so a lake that has somehow
@@ -1162,9 +1185,32 @@
           for (let tries = 0; tries < 8; tries++) {
             // a spread is a radius, not a half-width: the same shape the spawn sampled
             const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * r;
-            const cx = ox + Math.cos(a) * rr, cz = oz + Math.sin(a) * rr;
-            lastX = cx; lastZ = cz;
-            if (this.isAquatic() && waterColumn(world, cx, cz) < 0) continue;
+            const ux = ox + Math.cos(a) * rr, uz = oz + Math.sin(a) * rr;
+            lastX = ux; lastZ = uz;    // the in-disc sample: what a pick that finds no ground in front takes
+            let cx, cz;
+            if (cone > 0) {
+              /* The ground in front of the body: the bearing its heading plus a
+                 turn no wider than this kind of errand allows, at a distance
+                 the disc allows. The disc itself keeps the answer in the
+                 region the species belongs to -- a body at the edge of its
+                 ground, facing out of it, finds no ground in front, takes the
+                 uniform sample, and gets the wide turn the edge owes it. */
+              let inFront = false;
+              for (let s = 0; s < 4 && !inFront; s++) {
+                const b = this.yaw + (Math.random() * 2 - 1) * cone;
+                const d = Math.sqrt(Math.random()) * r;
+                cx = this.x + Math.sin(b) * d; cz = this.z - Math.cos(b) * d;
+                inFront = Math.hypot(cx - ox, cz - oz) <= r;
+              }
+              if (!inFront) continue;
+            } else { cx = ux; cz = uz; }
+            /* and the body's own cell at the body's own height: an errand into
+               a column that answers wet with the body's cell stone is an
+               errand to stand in the stone, and the correction's way out of
+               the stone is sixteen metres up the pillar (see the step
+               gate's cell ask). */
+            if (this.isAquatic() && (waterColumn(world, cx, cz) < 0 ||
+                bodyInSolid(world, this, cx, cz))) continue;
             /* And of the places it might go, the one with most room in it. An
                errand into the middle of a clump of its own kind is an errand to
                stand inside a neighbour: the ten lamps pick from a disc round the
@@ -1231,7 +1277,7 @@
          It is read after the body has turned and not before it: a body that
          turns swings its own trunk into whatever stands beside it, and a gate
          measured on the heading it had before the turn never sees the overlap
-         the turn itself made. Two bears one above the other on the northern
+         the turn itself made. Two walkers one above the other on the northern
          slope came about into one another that way, 0.4 m of one inside the
          other, and neither of them had stepped anywhere. */
       const deep = new Map();
@@ -1297,7 +1343,7 @@
         this.yaw += dy > 0 ? bend : -bend;
         /* An animal that is close to where it is going, and off course, cannot
            get there at the speed it is travelling. The arc of a turn is the
-           speed over the rate: at 0.92 m/s a lamp jellyfish that can bend its
+           speed over the rate: at 0.92 m/s a lanternfish that can bend its
            course 0.8 rad/s a second holds an arc of 1.15 m, so a target nearer
            than that, or off to one side, is a place it circles for the rest of
            the afternoon and never arrives at (measured: 292 frames in 60
@@ -1346,76 +1392,103 @@
              ended up parked against the sunken tower for the rest of the day. */
           const wet = (x, z) => waterColumn(world, x, z) >= 0;
           const free = (x, z) => wet(x, z) && !crowded(x, z);
-          if (free(mx, mz)) { this.x = mx; this.z = mz; }
-          else if (inWater && wet(mx, mz)) {
-            /* The water is there and another body's trunk is in it. The way round
-               it is the same way round the tower: of the four directions that are
-               wet and free, the one that closes on the errand most, and the
-               heading follows the step that was actually taken. Turning for home
-               instead -- the branch below, which is the right answer to a bank --
-               is what made a lamp pressed against a neighbour swim into the
-               middle of the field, where the rest of the field already was. */
-            const ex = this.tx - this.x, ez = this.tz - this.z, el = Math.hypot(ex, ez) || 1;
-            let bx = null, bz = null, best = -2;
-            /* Eight ways, not four. The four that follow the grid are enough
+          /* The nose. The centre column is the only ground the step above asks,
+             and a column is a metre wide: the centre can stand in the wet
+             column next door while the nose is already in the brick. So the
+             ground the nose is about to enter is asked the same question the
+             centre is asked -- wet, along the bearing the step runs. In open
+             water the question costs nothing: the nose is wet wherever the
+             centre is. The crowd is not asked of the nose: a nose inside a
+             neighbour is the snout touching a trunk, and the keep-apart law
+             above answers for the body; what the nose is refused is the ground
+             the body is not allowed into. */
+          const nose = noseReach(sp, this.modelId);
+          const fx = Math.sin(this.yaw) * nose, fz = -Math.cos(this.yaw) * nose;
+          /* And the cell the body would occupy at the step. `wet` answers
+             "does this column hold water somewhere", and a column can answer
+             yes with the body's own cell solid: the rim of the island at
+             Starfall Keep did exactly that. Twelve columns at d = 13 from
+             the lake centre carried a pocket of the lake's water (topmost
+             water y5) under sixteen metres of stone (y6..21) the world's own
+             island base had laid over them, and every ask above read the
+             pocket as open water while the body's cell at its hover height
+             (y13) was the stone. So the step is asked the body's own
+             question, at the body's own height, of the ground it is about to
+             stand in -- and of the ground the nose is about to stand in: the
+             nose stands 0.256 m ahead of the body, and a body whose centre is
+             in the wet column next to the stone pillar has its snout in the
+             stone. Unasked, the correction at the end of the frame is the
+             only thing between the body and the pillar, and it carries the
+             body out of the stone at 0.1 m a frame: up sixteen metres, onto
+             the rim, where the pocket still answers wet and the column's own
+             altitude law holds the body at the rim's ground plus 0.35 for
+             the rest of the day. The worldgen raises the rim so the pocket
+             does not form; this is the law that keeps answering the question
+             a pocket asks, so a world the player digs cannot park a body on
+             the roof either. */
+          if (free(mx, mz) && wet(mx + fx, mz + fz) &&
+              !bodyInSolid(world, this, mx, mz) &&
+              !bodyInSolid(world, this, mx + fx, mz + fz)) { this.x = mx; this.z = mz; }
+          else if (inWater) {
+            /* The step is refused -- a neighbour's trunk in the water, or the dry
+               brick of the sunken tower -- and the body is still in the water.
+               The way round either is the same way round the other, the same way
+               a walker goes round a cliff: of the eight steps that are wet and
+               clear, the one that closes on the errand most, and the heading
+               follows the step that was actually taken, so the next frame tries
+               the obstacle again from further along it and the nose is on the way
+               the body is going and not on the brick.
+               The step the body takes is the only step it is allowed, wet or
+               clear, and that test is the whole of the safety here. The way home
+               used to get its own branch, and unchecked the homeward step dragged
+               a lanternfish through the tower wall -- the altitude code then finds
+               no water in that column and leaves the animal standing on the tower's
+               roof, out of the lake for good. The branch that tested the way home
+               has its own shape kept beside that test: the minus sign it used to
+               carry walked a lamp pressed against the shore away from the home it
+               was being sent to, and one of them sat at 66.0, 107.0 for five
+               minutes, 11 m from the tower its field is supposed to be, heading
+               north into a wall of dirt. And with the way home tested like every
+               other step, the slide kept the body in the water and it still had
+               the shape this branch exists to fix: the heading was never told to
+               follow it, so a body
+               whose errand lay behind the wall kept its nose on the brick, and
+               when the wall gave it no way it set its errand to its own feet and
+               waited -- 322 to 422 times over a five-minute watch. The contour
+               toward the errand ends where the wall ends, because the errand is
+               picked wet, in the disc; what this branch refuses is not the goal,
+               it is the ground.
+               Eight ways, not four. The four that follow the grid are enough
                round a wall, because a wall is made of the same grid; a body is
                turned any way at all, and the shortest way out of one is very
                often a corner of the grid that leads straight back in. */
+            const ex = this.tx - this.x, ez = this.tz - this.z, el = Math.hypot(ex, ez) || 1;
+            let bx = null, bz = null, best = -2;
             for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1],
                                     [0.7071, 0.7071], [0.7071, -0.7071],
                                     [-0.7071, 0.7071], [-0.7071, -0.7071]]) {
               const px = this.x + ox * spd * dt, pz = this.z + oz * spd * dt;
-              if (!free(px, pz)) continue;
+              /* the body's own cell, at the body's own height, of the step and
+                 of the nose: the wet ask alone reads a pocket under a stone
+                 rim as open water, and this contour is the only step a body
+                 whose way is blocked is allowed -- see the step above. */
+              if (!free(px, pz) || !wet(px + ox * nose, pz + oz * nose) ||
+                  bodyInSolid(world, this, px, pz) ||
+                  bodyInSolid(world, this, px + ox * nose, pz + oz * nose)) continue;
               const dot = (ox * ex + oz * ez) / el;
               if (dot > best + 1e-6) { best = dot; bx = px; bz = pz; }
             }
-            if (bx !== null) {
+            if (bx === null) { this.tx = this.x; this.tz = this.z; this.pause = 0.5; }
+            else {
               const sx = bx - this.x, sz = bz - this.z;
               this.x = bx; this.z = bz;
+              /* The heading follows the step, at the rate the animal is allowed
+                 to turn anywhere else; the turn budget that lands after both the
+                 steering and this have had their say keeps the sum to one turn a
+                 frame. */
               const e = N.angleDelta(this.yaw, Math.atan2(sx, -sz));
               const back = Math.min(Math.abs(e), (sp.turn || 2) * dt);
               this.yaw += e > 0 ? back : -back;
-            }
-          } else if (inWater) {
-            /* In the water, and something dry is in the way: turn back for home,
-               and test that way the same way. The sunken tower stands in the
-               middle of the lamp field, and an unchecked homeward step used to
-               drag a jellyfish through the tower wall -- the altitude code then
-               finds no water in that column and leaves the animal standing on
-               the tower's roof, out of the lake for good. */
-            const ax = this.homeX - this.x, az = this.homeZ - this.z, al = Math.hypot(ax, az) || 1;
-            /* Both components of the homeward step go the same way: the way to
-               home is a vector, not a heading, and the minus that belongs to the
-               body's own forward axis (`mz = z - cos(yaw) * step`) does not
-               belong here. With it, an animal pressed against the shore of the
-               lake was walked away from the home it was being sent to: one lamp
-               sat at 66.0, 107.0 for five minutes, 11 m from the tower its field
-               is supposed to be, heading north into a wall of dirt. */
-            const hx = this.x + ax / al * spd * dt, hz = this.z + az / al * spd * dt;
-            /* A slide only counts if it actually moves: pressed flat against a
-               wall the animal's homeward step along the wall is zero, and taking
-               that branch anyway (the cell beside it is wet, so the test passes)
-               is how it used to sit on the tower's north face for the rest of
-               the run. */
-            const canX = Math.abs(hx - this.x) > 1e-4 && free(hx, this.z);
-            const canZ = Math.abs(hz - this.z) > 1e-4 && free(this.x, hz);
-            if (canX && (Math.abs(ax) >= Math.abs(az) || !canZ)) this.x = hx;
-            else if (canZ) this.z = hz;
-            else {
-              /* The corner: neither slide goes anywhere, so step round the
-                 obstacle -- of the four directions that are wet, take the one
-                 that closes on home most. Without this an animal whose home is
-                 straight through the tower presses its nose to the wall for the
-                 rest of the run. */
-              let bx = null, bz = null, best = Math.hypot(ax, az);
-              for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                const nx = this.x + ox * spd * dt, nz = this.z + oz * spd * dt;
-                if (!free(nx, nz)) continue;
-                const d = Math.hypot(this.homeX - nx, this.homeZ - nz);
-                if (d < best - 1e-6) { best = d; bx = nx; bz = nz; }
-              }
-              if (bx === null) { this.tx = this.x; this.tz = this.z; this.pause = 0.5; }
-              else { this.x = bx; this.z = bz; }
             }
           } else {
             // already out of the water, which should not happen: take the
@@ -1429,10 +1502,10 @@
           /* Can this body put its feet down in that column? The surface it would
              stand on, and the room over it: a step of a metre is a step, a
              surface with rock over it is a wall, and foliage over its head is
-             neither -- a bear walks through a bush with its shoulders in it. The
+             neither -- a body walks through a bush with its shoulders in it. The
              test used to ask for the highest solid thing in the column up to 3 m
              above the feet, which made every bush a cliff and every crown a
-             staircase: the bear of the northern ridge walked the crowns along the
+             staircase: the walker of the northern ridge walked the crowns along the
              ridge instead of the ground under them, and went up 105 m and back
              down 114 m in a day doing it. */
           const stand = (x, z) => {
@@ -1447,7 +1520,7 @@
                wood with open air straight under them, over the surface a walker
                stands on: there the feet cell is air, the gate opens, and the body
                walks in with its shoulders through the block. Measured with one trunk
-               block at the height a 1.54 m bear's own body occupies, two cells over
+               block at the height a walker's own body occupies, two cells over
                the shelf it stands on, it came up against wood at 0.17 m and walked
                through it: 30 of its 480 frames with part of itself inside, up to
                0.54 m of it through the block, its feet on the ground every one of
@@ -1462,21 +1535,21 @@
                cell, exactly what the gate for a body in the air asks, and it is
                asked of this body's own height, which is what keeps the answer about
                the body rather than about the block: the same block one cell higher,
-               over the bear's head, is walked under (29 frames in that column, 0 of
-               them inside, in every build), and the block that lies inside the
-               bear's body is open ground to a 0.43 m frog, which walks into that
+               over the walker's head, is walked under (29 frames in that column, 0 of
+               them inside, in every build), and the block that lies inside a
+               person's body is open ground to a 0.43 m frog, which walks into that
                column 80 of its 480 frames -- 81 in the build that reads the ceiling
                of a hop over the body's own cell only -- while a block at that
                frog's own feet cell is refused it too. Asking the same span from the
                height the body happens to be at, rather than from the surface of the
                column it is asked about, was measured too: it keeps these bodies out
-               of the wood and takes the walk with it, the bear standing still 180 of
+               of the wood and takes the walk with it, the walker standing still 180 of
                its 480 frames under a block one cell over its head and travelling
                10.4 m instead of 16.5 m. A body on foot is on the floor it walks on,
                and the body that is not --
                a frog in the middle of an arc -- is answered by the roof instead (see
                `roofY`, and the span and roof rig in test/play.js: with this half
-               missing alone the bear stands 30 frames inside the block and no other
+               missing alone the walker stands 30 frames inside the block and no other
                rig moves, while with the roof asked out of the wrong table that frog
                is inside the wood over its head -- 14 frames starting under the block,
                28 walked at it -- and with the roof read over the body's own cell
@@ -1499,7 +1572,7 @@
              never asks what is at the height the body itself is at, so a body
              that takes a step of a metre first puts its feet inside the riser of
              the step and then eases up through the ground behind it: measured on
-             the two bears of the northern ridge, 3120 of 21600 frames had the
+             the walkers of the northern ridge, 3120 of 21600 frames had the
              origin of the body inside the hillside. The step is therefore taken
              the way the player's own body takes it: the feet are raised onto the
              surface first, in the column the body is standing in, and the edge is
@@ -1538,7 +1611,7 @@
             const r = riser(x, z);
             if (!r) return 0;
             /* A body that is being carried down does not climb the step it drifts
-               into: it falls past the face of it. Measured, a bear that stepped off
+               into: it falls past the face of it. Measured, a body that stepped off
                a ledge and fell alongside the next one was lifted 0.83 m back up it
                in a single frame, because the step read as ground and the body was
                eased onto it. */
@@ -1566,7 +1639,7 @@
             this.x = mx; this.z = mz;
             /* A step is begun before the face of it. A body that only learns about
                a step when its nose is against the riser has to stop walking to
-               climb it: measured, a bear of the northern ridge stood still for 19
+               climb it: measured, a walker of the northern ridge stood still for 19
                frames at the foot of a step of a metre, rising the whole time, and
                did that at every step of the ridge it walks. The step is therefore
                read up to a metre and a half along the heading, and the climb is
@@ -1599,7 +1672,7 @@
                fresh errand -- and the heading follows the step, so the next
                frame tries the wall again from further along it and walks off
                when the wall ends. Giving up was the whole of the old behaviour,
-               and it is the last resort here: measured on the two bears of the
+               and it is the last resort here: measured on the walkers of the
                northern ridge, the step in front of them was rejected 2024 times
                in 2400 frames and they spent 81% of the afternoon standing still. */
             const bx = tgtX - this.x, bz = tgtZ - this.z;
@@ -1632,8 +1705,8 @@
         }
         /* One turn budget a frame, whoever spent it. Going round an obstacle
            bends the heading as well as steering at the errand does, and the two
-           added: a bear pressed against a cliff came about at twice the rate
-           its own body allows (measured 3.2 rad/s against a limit of 1.6). */
+           added: a body pressed against a cliff came about at twice the rate
+           its row allows (measured 3.2 rad/s against a row of 1.6). */
         if (arc > 0) {
           const budget = arc * dt;
           const off = N.angleDelta(yaw0, this.yaw);
@@ -1693,13 +1766,15 @@
            answering for -- the height the body wants is metres away and the answer
            is a lift. Measured on a bell put down on the lakebed at the bottom of
            the deepest column in the lamps' disc -- **11 m** of water there, film
-           at 15, bed at 4 -- and left to the old ease: it climbs the whole
-           **8.91 m** to the level its own row states, and the height closes
-           **0.2586 m** in a single frame, **15.51 m/s**, against the **2.2 m/s**
-           its own row swims, with **67** of its 600 frames faster than that. A
+           at 15, bed at 4 -- and left to the ease before the cap: it climbs the
+           whole **9.31 m** to the level its own row states (**8.91 m** of it
+           when the disc was the ring the field used to be and the lamp was its
+           first, larger model), and the height closes **0.248 m** in a single
+           frame, **14.9 m/s**, against the **2.2 m/s** its own row swims, with
+           **64** of its 600 frames faster than that. A
            body in water pays for height out of the speed it has: it rises or
            sinks no faster than it swims, and it arrives -- capped, the same bell
-           covers the same **8.91 m** inside the same ten seconds at **0.0367 m**
+           covers the same **9.31 m** inside the same ten seconds at **0.0367 m**
            a frame, and the check that pins this also insists it arrives,
            because a law satisfied by never moving the body at all would pass
            the rate and fail that. */
@@ -1710,10 +1785,10 @@
         if (Math.abs(target - this.y) < 0.01) this.y = target;
       } else {
         /* Feet, water and the ground -- one routine for every body that is not
-           being held up by air. A frog and a bear are told apart by whether the
-           data gives them a `hop`, not by whether they obey gravity: the two
-           branches used to be separate code, and the frog's had no bound on what
-           it would do to a body's height. */
+           being held up by air. The body that hops and the body that walks are
+           told apart by whether the data gives them a `hop`, not by whether they
+           obey gravity: the two branches used to be separate code, and the
+           hopper's had no bound on what it would do to a body's height. */
         const gy = standY(world, Math.floor(this.x), Math.floor(this.z), this.y);
         /* The height the feet are being raised onto: the column the body stands
            in answers for the ground under it, and the step in front of it answers
@@ -1784,13 +1859,14 @@
         if (inWater && room > 0.8) {
           /* A frog does not swim in one layer. It holds a depth of its own,
              sinks now and then and comes back up to breathe, on a cycle of its
-             own -- which is what twelve frogs on one lake look like when they
+             own -- which is what the frogs of one lake look like when they
              are alive: a spread of depths that changes, not a line. The cycle
              runs to the power 0.4 rather than squared, because squared is this
              animal turned upside down: a frog hangs at a depth and comes up for
              air now and then, it does not lie under the surface film and dive
-             occasionally. Squared, the twelve frogs of Mirrorlake spent 46% of a
-             ten minute watch within a metre of the surface film at a mean of
+             occasionally. Squared, the twelve frogs of Mirrorlake -- the
+             crowd then; the valley drives eight now -- spent 46% of a ten
+             minute watch within a metre of the surface film at a mean of
              1.47 m down, which is the report that the frogs sit too near the
              top of the water. The surface is the ceiling and the bottom is
              the floor, so in a column too shallow to swim in the frog simply
@@ -1800,8 +1876,8 @@
              the animal's own record swims at, not at a fraction of the distance
              left: the lerp was an elevator that ran fastest the instant it
              started, and a frog put down on the lakebed 4.7 m under the surface
-             came up 0.47 m in its very first frame -- 28 m/s, faster than a
-             falling bear -- every frame after it slower than the one before. */
+             came up 0.47 m in its very first frame -- 28 m/s -- every frame after
+             it slower than the one before. */
           const cyc = 0.5 + 0.5 * Math.sin(this.t * this.diveRate + this.phase);
           /* the shallowest a frog goes is the level the water holds a resting
              body at -- its own height down, plus the depth its own record says a
@@ -1819,7 +1895,8 @@
         } else {
           /* On land a frog does not slide: it hops. Before this the height of an
              amphibian was lerped onto the ground every frame, which meant the
-             twelve frogs in the valley never once left it -- the legs animated a
+             twelve frogs in the valley then never once left it -- the legs
+             animated a
              walk no body was doing. The launch is an impulse, the arc is
              gravity's, and the landing is where the squash comes from. The
              countdown only runs with feet on the ground, so a frog that lands
@@ -1829,7 +1906,7 @@
             /* A hop is an arc, and an arc has a top: `up*up/2g` over the feet,
                0.78 m for a launch of 6 m/s under this world's gravity, over a
                body that stands 0.43 m tall. The launch used to be asked nothing
-               about what was over the body's head. The twelve frogs of Mirrorlake
+               about what was over the body's head. The eight frogs of Mirrorlake
                walk in and out of the hollow shaft of the sunken tower, where the
                floor of the cavity they stand in is brick at 11 and the tower's
                glass is at 13: a metre of room. Measured, one of them pushed off
@@ -1877,13 +1954,13 @@
              falls, under the same gravity, the same terminal speed and the same
              landing squash the player's own body uses. What this replaces is a
              lerp onto the ground every frame, which is an elevator that runs
-             fastest at the moment it starts: walked a bear off a cliff where the
+             fastest at the moment it starts: walked a body off a cliff where the
              ground falls 17 m within one metre, it came down 6.8 m in the first
              0.1 s -- 81 m/s -- eased the rest of the way to a stop, and finished
              the drop standing on a tree 5 m above the valley floor, where it
              stopped moving for the rest of the run. The same cliff now: 16 m in
              1.17 s, the speed rising from nothing to 26.8 m/s, arriving with a
-             squash of 0.3 and walking on. A bear steps off a ridge; it does not
+             squash of 0.3 and walking on. A body steps off a ridge; it does not
              fall faster than a thrown stone.
              Down a slope is not a fall: the surface is a hand's width under the
              feet, the feet follow it, nothing is integrated. Going up is a step,
@@ -1939,7 +2016,7 @@
          step lands on the step.
          Wood and leaves are not in this. A body on foot walks through a bush with
          its shoulders in it and a crown is not ground to be pushed off
-         (docs/03 s5); pushing two bears out of the crowns they walk through
+         (docs/03 s5); pushing bodies out of the crowns they walk through
          measured 171 one-metre pops in three minutes.
          A trunk is no longer in this list for a different reason than a leaf is:
          the gate that lets a walker into a column refuses wood on the body's own
@@ -1954,7 +2031,7 @@
           /* Out, and at a rate. The distance is closed at up to 0.1 m a frame:
              in the running valley every one of these corrections is a body a few
              centimetres under the surface it stands on (measured: 85 of them in
-             three minutes for the two bears, the largest 0.042 m), and 0.1 clears
+             three minutes, the largest 0.042 m), and 0.1 clears
              that in the frame it happens. What the bound is for is a body that is
              *inside* something by a metre -- put down there, or pushed there by a
              rule that has not been thought of -- which is lifted out over a
@@ -1970,17 +2047,19 @@
          where they stood when the frame began, and two bodies walking at one
          another both see an empty place to walk into: measured over the morning
          the game opens on, in a valley born the way the game bears it, that is
-         how the twelve frogs of Mirrorlake spent 46% of it with another frog
+         how the twelve frogs of Mirrorlake then -- the valley drives eight
+         now -- spent 46% of it with another frog
          inside them, the worst pair 0.43 m deep -- one body drawn exactly on top
-         of another -- and the ten lamps of the tower field 1.9 overlapping pairs
-         at any one moment, 0.54 m deep. The overlap is undone
+         of another -- and the ten lamps of the tower field then, 1.9
+         overlapping pairs at any one moment, 0.54 m deep. The overlap is undone
          along the shortest way out, half to each body, at the rate the world's
          own corrections work at; where the shortest way is a bank, the body
          slides along it instead. A body that cannot be put anywhere the world
          allows stays, and the other one takes the whole way round on its turn.
          And the way out of one body is not a way into another: the ten lamps of
-         the tower field stand in a disc the size of two of them, so the shortest
-         way out of one lamp is very often the middle of the next, and a body
+         the tower field used to stand in a disc the size of two of them, so the
+         shortest way out of one lamp was very often the middle of the next, and a
+         body
          shoved into that one takes the whole field with it. Of the ways the world
          allows, the one taken is the one that leaves the body least deep in
          anybody else. */
@@ -1991,11 +2070,12 @@
            a body is in one body. It is not the whole of it when a body is in five:
            the pairs are taken one after another and each takes its turn at the same
            body, so the frame can move it several times over, and the field of the
-           sunken tower is where that shows. Ten lamps are sampled into a disc of
-           radius four whose wet part is 29 cells of 49, and the room a birth asks
-           its own kind for is 0.83 m, so even with the birth taking the roomiest
-           of the places it will accept, eight of the ten are put down inside a
-           neighbour every time the valley is made; the field then spends the watch
+           sunken tower is where that showed. Ten lamps were once sampled into a disc
+           of radius four round the tower whose wet part was 29 cells of 49, and the
+           room a birth asked its own kind for was 0.83 m, so even with the birth
+           taking the roomiest of the places it would accept, eight of the ten were
+           put down inside a neighbour every time the valley was made; the field then
+           spent the watch
            undoing what it was born with, and measured over 150-second watches of a
            page the way a player meets it, before this bound, the worst single frame
            moved a lamp 0.156 m at a sixtieth of a second -- 9.4 m/s, against the
@@ -2069,9 +2149,11 @@
          rather than integrated -- a frog settling onto its level is settling,
          whatever its velocity says. */
       const vRate = (this.y - y0) / Math.max(dt, 0.001);
-      /* The lamp jellyfish is not in this: a bell that pulses has no nose to
-         point, and tilting one is a lampshade tipping over. */
-      const carried = inWater && this.isAmphibian();
+      /* Every body the water carries has a nose to point now -- the frog's
+         and the lanternfish's alike. The valley once exempted one: a bell that
+         pulses has no nose to point, and tilting one is a lampshade tipping
+         over. The exemption went with the bell. */
+      const carried = inWater;
       const tiltWant = carried && this.speed > 0.3
         ? Math.max(-0.6, Math.min(0.6, Math.atan2(-vRate, Math.max(this.speed, 0.5))))
         : 0;
@@ -2080,21 +2162,12 @@
       if (dp < (this.sp.scale || 0.2) * 8 + 0.8) {
         if (this.state === 'chase') game.onCreatureTouch(this, dt);
         /* A sting is not an attack. Nothing in the valley hunts the player; the
-           lamp jellyfish simply is stinging, the way the ridge simply is cold,
+           lanternfish simply is stinging, the way the water simply is deep,
            and a body that is immune to it stands in the middle of the field.
            Contacts stack, because a field is a field: the middle of it costs
            more than its edge. */
         else if (this.sp.sting && !pl.formDef.poisonImmune) game.onSting(this, dt);
-        else if (this.sp.aura && (pl.formDef.aura || 0) > 0) { /* they ignore each other */ }
       }
-      // intimidation: the player's form aura makes lesser creatures flee.
-      // The same species is exempt -- a bear does not run from a bear, and the
-      // attitude table already says "calm" for one of its own.
-      const aura = pl.formDef.aura || 0;
-      if (aura > 0 && dp < aura && att !== 'hostile' && !this.sameSpeciesAs(pl.form) && this.state !== 'flee') {
-        this.state = 'flee'; this.alarm = 1;
-      }
-
       walkGait(this, sp.model, sp.scale, N.walkMove(this.speed, sp.speed),
         this.x - gx, this.z - gz, this.speed, dt);
     }

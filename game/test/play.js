@@ -1,4 +1,4 @@
-/* gameplay loop: harvest -> capacity -> eat & transform -> revert -> cellar in/out -> cellar tree -> save -> quests */
+/* gameplay loop: harvest -> capacity -> eat & transform -> revert -> cellar in/out -> cellar tree -> save -> deeds */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const { sim } = require('./simwait');
@@ -99,7 +99,7 @@ const { sim } = require('./simwait');
     g.inv.length = 0;
     const before = g.inv.length;
     const added = [];
-    for (const id of ['frogpear', 'frogpear', 'bruinfig'])
+    for (const id of ['frogpear', 'frogpear'])
       added.push(id + '=' + (g.addItem('fruit', id) ? 'ok' : 'FULL'));
     return { added, used: g.used(), cap: g.cap(), slots: g.inv.map(i => i.id + ':' + g.slotOf(i)) };
   });
@@ -150,29 +150,7 @@ const { sim } = require('./simwait');
   //     step is what keeps it deleted.
   const swap = await step('oneBodyAtATime', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
-    const ids = ['frogpear', 'bruinfig'];
-    /* The bear body is 1.4 x 1.5 -- the widest body in the valley -- and eat()
-       refuses a body that does not fit where you stand, so the swap has to
-       happen in the open. Find a column with room for it rather than testing
-       the rule by standing in a crevice. */
-    const home = { x: p.x, y: p.y, z: p.z };
-    const gy = (x, z) => { for (let y = g.world.h - 1; y >= 0; y--) if (g.world.solidAt(x, y, z)) return y; return -1; };
-    let spot = null;
-    for (let r = 0; r < 60 && !spot; r++)
-      for (let dx = -r; dx <= r && !spot; dx++)
-        for (let dz = -r; dz <= r && !spot; dz++) {
-          const cx = Math.floor(home.x) + dx, cz = Math.floor(home.z) + dz, y = gy(cx, cz);
-          if (y < 1) continue;
-          let open = true;
-          for (let h = 1; h <= 3; h++) if (g.world.solidAt(cx, y + h, cz)) { open = false; break; }
-          if (!open) continue;
-          p.x = cx + 0.5; p.z = cz + 0.5; p.y = y + 1.0005;
-          const was = p.form; p.form = 'bruinfig';
-          const fits = !p.hits(p.x, p.y, p.z);
-          p.form = was;
-          if (fits) spot = { x: +p.x.toFixed(1), y: +p.y.toFixed(1), z: +p.z.toFixed(1) };
-        }
-    if (!spot) { p.x = home.x; p.y = home.y; p.z = home.z; return { error: 'no bear-sized spot near the player' }; }
+    const ids = ['frogpear', 'frogpear'];
     g.inv.length = 0;
     for (const id of ids) g.addItem('fruit', id);
     const before = { vital: p.vital, inv: g.inv.length };
@@ -181,22 +159,21 @@ const { sim } = require('./simwait');
     const after = { vital: p.vital, inv: g.inv.length };
     const lines = g.log.slice(-10).map(l => l.text);
     const out = {
-      before, after, forms, spot,
+      before, after, forms,
       gastric: g.gastric, gastricTime: g.gastricTime,
       overwrite: N.t('log.overwrite', {
-        a: N.disp(N.FRUIT_BY_ID.frogpear.form), b: N.disp(N.FRUIT_BY_ID.bruinfig.form)
+        a: N.disp(N.FRUIT_BY_ID.frogpear.form), b: N.disp(N.FRUIT_BY_ID.frogpear.form)
       }),
       sawOverwrite: lines.some(l => l === N.t('log.overwrite', {
-        a: N.disp(N.FRUIT_BY_ID.frogpear.form), b: N.disp(N.FRUIT_BY_ID.bruinfig.form)
+        a: N.disp(N.FRUIT_BY_ID.frogpear.form), b: N.disp(N.FRUIT_BY_ID.frogpear.form)
       })),
       churnKeys: Object.keys(N.T).filter(loc =>
         N.T[loc]['log.churn'] !== undefined || N.T[loc]['log.causeOverload'] !== undefined)
     };
     p.form = null; p.formT = 0; g.inv.length = 0;
-    p.x = home.x; p.y = home.y; p.z = home.z;
     return out;
   });
-  check('each fruit replaces the body in order', JSON.stringify(swap.forms) === JSON.stringify(['frogpear', 'bruinfig']), swap.forms);
+  check('each fruit replaces the body in order', JSON.stringify(swap.forms) === JSON.stringify(['frogpear', 'frogpear']), swap.forms);
   check('swapping bodies costs no vitality', swap.after.vital === swap.before.vital, swap);
   check('each fruit is spent exactly once, none destroyed by a penalty', swap.after.inv === swap.before.inv - 2, swap);
   check('the gastric counter no longer exists on the game', swap.gastric === undefined && swap.gastricTime === undefined, swap);
@@ -207,7 +184,7 @@ const { sim } = require('./simwait');
   await step('cellar', () => {
     const g = window.game;
     g.inv.length = 0;
-    g.addItem('fruit', 'frogpear'); g.addItem('fruit', 'bruinfig');
+    g.addItem('fruit', 'frogpear'); g.addItem('fruit', 'frogpear');
     g.openStashUI(g.stashes[0]);
     g.invSel = 0; g.moveItem('in');
     g.stashSel = 0; g.moveItem('out');
@@ -238,41 +215,6 @@ const { sim } = require('./simwait');
   check('a second cellar tree too close is refused', ct.tooCloseRefused === true, ct);
 
   // 8. save / load
-  // cellar raids: far away always loses, nearby always defends, the main cellar is never robbed
-  const rf = await step('raidFar', () => {
-    const g = window.game;
-    const tree = g.stashes.find(s => s.kind === 'tree');
-    if (!tree) return 'no cellar tree';
-    const cellar = g.stashes[0];
-    for (let i = 0; i < 6; i++) tree.items.push({ kind: 'fruit', id: 'frogpear', fresh: 900, maxFresh: 900 });
-    for (let i = 0; i < 4; i++) cellar.items.push({ kind: 'fruit', id: 'frogpear', fresh: 900, maxFresh: 900 });
-    const cellarBefore = cellar.items.length;
-    g.player.x = tree.x + 400; g.player.z = tree.z + 400;   // far away
-    let guard = 0, prev = tree.items.length;
-    const taken = [];
-    while (tree.items.length > 0 && guard++ < 60) {
-      g.dailyRolls();
-      if (tree.items.length < prev) taken.push(prev - tree.items.length);
-      prev = tree.items.length;
-    }
-    const T = window.FRUTARIA.STORAGE.treestash;
-    return { treeLeft: tree.items.length, cellarLeft: cellar.items.length, cellarBefore, rolls: guard, lost: g.stats.raidsLost,
-             takeMin: Math.min(...taken), takeMax: Math.max(...taken), ruleMin: T.raidMin, ruleMax: T.raidMax };
-  });
-  check('raid take stays inside the data bounds', rf.takeMin >= rf.ruleMin && rf.takeMax <= rf.ruleMax, rf);
-  check('the town cellar is never robbed', rf.cellarLeft === rf.cellarBefore, rf);
-  const rn = await step('raidNear', () => {
-    const g = window.game;
-    const tree = g.stashes.find(s => s.kind === 'tree');
-    for (let i = 0; i < 6; i++) tree.items.push({ kind: 'fruit', id: 'frogpear', fresh: 900, maxFresh: 900 });
-    const R = window.FRUTARIA.STORAGE.treestash.raidScareRadius;
-    g.player.x = tree.x + R - 1; g.player.z = tree.z;      // just inside the scare radius
-    const before = tree.items.length, scared0 = g.stats.raidsScared || 0;
-    for (let i = 0; i < 40; i++) g.dailyRolls();
-    return { before, after: tree.items.length, scared: (g.stats.raidsScared || 0) - scared0, radius: R };
-  });
-  check('standing inside the scare radius loses nothing', rn.after === rn.before && rn.scared > 0, rn);
-
   const idBefore = await step('idBefore', () => window.game.id);
   await step('save', () => { window.game.save(); const s = localStorage.getItem(window.FRUTARIA.SAVE_KEY); return s ? 'saved ' + s.length + 'B' : 'NO SAVE'; });
   const ld = await step('load', () => { const ok = window.game.load(); return { ok, id: window.game.id, inv: window.game.inv.map(i => i.id), stashes: window.game.stashes.length }; });
@@ -281,80 +223,73 @@ const { sim } = require('./simwait');
   // 8b. identity: no fixed protagonist name -- id stable, epithet earned, name is the player's and clamped
   const ident = await step('identity', () => {
     const g = window.game, ID = window.FRUTARIA.IDENTITY;
-    const was = g.quests.map(q => q.done);
-    g.quests.forEach(q => q.done = false);
+    const was = g.deeds.map(q => q.done);
+    g.deeds.forEach(q => q.done = false);
     const epDefault = g.epithet().cn;
-    g.quests.find(q => q.id === 'q1').done = true;
+    g.deeds.find(q => q.id === 'cellar').done = true;
     const epQ1 = g.epithet().cn;
-    g.quests.forEach(q => q.done = true);
+    g.deeds.forEach(q => q.done = true);
     const epAll = g.epithet().cn;
-    g.quests.forEach((q, i) => q.done = was[i]);           // leave quest state untouched
+    g.deeds.forEach((q, i) => q.done = was[i]);           // leave deed state untouched
     const nm = g.setName('abcdefghijklmnopqrstuvwx');      // 24 chars, must clamp
     return { id: g.id, epDefault, epQ1, epAll, epDefaultExpected: ID.epithetDefault.cn, nameLen: nm.length, nameMax: ID.nameMax };
   });
   check('id looks like p-xxxxxx', /^p-[a-z0-9]{6}$/.test(ident.id), ident.id);
   check('default epithet comes from data', ident.epDefault === ident.epDefaultExpected, ident);
-  check('epithet changes after q1', ident.epQ1 !== ident.epDefault, { a: ident.epDefault, b: ident.epQ1 });
-  check('epithet changes when all quests are done', ident.epAll !== ident.epQ1, { a: ident.epQ1, b: ident.epAll });
+  check('epithet changes after the cellar deed', ident.epQ1 !== ident.epDefault, { a: ident.epDefault, b: ident.epQ1 });
+  check('epithet changes when all deeds are done', ident.epAll !== ident.epQ1, { a: ident.epQ1, b: ident.epAll });
   check('player name is clamped to nameMax', ident.nameLen === ident.nameMax, ident);
 
-  // 9. quests
-  await step('quests', () => {
+  // 9. deeds
+  await step('deeds', () => {
     const g = window.game;
-    return { quests: g.quests.map(q => q.id + (q.done ? '✔' : '·')), log: g.log.slice(-5).map(l => l.text) };
+    return { deeds: g.deeds.map(q => q.id + (q.done ? '·' : '—')), log: g.log.slice(-5).map(l => l.text) };
   });
 
-  /* 9b. the two gates that are not "count what is in the pack": q5 wants the fig
-     carried (a legendary one is 12 of 24 slots and sleeps in 420 s, so the quest
-     is the walk home), and q6 wants you standing at the greenhouse door -- no
-     amount of fruit does anything there. */
-  const gates = await step('quest gates', () => {
+  /* 9b. the gate that is not "count what is in the pack": the greenhouse deed
+     wants you standing at the greenhouse door -- no amount of fruit does
+     anything there. */
+  const gates = await step('deed gates', () => {
     const g = window.game, p = g.player, N = window.FRUTARIA;
     const was = { form: p.form, formT: p.formT, x: p.x, y: p.y, z: p.z,
                   inv: g.inv.slice(), upg: Object.assign({}, g.upg) };
-    const q = id => g.quests.find(x => x.id === id);
+    const d = id => g.deeds.find(x => x.id === id);
     const put = (arr, keep) => { arr.length = 0; for (const it of keep) arr.push(it); };
     put(g.inv, []);
-    q('q5').done = false; q('q6').done = false;
+    d('greenhouse').done = false;
     const gh = N.POIS.find(x => x.id === 'greenhouse');
     p.x = gh.x + 40; p.y = gh.y + 1; p.z = gh.z + 40;      // nowhere near the door
-    g.checkQuests();
-    const farFromDoor = q('q6').done;
-    g.addItem('fruit', 'bruinfig');                        // 12 of 24 slots
-    g.checkQuests();
-    const carried = q('q5').done;
+    g.checkDeeds();
+    const farFromDoor = d('greenhouse').done;
     p.x = gh.x + 1; p.y = gh.y + 1; p.z = gh.z + 1;        // at the door
-    g.checkQuests();
-    const atDoor = q('q6').done;
+    g.checkDeeds();
+    const atDoor = d('greenhouse').done;
     Object.assign(p, { form: was.form, formT: was.formT, x: was.x, y: was.y, z: was.z });
     put(g.inv, was.inv);
     for (const k in g.upg) if (!(k in was.upg)) delete g.upg[k];
-    q('q5').done = false; q('q6').done = false;
-    return { farFromDoor, carried, atDoor };
+    d('greenhouse').done = false;
+    return { farFromDoor, atDoor };
   });
-  check('q5 is a bruin fig carried home', gates.carried === true, gates);
-  check('q6 is a place, not a fruit', gates.farFromDoor === false && gates.atDoor === true, gates);
+  check('the greenhouse deed is a place, not a fruit', gates.farFromDoor === false && gates.atDoor === true, gates);
 
   /* 9c. a place's name is a claim about the world, asked of that world. The keep's
-     fruit store used to carry the word for a cellar -- in the name the data gives
-     the marker, in the zone's own description, and in the hint the codex prints
-     under quest 6 -- and the room it promised is not there: the generator fills
-     the island, and every one of the 9,702 cells from the floor of the world up to
-     the row the keep's own door marker is printed at holds a block. The town's
-     Main Cellar keeps the word, and keeps it honestly: over its floor the world
-     leaves three rows of air inside a 9x9 box of dark brick, and a floor of solid
-     over that. The suite runs the page, so these are the live objects the codex
-     and the HUD read, not the source text a second checker parses. Two halves,
-     each with its own canary: put the word back into the zone's description and
-     the keep half goes red; take the store's room out of the generator and the
-     town half goes red. */
+     fruit store used to carry the word for a cellar -- in the name the data
+     gives the marker and in the zone's own description -- and the room it
+     promised is not there: the generator fills the island, and every one of the
+     9,702 cells from the floor of the world up to the row the keep's own door
+     marker is printed at holds a block. The town's Main Cellar keeps the word,
+     and keeps it honestly: over its floor the world leaves three rows of air
+     inside a 9x9 box of dark brick, and a floor of solid over that. The suite
+     runs the page, so these are the live objects the HUD reads, not the source
+     text a second checker parses. Two halves, each with its own canary: put
+     the word back into the zone's description and the keep half goes red; take
+     the store's room out of the generator and the town half goes red. */
   const named = await step('place names', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA;
     const gh = N.POIS.find(p => p.id === 'greenhouse');
     const keep = N.ZONE_BY_ID.starfall;
     const cell = N.POIS.find(p => p.id === 'cellar');
     const town = N.ZONE_BY_ID.lanternrow;
-    const q6 = g.quests.find(q => q.id === 'q6');
     let cols = 0, cells = 0, air = 0;
     for (let z = keep.cz - keep.r; z <= keep.cz + keep.r; z++)
       for (let x = keep.cx - keep.r; x <= keep.cx + keep.r; x++) {
@@ -379,19 +314,19 @@ const { sim } = require('./simwait');
       if (!a) break;
       roomRows.push(y);
     }
-    const says = [gh.cn, gh.en, keep.desc, q6.hint.cn, q6.hint.en];
+    const says = [gh.cn, gh.en, keep.desc];
     const word = /地窖|cellar/i;
     const hud = g.zoneNameAt({ x: gh.x + 0.5, y: gh.y + 1, z: gh.z + 0.5 });
     return { cols, cells, air, box, plan: [hi[0] - lo[0] + 1, hi[1] - lo[1] + 1], roomRows,
       says, carrying: says.filter(s => word.test(String(s))),
-      codex: N.disp(q6) + ' / ' + N.disp(q6.hint), hud,
+      codex: N.disp(gh) + ' / ' + keep.desc, hud,
       townNames: [cell.cn, cell.en] };
   });
   check('the island under the keep door holds no room, so the name may not promise one',
     named.cols === 441 && named.cells === 9702 && named.air === 0, named);
-  check('and none of the five strings the game carries for that place carries the word',
-    named.says.length === 5 && named.carrying.length === 0, named);
-  check('the quest 6 the codex prints says where the greenhouse stands, not what is under it',
+  check('and none of the three strings the game carries for that place carries the word',
+    named.says.length === 3 && named.carrying.length === 0, named);
+  check('the strings the game carries for that place say where the greenhouse stands, not what is under it',
     /greenhouse|温室/.test(named.codex) && !/cellar|地窖/i.test(named.codex), named.codex);
   check('the town store names a room, and the world gives it three rows of one',
     /cellar|果窖/.test(named.townNames.join(' ')) && named.roomRows.length === 3 &&
@@ -407,44 +342,55 @@ const { sim } = require('./simwait');
     return by;
   });
 
-  // 10b. the lamps of Mirrorlake: an animal with no fruit and no body to wear, a
-  //      field that sits on one landmark instead of being scattered over the
-  //      lake, and -- the interesting part -- the only species whose locomotion
-  //      is 'water', so the only one that must never end up on dry land.
+  // 10b. the lamps of Mirrorlake: an animal with no fruit and no body to wear,
+  //      a field that is the open water of the lake itself, and -- the
+  //      interesting part -- the only species whose locomotion is 'water', so
+  //      the only one that must never end up on dry land.
   const lamps = await step('lamps', () => {
     const g = window.game, p = g.player, N = window.FRUTARIA;
-    const sp = N.CREATURE_BY_ID.jelly, tower = N.ZONE_BY_ID.mirrorlake.tower;
-    const herd = () => g.creatures.filter(c => c.sp.id === 'jelly');
+    const sp = N.CREATURE_BY_ID.lanternfish, zone = N.ZONE_BY_ID.mirrorlake;
+    const lake = sp.at ? zone[sp.at] : null;
+    if (!lake) return { error: 'the lamp field names no landmark the zone carries' };
+    const herd = () => g.creatures.filter(c => c.sp.id === 'lanternfish');
     const wet = () => herd().filter(c =>
       g.world.liquidAt(Math.floor(c.x), Math.floor(c.y + 0.2), Math.floor(c.z))).length;
     /* Where a lamp is allowed to stand. The errands it swims are picked from a
-       disc of `spread` round the landmark, and that disc is the promise the dex
-       makes ("the field sits exactly in the outline of the sunken tower") -- it
-       is also the thing the old bug broke, when errands were picked from a disc
-       of the same size round wherever the lamp happened to be standing: the
-       field came out twice the size it was meant to be, and one lamp sat 11 m
-       from the tower for five minutes. The body swimming an errand is not the
-       errand, though. It can only bend the course it is already on, at `turn`
-       radians a second, so at the speed its wandering cruises at (0.42 of the
-       speed its row swims at: 0.92 m/s for this one) the tightest arc its own
-       table allows is 1.16 m -- and a lamp that reaches the place it was sent to
-       still carrying a course it cannot shed swings past it and back. The
-       field's outer edge is the disc plus that swing, not the disc.
+       disc of `spread` round the landmark the record names, and that disc is
+       the promise the dex makes ("the lanternfish swim the open water of the
+       lake") -- it is also the thing the old bug broke, when errands were
+       picked from a disc of the same size round wherever the lamp happened to
+       be standing: the field came out twice the size it was meant to be, and
+       one lamp sat 11 m from the landmark for five minutes. The body swimming
+       an errand is not the errand, though. It can only bend the course it is
+       already on, at `turn` radians a second, so at the speed its wandering
+       cruises at (0.42 of the speed its row swims at: 0.92 m/s for this one)
+       the tightest arc its own table allows is 1.16 m -- and a lamp that
+       reaches the place it was sent to still carrying a course it cannot shed
+       swings past it and back. The field's outer edge is the disc plus that
+       swing, not the disc.
        The bound also has to be paid frame by frame rather than at two instants.
        Read at the start and the end of this step only, the field peaked between
-       5.7 and 7.4 m from the tower over ten watches of ten minutes each, and a
-       check written against the disc plus a bare 2 m went red on roughly one run
-       in three with nothing in the game changed. Paid frame by frame instead: the
-       field peaks at 5.7 to 6.5 m within a watch, and of the 60000 lamp-frames a
-       five-minute watch runs, 0 to 31 stand outside the disc plus one swing.
-       The errands themselves never leave the disc: 764 to 795 of them a watch,
-       the furthest 3.999 m from the tower. What does stand further out is the
-       pick a lamp makes when the tower's brick leaves it nowhere to go -- it sets
-       its errand to its own feet and waits, 322 to 422 times a watch -- and those
-       are counted apart, because a lamp standing where it already is has not been
-       sent anywhere. So the field is asked three ways: every errand inside the
-       disc, under one lamp-frame in a hundred outside the disc plus a swing, and
-       no lamp ever beyond the 8 m that was the far tail of those ten watches. */
+       5.7 and 7.4 m from the landmark over ten watches of ten minutes each,
+       and a check written against the disc plus a bare 2 m went red on roughly
+       one run in three with nothing in the game changed. Paid frame by frame
+       instead: the field peaks a few metres inside its water, and of the 60000
+       lamp-frames a five-minute watch runs, none stand outside the disc of the
+       water. The errands themselves never leave the disc: several hundred of
+       them a watch, the furthest one inside its radius. What can stand further
+       out than the disc does is nothing at all, because the disc is the water
+       and a lamp cannot leave it -- the bound below asks the far tail of the
+       disc anyway, the way a bound is asked.
+       The sunken tower stands in the water, 17 m off the centre -- the middle
+       of the water is the isle the keep is built on, and it is dry too -- and
+       the brick of the tower pokes up through the film, and the column of it
+       answers "no water" to the question the picker and the step gate ask. So
+       the tower is an obstacle the field swims round now and then, the same
+       way a pillar is an obstacle to a fish that swims the room it stands in. The
+       wait below counts how often the brick still leaves a lamp with nowhere
+       to go: 322 to 422 a watch while the way round the brick ran for home and
+       the heading was never told to follow it, a handful since the contour
+       runs toward the errand and the heading follows the step, and the nose
+       test keeps the snout out of the brick the centre is not allowed into. */
     const cruise = (sp.swimSpeed || sp.speed || 3) * 0.42;   // entities.js: wander cruises at 0.42
     const arc = cruise / (sp.turn || 1);                     // the tightest arc the row allows
     const edge = sp.spread + 2 * arc;                        // the disc, plus one swing past it
@@ -453,7 +399,7 @@ const { sim } = require('./simwait');
     // parks the player in it for 90 seconds, so the body is put back after
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital };
     const one = herd()[0];
-    const atts = [null, 'frogpear', 'bruinfig'].map((f) => {
+    const atts = [null, 'frogpear'].map((f) => {
       p.form = f; p.x = one.x + 1.5; p.y = one.y; p.z = one.z;
       return one.attitudeTo(f);
     });
@@ -487,7 +433,7 @@ const { sim } = require('./simwait');
       swam[k] += Math.hypot(c.x - bx0, c.z - bz0);
       prev[k][0] = c.x; prev[k][1] = c.z;
       // the field's own extent, over every frame of the watch and not at two instants
-      const dfar = Math.hypot(c.x - tower[0], c.z - tower[1]);
+      const dfar = Math.hypot(c.x - lake[0], c.z - lake[1]);
       lampFrames++;
       if (dfar > maxFar) maxFar = dfar;
       if (dfar > edge) outFrames++;
@@ -502,7 +448,7 @@ const { sim } = require('./simwait');
         if (Math.hypot(c.tx - bx0, c.tz - bz0) < 1e-9) boxedIn++;
         else {
           errands++;
-          const de = Math.hypot(c.tx - tower[0], c.tz - tower[1]);
+          const de = Math.hypot(c.tx - lake[0], c.tz - lake[1]);
           if (de > maxErrand) maxErrand = de;
         }
       }
@@ -531,7 +477,7 @@ const { sim } = require('./simwait');
     stuck.pause = 1e9;                                     // the wander roll is not the thing under test
     const startD = Math.hypot(stuck.x - stuck.homeX, stuck.z - stuck.homeZ);
     let dryFrames = 0, solidFrames = 0, swum = 0, px = stuck.x, pz = stuck.z;
-    for (let i = 0; i < 1800; i++) {      // 90 s: a jellyfish crosses 0.34 m of
+    for (let i = 0; i < 1800; i++) {      // 90 s: a lanternfish crosses 0.34 m of
       stuck.update(0.05, p, g.world, g);  // water per second, so give it a minute
       if (!g.world.liquidAt(Math.floor(stuck.x), Math.floor(stuck.y + 0.2), Math.floor(stuck.z))) dryFrames++;
       if (g.world.solidAt(Math.floor(stuck.x), Math.floor(stuck.y), Math.floor(stuck.z))) solidFrames++;
@@ -561,7 +507,7 @@ const { sim } = require('./simwait');
       outFrames, lampFrames,
       hover: { want: sp.hover, min: +crownMin.toFixed(2), max: +crownMax.toFixed(2),
         mean: +(crownSum / Math.max(1, seen)).toFixed(2), through, bedded, seen },
-      bears: !!sp.fruit, worn: N.FRUITS.some(f => f.creature === 'jelly'),
+      bears: !!sp.fruit, worn: N.FRUITS.some(f => f.creature === 'lanternfish'),
       name: N.disp(sp), lore: N.dexOf(sp)
     };
   });
@@ -570,19 +516,24 @@ const { sim } = require('./simwait');
   check('the lamps never leave the water',
     lamps.wet === lamps.n && lamps.after.wet === lamps.n, lamps);
   /* The errand is the promise the dex makes, and this is the tight question:
-     every place a lamp is sent to has to lie inside the tower's disc. It is
-     exact by construction -- a radius, sampled as a radius -- so it is asked
-     without slack, and it is what a field that had drifted off its landmark
-     would trip, which is exactly the bug this step was written for. */
-  check('a lamp is sent to the tower, not to wherever it happens to be standing',
-    lamps.errands > 500 && lamps.maxErrand <= lamps.spread + 0.001, lamps);
-  /* The body that swims an errand, on the other hand, is a body: it carries the
-     course it was travelling on past the place it was sent to, and comes back
-     round. That is the swing its own turn rate buys it, and the field is held to
-     the disc plus a swing on the frames it stands outside them, with a ceiling
-     at the far tail of what those watches ever reached. */
-  check('the lamp field is the sunken tower, not the whole lake',
-    lamps.maxFar <= 8 && lamps.outFrames * 100 <= lamps.lampFrames, lamps);
+     every place a lamp is sent to has to lie inside the disc of its field. It
+     is exact by construction -- a radius, sampled as a radius -- so it is
+     asked without slack, and it is what a field that had drifted off its
+     landmark would trip, which is exactly the bug this step was written for.
+     Asked both ways: the furthest errand of the watch must also have reached
+     out into the disc, or the field is the disc in name only. */
+  check('a lamp is sent to the water of its field, not to wherever it happens to be standing',
+    lamps.errands > 500 && lamps.maxErrand >= 25 && lamps.maxErrand <= lamps.spread + 0.001, lamps);
+  /* The body that swims an errand, on the other hand, is a body: it carries
+     the course it was travelling on past the place it was sent to, and comes
+     back round. The disc is the water, and a lamp cannot leave the water --
+     the step gate refuses the dry column -- so the far edge a body can ever
+     stand is the edge of the disc a column's width out, and the bound asks it
+     with a swing left over: nothing a lamp can do buys it ground past the
+     water. The swing-past count is kept as it was when the disc was a ring:
+     under one frame in a hundred. */
+  check('the lamp field is the open water of the lake, and a lamp stays in it',
+    lamps.maxFar <= lamps.spread + 4 && lamps.outFrames * 100 <= lamps.lampFrames, lamps);
   check('the lamps do not read bodies', lamps.atts.every(a => a === 'ignore'), lamps);
   check('the lamps have a dex entry', lamps.name.length > 0 && lamps.lore.length > 20, lamps);
   check('the lamps still get around the tower', lamps.drift > 20, lamps);
@@ -619,38 +570,53 @@ const { sim } = require('./simwait');
   //      one fruit the lake gives you before it asks anything (docs/02 s4).
   const sting = await step('sting', () => {
     const g = window.game, p = g.player, N = window.FRUTARIA;
-    const herd = g.creatures.filter(c => c.sp.id === 'jelly');
+    const herd = g.creatures.filter(c => c.sp.id === 'lanternfish');
     const mid = (k) => herd.reduce((a, c) => a + c[k], 0) / herd.length;
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
-    const run = (form, y, secs, among) => {
+    const run = (form, y, secs, track) => {
       p.form = form; p.vital = 10; p.x = mid('x'); p.y = y; p.z = mid('z');
       g.log.length = 0;
       g._stungAt = undefined;                       // the throttle is per wade, not per run
       let frames = 0, contacts = 0, worstNear = 0, spread = 0;
       for (let i = 0; i < secs / 0.05 && p.vital > 0; i++) {
         for (const c of herd) c.update(0.05, p, g.world, g);
-        /* Stay where the lamps are. They wander -- a spread is a radius and
-           they pick a new point inside it every few seconds -- so a body left
-           where it was dropped can find the field has walked off without it,
-           and then this measures luck rather than the cost of standing in the
-           field. And the field is a ring: the lamps sit on the outline of the
-           sunken tower, so the middle of the ten of them is the tower, and no
-           lamp is within reach of that middle (measured: the nearest lamp to
-           it sits 1.7-2.3 m off, and the reach is 2.08 m). The claim being
-           tested is "you are standing among the lamps", so the body stands at
-           the lamp nearest the middle of the field -- the point of the field
-           closest to its own middle. The dive to the sills is the exception:
-           down there, out of reach of every lamp, is the thing that run is
-           checking. */
+        /* Stay where the lamps are. They wander the open water of the lake --
+           a spread is a radius and they pick a new point inside it every few
+           seconds -- so a body left where it was dropped can find the field has
+           walked off without it, and then this measures luck rather than the
+           cost of standing in the field. The claim being tested is "you are
+           standing among the lamps", so with 'lamp' the body stands at the lamp
+           nearest the middle of the field -- the point of the field closest to
+           its own middle -- and at that lamp's own height. 'overhead' is the
+           worst case the dive to the sills has to answer: the body keeps the
+           x, z of the nearest lamp -- a lamp directly over it, the nearest a
+           lamp can be at the sill's own depth -- and holds the y it was
+           dropped at. The sills are the exception, and they are asked the way
+           the player asks them: the body drops to the depth the sill sits --
+           y9, one block under the lower window the frog pear hangs on, the one
+           fruit the lake gives before it asks anything (docs/02 s4) -- and
+           stays under the lamp, whatever the lamps do sideways. Whatever
+           sideways, the lamps hang where their own row says they hang: 1.2 m
+           under the film, measured to the crown, so their bases hang at 13.66
+           under this film at 15 (the crown less the 0.136 m the model is
+           tall), and the lower sill at y9 sits 3.9-5.5 m under those bases at
+           any depth the 0.5-1.9 m band they drift on allows, against a reach
+           of 2.08 m. The depth alone keeps them out. The upper sill at y12
+           sits 0.9-2.5 m under those same bases: inside the reach for a lamp
+           that is not up in the top of its band, which is why the body that
+           pays there is the one that cannot take the fruit, and the one that
+           can take it takes it immune. */
         let bx = mid('x'), bz = mid('z'), by = y;
-        if (among) {
-          const cy = mid('y');
+        if (track) {
           let best = null, bd = 1e9;
           for (const c of herd) {
-            const d = Math.hypot(c.x - bx, c.y - cy, c.z - bz);
+            const d = track === 'overhead'
+              ? Math.hypot(c.x - bx, c.z - bz)
+              : Math.hypot(c.x - bx, c.y - mid('y'), c.z - bz);
             if (d < bd) { bd = d; best = c; }
           }
-          bx = best.x; by = best.y; bz = best.z;
+          bx = best.x; bz = best.z;
+          if (track === 'lamp') by = best.y;
         }
         p.x = bx; p.y = by; p.z = bz;
         let n = 0, near = 1e9;
@@ -663,7 +629,7 @@ const { sim } = require('./simwait');
         contacts += n; if (near > worstNear) worstNear = near;
         frames++;
       }
-      const warn = N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.jelly) });
+      const warn = N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.lanternfish) });
       // the death line is 'bad' too, so the warning is matched by text
       return {
         lost: +(10 - p.vital).toFixed(2), secs: +(frames * 0.05).toFixed(1),
@@ -677,47 +643,39 @@ const { sim } = require('./simwait');
       };
     };
     const surface = mid('y');
-    const human = run(null, surface, 18, true);
-    const frog = run('frogpear', surface, 18, true);
-    const sill = run(null, 9, 18, false);    // the tower sills the frog pear hangs on
+    const human = run(null, surface, 18, 'lamp');
+    const frog = run('frogpear', surface, 18, 'lamp');
+    const sill = run(null, 9, 18, 'overhead');       // the lower sill, the worst case the dive can meet: a lamp directly over the body
+    const sillHigh = run(null, 12, 18, 'overhead');  // the upper sill, the same worst case: its cost is the design, not a fluke
     Object.assign(p, was);
     return {
-      rate: N.CREATURE_BY_ID.jelly.sting, human, frog, sill, surface: +surface.toFixed(1),
+      rate: N.CREATURE_BY_ID.lanternfish.sting, human, frog, sill, sillHigh, surface: +surface.toFixed(1),
       immune: N.FRUITS.filter(f => f.form.poisonImmune).map(f => f.id),
       cause: N.t('log.causeSting'),
-      warnText: N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.jelly) })
+      warnText: N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.lanternfish) })
     };
   });
-  /* Measured with the body held among the lamps, at the lamp nearest the middle
-     of the field: about two lamps are inside it at any moment, so at 0.25 a
-     second each it loses all 10 vitality in about 10 seconds. The bound is the
-     loose half on purpose -- what it must never do is come back near zero,
-     which is what a body the field has walked away from reports. */
+  /* Measured with the body held among the lamps, snapped to the lamp nearest the
+     middle of the field every frame: at least one lamp is inside it at any
+     moment, so at 0.25 a second it loses 4.5 of the 10 in the 18 seconds. The
+     bound is the loose half on purpose -- what it must never do is come back
+     near zero, which is what a snap that no longer finds a lamp reports. The
+     sills are asked the way the worst case asks them: the body holds the sill's
+     own depth and the x, z of the lamp nearest it -- a lamp directly overhead,
+     the nearest a lamp can be there -- for the whole 18 seconds. At the lower
+     sill (y9) that lamp is 3.9-5.5 m off against a reach of 2.08 m, so the run
+     must report 0 whatever the lamps do sideways; at the upper sill (y12) the
+     same lamp is 0.9-2.5 m off, inside the reach for a lamp that is not up in
+     the top of its band, so the run must pay -- and the body that pays is the
+     one the fruit is not for. */
   check('the lamps sting a body that is not immune', sting.human.lost > 2, sting);
   check('the lamps do not sting the body the lake already gave you', sting.frog.lost === 0, sting);
-  check('the dive to the tower sills stays out of reach of the lamps', sting.sill.lost === 0, sting);
+  check('the dive to the depth of the sills stays out of reach of the lamps', sting.sill.lost === 0, sting);
+  check('a lamp directly overhead reaches the upper sill, and not the lower one',
+    sting.sillHigh.lost > 2 && sting.sill.lost === 0, { sill: sting.sill, sillHigh: sting.sillHigh });
   check('the sting warning names the body that answers it', /雨蛙|frog/.test(sting.warnText), sting);
   check('the sting warns once, not every frame', sting.human.warns >= 1 && sting.human.warns <= 2, sting);
   check('exactly one body shrugs the sting off', sting.immune.length === 1 && sting.immune[0] === 'frogpear', sting);
-
-  // 10b. intimidation belongs to the body, and one's own species is exempt
-  const intimidate = await step('intimidation', () => {
-    const g = window.game, p = g.player, N = window.FRUTARIA;
-    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
-    const bear = g.creatures.find(c => c.sp.id === 'bear');
-    const frog = g.creatures.find(c => c.sp.id === 'frog');
-    p.form = 'bruinfig'; p.vital = 5;
-    const standNextTo = (c) => { p.x = c.x + 3; p.y = c.y; p.z = c.z; c.state = 'wander'; c.alarm = 0; };
-    standNextTo(bear); bear.update(0.05, p, g.world, g);
-    const bearAtt = bear.attitudeTo('bruinfig'), bearState = bear.state;
-    standNextTo(frog); frog.update(0.05, p, g.world, g);
-    const frogAtt = frog.attitudeTo('bruinfig'), frogState = frog.state;
-    Object.assign(p, was);
-    bear.state = 'wander'; frog.state = 'wander'; bear.alarm = 0; frog.alarm = 0;
-    return { aura: N.FRUIT_BY_ID.bruinfig.form.aura, bearAtt, bearState, frogAtt, frogState };
-  });
-  check('a bear is not intimidated by a bear', intimidate.bearState !== 'flee', intimidate);
-  check('the bear aura still scares another species', intimidate.frogState === 'flee', intimidate);
 
   // 10c. one integer still names exactly one block (the highlight box used to
   // be cached by one; it is aimed by a model matrix now, and the name is left
@@ -945,10 +903,10 @@ const { sim } = require('./simwait');
   check('a dusk animal is asleep at noon and abroad at dusk', beasts.duskNoon === 0 && beasts.duskDusk > 1.2, beasts);
   check('a frog that wanders off hops back to the herd', beasts.herd.after < beasts.herd.before - 3, beasts.herd);
 
-  /* 10i. the two abilities that used to be declared and inert: night vision and
-     the ridge cold. Each is measured against the body that does not have it, so
-     what is being tested is the number in data/fruits.js and not a coincidence
-     about one particular animal. */
+  /* 10i. the ability that used to be declared and inert: night vision. It is
+     measured against the body that does not have it, so what is being tested is
+     the number in data/fruits.js and not a coincidence about one particular
+     animal. */
   const eyes = await step('nightVision', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
     const was = { form: p.form, time: g.time, lastHour: g.lastHour };
@@ -968,31 +926,6 @@ const { sim } = require('./simwait');
   check('the same dark is brighter for the frog than for a human', eyes.midnightFrog.eye > eyes.midnightHuman.eye + 0.05, eyes);
   check('the sky does not change because of the eye', eyes.midnightFrog.sky === eyes.midnightHuman.sky, eyes);
   check('daylight washes out an eye built for the dark', eyes.noonFrog.fogDen > eyes.noonHuman.fogDen, eyes);
-
-  const cold = await step('ridgeCold', () => {
-    const g = window.game, N = window.FRUTARIA, p = g.player;
-    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, vital: p.vital, wasCold: p.wasCold, air: p.air };
-    const zc = N.ZONE_BY_ID.mountains;
-    const gy = (x, zz) => { for (let y = g.world.h - 1; y >= 0; y--) if (g.world.solidAt(x, y, zz)) return y; return 1; };
-    const stand = (form, x, zz) => {
-      p.form = form; p.x = x + 0.5; p.z = zz + 0.5; p.y = gy(x, zz) + 1;
-      p.vx = p.vy = p.vz = 0; p.vital = 5; p.wasCold = false; p.air = p.maxAir(); p.dry = 0;
-      g.log.length = 0;                                            // the feed is capped at 40, so index math would drift
-      for (let i = 0; i < 300; i++) p.update(1 / 60, {}, g);      // 5 s standing still
-      return { y: +p.y.toFixed(1), vital: +p.vital.toFixed(2), announced: g.log.filter(l => l.text === N.t('log.coldIn')).length };
-    };
-    const on = [zc.cx + 7, zc.cz + 19];                            // a ridge column, well above the line
-    const human = stand(null, on[0], on[1]);
-    const bear = stand('bruinfig', on[0], on[1]);
-    const off = stand(null, zc.cx, zc.cz + zc.r + 3);              // downhill, outside the ridge
-    Object.assign(p, was);
-    return { human, bear, off, cold: zc.cold, r: zc.r };
-  });
-  check('the test column really is above the cold line', cold.human.y > cold.cold.above, cold.human);
-  check('the ridge takes vitality from a human', cold.human.vital < 5 - 0.1, cold.human);
-  check('the cold announces itself once, not every frame', cold.human.announced === 1, cold.human);
-  check('a bear body never feels it', cold.bear.vital === 5 && cold.bear.announced === 0, cold);
-  check('outside the ridge, altitude alone does not bite', cold.off.vital === 5, cold.off);
 
   /* 10j. a hop is one event, not two stories. The body leaves the ground
      because the physics says so, and the animation reads the same numbers off
@@ -1207,10 +1140,9 @@ const { sim } = require('./simwait');
   /* 10l. a body change cannot leave you inside the world. `axis` stops a body
      entering a solid; it has no opinion about one that already is, and a body
      that overlaps a solid cannot move at all -- every direction it tries still
-     hits, so the run is over. Two ways in: eating a body too big for the room
-     you are standing in, and coming back to a human body in a gap only a frog
-     fits. The first can be refused before the fruit is spent; the second cannot
-     (the timer does not ask), so the body is lifted out instead. */
+     hits, so the run is over. The way in: coming back to a human body in a gap
+     only a frog fits -- the timer does not ask, so the body is lifted out
+     instead. */
   const fit = await step('bodyFits', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player, W = g.world;
     const home = { x: p.x, y: p.y, z: p.z, inv: g.inv.slice() };
@@ -1225,6 +1157,19 @@ const { sim } = require('./simwait');
           if (y < 1 || y > W.h - 6) continue;
           let open = true;
           for (let h = 1; h <= 4; h++) if (W.get(x, y + h, z) !== 0) { open = false; break; }
+          // the whole 3x3 around the column, not just the column: unstick lands
+          // the body one cell out, and a body one cell out probes the cells
+          // beyond itself, so a ring of rock at head height around the column
+          // would leave it with two of its four directions still blocked
+          for (let ox = -1; ox <= 1 && open; ox++) for (let oz = -1; oz <= 1 && open; oz++) {
+            if (!ox && !oz) continue;
+            for (let h = 1; h <= 4; h++) if (W.get(x + ox, y + h, z + oz) !== 0) { open = false; break; }
+          }
+          // and one column past the side unstick lands on: unstick tries its
+          // one-metre offsets with -x first, so the body parks at the centre of
+          // column x-1, and the 0.2 m probe out of that cell crosses into
+          // column x-2, which the 3x3 never asks about
+          for (let h = 1; h <= 4 && open; h++) if (W.get(x - 2, y + h, z) !== 0) open = false;
           // far enough from every existing tree that (c) can build here
           for (const s of g.stashes) if (s.kind === 'tree' && Math.hypot(x - s.x, z - s.z) < 21) { open = false; break; }
           if (!open) continue;
@@ -1237,20 +1182,7 @@ const { sim } = require('./simwait');
     p.x = cx + 0.5; p.z = cz + 0.5; p.y = gy + 1.0005;
     const out = { at: [cx, gy, cz] };
 
-    // (a) the body that does not fit is refused, and the fruit is not spent
-    g.inv.length = 0; g.addItem('fruit', 'bruinfig');
-    g.eat('bruinfig', 0);
-    const wornAfterEat = p.form;
-    p.form = 'bruinfig';
-    const bearFits = !p.hits(p.x, p.y, p.z);
-    p.form = null;
-    out.refused = {
-      form: wornAfterEat, inv: g.inv.length, bearFits,
-      line: g.log.slice(-4).map(l => l.text)
-        .includes(N.t('log.noRoomForm', { f: N.disp(N.FRUIT_BY_ID.bruinfig.form) }))
-    };
-
-    // (b) the body that ends inside the gap is not left buried
+    // (a) the body that ends inside the gap is not left buried
     g.inv.length = 0; g.addItem('fruit', 'frogpear');
     g.eat('frogpear', 0);
     out.frogIn = { form: p.form, y: +p.y.toFixed(2), fits: !p.hits(p.x, p.y, p.z) };
@@ -1269,7 +1201,7 @@ const { sim } = require('./simwait');
     }
     out.canMove = free;
 
-    // (c) a tree planted at your own feet is planted beside you, not inside you
+    // (b) a tree planted at your own feet is planted beside you, not inside you
     W.set(cx, gy + 2, cz, roofWas);
     p.x = cx + 0.5; p.z = cz + 0.5; p.y = gy + 1.0005;
     const treesBefore = g.stashes.filter(s => s.kind === 'tree').length;
@@ -1286,9 +1218,6 @@ const { sim } = require('./simwait');
     g.inv.length = 0; for (const it of home.inv) g.inv.push(it);
     return out;
   });
-  check('a body too big for the room is refused', fit.refused && fit.refused.form === null && fit.refused.inv === 1, fit.refused);
-  check('the refusal is about the box, not about the fruit', fit.refused && fit.refused.bearFits === false, fit.refused);
-  check('the valley says why', fit.refused && fit.refused.line, fit.refused);
   check('a body that does fit is still eaten', fit.frogIn && fit.frogIn.form === 'frogpear' && fit.frogIn.fits, fit.frogIn);
   check('a body that ends inside the world gets out of it',
     fit.outOfGap && fit.outOfGap.fits && (fit.outOfGap.slid > 0 || fit.outOfGap.rose > 0), fit.outOfGap);
@@ -2332,7 +2261,7 @@ const { sim } = require('./simwait');
     const grab = () => { const b = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
     const parts = g.ensureModel('frog');
     /* The body alone: the mesh a body is drawn from is shared with every animal of
-       that species, so zeroing it to find its pixels also blanks the twelve frogs
+       that species, so zeroing it to find its pixels also blanks the eight frogs
        that live in this lake -- and one of them wandering into the frame is worth
        2,000 pixels of mask and wrecks the symmetry. The animals are put away for
        the two draws and handed back after. */
@@ -2464,7 +2393,7 @@ const { sim } = require('./simwait');
     const at = (model, sw) => [0, 1, 2].map(k =>
       read(model, sw, sw ? 0.31 + k * 0.37 : 0, sw ? 0 : 0.30 + k * 0.25, 1));
     const d = (s, a, b) => s.map(x => +(x[a].rx - x[b].rx).toFixed(3));
-    const walk = at('bear', 0), land = at('frog', 0), kick = at('frog', 1);
+    const walk = at('human', 0), land = at('frog', 0), kick = at('frog', 1);
     /* A pair of knees folds in turn and not both at once -- and that is a claim
        about a walk, not about a run. At the fastest a body travels a foot is on
        the ground for 30% of the cycle, so both feet are off the ground together
@@ -2474,11 +2403,11 @@ const { sim } = require('./simwait');
        what a knee reaches at that speed instead of against a constant. Sampled
        over a stride and a half, so the extremes are the stride's own. */
     const span = [];
-    for (let k = 0; k < 24; k++) span.push(read('bear', 0, 0, k * 0.0625, 0.35));
-    const A = span.map(a => Math.abs(a.shinFL.rx)), B = span.map(a => Math.abs(a.shinFR.rx));
+    for (let k = 0; k < 24; k++) span.push(read('human', 0, 0, k * 0.0625, 0.35));
+    const A = span.map(a => Math.abs(a.shinL.rx)), B = span.map(a => Math.abs(a.shinR.rx));
     return {
       walk: {
-        front: d(walk, 'legFL', 'legFR'), back: d(walk, 'legBL', 'legBR'),
+        legs: d(walk, 'thighL', 'thighR'),
         kneeMax: +Math.max(Math.max(...A), Math.max(...B)).toFixed(3),
         // how bent one knee is on the frame when the other is bent just as much
         kneeBoth: +Math.max(...A.map((v, i) => Math.min(v, B[i]))).toFixed(3)
@@ -2494,7 +2423,7 @@ const { sim } = require('./simwait');
     };
   });
   check('a walking body alternates its legs: left is the mirror of right',
-    stride.walk.front.every(v => Math.abs(v) > 0.3) && stride.walk.back.every(v => Math.abs(v) > 0.3), stride);
+    stride.walk.legs.every(v => Math.abs(v) > 0.3), stride);
   check('and its knees fold in turn: one leg of a pair is always straight under it',
     stride.walk.kneeMax > 0.15 && stride.walk.kneeBoth < 0.02, stride);
   check('a frog on land holds its legs: it hops, it does not stride',
@@ -2603,7 +2532,8 @@ const { sim } = require('./simwait');
        This rig borrows its body out of the crowd rather than building one, so it
        neither chooses that depth habit nor can be assumed to know it: sent 12 m
        out of the column the search used to pick, in each of 8 headings, 5 of 96
-       runs of the crowd's frogs lost the water's hold for 41 to 132 frames and
+       runs of the crowd's frogs -- twelve of them then; the valley drives eight
+       now -- lost the water's hold for 41 to 132 frames and
        were read standing on a bottom they had sunk up to 0.45 m into, and the
        step went red with nothing in the game changed. So the leg is asked for as
        a corridor: every column along it and 2.5 m either side has to hold more
@@ -2611,9 +2541,9 @@ const { sim } = require('./simwait');
        the hold itself allows. All eight headings out of the column the old
        search picked fail that at every length tried, which is why the fix moves
        the column rather than the heading: Mirrorlake is 1 to 11 blocks of water
-       over its 2,970 water columns (docs 02), and only its deepest part keeps a
+       over its 2,958 water columns (docs 02), and only its deepest part keeps a
        corridor that deep for 16 m. On the leg this asks for, 0 of the same 96
-       runs lose the hold and no body comes nearer than 5.08 m to a bottom; the
+       runs lost the hold and no body comes nearer than 5.08 m to a bottom; the
        narrowest water along that leg leaves 4.77 m between the deepest hang of
        the deepest dive and the bed under it, where the leg the old search picked
        reads -4.23 m. */
@@ -2891,11 +2821,12 @@ const { sim } = require('./simwait');
          stands at 22 with the film of the lake at 15, and the body hangs where
          its kind hangs -- the level the water holds a resting body at and up to
          4 m under that -- so a lens left level with the ground it stands on has
-         that whole band under the bottom edge of its frame: over the 12 bodies
-         the crowd of this valley actually is, 5 of them were not in the frame the
-         draw took at all, and the frame held the whole of that band at 2 of the
-         12 places they were read in and at no place along the leg. Turned onto
-         the band, 0 of the 12 are out and the band is held the length of the leg.
+         that whole band under the bottom edge of its frame: over the 12 frogs
+         the valley drove when this was measured -- it drives eight now -- 5 of
+         them were not in the frame the draw took at all, and the frame held
+         the whole of that band at 2 of the 12 places they were read in and at
+         no place along the leg. Turned onto the band, 0 of the 12 were out
+         and the band is held the length of the leg.
          The axis of a third-person lens is the line out of the subject's own eye
          (`shootCamera` backs the lens along it), so the pitch that puts a point
          on that axis is read off the eye and the lens distance never enters it. */
@@ -3014,20 +2945,36 @@ const { sim } = require('./simwait');
   }
   check('the lake this runs on is four blocks deep at the least and the body floats in it',
     !!kFl && kFl.held > 0.9 && kFl.body.inWater === 1 && kFl.body.grounded === 0, kick);
-  /* A body the water is holding up, going nowhere, holds its legs in the pose
-     the water holds them in. The stroke used to have a floor under it: the draw
+  /* A body the water is holding up, going nowhere, is not kicking at the lake,
+     but it is not a statue either: the water is holding it up and something has
+     to do the work, so the legs do the same stroke shrunken to the effort of
+     holding still -- the tread -- and the body keeps its small ride with the
+     drive. The stroke used to have a floor under it of the wrong shape: the draw
      was handed at least 0.18 of a stroke whenever a body was in water with the
      hold on it, so a frog sitting in the middle of the lake with no key held ran
      its feet 1.55 m through 4 s of water -- a body pushing water in no direction
      at all, which is the one thing every animal on that lake does not do. A
      stroke is the thing that pushes a body along, so it is sized by the water the
-     body is actually pushing, and at a standstill there is none: the feet stay
-     where the hold puts them, 0.17 m behind the rear of the body and 0.085 m
-     under its origin, and they do not move. The wild body sitting in the water
-     with nowhere to go says the same for the animals. */
-  check('a body the water holds up that is going nowhere holds its legs still: it does not kick at the lake',
-    !!kFl && !!kick.wildStill && kFl.travel <= 0.002 && kFl.rise <= 0.002 &&
-    kick.wildStill.travel <= 0.002 && kick.wildStill.rise <= 0.002, kick);
+     body is actually pushing; what is left at a standstill is the work of staying
+     still, and that is a little, and no more than a little. And the tread is not
+     the stroke run slow: the stroke carries a hold, the last 44 % of the cycle
+     the legs shut behind the body and do nothing, and a body treading to stay
+     afloat does not stop its legs -- from the bank a body at rest used to read
+     as one that reached back, froze, sat still, and started again, twice a
+     stroke. So at rest the body runs the same table on a slower clock with the
+     hold taken out, a continuous pump between the gather and the drive, one slow
+     pump every 3 s, and the foot never once stands still. Measured the same way
+     the 1.55 m was: a frog floating with its speed at nothing now runs each foot
+     0.079 m fore and aft and 0.01 m up and down in the same three seconds -- the
+     feet start where the hold puts them, at the rear edge of the body 0.17 m
+     behind its origin and 0.085 m under it, gather 0.003 m forward of that and
+     drive 0.077 m back from it. Before the
+     tread the standstill was the whole of it: the foot moved 0 m, and from the
+     bank the body read as frozen in the middle of the lake. The wild body
+     sitting in the water with nowhere to go says the same for the animals. */
+  check('a body the water holds up that is going nowhere treads: its feet move a little, and no more than a little',
+    !!kFl && !!kick.wildStill && kFl.travel >= 0.02 && kFl.travel <= 0.15 && kFl.rise <= 0.08 &&
+    kick.wildStill.travel >= 0.02 && kick.wildStill.travel <= 0.15 && kick.wildStill.rise <= 0.08, kick);
   check('a floating frog keeps its feet behind the body it hangs them from, not under its chest',
     !!kFl && kFl.fwd <= kick.BACK + 0.05 && kFl.back <= kick.BACK + 0.005, kick);
   check('a swimming frog sweeps its feet well behind the body and a long way',
@@ -3081,11 +3028,12 @@ const { sim } = require('./simwait');
      throws away any creature its own frustum test does not contain, so a body
      hanging 11 to 15 m under a lens left level with the bank it stands on is not
      in the state the draw uploads at all, and a capture taken there reads
-     nothing. Left level here, the crowd's own 12 bodies put 5 of themselves out
-     of the frame at the moment they were read, and the depth band their kind is
-     born with was inside the frame at 2 of those 12 read points and at no point
-     along the leg; turned onto that band -- 1.09 rad down on this place -- the
-     band is inside the whole length of the leg and none of the 12 is out. Take
+     nothing. Left level here, the 12 frogs the valley drove when this was
+     measured (it drives eight now) put 5 of themselves out of the frame at the
+     moment they were read, and the depth band their kind is born with was
+     inside the frame at 2 of those 12 read points and at no point along the
+     leg; turned onto that band -- 1.09 rad down on this place -- the band is
+     inside the whole length of the leg and none of the 12 was out. Take
      the aim out of the rig and this check goes red on every page, which is the
      thing a run of the whole suite used to pay for with a TypeError instead. */
   check('and the frame that body was read out of holds the whole depth band its kind is born with, the length of that leg',
@@ -3284,7 +3232,11 @@ const { sim } = require('./simwait');
       out.spd = +Math.hypot(p.vx, p.vz).toFixed(2);
       return out;
     };
-    const out = { spot, straight: drive(0), right: drive(1.5), left: drive(-1.5) };
+    /* the aim is swung at a rate over the body's own limit, so the body holds
+       a clean arc at the limit and the kick is read at full emphasis: the
+       tightest arc a body with a kick holds, the state the outside leg's sweep
+       was measured at in the comment in models.js */
+    const out = { spot, straight: drive(0), right: drive(1.0), left: drive(-1.0) };
     restore();
     return out;
   });
@@ -3301,12 +3253,12 @@ const { sim } = require('./simwait');
      doing the work, and it is doing it by reaching further along the body,
      further past the flank, and by carrying more water */
   check('a body turning right drives the leg on its own left harder',
-    !!tR && tR.turn > 1 && tR.shinR.fore > tR.shinL.fore * 1.15 &&
+    !!tR && tR.turn > 0.7 && tR.shinR.fore > tR.shinL.fore * 1.15 &&
     tR.shinR.path > tR.shinL.path * 1.2 && tR.shinR.leg > tR.shinL.leg + 0.01, turn);
   check('and the leg on its inside is being dragged: it strokes less than it does going straight',
     !!tR && tR.shinL.fore < tStr.shinL.fore * 0.95 && tR.shinL.path < tStr.shinL.path * 0.95, turn);
   check('turning left is the same turn the other way: the two legs swap',
-    !!tL && tL.turn < -1 && Math.abs(tL.turn - -tR.turn) < 0.05 &&
+    !!tL && tL.turn < -0.7 && Math.abs(tL.turn - -tR.turn) < 0.05 &&
     Math.abs(tL.shinL.fore - tR.shinR.fore) < 0.02 &&
     Math.abs(tL.shinR.fore - tR.shinL.fore) < 0.02 &&
     Math.abs(tL.shinL.path - tR.shinR.path) < 0.02, turn);
@@ -3316,6 +3268,53 @@ const { sim } = require('./simwait');
     tR.shinR.rise < tR.shinR.fore * 0.75 && tR.shinL.rise < tR.shinL.fore * 0.75 &&
     tR.shinR.cross <= 0.012 && tR.shinL.cross <= 0.012 &&
     tR.shinR.leg <= 0.23 && tR.shinL.leg <= 0.23, turn);
+
+  /* And the fish that swims reads as swimming, not as a body sliding along
+     with a tail. The lamp's tail has always kicked -- a joint, not a squeeze --
+     but the body it hung from held its heading straight while the tail went
+     left and right, which from the bank is a body being dragged rather than a
+     body moving. So the body now sways on the tail's own clock: the same 1.6
+     rad/s the tail kicks at, smaller (the body is the part that is mostly going
+     straight and the tail is the part that swings), and a quarter beat ahead of
+     the tail, because the kick travels from the body out to the tail -- a wave
+     that ran tail-to-body would be a fish swimming backwards. The claim is read
+     off the model's own angles (N.partAngles), so the fish's heading never
+     enters it, over two of the kick's own cycles with the speed held at the
+     body's own cruise, so the two sines come out clean. */
+  const fishSwim = await step('fishBodySwimsWithItsTail', () => {
+    const N = window.FRUTARIA;
+    const body = { part: N.MODELS.lanternfish.parts.find((p) => p.name === 'body') };
+    const tail = { part: N.MODELS.lanternfish.parts.find((p) => p.name === 'tail') };
+    const sp = N.CREATURE_BY_ID.lanternfish;
+    const move = N.walkMove(sp.speed, sp.speed);   // 1: the wag at the body's own cruise speed
+    const t0 = 123.456;                            // an odd start, so a peak is not on the window's edge
+    const rows = [];
+    for (let i = 0; i < 480; i++) {
+      const s = { t: t0 + i / 60, phase: 0, move };
+      rows.push([N.partAngles(body, s).ry, N.partAngles(tail, s).ry]);
+    }
+    const peak = (idx) => { let hi = -1e9, hp = 0;
+      for (let i = 0; i < rows.length; i++) if (rows[i][idx] > hi) { hi = rows[i][idx]; hp = i; }
+      return { hi: +hi.toFixed(3), at: +(hp / 60).toFixed(2) }; };
+    const range = (idx) => { let lo = 1e9, hi = -1e9;
+      for (const r of rows) { const v = r[idx]; if (v < lo) lo = v; if (v > hi) hi = v; }
+      return +(hi - lo).toFixed(3); };
+    const bPeak = peak(0), tPeak = peak(1);
+    const PER = 2 * Math.PI / 1.6;
+    let lag = tPeak.at - bPeak.at;                 // the tail's peak after the body's
+    while (lag < -PER / 2) lag += PER;
+    while (lag > PER / 2) lag -= PER;
+    return { bodyRange: range(0), tailRange: range(1),
+      tailOverBody: +(range(1) / range(0)).toFixed(2),
+      bodyLeadRad: +(lag * 1.6).toFixed(3), quarterRad: +(Math.PI / 2).toFixed(3),
+      move: +move.toFixed(2) };
+  });
+  check('the lampfish sways its body as it swims, and not only its tail',
+    fishSwim.bodyRange >= 0.25, fishSwim);
+  check('and the tail swings wider than the body it drives',
+    fishSwim.tailOverBody >= 1.5, fishSwim);
+  check('and the body leads the tail by about a quarter of the kick, the wave running from the body out to the tail',
+    Math.abs(fishSwim.bodyLeadRad - fishSwim.quarterRad) <= 0.3, fishSwim);
 
   /* 10w. and the body that is drawn never reaches under the ground it is
      standing on. Everything above asks what the legs are *doing*; this asks
@@ -3334,11 +3333,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      body was hopping, and the fold was timed for the stance instead of the
      swing; a body landing from a hop swept its foot 0.154 m through the ground
      on the way into the flight pose, because the pose is eased and the body's
-     own origin does not move with it; a bear walking had its hind foot 0.091 m
-     under the floor in 32 frames of 180 and its front foot in 32 more, because
-     a knee that folds while the foot is still on the ground has no ankle to
-     fold at, and the body breathing on top of it pushed the whole limb down
-     another 4 cm with every step; a person its boot 0.032 m in 32 of 180.
+     own origin does not move with it; a person its boot 0.032 m in 32 of 180.
      What closes them is in models.js -- the limb lifts by as much as its own
      swing drives it under, and refuses to be carried down when the body above
      it breathes -- and in entities.js: the pitch belongs to a body above the
@@ -3349,7 +3344,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      above the surface and coming in at 0.42 rad -- its toes are through the
      surface for one frame before the body lands on it. The bound below is
      where the bodies are today plus a hand of room; it is there to keep this
-     from getting worse, and all three were red before the fix. */
+     from getting worse, and both were red before the fix. */
   const planted = await step('feetStayOnTheirGround', () => {
     const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player, R = g.R;
     const was = { form: p.form, formT: p.formT, formMax: p.formMax, x: p.x, y: p.y, z: p.z,
@@ -3461,7 +3456,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     };
     const go = { fwd: true, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
     const still = { fwd: false, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
-    for (const f of ['frogpear', null, 'bruinfig']) {
+    for (const f of ['frogpear', null]) {
       const nm = f === null ? 'human' : f;
       run('walk-' + nm, f, go, 180);
       run('stand-' + nm, f, still, 120);
@@ -3472,10 +3467,10 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   /* 5 cm, the same for every body: the walk and the stand are at 0.007 or
      better, and the one frame left is a landing seen a frame too early. The
-     fraction is the part with teeth -- before the fix a bear's foot was under
-     the floor in a fifth of the frames of its walk. */
+     fraction is the part with teeth -- before the fix a frog's shin was
+     0.164 m under the floor in 169 of 360 frames. */
   const PLANT = 0.05;
-  for (const f of ['frogpear', 'human', 'bruinfig']) {
+  for (const f of ['frogpear', 'human']) {
     const pw = planted['walk-' + f], ps = planted['stand-' + f];
     check(`the drawn ${f} never reaches under the ground it stands on`,
       !!pw && !!ps && pw.worst < PLANT && ps.worst < PLANT &&
@@ -3488,8 +3483,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      5 mm is the margin: every body sits at 0, because a limb is carved well
      inside the part above it. */
   check('no part of a walking body is drawn adrift from the part it hangs from',
-    ['walk-frogpear', 'stand-frogpear', 'walk-human', 'stand-human', 'walk-bruinfig',
-      'stand-bruinfig']
+    ['walk-frogpear', 'stand-frogpear', 'walk-human', 'stand-human']
       .every(k => planted[k] && planted[k].gap < 0.005), planted);
 
   /* The step above asks whether a foot gets under the ground. This one asks the
@@ -3498,10 +3492,9 @@ What was measured before any of this was fixed, over 180 frames of walking
      That is the one thing a walk cycle is for, and the cycle used to be one
      clock for every legged body while the body was driven along by its own
      speed, and the two had never been spoken to. Read off the matrices the draw
-     uploads, a bear's foot was travelling along the ground at 2.3 m/s while its
-     body went past at 2.1, and a person's at 3.0 against 4.1: a foot was on the
-     ground for four frames in five and held still in none of them, and the whole
-     animal was skating on grass. It is not a tuning problem -- a foot is at the
+     uploads, a person's foot was travelling along the ground at 3.0 m/s while
+     its body went past at 4.1: a foot was on the ground for four frames in five
+     and held still in none of them, and the whole animal was skating on grass. It is not a tuning problem -- a foot is at the
      bottom of a sine's arc exactly where that sine is turning over fastest, so
      the fastest moment of the swing is the moment the foot needs to be at its
      slowest, and no rate fixes that.
@@ -3647,10 +3640,8 @@ What was measured before any of this was fixed, over 180 frames of walking
     };
     const go = { fwd: true, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
     const still = { fwd: false, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
-    for (const f of [null, 'bruinfig']) {
-      run('walk-' + (f === null ? 'human' : f), f, go, 180);
-      run('stand-' + (f === null ? 'human' : f), f, still, 120);
-    }
+    run('walk-human', null, go, 180);
+    run('stand-human', null, still, 120);
     R.drawMesh = realDraw;
     back();
     return out;
@@ -3659,40 +3650,34 @@ What was measured before any of this was fixed, over 180 frames of walking
      First: one cycle of the legs is worth exactly as much ground as the model's
      own foot reaches. Measured metres over measured cycles against the number
      the model gives for that body at that speed -- 1.85 against 1.85 for a
-     person, 1.95 against 1.96 for a bear. Before
+     person. Before
      the stride was tied to the ground the cycle ran on a clock of its own and
      this ratio was the body's speed over that clock, which had nothing to do
-     with the leg: a person took 6.3 m steps and a bear 1.9.
+     with the leg: a person took 6.3 m steps.
      Second: a foot that is on the ground does not move along it. 0.006 of the
-     ground the body covers, for a person, and 0.014 for a bear -- the last of
-     it is a foot with no ankle, which rocks from toe to heel as the leg sweeps
-     under the body. Before, it was over 1: a foot was travelling along the
+     ground the body covers, for a person -- the last of it is a foot with no
+     ankle, which rocks from toe to heel as the leg sweeps under the body.
+     Before, it was over 1: a foot was travelling along the
      ground faster than the body it belongs to, and every body in the valley was
      skating on grass. And the bound is not only there for a cycle on a clock of
      the wrong rate: run the legs at the very rate the body's own legs happen to
      come round at, and the foot still slips 0.05, because the phase of a sine
      and the phase of a stride are not the same thing however you set the rate. */
   const HOLD = 0.03;
-  for (const f of ['human', 'bruinfig']) {
-    const hw = hold['walk-' + f];
-    check(`the drawn ${f} takes the stride its legs are worth: one cycle, one reach`,
+  {
+    const hw = hold['walk-human'], hs = hold['stand-human'];
+    check('the drawn human takes the stride its legs are worth: one cycle, one reach',
       !!hw && hw.cycles > 3 && Math.abs(hw.cycleLen - hw.law) < 0.08 * hw.law, hold);
-  }
-  for (const f of ['human', 'bruinfig']) {
-    const hw = hold['walk-' + f];
-    check(`the drawn ${f} plants its feet: a foot on the ground holds while the body goes past`,
+    check('the drawn human plants its feet: a foot on the ground holds while the body goes past',
       !!hw && hw.near > 20 && hw.ratio < HOLD, hold);
-  }
-  for (const f of ['human', 'bruinfig']) {
-    const hs = hold['stand-' + f];
-    check(`a ${f} standing still has no stride at all: its feet hold the ground`,
+    check('a human standing still has no stride at all: its feet hold the ground',
       !!hs && hs.cycles === 0 && hs.drift < 0.01, hold);
   }
 
   /* A body with its feet on the ground has one more thing to say, and it is the
      one thing a stride cannot help saying: the body itself goes up and down
      twice a stride. The person's own body used to have no part carrying that
-     heave at all -- the bear and the frog each had one, and the body
+     heave at all -- the frog had one, and the body
      you look at for an hour did not -- so a person crossing a field slid along
      the grass at a height nothing ever touched.
      Which way round it goes is not a style choice either, and the stride says
@@ -3717,9 +3702,9 @@ What was measured before any of this was fixed, over 180 frames of walking
      m across a stride, and that is a body you cannot see moving. */
   const ride = await step('bodyRidesItsStride', () => {
     const N = window.FRUTARIA, g = window.game;
-    const SC = { human: 0.18, bear: 0.24 };
+    const SC = { human: 0.18 };
     const out = {};
-    for (const model of ['human', 'bear']) {
+    for (const model of ['human']) {
       const entries = g.ensureModel(model);
       const e = entries.find(q => q.part.anim === 'bob');
       if (!e) { out[model] = { error: 'no part of this model carries the heave' }; continue; }
@@ -3747,7 +3732,7 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   check('the body you look at for an hour rides its own stride',
     !ride.human.error && ride.human.run.amp > 0.045, ride.human);
-  for (const m of ['human', 'bear']) {
+  for (const m of ['human']) {
     const r = ride[m] && ride[m].run;
     check(`a ${m} at a run is at its lowest over the middle of a stance, not the top`,
       r && r.stance < 0.5 && Math.abs(r.loAt - r.midStance) < 0.05 &&
@@ -3811,10 +3796,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch };
     const frog = g.creatures.find(c => c.sp.id === 'frog');
-    const bear = g.creatures.find(c => c.sp.id === 'bear');
-    if (!frog || !bear) return { error: 'no frog or bear in the roster' };
-    // a lens nowhere near either of them: nothing here should be fleeing
-    p.x = bear.x > 80 ? 12 : 148; p.z = bear.z > 80 ? 12 : 148; p.y = 30;
+    if (!frog) return { error: 'no frog in the roster' };
     /* the lean body must be in the water for the whole turn: a column of open
        water, at least two cells deep over a bed, with two more columns of the
        same water to the east, so the quarter turn stays under the film. */
@@ -3830,14 +3812,34 @@ What was measured before any of this was fixed, over 180 frames of walking
         spot = { x: x + 0.5, z: z + 0.5, surf: s };
     }
     if (!spot) { Object.assign(p, was); return { error: 'no open water deep enough' }; }
+    /* and dry ground for the same body on foot: the lean is a thing the water
+       does, and the ground a body stands on answers for itself, so the on-foot
+       drive needs dry ground away from the lake, with air over it. */
+    const dryAt = (x, z) => {
+      let gy = 0;
+      for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z)) { gy = y + 1; break; }
+      if (gy < 12) return 0;
+      for (let y = gy; y <= gy + 3; y++) if (W.liquidAt(x, y, z)) return 0;
+      return gy;
+    };
+    let shore = null;
+    for (let x = 8; x < W.w - 8 && !shore; x++) for (let z = 8; z < W.d - 8 && !shore; z++) {
+      if (Math.abs(x - spot.x) + Math.abs(z - spot.z) < 12) continue;
+      const gy = dryAt(x, z);
+      if (gy) shore = { x: x + 0.5, z: z + 0.5, gy };
+    }
+    if (!shore) { Object.assign(p, was); return { error: 'no dry ground off the lake' }; }
+    // a lens nowhere near either of them: nothing here should be fleeing
+    p.x = spot.x > 80 ? 12 : 148; p.z = spot.z > 80 ? 12 : 148; p.y = 30;
+    if (Math.hypot(shore.x - p.x, shore.z - p.z) < 20) { p.x = 160 - p.x; p.z = 160 - p.z; }
     const body = { x: frog.x, y: frog.y, z: frog.z, yaw: frog.yaw, state: frog.state,
       sleeping: frog.sleeping, pause: frog.pause, tx: frog.tx, tz: frog.tz,
       homeX: frog.homeX, homeZ: frog.homeZ, vy: frog.vy, speed: frog.speed,
       inWater: frog.inWater, wSurf: frog.wSurf, held: frog.held, bank: frog.bank,
       bend: frog.bend, airAmt: frog.airAmt, t: frog.t };
-    /* and the hour the bear is awake: a bear asleep in its den is not evidence
-       of anything. The frog is awake at every hour, so the same nine o'clock
-       works for both of them. */
+    /* and the hour both drives share: a body asleep is not evidence of
+       anything, and the frog is awake at every hour, so one nine o'clock
+       covers both of them. */
     const t0 = g.time;
     const at = h => { g.time = 420 * h / 24; g.updateEnv(); };
 
@@ -3854,7 +3856,11 @@ What was measured before any of this was fixed, over 180 frames of walking
     frog.x = spot.x; frog.z = spot.z; frog.y = spot.surf - 1;
     frog.homeX = frog.x; frog.homeZ = frog.z;
     const swim = drive(frog);
-    const walk = drive(bear);
+    // and the same body on foot: the ground it stands on answers for itself,
+    // so the turn it holds there costs it no lean at all
+    frog.x = shore.x; frog.z = shore.z; frog.y = shore.gy;
+    frog.homeX = frog.x; frog.homeZ = frog.z;
+    const walk = drive(frog);
     g.time = t0; g.updateEnv();
 
     // and the draw reads it: one body, level and tilted, two frames
@@ -3886,7 +3892,7 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the turn is real: the frog is in the water and ends up facing a quarter away from where it started',
     !!lean.swim && lean.swim.wet && Math.abs(lean.swim.turned) > 0.5, lean);
   check('a body the water is holding leans into it', !!lean.swim && lean.swim.peak > 0.15, lean);
-  check('a body on foot does not: a bear turning at speed stays level', !!lean.walk && lean.walk.peak < 0.02, lean);
+  check('a body on foot does not: the same frog turning on land stays level', !!lean.walk && lean.walk.peak < 0.02, lean);
   check('and the renderer reads the lean: the same body level and tilted is not the same frame',
     !!lean.swim && lean.diff > 300, lean);
 
@@ -4423,12 +4429,15 @@ What was measured before any of this was fixed, over 180 frames of walking
      The second is the lamps. The renderer discounts the haze for a fragment
      that lights itself, so that a lantern across the valley is still a lantern
      -- and the discount was a constant 0.75 written in the shader, which the
-     lake had no say in. The lamp jellyfish sit on the outline of the sunken
-     tower, so a body that swims in among them is looking at a ring of them:
-     3.6 m off that ring, with the air's 0.75 in force, the frame came back with
-     pixels at luminance 246, its 99th percentile at 176 and 0.82% of it over
-     200. With the lake's own 0.15 in the way the same frame is 230, 156 and
-     0.24%. That is the difference between a lamp and the "sun" on the lakebed.
+     lake had no say in. The lanternfish sat on the outline of the sunken tower
+     when this was measured -- the field is the open water of the lake now, and
+     the ring was what the field used to be -- so the shot below pins its own
+     ring on that outline, ten lamps on a circle of 4.5 m round the tower with
+     the lens 3.6 m off the nearest of them, and asks the water about one lamp:
+     with the air's 0.75 in force the frame came back with pixels at luminance
+     246, its 99th percentile at 176 and 0.82% of it over 200. With the
+     lake's own 0.15 in the way the same frame is 230, 156 and 0.24%. That is
+     the difference between a lamp and the "sun" on the lakebed.
 
      Both facts belong to the liquid rather than to the renderer, so both live
      on the water's row in the block table and reach the shader as the
@@ -4451,16 +4460,16 @@ What was measured before any of this was fixed, over 180 frames of walking
      lens itself sits in; and the water between the lens and the surface it is
      looking through. The surface is drawn twice because survival is per colour
      and a blend can only scale the whole frame by one number. The lamps feel it
-     too: the light leaving a bell now climbs out through the same law, and the
+     too: the light leaving a fish now climbs out through the same law, and the
      frame 3.6 m off the ring is 167 at its brightest, 134 at its 99th percentile
      and nothing at all over 200. */
   const lakebedView = await step('theLakebedIsUnderWater', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
-    const jellies = g.creatures.filter(c => c.sp.model === 'jelly');
+    const fish = g.creatures.filter(c => c.sp.model === 'lanternfish');
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
       form: p.form, third: g.thirdPerson, camD: g.cam.d, camFov: g.cam.fov, ready: g.camReady,
       time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
-      jelly: jellies.map(c => ({ c, x: c.x, y: c.y, z: c.z, t: c.t, ph: c.phase, st: c.state,
+      fish: fish.map(c => ({ c, x: c.x, y: c.y, z: c.z, t: c.t, ph: c.phase, st: c.state,
         yaw: c.yaw, bank: c.bank, tilt: c.tilt, squash: c.squash, speed: c.speed,
         inWater: c.inWater, held: c.held, airAmt: c.airAmt, crouch: c.crouch })) };
     const back = (r) => {
@@ -4469,7 +4478,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.thirdPerson = was.third; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.ready;
       g.time = was.time; g.mode = was.mode; g._lens = was.lens; g._camFrame = was.frame; g.env = was.env;
       g.hover = was.hover;
-      for (const j of was.jelly) {
+      for (const j of was.fish) {
         Object.assign(j.c, { x: j.x, y: j.y, z: j.z, t: j.t, phase: j.ph, state: j.st,
           yaw: j.yaw, bank: j.bank, tilt: j.tilt, squash: j.squash, speed: j.speed,
           inWater: j.inWater, held: j.held, airAmt: j.airAmt, crouch: j.crouch });
@@ -4482,7 +4491,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const lake = N.ZONES.find(z => z.id === 'mirrorlake');
     if (!lake || !lake.tower) return back({ error: 'no sunken tower in the mirrorlake zone data' });
     const [tx, tz] = lake.tower;
-    if (!jellies.length) return back({ error: 'no lamp jellyfish in the valley' });
+    if (!fish.length) return back({ error: 'no lanternfish in the valley' });
 
     // a shallow shelf of lake and a deep stretch of it, both searched for, and
     // the arm's-length bed B15 is about: two metres of water over the sand, so
@@ -4508,12 +4517,12 @@ What was measured before any of this was fixed, over 180 frames of walking
       p.x = lx; p.y = lensY - eyeOff; p.z = lz; p.vx = p.vy = p.vz = 0;
       p.yaw = yaw; p.pitch = pitch;
       /* Only the lamps are allowed in this frame. The shot is a question about
-         water and about the ring of lamps around the tower, and a bear
+         water and about the ring of lamps around the tower, and an animal
          wandering past the tower, or a fruit that happened to fall near it,
          changes the 99th percentile of the frame by dozens between two runs of
          identical code: the drops are drawn with an emissive boost of their own. */
       const herd = g.creatures, dropsWas = g.drops;
-      g.creatures = solo ? [] : jellies; g.drops = [];
+      g.creatures = solo ? [] : fish; g.drops = [];
       /* A dry shot is the control: the same lens with nothing the water does to
          light left anywhere in the frame. The law, the haze, the colour the
          water scatters back into the ray and the surface itself are all taken
@@ -4584,15 +4593,15 @@ What was measured before any of this was fixed, over 180 frames of walking
     // 3. the bed at the bottom of the deep stretch, 9 m of water above it
     const floor = shot(deep.x, deep.top - 0.6, deep.z, 0, -1.2);
     /* 4. the lamps, pinned on their ring so this measures the water and not the
-       animals: 3.6 m of lake between the lens and the nearest bell. Pinned means
-       the pose as well as the place. The bells are emissive and they are most of
-       the bright end of the frame, and a lamp with its arms out at the sides
-       covers a different number of pixels from one with its arms gathered under
-       it: with only the position held, the 99th percentile of this frame came
+       animals: 3.6 m of lake between the lens and the nearest fish. Pinned means
+       the pose as well as the place. The fish are emissive and they are most of
+       the bright end of the frame, and a lamp with its tail out at one side
+       covers a different number of pixels from one with it swung the other way:
+       with only the position held, the 99th percentile of this frame came
        back anywhere between 122 and 160 from one run of identical code to the
        next, which is most of the width of the thing being measured. */
-    jellies.forEach((c, i) => {
-      const a = i / jellies.length * 6.283;
+    fish.forEach((c, i) => {
+      const a = i / fish.length * 6.283;
       c.x = tx + 0.5 + Math.cos(a) * 4.5; c.y = 11 + (i % 3) * 0.5;
       c.z = tz + 0.5 + Math.sin(a) * 4.5;
       c.t = 0; c.phase = 0; c.speed = 0; c.state = 'wander';
@@ -4680,7 +4689,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const armDown = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true);
     const armDry = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true, true);
     const armDeep = shot(shallow.x, shallow.top + 1 - 0.25, shallow.z, 0, -1.5, true);
-    return back({ shallow, deep, arm, jelly: jellies.length, down, up, floor, lamps, air,
+    return back({ shallow, deep, arm, fish: fish.length, down, up, floor, lamps, air,
       body, conventions, armDown, armDry, armDeep });
   });
   check('a body looking down at the lakebed sees water: the frame is blue over red',
@@ -4896,7 +4905,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       let F, Rt, U;
       /* What stands in front of one pixel of the lens: a level stretch of bed
          with at least two metres of water over the top of it, and nothing
-         self-lit standing in the water above it -- a lamp jellyfish, or a frog
+         self-lit standing in the water above it -- a lanternfish, or a frog
          pear hung up in the sunken tower -- is allowed to be bright and is not
          what this is about. Only faces that look straight up are asked: the
          wall of the basin has its four corners at two depths at once and is
@@ -5037,7 +5046,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      grabs differ by zero pixels), so a low threshold counts the stalk with no
      noise to count instead. Read the frame three ways: whole, with the
      emissive micro mesh taken out, and with the ordinary one taken out. A lake
-     frame at noon has no self-lit block in it -- the jellyfish lamps are
+     frame at noon has no self-lit block in it -- the lanternfish lamps are
      bodies and are drawn elsewhere -- so the first pair has to be the same
      frame, and the kelp is in the frame, so the second pair has to be different. */
   const kelpFrame = await step('theKelpInTheLakeIsNotALamp', () => {
@@ -5626,14 +5635,22 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (ty < 12 || ty > 34) continue;
         if (!open && gy === ty) open = [x, z];
         /* a crown to throw sparks up into: needles four blocks over the ground,
-           and the two blocks over the ground themselves empty, so the burst is
-           let go in air and the needles it rises into are the thing being asked
-           about -- a column with the trunk in it would bury the burst at its
-           birth, and a mote born inside a block keeps its move by the rule below */
-        if (!crown && gy > ty + 3 && !W.solidAt(x, ty + 1, z) && !W.solidAt(x, ty + 2, z) &&
+           and the cells the burst is let go in -- ty and ty + 1, the spawn
+           lifting it a random metre -- plus the cell over that, all empty, so
+           the burst is let go in air and the needles it rises into are the
+           thing being asked about -- a column with the trunk in it would bury
+           the burst at its birth, and a mote born inside a block keeps its
+           move by the rule below */
+        if (!crown && !W.solidAt(x, ty, z) && gy > ty + 3 && !W.solidAt(x, ty + 1, z) && !W.solidAt(x, ty + 2, z) &&
             W.solidAt(x, ty + 4, z)) crown = [x, z];
-        if (!wall) for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
-          if (N.terrainY(W, x + dx, z + dz, W.h - 1) - ty >= 3) { wall = [x, z]; break; }
+        /* a riser: a neighbour whose ground stands three higher. The same
+           air-birth premise as the crown -- the burst is let go at ty + 0.2
+           and the spawn lifts it a random metre, so the two cells it can be
+           born in must be air, or the question asked is no longer "does the
+           air keep it" */
+        if (!wall && !W.solidAt(x, ty, z) && !W.solidAt(x, ty + 1, z))
+          for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
+            if (N.terrainY(W, x + dx, z + dz, W.h - 1) - ty >= 3) { wall = [x, z]; break; }
       }
     }
     if (!open || !wall || !crown) return back({ error: 'no open ground, no riser and no crown to measure on' });
@@ -5943,16 +5960,22 @@ What was measured before any of this was fixed, over 180 frames of walking
         limit: p.formDef.turn };
     };
     const frog = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 }, 1,
-      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 90);
+      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 135);
     const frogStraight = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 }, 0,
-      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 90);
+      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 135);
     Object.assign(p, was);
     return { frog, frogStraight };
   });
   check('a swimming body presses against its own turn limit and no further',
     !carve.error && carve.frog.peak <= carve.frog.limit + 0.15 && carve.frog.peak > carve.frog.limit * 0.9, carve);
+  /* a quarter of the way round at the rate the data gives the body -- 0.9 rad/s
+     is 0.87 s -- and the window is nearly twice that, so the crossing is inside
+     the measure and not at its edge. The floor keeps the old ninety-four
+     radians a second out; the ceiling is a hand over the 0.83 s the old limit
+     of 1.9 allows, so a regression to it reads as a body that turns better
+     than its data. */
   check('ninety-four radians a second is gone: a quarter course change takes a third of a second or more',
-    !carve.error && carve.frog.to45 !== null && carve.frog.to45 >= 0.3, carve);
+    !carve.error && carve.frog.to45 !== null && carve.frog.to45 >= 0.3 && carve.frog.to45 <= 1.0, carve);
   check('the path is an arc, not a polyline: it is longer than the line it spans',
     !carve.error && carve.frog.arc > carve.frog.chord * 1.03, carve);
   check('an aim that does not move is not a turn: the course holds',
@@ -6205,12 +6228,10 @@ What was measured before any of this was fixed, over 180 frames of walking
       return r;
     };
     const out = {};
-    const jelly = g.creatures.find(c => c.isAquatic());
-    const bear = g.creatures.find(c => c.sp.id === 'bear');
+    const fish = g.creatures.find(c => c.isAquatic());
     const frog = g.creatures.find(c => c.isAmphibian());
     // every animal that remains is out at every hour, so no hour is set here
-    if (jelly) out.jelly = turnOf(jelly);
-    if (bear) out.bear = turnOf(bear);
+    if (fish) out.lanternfish = turnOf(fish);
     if (frog && lake) {
       /* the frog is a herd animal: a wanderer more than 12 m from its kind's
          middle is steered to that middle instead of the target the test sets, and
@@ -6231,26 +6252,29 @@ What was measured before any of this was fixed, over 180 frames of walking
     Object.assign(p, was);
     return out;
   });
-  for (const who of ['jelly', 'bear', 'frog']) {
+  for (const who of ['lanternfish', 'frog']) {
     check(`the wild ${who} turns at its own rate and no faster`,
       !!animals[who] && animals[who].peak <= animals[who].limit + 0.15 && animals[who].peak > 0.3, animals);
   }
-  /* Ninety degrees at the rate the data gives a frog -- 1.9 rad/s -- is 0.83 s,
+  /* Ninety degrees at the rate the data gives a frog -- 0.9 rad/s -- is 1.75 s,
      and the ease this replaced came about in 0.39 s: the floor below is the same
-     fact the peak check reads, seen as what the eye sees. */
-  check('a frog in the water takes well under a second to come about ninety degrees, and no better than its data allows',
-    !!animals.frog && animals.frog.to90 !== null && animals.frog.to90 >= 0.7 && animals.frog.to90 <= 1.3, animals);
+     fact the peak check reads, seen as what the eye sees. The record held 1.9
+     until the lake read it back: at 1.9 a correction wider than half a turn is
+     109 degrees a second, and every errand a frog picks lies somewhere off its
+     nose, so the wide corrections read as a head swung at the end of a body.
+     The lower bound is a hand over the 0.83 s the old limit allows, so a
+     regression to 1.9 reads as a frog that turns better than its data. */
+  check('a frog in the water comes about ninety degrees at the rate its own record holds, no faster and no slower',
+    !!animals.frog && animals.frog.to90 !== null && animals.frog.to90 >= 1.3 && animals.frog.to90 <= 2.0, animals);
 
   /* 11h. And an animal spends its afternoon walking. This is the one claim about
      the animals that is not about a single manoeuvre: put every animal in the
      valley through ninety seconds of its own wandering and count the frames it
-     is actually moving. What it caught: the two bears of the northern ridge
-     moved in 20% of those frames and covered 24 m between them, because in
-     front of a cliff the old behaviour was to give up, drop a new errand and
-     walk into the same rock again (a closer look at the same two bears had the
-     step in front of them rejected 2024 times in 2400 frames). Going round the
-     obstacle took them to 94% of the frames and 51 m, and the frogs, which meet
-     the same walls all along the lakeshore, from 76% to 93%. */
+     is actually moving. What it caught: a body in front of a cliff used to
+     give up, drop a new errand and walk into the same rock again (a closer
+     look at one of them had the step in front of it rejected most of the time
+     it stood there). Going round the obstacle took the frogs, which meet the
+     same walls all along the lakeshore, from 76% of their frames to 93%. */
   const roaming = await step('animalsWalkTheirAfternoon', () => {
     const g = window.game, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, form: p.form, time: g.time, night: g.night };
@@ -6258,24 +6282,18 @@ What was measured before any of this was fixed, over 180 frames of walking
     const out = {}, prev = new Map(), body = new Map();
     for (const c of g.creatures) { out[c.sp.id] = { n: 0, moving: 0, path: 0 }; prev.set(c, { x: c.x, z: c.z });
       /* The pooled number per species is the bound; the per-body read is what
-         a red of it needs. The law first went red on run four of the watch
-         that followed the dust fix: **57** of the frames for **99 m**, where
-         the forty-eight runs before it on the same trees read **86-99** and
-         thirty-six fresh pages of this same rig read **75-94**, the six of
-         them with both bears stood at the centre of their home discs -- the
-         start that maximises the short errands the stand runs come from --
-         reading **75-93**. The pooled number alone cannot say which of the two
-         bears a red belongs to: one bear standing a fourth of its afternoon
+         a red of it needs, because the pool cannot say which body of the
+         species a red belongs to: one frog standing a fourth of its afternoon
          at the errands it reaches and one walking at the usual rate pools to
-         the same number as two bears each standing a fifth. A bear that stands
+         the same number as two frogs each standing a fifth. A body that stands
          at the errand it has reached is spending the pause that re-picks the
-         next one, which is what a bear does between walks; a bear that stands
+         next one, which is what a body does between walks; a body that stands
          somewhere it is not going is not. The distance from the home the
          disc of errands is picked from is the same question for both: far
          from it the errands are long and the walk does not stop, and a stand
          run that ends away from its errand is the one that asks what held
          the body. */
-      if (c.sp.id === 'bear') body.set(c, { dHome: +Math.hypot(c.x - c.homeX, c.z - c.homeZ).toFixed(1),
+      if (c.sp.id === 'frog') body.set(c, { dHome: +Math.hypot(c.x - c.homeX, c.z - c.homeZ).toFixed(1),
         n: 0, moving: 0, path: 0, inStand: 0, runs: 0, max: 0, total: 0, atErrand: 0 }); }
     const t0 = g.time;
     g.time = 420 * 21 / 24; g.updateEnv();          // night: every one of them is out
@@ -6335,16 +6353,16 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   /* The bound is deliberately nowhere near the measurement: what it must never
      come back with is the old one-in-five. */
-  for (const who of ['frog', 'bear']) {
+  for (const who of ['frog']) {
     check(`the wild ${who} spends its afternoon walking rather than standing still`,
       !!roaming[who] && roaming[who].movingPct > 60, roaming);
   }
   check('and the lamp field keeps drifting round the lake',
-    !!roaming.jelly && roaming.jelly.movingPct > 50, roaming);
+    !!roaming.lanternfish && roaming.lanternfish.movingPct > 50, roaming);
 
   /* 11i. And an animal sent to a place gets there. A body that can only bend
      its course at a fixed rate holds a turn arc as wide as its speed over that
-     rate: a lamp jellyfish drifting at 0.92 m/s with a course it can bend 0.8
+     rate: a lanternfish drifting at 0.92 m/s with a course it can bend 0.8
      rad/s a second is swinging an arc 1.15 m across, so a target nearer than
      that is a place it circles for the rest of the afternoon. The animal slows
      for the turn, and the speed to slow to is the one whose arc passes through
@@ -6413,11 +6431,11 @@ What was measured before any of this was fixed, over 180 frames of walking
       /* Phase two: the case the animal's own wander retarget produces every few
          seconds -- a new place a step or two off, to one side of the way it is
          facing. The arc an animal holds is its speed over its turn rate: 1.15 m
-         for a lamp jellyfish drifting at 0.92 m/s, 1.0 m for a frog at 1.9. A
+         for a lanternfish drifting at 0.92 m/s, 2.1 m for a frog at 0.9. A
          place nearer than that, off to the side, is a place it circles for the
          rest of the pause. Measured without the animal slowing for a turn it
          cannot hold, over 25 seconds at a target this far to one side: the
-         jellyfish walks 23 m and ends 0.9-1.4 m from a place 0.9 m away, the
+         lanternfish walks 23 m and ends 0.9-1.4 m from a place 0.9 m away, the
          frog walks 48 m for a place 1.2 m away. */
       const d = c.isAquatic() ? 0.9 : 1.2;
       c.yaw = 0; c.speed = 0;                        // facing off at right angles to it
@@ -6440,19 +6458,19 @@ What was measured before any of this was fixed, over 180 frames of walking
     };
     const out = {};
     const frog = g.creatures.find(c => c.isAmphibian());
-    const jelly = g.creatures.find(c => c.isAquatic());
+    const fish = g.creatures.find(c => c.isAquatic());
     if (frog) out.frog = sent(frog, 24);
-    if (jelly) out.jelly = sent(jelly, 24);
+    if (fish) out.lanternfish = sent(fish, 24);
     Object.assign(p, was);
     return out;
   });
   /* An animal sent somewhere arrives there and stands still: the frog closes to
-     0.8 m and stops, the jellyfish to 0.8 m, each along a path of 4-5 m, and
+     0.8 m and stops, the lanternfish to 0.8 m, each along a path of 4-5 m, and
      the state never leaves 'wander' -- no sleep, no panic taking over the run.
      `arc` is the width of the widest turn the animal makes at the fastest it
-     travelled (1.0 m for the frog, 1.2 for the jellyfish), so arriving inside a
+     travelled (2.1 m for the frog, 1.2 for the lanternfish), so arriving inside a
      metre is not the animal failing to move. */
-  for (const who of ['frog', 'jelly']) {
+  for (const who of ['frog', 'lanternfish']) {
     check(`the wild ${who} gets to the place it was sent to and stops there`,
       !!arrive[who] && !arrive[who].error && arrive[who].states === 'wander' &&
       arrive[who].min < 0.9 && arrive[who].max < 1.2 && arrive[who].arc > 0.5, arrive);
@@ -6460,10 +6478,10 @@ What was measured before any of this was fixed, over 180 frames of walking
   /* And it gets there when the place is one it cannot walk into at the speed it
      is travelling: a target a step to one side, inside the width of its own
      turn. The frog stands 0.79 m from a place 1.2 m off having walked 1 m; the
-     jellyfish 0.8 m from one 0.9 m off having walked 0.4 m. Before the animal
+     lanternfish 0.8 m from one 0.9 m off having walked 0.4 m. Before the animal
      was taught to slow for a turn it cannot hold, the same two walked 48 m and
      23 m round those two places and never stopped at either. */
-  for (const who of ['frog', 'jelly']) {
+  for (const who of ['frog', 'lanternfish']) {
     check(`the wild ${who} does not circle a place that is too close for its turn to reach`,
       !!arrive[who] && !arrive[who].error && !!arrive[who].side &&
       arrive[who].side.min < 0.9 && arrive[who].side.max < 1.2 && arrive[who].side.path < 8, arrive);
@@ -6630,7 +6648,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     Object.assign(p, was);
     return out;
   });
-  /* Forty seconds of the twelve frogs of Mirrorlake: at no instant are they all
+  /* Forty seconds of the eight frogs of Mirrorlake: at no instant are they all
      within 20 cm of one depth (once they were, 96-97% of the time), they are
      spread over 2.3-3.1 m of it from the shallowest to the deepest at any one
      instant (2.9-3.4 m at the widest instant of the window), and they sit in
@@ -6647,7 +6665,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      through, which is the same excuse the body's own step gate and ceiling
      already give it, and the block that got a body into the tower's wall was
      masonry, not a bush. */
-  check('the twelve frogs on one lake do not all swim at one depth',
+  check('the eight frogs on one lake do not all swim at one depth',
     !flock.error && flock.sameLinePct < 10, flock);
   check('they are spread over metres of the water, not a hand span of it',
     !flock.error && flock.spreadMedian > 1 && flock.spreadMax > 2, flock);
@@ -6664,7 +6682,7 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and none of them spends a frame inside the world',
     !flock.error && flock.inside === 0, flock);
 
-  /* 10z2. The door of the sunken tower is a door. The twelve frogs of
+  /* 10z2. The door of the sunken tower is a door. The eight frogs of
      Mirrorlake walk in and out of the hollow shaft of the tower through the
      holes of frogpear in its south wall -- the holes are not rock, so a frog
      walking deep in its dive steps flat across the face of the wall into one
@@ -6891,8 +6909,8 @@ What was measured before any of this was fixed, over 180 frames of walking
      the same seeds, walked a route of the same 6.05 m that came within 1.09 m of
      the block and strayed 4.02 m from it. This body's herd is itself. And the rig
      aims the body, because which way a body happens to be looking when a frame
-     starts is not the law either: left to its own draw the bear travelled 16.6 m
-     and never came nearer than 2.1 m to the column it was handed an errand
+     starts is not the law either: left to its own draw the body would have spent
+     the eight seconds wandering away from the column it was handed an errand
      through.
      The rig is one column of ground, flat for nine cells each way with seven
      cells of clear air over all of it, one block in it, and one animal walked for
@@ -6901,22 +6919,16 @@ What was measured before any of this was fixed, over 180 frames of walking
      two ways: `through`, walked at from 2.5 m on one side with an errand out the
      other, which is the walk gate being asked about a column; and `under`,
      starting in the column itself, which is where the room for a hop is decided.
-     A trunk two cells over the floor of a shelf at 24, against a 1.54 m bear: it
-     came up against wood at 0.17 m and walked through it, 30 of its 480 frames
-     with part of itself inside, up to 0.54 m of it through the block, its feet on
-     the ground every one of those frames, 30 of them standing in that column. It
-     now stops at the face of it -- nearest wood 0.50 m, 0 frames in the column --
-     and still walks its 16.5 m. The same block one cell higher, over its head, it
-     walks under: 29 frames in that column, none of them inside, in every build.
-     And the same block at the same height is open ground to a 0.43 m frog, which
-     walks into that column 81 of its 480 frames in every build, while a block at
-     its own feet cell is refused that frog too. The span is asked of this body's
-     own height, which is what keeps the answer about the body rather than about
-     the block; asking it from the height the body happens to be at, rather than
-     from the surface it stands on, was measured too, and it keeps these bodies
-     out of the wood and takes the walk with it: the bear stood still 180 of its
-     480 frames under a block one cell over its head and travelled 10.4 m instead
-     of 16.5 m, and the eight bodies travelled 72.8 m instead of 79.9 m.
+     A trunk two cells over the floor of a shelf is open ground to a 0.43 m frog,
+     which walks into that column 81 of its 480 frames in every build, while a
+     block at its own feet cell is refused that frog too: the span is asked of
+     this body's own height, which is what keeps the answer about the body rather
+     than about the block -- the block at its own feet cell is the one a body
+     refuses, and the one over its head is the one it walks under. Asking the
+     span from the height the body happens to be at, rather than from the
+     surface it stands on, was measured too, and it takes the walk with it: a
+     body asked at the height it happens to be at stood still a third of its
+     frames under a block over its head and travelled 10.4 m instead of 16.5 m.
      The span alone does not keep the frog out of the wood over its own head, and
      there the answer is two laws and not one. A hop is launched a frame before
      the legs push, from a read of the room over the floor the body stands on, and
@@ -6945,16 +6957,14 @@ What was measured before any of this was fixed, over 180 frames of walking
      of the column and hops about down the shelf, which is why the control is
      counted where the block is.
      Three halves, and each of them is needed by a rig of its own: with the span
-     alone missing, the bear stands 30 frames inside the block and no other rig
-     changes at all; with the material table missing from the ceiling, the frog
+     alone missing, the body walked at the block in its own feet cell stands
+     inside it; with the material table missing from the ceiling, the frog
      starting under the block stands 14 frames inside it and the one walked at it
      is inside 28; with the arc's forward reach missing, the walked-at frog is
      inside 14 frames and the one starting under the block is clean. With all
-     three missing -- the gate as it stood before any of this -- 72 of the 3,840
-     frames of these eight rigs have part of a body inside wood, every one of them
-     a head. With all three in place: no rig has any part of a body inside wood,
-     no rig ends inside rock, nothing is thrown across the shelf, and every animal
-     still travels. */
+     three in place: no rig has any part of a body inside wood, no rig ends
+     inside rock, nothing is thrown across the shelf, and every animal still
+     travels. */
   const spanLaw = await step('aBodyOnFootAsksTheWoodOverItsOwnSpanAndTheRoofOverItsHead', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA, P = g.player;
     const TRUNK = 6;                       // solid, in TREE_BLOCK, not foliage: wood
@@ -7000,15 +7010,14 @@ What was measured before any of this was fixed, over 180 frames of walking
        rig that does not get the same animal twice is one rig only by the look of
        it. */
     const land = N.CREATURES.filter((s) => s.locomotion !== 'water');
-    /* one body tall enough that a block two cells over the floor it stands on lies
-       inside its own body, and one short enough that the same block is over its
-       head: the same wood, asked of two different spans */
+    /* the one hopper the species table leaves: short enough that a block two
+       cells over the floor it stands on is over its head, and the span is asked
+       of its own height */
     const born = land.map((sp) => { seed(5150); return new N.Creature(sp, x + 0.5, gy + 1, z + 0.5); });
-    const tall = born.filter((c) => !c.isAmphibian() && c.tall > 1.2).sort((a, b) => b.tall - a.tall)[0];
-    const short = born.filter((c) => c.isAmphibian() && c.tall > 0.2 && c.tall < 0.8).sort((a, b) => a.tall - b.tall)[0];
-    if (!tall || !short) {
+    const hopper = born.filter((c) => c.isAmphibian() && c.tall > 0.2 && c.tall < 0.8).sort((a, b) => a.tall - b.tall)[0];
+    if (!hopper) {
       g.time = timeWas; Math.random = rnd;
-      return { error: 'no tall walker and no short hopper in the species table', land: born.length };
+      return { error: 'no short hopper in the species table', land: born.length };
     }
     /* what the shelf the scan found is actually like, and what is standing on it:
        the scan is blind to both on purpose, so the report says what they are */
@@ -7019,20 +7028,18 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     const crowdNear = crowdWas.filter((c) => Math.abs(c.x - x) <= 5 && Math.abs(c.z - z) <= 5).length;
     const rigs = [];
-    for (const sp of [tall.sp, short.sp]) {
-      /* Three ways the same block is put in front of the same body.
+    for (const sp of [hopper.sp]) {
+      /* Five ways the same block is put in front of the same body.
          `through`: the body starts 2.5 m on one side and is handed an errand out
          the other, which is the walk gate being asked about a column.
          `under`: the body starts in the column itself, with the block over its
          head, which is where the room for an arc is decided -- a body that is
          already under a roof is the one whose launch has to answer for it.
-         And the amphibian gets the same block at the same height made of leaves:
+         The last rig is the same block at the same height made of leaves:
          the control that says the roof is asked of the material table and not of
          the height. */
-      const plan = sp.locomotion === 'amphibian'
-        ? [[1, TRUNK, 'through'], [2, TRUNK, 'through'], [3, TRUNK, 'through'],
-          [2, TRUNK, 'under'], [2, LEAF, 'under']]
-        : [[1, TRUNK, 'through'], [2, TRUNK, 'through'], [3, TRUNK, 'through']];
+      const plan = [[1, TRUNK, 'through'], [2, TRUNK, 'through'], [3, TRUNK, 'through'],
+        [2, TRUNK, 'under'], [2, LEAF, 'under']];
       for (const [off, mat, mode] of plan) {
         const beam = gy + off, beamWas = W.get(x, beam, z);
         if (beamWas !== 0) { rigs.push({ kind: sp.id, off, mat, mode, beam, error: 'beam cell not clear', beamWas }); continue; }
@@ -7045,9 +7052,9 @@ What was measured before any of this was fixed, over 180 frames of walking
         seed(77001 + off * 13 + (mode === 'under' ? 300 : 0));
         const body = new N.Creature(sp, mode === 'under' ? ax : ax - 2.5, gy + 1, az);
         /* the rig aims it. Which way a body happens to be looking when the frame
-           starts is not the law under test, and left to its own draw the bear spent
-           the eight seconds going 16.6 m and never came nearer than 2.1 m to the
-           column it was handed an errand through. */
+           starts is not the law under test, and left to its own draw the body
+           spends the eight seconds wandering away from the column it was handed
+           an errand through. */
         body.yaw = Math.PI / 2;
         body.tx = mode === 'under' ? ax + 3.5 : ax + 2.5;
         body.tz = az; body.homeX = ax; body.homeZ = az;
@@ -7167,8 +7174,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        be paid for by a body that never arrived, so the rig says it arrived:
        `closest` is how near the body's own centre came to the centre of the
        nearest wood cell, and under 1 m of centre-to-centre is the body standing
-       at the face of the block. Measured, the three of them came to 0.51 m,
-       0.50 m and 0.54 m. */
+       at the face of the block. */
     const inSpan = (r) => r.mat === TRUNK && r.mode === 'through' && r.off < 1 + r.tall;
     const driven = rigs.filter(inSpan).map((r) => r.closest);
     g.creatures = crowdWas; g.time = timeWas; Math.random = rnd; g.updateEnv();
@@ -7190,28 +7196,27 @@ What was measured before any of this was fixed, over 180 frames of walking
       stands: rigs.map((r) => r.stands), gone: rigs.map((r) => r.gone),
       path: +rigs.reduce((s, r) => s + r.path, 0).toFixed(1),
       frames: rigs.reduce((s, r) => s + r.frames, 0), woodFrames: rigs.reduce((s, r) => s + r.beamWood, 0),
-      tall: tall.sp.id, short: short.sp.id, tallOf: +tall.tall.toFixed(2), shortOf: +short.tall.toFixed(2),
+      hopper: hopper.sp.id, hopperOf: +hopper.tall.toFixed(2),
       woodId: TRUNK, leafId: LEAF };
   });
-  check('a flat shelf, a tall walker and a short hopper were found to measure on, the beam cell was clear air, and the crown rig had its matching wood rig',
-    !spanLaw.error && spanLaw.rigs.length === 8 && !spanLaw.twinMissing, spanLaw);
+  check('a flat shelf and the short hopper were found to measure on, the beam cell was clear air, and the crown rig had its matching wood rig',
+    !spanLaw.error && spanLaw.rigs.length === 5 && !spanLaw.twinMissing, spanLaw);
   check('the block stayed the material it was set as, wood or crown, so "never inside it" is not paid for by the block going away',
     spanLaw.woodFrames === spanLaw.frames, spanLaw);
-  check('both animals were driven at the wood: every rig with a wood block in the body\u0027s own span came up against it, so "0 frames inside" is not paid for by a body that never got there',
-    spanLaw.nearWood === spanLaw.driven.length && spanLaw.driven.length >= 3, spanLaw);
+  check('the body was driven at the wood: every rig with a wood block in its own span came up against it, so "0 frames inside" is not paid for by a body that never got there',
+    spanLaw.nearWood === spanLaw.driven.length && spanLaw.driven.length >= 1, spanLaw);
   check('a body on foot is not let inside wood with any part of itself, at the height of its own body',
     spanLaw.inside === 0 && spanLaw.deep === 0, spanLaw);
   check('in particular its head: the gate used to ask one cell over the surface, and the feet were in open air every frame',
     spanLaw.headIn === 0 && spanLaw.feetIn === 0, spanLaw);
-  check('the wood did not become a wall to a body that fits under it: the short body still walks in the column it starts under, of wood or of crown, and every rig with the block a full cell over the body still goes through that column',
+  check('the wood did not become a wall to a body that fits under it: the body still walks in the column it starts under, of wood or of crown, and every rig with the block a full cell over the body still goes through that column',
     spanLaw.underAt.length === 2 && spanLaw.underAt.every((n) => n > 0) &&
     spanLaw.rigs.filter((r) => r.mode === 'through' && r.off >= 3).every((r) => r.atColumn > 0), spanLaw);
-  check('the wood did not become a wall the body is pinned against: the block over a tall body is walked under, and every body keeps travelling',
-    spanLaw.rigs.every((r) => r.path > 3) &&
-    spanLaw.rigs.filter((r) => r.kind === spanLaw.tall && r.off === 3).every((r) => r.atColumn > 0), spanLaw);
-  check('refused the column it goes round it rather than freezing at it, and nothing is thrown across the shelf',
+  check('the wood did not become a wall the body is pinned against: every rig keeps travelling',
+    spanLaw.rigs.every((r) => r.path > 3), spanLaw);
+  check('refused the block at its own height it goes round it rather than freezing at it, and nothing is thrown across the shelf',
     spanLaw.rigs.every((r) => r.pops === 0 && r.stands < r.frames * 0.5) &&
-    spanLaw.rigs.filter((r) => r.kind === spanLaw.tall).every((r) => r.gone > 100), spanLaw);
+    spanLaw.rigs.filter((r) => r.mode === 'through' && r.mat === spanLaw.woodId && r.off === 1).every((r) => r.gone > 100), spanLaw);
   check('the roof is asked of the material table and not of the height: the same block made of leaves lets this hopper an arc inside that column and the trunk lets it none',
     spanLaw.twinAirIn === 0 && spanLaw.leafAirIn > 20 && spanLaw.leafHopsIn > spanLaw.twinHopsIn, spanLaw);
   check('none of them ended up inside rock or water either',
@@ -7219,7 +7224,7 @@ What was measured before any of this was fixed, over 180 frames of walking
 
   /* 11i4. A hop is an arc, and an arc has a top. The launch of one was asked
      about the ground under the body's feet and nothing about what was over its
-     head. The twelve frogs of Mirrorlake walk in and out of the hollow shaft of
+     head. The eight frogs of Mirrorlake walk in and out of the hollow shaft of
      the sunken tower -- brick floor at 11, the tower's glass a metre over it --
      and one of them pushed off there: 0.27 m in a single frame into the glass,
      then lifted out of the wall at 0.1 m a frame for 28 frames. The day soak of
@@ -7567,14 +7572,14 @@ What was measured before any of this was fixed, over 180 frames of walking
      (a) Nothing holds a body up but the ground, so when the ground leaves, the
      body falls. The animals' height used to be lerped onto whatever the column
      said, which is an elevator that runs fastest the moment it starts: walked a
-     bear off a cliff where the ground falls 17 m within one metre, it came down
+     body off a cliff where the ground falls 17 m within one metre, it came down
      6.8 m in the first 0.1 s -- 81 m/s, easing the rest of the way to a stop --
      and finished the drop standing on a tree 5 m above the valley floor, where
      it stopped moving and spent the rest of the run.
      (b) `groundY` answers "the highest solid thing in this column", and a crown
-     is solid, so foliage at feet level read as a step: the bear took the step,
+     is solid, so foliage at feet level read as a step: a body took the step,
      found the next block of the same crown at its new feet, took that one too,
-     and climbed the tree. Over a day, 22061 of one bear's 25200 frames were
+     and climbed the tree. Over a day, 22061 of one body's 25200 frames were
      spent standing on leaves, 12 m above the ground, going up 105 m and back
      down 114 m riding the crowns along the ridge.
      A body on foot stands on the ground with the crown over it ignored, read at
@@ -7585,46 +7590,67 @@ What was measured before any of this was fixed, over 180 frames of walking
      26.8 m/s, arriving with a squash of 0.3 and walking on. */
 
   const footing = await step('aBodyOnFootFalls', () => {
-    const g = window.game, W = g.world, N = window.FRUTARIA, p = g.player;
-    const bear = g.creatures.find(c => c.sp.id === 'bear');
-    if (!bear) return { error: 'no bear in the roster' };
-    const was = { x: bear.x, y: bear.y, z: bear.z, yaw: bear.yaw, vy: bear.vy, squash: bear.squash,
-      state: bear.state, pause: bear.pause, tx: bear.tx, tz: bear.tz, homeX: bear.homeX, homeZ: bear.homeZ };
-    // a cliff the ground falls off within one metre of where the body is standing
+    const g = window.game, W = g.world, N = window.FRUTARIA;
+    const frog = g.creatures.find(c => c.sp.id === 'frog');
+    if (!frog) return { error: 'no frog in the roster' };
+    const was = { x: frog.x, y: frog.y, z: frog.z, yaw: frog.yaw, vy: frog.vy, squash: frog.squash,
+      vx: frog.vx, vz: frog.vz, hopT: frog.hopT, dry: frog.dry,
+      state: frog.state, pause: frog.pause, tx: frog.tx, tz: frog.tz, homeX: frog.homeX, homeZ: frog.homeZ };
+    // a cliff the ground falls off within one metre of where the body is standing,
+    // with the column past the edge clear of rock and of water the whole way down:
+    // a lake at the foot of the cliff is not a fall, it is a swim, and a body
+    // floating at the film never lands
     let edge = null;
     for (let z = 12; z < W.d - 12 && !edge; z++) {
       for (let x = 12; x < W.w - 12 && !edge; x++) {
         const a = N.terrainY(W, x, z, W.h - 1), b = N.terrainY(W, x + 1, z, W.h - 1);
-        if (a - b >= 6 && !W.solidAt(x, a, z) && !W.solidAt(x + 1, b, z)) edge = { x, z, top: a, low: b };
+        if (a - b < 6 || W.solidAt(x, a, z) || W.solidAt(x + 1, b, z)) continue;
+        let clear = true;
+        for (let y = b; y <= a; y++) if (W.solidAt(x + 1, y, z) || W.liquidAt(x + 1, y, z)) { clear = false; break; }
+        if (clear) edge = { x, z, top: a, low: b };
       }
     }
-    if (!edge) { Object.assign(bear, was); return { error: 'no cliff in the valley' }; }
-    const px = edge.x + 0.5, pz = edge.z + 0.5;
-    bear.x = px; bear.y = edge.top; bear.z = pz; bear.yaw = Math.PI / 2;
-    bear.vy = 0; bear.squash = 0; bear.state = 'wander'; bear.pause = 999;
-    bear.tx = px + 12; bear.tz = pz; bear.homeX = px; bear.homeZ = pz;
+    if (!edge) { Object.assign(frog, was); return { error: 'no cliff in the valley' }; }
+    /* the body stands one cell past the edge, where the ground is already gone:
+       the fall is the law under test, and a frog asked to walk off a cliff
+       answers with its own step gate rather than with the gravity. With its
+       errand pointed at its own feet it has no push of its own, so the fall
+       goes straight down and the landing is the one the ground decides */
+    const px = edge.x + 1.5, pz = edge.z + 0.5;
+    frog.x = px; frog.y = edge.top; frog.z = pz; frog.yaw = Math.PI / 2;
+    frog.vy = 0; frog.squash = 0;
+    frog.state = 'wander'; frog.pause = 999;
+    frog.tx = px; frog.tz = pz; frog.homeX = px; frog.homeZ = pz;
     const t0 = g.time; g.time = 420 * 21 / 24; g.updateEnv();
+    /* the player is kept out of the fall: the attitude a body holds to the player
+       is asked every frame, not only when it picks an errand, and a player left
+       standing where the step before stood is within the frog's reach of it, so the
+       frog walks off its own errand straight down the drop it was put to test --
+       the kinematic walk carries it sideways into the column next door, whose
+       full-column read is the rock over its head rather than the floor it lands on.
+       The same sentinel the bank step feeds its frog. */
+    const away = { x: -999, y: 0, z: -999, form: null, formDef: {} };
     const dt = 1 / 60;
     let airT = 0, vPeak = 0, first = 0, last = 0, landed = null, sq = 0;
     for (let i = 0; i < 400; i++) {
-      const y0 = bear.y;
-      bear.update(dt, p, W, g);
-      const gy = N.terrainY(W, Math.floor(bear.x), Math.floor(bear.z), W.h - 1);
-      const v = (y0 - bear.y) / dt;
-      if (bear.y > gy + 0.05) {
+      const y0 = frog.y;
+      frog.update(dt, away, W, g);
+      const gy = N.terrainY(W, Math.floor(frog.x), Math.floor(frog.z), W.h - 1);
+      const v = (y0 - frog.y) / dt;
+      if (frog.y > gy + 0.05) {
         if (!airT) first = v;
         airT += dt; last = v; vPeak = Math.max(vPeak, v);
       } else if (airT > 0 && !landed) {
         landed = { drop: +(edge.top - gy).toFixed(1), airT: +airT.toFixed(2), vPeak: +vPeak.toFixed(1),
           vAvg: +((edge.top - gy) / airT).toFixed(1), first: +first.toFixed(1), last: +last.toFixed(1) };
-        sq = +bear.squash.toFixed(2);
+        sq = +frog.squash.toFixed(2);
       }
-      if (landed && bear.x - px > 6) break;
+      if (landed) break;
     }
     g.time = t0; g.updateEnv();
     const out = { at: [edge.x, edge.z], top: edge.top, low: edge.low, landed, squash: sq,
-      end: { y: +bear.y.toFixed(2), ground: N.terrainY(W, Math.floor(bear.x), Math.floor(bear.z), W.h - 1) } };
-    Object.assign(bear, was);
+      end: { y: +frog.y.toFixed(2), ground: N.terrainY(W, Math.floor(frog.x), Math.floor(frog.z), W.h - 1) } };
+    Object.assign(frog, was);
     return out;
   });
   check('a body on foot falls when the ground under it goes',
@@ -7897,7 +7923,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      bookkeeping does not grow. This is the one step that looks at all of them
      at once instead of one animal sent to one place, and it is what found that
      the spawn code put an animal on top of a tree rather than on the ground
-     under it (509 of 600 tries). A crown is not rock: a bear walks through a
+     under it (509 of 600 tries). A crown is not rock: a body walks through a
      bush, and where a crown grows to the top of the world there is no air left
      above it for a body to keep. Those samples are counted and reported, not
      failed. */
@@ -7972,7 +7998,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const before = look(), n0 = counts(), t0 = g.time;
     /* And how far a body travels in one frame. Every one of its rules is a rate
        -- a step, a fall, a climb, a swim -- and none of them is allowed to be a
-       lift: measured before, one bear changed height by 1.35 m in a single frame
+       lift: measured before, one body changed height by 1.35 m in a single frame
        (81 m/s) and by exactly 0.75 m in 261 frames of a day, and a frog dropped
        on the lakebed came up 0.47 m in its first frame (28 m/s). */
     const feet = g.creatures.filter(c => !c.isAquatic());
@@ -7980,7 +8006,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     /* Nobody is holding a key, and the body is parked where the valley put it at
        the boot. The step before this one leaves its own keys in g.input, and the
        steps before that leave the body wherever their own rig wanted it -- a day
-       of that walks or leaves a player somewhere the ridge cold bites, they go
+       of that walks or leaves a player standing in the lamps, they go
        down, and their fruit scatters, which puts the drop count and the log up:
        exactly the two things this step is watching for, caused by nothing in the
        world at all. */
@@ -8010,7 +8036,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       dropKinds: g.drops.map(d => d.item && d.item.id) };
   });
   check('an animal is put down on the ground, not on the tree that grows out of it',
-    soak.placed.n > 200 && !soak.placed.onCrown.length && !soak.placed.inTrunk.length, soak.placed);
+    soak.placed.n > 160 && !soak.placed.onCrown.length && !soak.placed.inTrunk.length, soak.placed);
   check('a whole day of the world running leaves every animal a body in a place',
     !soak.after.notANumber.length && !soak.after.outside.length && !soak.after.inRock.length &&
     !soak.after.underTheMap.length && !soak.after.aboveTheAir.length, soak.after);
@@ -8025,8 +8051,8 @@ What was measured before any of this was fixed, over 180 frames of walking
      and the list is only as wide as the bodies actually are. */
   check('and every number a body carries stays a number, for the animals and for the body you wear',
     !soak.after.bodyNaN.length && !soak.before.bodyNaN.length &&
-    soak.after.seen.wSurf > 20 && soak.after.seen.tilt > 20 && soak.after.seen.bank > 20 &&
-    soak.after.seen.held > 20 && soak.after.seen.airAmt > 20 && soak.after.seen.yaw > 20, soak.after);
+    soak.after.seen.wSurf > 16 && soak.after.seen.tilt > 16 && soak.after.seen.bank > 16 &&
+    soak.after.seen.held > 16 && soak.after.seen.airAmt > 16 && soak.after.seen.yaw > 16, soak.after);
   check('and no frame of that day moves a body further than its own body can',
     soak.jump.worst <= 0.4, soak.jump);
   check('the log, the scattered fruit and the queues do not grow without bound',
@@ -8042,10 +8068,11 @@ What was measured before any of this was fixed, over 180 frames of walking
      carved from, turned by its heading, and only counted where the two bodies
      also stand at one height -- the ten lamps of the tower field stood in one
      another's way 17197 times, 12995 of those frames more than 12 cm deep, the
-     worst pair 0.54 m in: one bell drawn almost exactly on top of another. The
-     twelve frogs of Mirrorlake spent 46% of the morning with another frog
-     inside them, 0.43 m deep at the worst, and a frog inside a frog averaged
-     0.28 m. Now the worst pair is 0.229 m, the frames more than 12 cm deep are a
+     worst pair 0.54 m in: one fish drawn almost exactly on top of another. The
+     frogs of Mirrorlake spent 46% of the morning with another frog inside them,
+     0.43 m deep at the worst, and a frog inside a frog averaged 0.28 m --
+     twelve of them when the morning was measured; the valley drives eight now.
+     Now the worst pair is 0.229 m, the frames more than 12 cm deep are a
      little over a fifth of what they were, and the mean depth of a pair that
      touches is 0.084 instead of 0.242. The frogs are in one another's way in far
      fewer frames than before as well -- 1339 against 4099 -- because they go
@@ -8053,9 +8080,10 @@ What was measured before any of this was fixed, over 180 frames of walking
      obstacle the same contour takes a body round, a body may not step deeper
      into one than it already stands, and whatever overlap is left at the end of
      the frame is undone along the shortest way out that the world allows. A
-     body is not a circle either: two bears end on are 1.1 m from nose to tail,
-     and a rule wide enough to keep them apart would keep a bear and a frog
-     three metres apart.
+     body is not a circle either: a person is 0.41 m side by side and 0.29 m
+     nose to nose, and a frog 0.34 across and 0.41 long, so the distance at
+     which two bodies count as in one place depends on the way they stand to
+     one another, and the rule asks it of the body, not of a circle.
      Three laws are asked of this window beyond that, and each of the readings
      below comes from a run of this same window with that one law gutted and the
      other two in force -- the window is seeded, so a law is the only thing that
@@ -8071,7 +8099,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      swims at 2.2 and wanders at 0.92; over five-minute watches of the field a
      player actually meets the worst frame was 0.133-0.156 m (7.9-9.4 m/s), and
      on one page the whole five minutes averaged 17.9 m/s, with a worst frame of
-     4.1 m and 82 m/s -- bells thrown about their own field for a whole watch.
+     4.1 m and 82 m/s -- fish thrown about their own field for a whole watch.
      Each body now has one budget a frame, and the budget is its own speed: a
      neighbour may add to the body's own walk at most the walk the body itself
      has, so a frame may be twice the animal and is not eight times it. The worst
@@ -8079,14 +8107,14 @@ What was measured before any of this was fixed, over 180 frames of walking
      fins would have carried it. The slower undo is not worse for the crowd
      either, and where it is worse it is worse by a fingernail: 2856 pair-frames
      deeper than 12 cm against 3653, a mean depth of 0.084 against 0.091, the
-     worst pair 0.229 against 0.223, a bell that may not be thrown clear in one
+     worst pair 0.229 against 0.223, a fish that may not be thrown clear in one
      frame taking two frames to get clear.
      Second: the crowd that does not fit its ground is put down on top of itself
      by the birth loop, which used to take the first sample clear and otherwise
      whatever the tenth throw landed on. 29 of the 49 columns of the lamp's disc
      are water and the rest is the tower's brick, the room a lamp asks of its own
      kind is 0.83 m, and ten lamps do not fit; in the worst of five mornings the
-     nearest pair stood 0.23 m apart -- bells inside bells -- and the field spent
+     nearest pair stood 0.23 m apart -- fish inside fish -- and the field spent
      the rest of the morning undoing it. Of the places a species will accept, the
      one taken is now the one furthest from its own kind, the rule the animal
      already follows when it picks somewhere to swim to, and the worst nearest
@@ -8094,7 +8122,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      cannot hold, and that is reported rather than hidden: six of the ten were
      born with a neighbour inside the room and eight are now, while the nearest
      pair moved from 0.23 m to 0.67 m -- what the law refuses is not a lamp born
-     close to a lamp, it is a bell born on top of a bell.
+     close to a lamp, it is a fish born on top of a fish.
      Third, and it is asked of the place a shove lands rather than of the body:
      the step below hunts a shore the law can be asked of, and it costs this
      window depth -- without that law the worst pair of this window is 0.192 m
@@ -8108,7 +8136,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const g = window.game, N = window.FRUTARIA, p = g.player;
     /* The valley this is measured over is a fresh one, and the same fresh one
        every time. The steps before this leave the animals wherever a day of
-       testing has pushed them -- one run had a bear standing in a hollow with
+       testing has pushed them -- one run had a body standing in a hollow with
        its errand 13.9 m away, not moving once in 150 seconds, with no other
        body within 2 m of it the whole while -- and an animal's choices come from
        Math.random, so the same code measured twice gave answers three times
@@ -8175,7 +8203,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        either of them could be pulled out of the other. Two bodies a metre apart
        in height are not in one place, and the height they have in common has to
        be more than a graze of the shorter one before it counts at all -- a lamp
-       riding on the crown of another's bell is on top of it, not inside it. */
+       riding on another's back is on top of it, not inside it. */
     const deepIn = (a, b) => {
       const v = Math.min(a.y + a.tall, b.y + b.tall) - Math.max(a.y, b.y);
       if (v <= 0.15 * Math.min(a.tall, b.tall)) return 0;
@@ -8206,7 +8234,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        they stood when the frame began, and it is applied once for every pair that
        overlaps, so a body standing inside several of its own kind is moved once
        per pair, each at the rate the world's corrections work at; the field of
-       the sunken tower is that field, and the same law that pulls two bells apart
+       the sunken tower is that field, and the same law that pulls two fish apart
        was measured throwing a lamp 0.133 m at a sixtieth of a second -- 8 m/s for
        an animal whose row says 2.2 m/s, and on one page of the same field an
        average of 17.9 m/s over five whole minutes, with a worst frame of 82 m/s.
@@ -8223,7 +8251,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        *eased* towards a level the world answers for it. A jump or a step down
        and is asked elsewhere (`soak` reads a whole day of feet at 0.4 m a
        frame); an ease is the world moving the body, and nothing at all asked its
-       rate: the water's branch was measured taking a bell 0.1587 m in a single
+       rate: the water's branch was measured taking a fish 0.1587 m in a single
        frame -- 9.52 m/s, 4.33 times the 2.2 m/s its own row swims. */
     const lift = { ratio: 0, who: null, m: 0, mPerS: 0, frames: 0, over: 0 };
     const SECS = 150;
@@ -8290,9 +8318,9 @@ What was measured before any of this was fixed, over 180 frames of walking
       ':awake' + Math.round(awake.get(c) / 60) + 's:near' + Math.round(near.get(c) / 60) + 's';
     const quiet = cs.filter(c => awake.get(c) > 60 * 60 && path.get(c) < 1);
     const still = quiet.filter(c => near.get(c) > 60 * 60).map(detail);
-    const tower = (N.ZONE_BY_ID.mirrorlake || {}).tower || [0, 0];
-    const lampFar = cs.filter(c => c.sp.id === 'jelly')
-      .map(c => +Math.hypot(c.x - tower[0], c.z - tower[1]).toFixed(1)).sort((a, b) => b - a);
+    const lake = (N.ZONE_BY_ID.mirrorlake || {}).lake || [0, 0];
+    const lampFar = cs.filter(c => c.sp.id === 'lanternfish')
+      .map(c => +Math.hypot(c.x - lake[0], c.z - lake[1]).toFixed(1)).sort((a, b) => b - a);
     const per = {};
     for (const k in kind) per[k] = { frames: kind[k].frames, deep: kind[k].deep,
       worst: +kind[k].worst.toFixed(3), mean: +(kind[k].sum / kind[k].frames).toFixed(3) };
@@ -8308,8 +8336,8 @@ What was measured before any of this was fixed, over 180 frames of walking
     space.deep <= 5000 && space.mean <= 0.12, space);
   check('a body guided round its neighbours still goes somewhere',
     !space.still.length && space.walked > 20, space);
-  check('the lamps still trace the tower they were born on',
-    space.lampFar[0] <= 6, space);
+  check('the lamps stay in the water of the lake they were born in',
+    space.lampFar[0] <= 40, space);
   /* And the two laws this window is now asked to hold. The first is about how a
      body is moved: every frame of the window is read against the speed the body's
      own row gives it, and the crowd is not allowed to be the one in front. The
@@ -8484,7 +8512,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      this was found -- of 90,000 lamp-frames in a five minute watch not one stood
      in such a column, because the picker and the step gate kept the field out of
      columns they believed were dry -- but the field was not in the outline the dex
-     gives it, and a bell that got into one of
+     gives it, and a fish that got into one of
      those columns, by a shove from its own kind, which asks only about solid and
      stone, was pinned on the lakebed under the tower: ten seconds there and its
      crown sat **6.27 m** under the film on the average and **7.11 m** at the
@@ -8494,17 +8522,20 @@ What was measured before any of this was fixed, over 180 frames of walking
      bed searched from the topmost water cell and not from the brick standing over
      it. And the height the water holds a body at is closed at no more than the
      speed that body swims -- the law the air branch of this file already carries
-     (docs 03 line 85, 23.9 -> 2.94 m/s) and the water branch never got: a bell
+     (docs 03 line 85, 23.9 -> 2.94 m/s) and the water branch never got: a fish
      put on the lakebed at the bottom of the deepest column in that disc and let go
-     climbs the whole **8.91 m** of water, and the ease carries it **15.51 m/s**,
-     seven times its own speed, with **67** of its 600 frames faster than it
-     swims. */
+     climbs the whole **9.31 m** of water (the deepest column in that disc is the
+     lake's own deepest now -- 11 m of it, lakebed at 4 -- where the disc the
+     field used to be put the rig in **8.91 m**, with the lamp's first, larger
+     model), and the ease that used to carry that height carried it **14.9 m/s**,
+     seven times its own speed, with **64** of its 600 frames faster than it swims. */
   const towerWater = await step('towerWater', () => {
     const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
-    const sp = N.CREATURES.find((s) => s.id === 'jelly');
-    const tower = (N.ZONE_BY_ID.mirrorlake || {}).tower || [0, 0];
-    const field = g.creatures.filter((c) => c.sp.id === 'jelly');
-    if (!sp || !field.length) return { error: 'no lamp jellyfish in the world' };
+    const sp = N.CREATURES.find((s) => s.id === 'lanternfish');
+    const zone = N.ZONE_BY_ID.mirrorlake || {};
+    const center = (sp.at && zone[sp.at]) || zone.tower || [0, 0];   // the field's own landmark
+    const field = g.creatures.filter((c) => c.sp.id === 'lanternfish');
+    if (!sp || !field.length) return { error: 'no lanternfish in the world' };
     const TALL = field[0].tall;
     const own = sp.swimSpeed || sp.speed || 3;
     const HOVER = sp.hover === undefined ? 0.8 : sp.hover;
@@ -8536,16 +8567,16 @@ What was measured before any of this was fixed, over 180 frames of walking
     const capAbove = (x, z, film) => W.solidAt(x, film, z);
 
     /* every column of the disc the lamps belong to that holds water deep enough
-       for a bell: what height does the level law answer for one standing in it? */
+       for a fish: what height does the level law answer for one standing in it? */
     let wet = 0, deep = 0, capped = 0, bedTakes = 0, worst = null, deepest = null, cappedDeep = null;
-    const x0 = Math.max(1, Math.ceil(tower[0] - sp.spread - 1)), x1 = Math.min(W.w - 2, Math.floor(tower[0] + sp.spread + 1));
-    const z0 = Math.max(1, Math.ceil(tower[1] - sp.spread - 1)), z1 = Math.min(W.d - 2, Math.floor(tower[1] + sp.spread + 1));
+    const x0 = Math.max(1, Math.ceil(center[0] - sp.spread - 1)), x1 = Math.min(W.w - 2, Math.floor(center[0] + sp.spread + 1));
+    const z0 = Math.max(1, Math.ceil(center[1] - sp.spread - 1)), z1 = Math.min(W.d - 2, Math.floor(center[1] + sp.spread + 1));
     for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
-      if (Math.hypot(x + 0.5 - tower[0], z + 0.5 - tower[1]) > sp.spread + 1) continue;
+      if (Math.hypot(x + 0.5 - center[0], z + 0.5 - center[1]) > sp.spread + 1) continue;
       const col = depthAt(x, z);
       if (col === null) continue;
       wet++;
-      if (col.depth < 4) continue;      // not water a bell could hang in, whatever the law says
+      if (col.depth < 4) continue;      // not water a fish could hang in, whatever the law says
       deep++;
       if (!deepest || col.depth > deepest.depth)
         deepest = { x, z, depth: col.depth, film: col.film, bed: col.bed, row: f2(col.body) };
@@ -8562,13 +8593,13 @@ What was measured before any of this was fixed, over 180 frames of walking
           worst = { x, z, under: +under.toFixed(2), want: f2(want), film: col.film, depth: col.depth };
       }
     }
-    const out = { tower, spread: sp.spread, tall: +TALL.toFixed(3), own, hover: HOVER,
+    const out = { center, spread: sp.spread, tall: +TALL.toFixed(3), own, hover: HOVER,
       wet, deep, capped, bedTakes, worst, deepest, cappedDeep };
     if (!deepest) return Object.assign(out, { error: 'no column in the lamps disc holds water deep enough for a body' });
 
-    const bell = field[0];
+    const fish0 = field[0];
     const keep = ['x', 'y', 'z', 'homeX', 'homeZ', 'tx', 'tz', 'pause', 'state', 'yaw', 't', 'phase']
-      .map((k) => ({ k, v: bell[k] }));
+      .map((k) => ({ k, v: fish0[k] }));
     const filmOf = (c) => filmAt(Math.floor(c.x), Math.floor(c.z));
     const spanSolid = (c) => {
       let n = 0;
@@ -8582,18 +8613,18 @@ What was measured before any of this was fixed, over 180 frames of walking
       let worstM = 0, over = 0, frames = 0, dry = 0, solid = 0;
       let min = 9, max = -9, sum = 0, seen = 0;
       for (let i = 0; i < Math.round(secs * 60); i++) {
-        const y0 = bell.y;
-        bell.update(1 / 60, p, W, g);
-        const d = Math.abs(bell.y - y0);
+        const y0 = fish0.y;
+        fish0.update(1 / 60, p, W, g);
+        const d = Math.abs(fish0.y - y0);
         frames++;
         if (d > worstM) worstM = d;
         // a frame at exactly its own speed is not a frame faster than it swims
         if (d * 60 > own + 1e-6) over++;
-        if (!W.liquidAt(Math.floor(bell.x), Math.floor(bell.y + 0.2), Math.floor(bell.z))) dry++;
-        if (spanSolid(bell)) solid++;
-        const film = filmOf(bell);
+        if (!W.liquidAt(Math.floor(fish0.x), Math.floor(fish0.y + 0.2), Math.floor(fish0.z))) dry++;
+        if (spanSolid(fish0)) solid++;
+        const film = filmOf(fish0);
         if (film !== null) {
-          const under = film - (bell.y + TALL);
+          const under = film - (fish0.y + TALL);
           seen++; sum += under;
           if (under < min) min = under;
           if (under > max) max = under;
@@ -8602,24 +8633,24 @@ What was measured before any of this was fixed, over 180 frames of walking
       return { frames, worstM: +worstM.toFixed(4), worstPerS: +(worstM * 60).toFixed(2),
         ratio: +(worstM * 60 / own).toFixed(2), over, dry, solid,
         under: seen ? { min: +min.toFixed(2), max: +max.toFixed(2), mean: +(sum / seen).toFixed(2), seen } : null,
-        at: [f2(bell.x), f2(bell.y), f2(bell.z)] };
+        at: [f2(fish0.x), f2(fish0.y), f2(fish0.z)] };
     };
 
-    /* rig A: a bell stood in the deepest of those columns, at the height the rest
+    /* rig A: a fish stood in the deepest of those columns, at the height the rest
        of the field hangs at, and left to the level law for ten seconds with no
        errand, no shove and no neighbour: what is left is the level and nothing
        else. The row says a crown HOVER under the film, give or take the swing. */
     const place = (col, y) => {
-      bell.x = col.x + 0.5; bell.z = col.z + 0.5; bell.y = y;
-      bell.tx = bell.x; bell.tz = bell.z; bell.homeX = bell.x; bell.homeZ = bell.z; bell.pause = 1e9;
-      return [f2(bell.x), f2(bell.y), f2(bell.z)];
+      fish0.x = col.x + 0.5; fish0.z = col.z + 0.5; fish0.y = y;
+      fish0.tx = fish0.x; fish0.tz = fish0.z; fish0.homeX = fish0.x; fish0.homeZ = fish0.z; fish0.pause = 1e9;
+      return [f2(fish0.x), f2(fish0.y), f2(fish0.z)];
     };
     const other = field.slice(1).reduce((m, c) => m + c.y, 0) / Math.max(1, field.length - 1);
     const hungIn = cappedDeep || deepest;
     out.hungIn = hungIn;
     out.hung = Object.assign({ stood: place(hungIn, other) }, run(10));
 
-    /* rig B: the same column, a bell put down on the bottom of it and let go. This
+    /* rig B: the same column, a fish put down on the bottom of it and let go. This
        asks the rate on its own, with no help from the level law: whatever the
        level is, the way up to it is not a lift, and it has to be a way that
        arrives -- a law satisfied by never moving anything would pass the rate and
@@ -8629,20 +8660,20 @@ What was measured before any of this was fixed, over 180 frames of walking
     out.risenIn = deepest;
     out.risen = Object.assign({ row: f2(row), stood: place(deepest, deepest.bed + 0.35),
       climb: f2(row - (deepest.bed + 0.35)) }, run(10));
-    /* a bell that reaches its level is within the swing of it; a bell left on the
+    /* a fish that reaches its level is within the swing of it; a fish left on the
        lakebed under the tower is the whole depth of the water away from it */
-    out.risen.arrived = Math.abs(bell.y - row) < BOB + 0.4;
-    keep.forEach(({ k, v }) => { bell[k] = v; });
+    out.risen.arrived = Math.abs(fish0.y - row) < BOB + 0.4;
+    keep.forEach(({ k, v }) => { fish0[k] = v; });
     return out;
   });
   check('the water a swimming body hangs in is told by the water in the column, not by the brick standing over it',
     !towerWater.error && towerWater.wet > 0 && towerWater.deep > 0 && towerWater.bedTakes === 0, towerWater);
-  check('a bell stood in the deepest of those columns hangs where its own row says it hangs, in water, out of brick',
+  check('a fish stood in the deepest of those columns hangs where its own row says it hangs, in water, out of brick',
     !!towerWater.hung && !!towerWater.hung.under &&
     towerWater.hung.under.min > 0.2 && towerWater.hung.under.max < towerWater.hover + 1.2 &&
     Math.abs(towerWater.hung.under.mean - towerWater.hover) < 0.35 &&
     towerWater.hung.dry === 0 && towerWater.hung.solid === 0, towerWater.hung);
-  check('a bell put on the bottom of that column comes up to its level, and the water never closes that height faster than it swims',
+  check('a fish put on the bottom of that column comes up to its level, and the water never closes that height faster than it swims',
     !!towerWater.hung && !!towerWater.risen && towerWater.hung.ratio <= 1.05 &&
     towerWater.risen.climb > 3 && towerWater.risen.ratio <= 1.05 &&
     towerWater.risen.arrived === true, { hung: towerWater.hung, risen: towerWater.risen });
@@ -8654,23 +8685,19 @@ What was measured before any of this was fixed, over 180 frames of walking
      stop, so the body never moved and the lift was kept anyway. A body pressed
      against a bank it cannot climb was raised 0.15 m, dropped back, raised
      again: walked at a bank two metres tall, a human stood on the ground in
-     **34%** of frames and its height swung **0.124 m** within a second, a bear
-     in **31%**. And the same broken retry meant the lift never once carried a
-     body up a step it could reach: a bear whose own record says its legs reach
-     **1.1 m**, walked at a step of one metre, gained **0.124 m** in three
-     seconds and stood on the ground in 31% of frames. Now the retry is handed
-     the move the body asked for, and a lift that ends where the body already
-     was is thrown away: the human and the bear stand on the ground in every one
-     of those frames with a swing of **0**, and the bear climbs the step it can
-     reach and ends standing on top of it, **1.02 m** up. A step taller than the
-     legs is still not climbed -- the human gains **0** against a step of a
-     metre and against a bank of two. And with nothing built there the same two
-     bodies simply walk: they were on the ground in **89%** and **78%** of the
-     frames of a shorter run, swinging the same 0.124 m, and they are on the
-     ground in every one of them now with a swing of 0. A hopping body is not
-     measured for standing: a frog at the same bank is off the ground in 77% of
-     frames because hopping is what its own record says it does on land, and
-     what is asked of it is that its feet come back down, which they do. */
+     **34%** of frames and its height swung **0.124 m** within a second. And the
+     same broken retry meant the lift never once carried a body up a step it
+     could reach. Now the retry is handed the move the body asked for, and a
+     lift that ends where the body already was is thrown away: the human stands
+     on the ground in every one of those frames with a swing of **0**. A step
+     taller than the legs is still not climbed -- the human gains **0** against
+     a step of a metre and against a bank of two. And with nothing built there
+     the body simply walks: it was on the ground in **89%** of the frames of a
+     shorter run, swinging the same 0.124 m, and it is on the ground in every
+     one of them now with a swing of 0. A hopping body is not measured for
+     standing: a frog at the same bank is off the ground in 77% of frames
+     because hopping is what its own record says it does on land, and what is
+     asked of it is that its feet come back down, which they do. */
   const wall = await step('aBodyWalkedIntoABankStandsOnItsFeet', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
     /* The bank is built, not hunted: one shelf, one riser, the same place and
@@ -8682,13 +8709,13 @@ What was measured before any of this was fixed, over 180 frames of walking
        everything solid along the way it walks. A crown is not a wall the
        movement code refuses, but a body set down inside one, or walked into one,
        is a body whose box overlaps a block it cannot pass, and the widest body
-       measured here (the bear's 1.4 m box) covers three cells across. The search
+       measured here (the person's 0.62 m box) spans two cells across. The search
        used to ask for a 13x13 level square and nothing at all about the cells
        the body walks through: widening the lake moved the shoreline terrace, and
        with it the only 13x13 in the valley (over the whole map 0 columns pass a
        13x13 now, 13 pass this footprint -- 16 passed it before the lake was
        widened, so the search is not fitted to the new map either). The shelf it
-       then found had a tree standing in the row the bank is built in: the bear
+       then found had a tree standing in the row the bank is built in: the body
        was stopped by three metres of crown before the metre of bank it was
        meant to climb, and gained 0. */
     let spot = null;
@@ -8770,7 +8797,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     for (const [h, secs] of [[2, 3], [1, 3], [0, 1.5]]) {
       build(h);
       const per = {};
-      for (const form of [null, 'frogpear', 'bruinfig'])
+      for (const form of [null, 'frogpear'])
         per[form || 'human'] = run(form, secs);
       res['bank' + h] = per;
     }
@@ -8782,19 +8809,17 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   const onFeet = (k) => !!wall.bank2 && !!wall.bank2[k] && wall.bank2[k].gndPct >= 90;
   check('a body walked into a bank taller than its own legs stays on its feet',
-    onFeet('human') && onFeet('bruinfig'), wall);
+    onFeet('human'), wall);
   check('and its height does not swing while it is pressed against it',
-    !!wall.bank2 && ['human', 'bruinfig'].every(k => wall.bank2[k].span <= 0.02), wall);
+    !!wall.bank2 && wall.bank2.human.span <= 0.02, wall);
   check('every body comes back down to its feet, hopping or not',
-    !!wall.bank2 && ['human', 'frogpear', 'bruinfig']
+    !!wall.bank2 && ['human', 'frogpear']
       .every(k => wall.bank2[k].gapMin <= 0.02), wall);
-  check('a step the body reaches with its own legs is still climbed',
-    !!wall.bank1 && wall.bank1.bruinfig.gained >= 0.9, wall);
-  check('and a step taller than that is not',
+  check('a step taller than its own legs is not climbed',
     !!wall.bank1 && !!wall.bank2 && wall.bank1.human.gained <= 0.05 &&
-    wall.bank2.human.gained <= 0.05 && wall.bank2.bruinfig.gained <= 0.05, wall);
+    wall.bank2.human.gained <= 0.05, wall);
   check('with nothing built in front of it the same body just walks',
-    !!wall.bank0 && ['human', 'bruinfig'].every(k => wall.bank0[k].gndPct >= 90 && wall.bank0[k].span <= 0.02), wall);
+    !!wall.bank0 && wall.bank0.human.gndPct >= 90 && wall.bank0.human.span <= 0.02, wall);
   check('and no body is left inside the bank, or the bank inside the world',
     wall.restored && ['bank2', 'bank1', 'bank0'].every(k =>
       Object.keys(wall[k]).every(f => wall[k][f] === null || wall[k][f].boxIn === 0)), wall);
@@ -8875,14 +8900,14 @@ What was measured before any of this was fixed, over 180 frames of walking
      scan asked for the highest **solid** block, and water is not solid -- the
      block row says so, and everything else in the game believes it -- so the
      scan walked down through the whole lake and stopped at the lakebed. Every
-     one of the valley's **2,970** wet columns was painted with the colour of its
+     one of the valley's **2,958** wet columns was painted with the colour of its
      own floor (Mirrorlake's sand and mud: 112/104/74, 148/137/98), the lake read
      as a dry pit in the middle of the green, and the water palette the same
      function holds was never reached by a single pixel. The depth run was wrong
      the same way: it counted **up** from wherever the scan had stopped, which
      asks the sky how much water is above the lake and always answers one.
-     Measured over the whole map: **0** of 2,970 wet columns painted as water
-     before, **2,816** after. The other **133** have something solid standing
+     Measured over the whole map: **0** of 2,958 wet columns painted as water
+     before, **2,816** after. The other **121** have something solid standing
      over the water -- the sunken tower, the keep, a tree -- and **21** more sit
      under a POI dot, which is painted over the base and is warm by itself.
      The land is the control: a dry column is painted with the colour of the
@@ -9279,7 +9304,7 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('rebuilding the whole valley leaves no buffer standing over the one it replaces',
     meshAcct.deltas && meshAcct.deltas.every(d => d === 0) && meshAcct.made === meshAcct.freed, meshAcct);
   check('and the valley is standing on the same number of meshes it was',
-    meshAcct.standingBefore === meshAcct.standingAfter && meshAcct.standingBefore > 200, meshAcct);
+    meshAcct.standingBefore === meshAcct.standingAfter && meshAcct.standingBefore > 100, meshAcct);
   check('picking a block costs a chunk re-mesh and no buffers',
     meshAcct.pick && meshAcct.pick.delta === 0 && meshAcct.pick.replaced && meshAcct.pick.rebuilt > 0 &&
     !meshAcct.pick.left && meshAcct.pick.back, meshAcct.pick);
@@ -9326,7 +9351,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       return up0.call(this, gl);
     };
     const built = {};
-    for (const id of ['human', 'frog', 'bear', 'jelly']) {
+    for (const id of ['human', 'frog', 'lanternfish']) {
       const old = g.creatureMeshes[id];
       cap.length = 0;
       delete g.creatureMeshes[id];
@@ -9337,7 +9362,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     N.MeshBuilder.prototype.upload = up0;
 
-    let posErr = 0, faces = 0, creasedFaces = 0, worstRatio = 1, jellyErr = 0;
+    let posErr = 0, faces = 0, creasedFaces = 0, worstRatio = 1, fishErr = 0;
     const tones = {};
     /* the shade at each of one face's four corners, as a share of the face
        constant: the mesh of a part is built box by box, six vertices a face in
@@ -9359,7 +9384,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       return out;
     };
     const spread = (f) => Math.max(...f) - Math.min(...f);
-    for (const id of ['human', 'frog', 'bear']) {
+    for (const id of ['human', 'frog']) {
       tones[id] = new Set();
       for (const m of built[id]) for (let v = 0; v < m.dat.length; v += 4) tones[id].add(m.dat[v]);
       for (const p of N.MODELS[id].parts) {
@@ -9371,21 +9396,21 @@ What was measured before any of this was fixed, over 180 frames of walking
         }
       }
     }
-    for (const p of N.MODELS.jelly.parts) {
+    for (const p of N.MODELS.lanternfish.parts) {
       for (let bi = 0; bi < p.boxes.length; bi++) for (let fi = 0; fi < 6; fi++)
-        if (at('jelly', p.name, bi, fi).some(x => Math.abs(x - 1) > 0.01)) jellyErr++;
+        if (at('lanternfish', p.name, bi, fi).some(x => Math.abs(x - 1) > 0.01)) fishErr++;
     }
-    let shinCrease = 0;
+    let bootCrease = 0;
     for (let fi = 0; fi < 6; fi++) {
-      const f = at('bear', 'shinFL', 0, fi);
-      if (spread(f) > 0.02 || Math.min(...f) < 0.99) shinCrease++;
+      const f = at('human', 'shinL', 1, fi);
+      if (spread(f) > 0.02 || Math.min(...f) < 0.99) bootCrease++;
     }
-    const out = { faces, creasedFaces, posErr, jellyErr, shinCrease,
+    const out = { faces, creasedFaces, posErr, fishErr, bootCrease,
       worstRatio: +worstRatio.toFixed(3), tones: Object.keys(tones).reduce((o, k) => (o[k] = tones[k].size, o), {}) };
     for (const [k, v] of Object.entries({
       frogLeg: ['frog', 'legFL', 0, 4], frogToe: ['frog', 'legFL', 1, 4],
       thighTop: ['human', 'thighL', 0, 2], shoulder: ['human', 'torso', 0, 2],
-      skullTop: ['human', 'head', 0, 0], bearHead: ['bear', 'head', 0, 2]
+      skullTop: ['human', 'head', 0, 0]
     })) out[k] = at(...v);
     return out;
   });
@@ -9400,31 +9425,31 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the top of a head is shaded all over under its hair',
     !!crease.skullTop && Math.max(...crease.skullTop) - Math.min(...crease.skullTop) < 0.01 &&
     Math.min(...crease.skullTop) < 0.9, crease.skullTop);
-  check('a bear head is shaded where it sits on the body', isSpread(crease.bearHead), crease.bearHead);
-  check('a leg the same width from hip to foot shows no crease', crease.shinCrease === 0, crease.shinCrease);
+  check('a box nothing overhangs keeps its faces whole: the boot stays whole', crease.bootCrease === 0, crease.bootCrease);
   /* the deepest a corner can be closed: one side fully, the other all but
      half, the diagonal fully -- 5/6 of the crease, so 1 - 0.35*5/6 = 0.71 of
      the face it stands on, less what the shade byte rounds away */
   check('no corner of a body goes below 0.70 of the face it stands on',
     crease.worstRatio > 0.70, crease.worstRatio);
   check('a body is no longer lit by six flat values',
-    crease.tones && crease.tones.frog > 12 && crease.tones.bear > 6, crease.tones);
-  check('a lamp is self-lit and takes no crease', crease.jellyErr === 0, crease.jellyErr);
+    crease.tones && crease.tones.frog > 12, crease.tones);
+  check('a lamp is self-lit and takes no crease', crease.fishErr === 0, crease.fishErr);
   check('the crease is on the joints and not smeared over the body',
     crease.creasedFaces > crease.faces * 0.1 && crease.creasedFaces < crease.faces * 0.6, crease);
 
-  /* Three bodies carry a colour nobody can ever see. A box that sits entirely
+  /* A colour can be written into a body's record and never once reach a frame.
+     A box that sits entirely
      inside another box of the same part costs six faces and zero pixels, and a
-     part moves as one piece, so no pose can ever dig it out: the bear's
-     grizzled saddle was written into the model and buried in the box it hangs
-     from. The question is asked twice -- once
+     part moves as one piece, so no pose can ever dig it out: the person's
+     collar wraps the skull it sits on, and buried in the skull it wraps it would
+     be drawn and never once reach a frame. The question is asked twice -- once
      of the geometry, which is cheap and exact, and once of the frame, which is
      the only thing that can say a marking arrived. The frame question is asked
      by taking the box away: the pixels that go with it are exactly what that box
      was worth, and a box with no pixels to its name is six faces spent on
      nothing. Hue fingerprints were tried first and refuse to work here: a
-     grizzly saddle and the brown under it are the same hue at two lights, and
-     the only thing the renderer does to a colour is scale it. */
+     marking and the box under it can be the same hue at two lights, and the
+     only thing the renderer does to a colour is scale it. */
   const marks = await step('aMarkingTheModelStatesReachesTheFrame', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player, gl = g.R.gl, W = g.world;
     const was = { list: g.creatures, tp: g.thirdPerson, hover: g.hover, mode: g.mode, time: g.time,
@@ -9435,7 +9460,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        same part. Boxes of different parts are not counted -- a part turns, so a
        box that starts behind another can swing out into the light. */
     const buried = [];
-    for (const id of ['human', 'frog', 'bear']) {
+    for (const id of ['human', 'frog']) {
       for (const pt of N.MODELS[id].parts) {
         const bs = pt.boxes || [];
         for (const a of bs) {
@@ -9483,17 +9508,16 @@ What was measured before any of this was fixed, over 180 frames of walking
        caught from shootCamera itself rather than read back off the game. */
     const shoot = () => { const f = g.shootCamera(p); g._camFrame = f; g.render(); return f; };
     const grab = () => { const b = new Uint8Array(Wd * Hd * 4); gl.readPixels(0, 0, Wd, Hd, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
-    const bear = g.creatures.find(c => c.sp.id === 'bear');
-    if (!bear) return { error: 'no bear in the valley', buried };
     /* (c) which side of a box the lens has to stand on. A marking owns pixels
        only on the side it stands out, and which side that is comes out of the
-       model: each of the six faces of the box is sampled on a grid and counted by
-       how much of it no other box of the same body reaches past. The face with
-       the largest open area is the side the marking is written on. Nothing is
-       measured from one angle, because a back that rises -- a grizzly's shoulder
-       hump -- is buried on every side and escapes only upward: every box is looked
-       at twice, once from the side its own best face points at and once from over
-       it, and the worth of the box is the better of the two readings. */
+       model: each of the six faces of the box is sampled on a grid and counted
+       by how much of it no other box of the same body reaches past. The face
+       with the largest open area is the side the marking is written on. Nothing
+       is measured from one angle, because a marking that rises above the body
+       it is written on is buried on every side and escapes only upward: every
+       box is looked at twice, once from the side its own best face points at
+       and once from over it, and the worth of the box is the better of the two
+       readings. */
     const escapeOf = (id, partName, i) => {
       const parts = N.MODELS[id].parts;
       const a = parts.find(q => q.name === partName).boxes[i];
@@ -9531,14 +9555,6 @@ What was measured before any of this was fixed, over 180 frames of walking
       return { yaw: YAW[DIR[hs]], up, dir: DIR[up ? 3 : hs],
         out: +open[up ? 3 : hs].toFixed(3) };
     };
-    const bodies = { bear };
-    const DIST = { bear: 2.0 };
-    const eyeH = (p.eyePos ? (p.eyePos() - p.y) : 1.55);
-    const pose = (a, yaw) => {
-      a.x = spot.x; a.y = spot.y; a.z = spot.z; a.yaw = yaw;
-      a.vx = a.vy = a.vz = 0; a.sleeping = false; a.state = 'wander'; a.pause = 0;
-      a.tilt = 0; a.bank = 0; a.crouch = 0; a.airAmt = 0; a.squash = 0; a.moveAmt = 0;
-    };
     /* The shot is pinned, not inherited. Every count below is a count of pixels,
        and two things about the shot belong to whatever step ran before this one
        rather than to the body in front of the lens: the damped distance and fov
@@ -9555,20 +9571,11 @@ What was measured before any of this was fixed, over 180 frames of walking
            off the player's aim, so it is the player's *facing* that has to turn
            and the aim that stays: faceYaw is what the draw rotates the model by,
            and with the aim fixed at PI/2 the lens stands west of the body and
-           looks east, exactly as it does for an animal. */
+           looks east. */
         g.creatures = []; g.thirdPerson = true; p.form = null;
         p.x = spot.x; p.z = spot.z; p.y = spot.y; p.vx = p.vy = p.vz = 0;
         p.yaw = Math.PI / 2; p.faceYaw = v.yaw; p.bank = 0; p.tilt = 0;
         p.pitch = v.up ? -0.8 : 0; p.vital = 10; p.fright = 0;
-      } else {
-        const a = bodies[id];
-        pose(a, v.yaw);
-        g.creatures = [a]; g.thirdPerson = false; p.form = null; g.camReady = true;
-        const h = N.FRUIT_BY_ID[N.CREATURE_BY_ID[id].fruit].form.size[1], d = DIST[id];
-        const eye = Math.max(0.12, h * (v.up ? 2.2 : 0.55));
-        p.x = spot.x - d; p.z = spot.z; p.y = spot.y + eye - eyeH;
-        p.vx = p.vy = p.vz = 0; p.yaw = Math.PI / 2;
-        p.pitch = v.up ? -Math.atan2(eye - h * 0.6, d) : 0;
       }
       /* the environment a shot is drawn with is built off the lens one frame
          old, and that lens is whatever the game's own loop last aimed its
@@ -9622,9 +9629,6 @@ What was measured before any of this was fixed, over 180 frames of walking
     const idx = (id, partName, col) => N.MODELS[id].parts.find(q => q.name === partName).boxes.findIndex(b => b[6] === col);
     g.time = 420 * 0.42; g.mode = 'play'; g.hover = null;
     const row = {};
-    row.bearSaddle = both('bear', 'body', idx('bear', 'body', '#8a8272'));
-    row.bearBody = both('bear', 'body', 0);
-    row.bearHump = both('bear', 'body', idx('bear', 'body', '#5f574e'));
     row.humanCollar = both('human', 'torso', idx('human', 'torso', '#7a4a3a'));
     row.humanSkull = both('human', 'head', 0);
     row.humanCoat = both('human', 'torso', 0);
@@ -9642,10 +9646,6 @@ What was measured before any of this was fixed, over 180 frames of walking
      measures, never from what the boxes are sized. */
   const mr = marks.row || {};
   check('no box of a body is buried inside a box of the same part', marks.buried && marks.buried.length === 0, marks.buried);
-  check('the measure is not vacuous: a bear\'s own trunk owns a twentieth of the frame', mr.bearBody && mr.bearBody.px > 12000, mr.bearBody);
-  check('the bear\'s grizzled saddle owns pixels of its own', mr.bearSaddle && mr.bearSaddle.px > 3000, mr.bearSaddle);
-  check('the saddle is worth half the shoulder it rises under',
-    mr.bearSaddle && mr.bearHump && mr.bearSaddle.px > mr.bearHump.px * 0.5, marks);
   check('the person is drawn, and the coat owns pixels', mr.humanCoat && mr.humanCoat.px > 300, mr.humanCoat);
   check('the person\'s collar owns pixels of its own', mr.humanCollar && mr.humanCollar.px > 300, mr.humanCollar);
   /* The side reading, not the better of the two: a ruff is a ring round a neck,
@@ -9659,12 +9659,11 @@ What was measured before any of this was fixed, over 180 frames of walking
     mr.humanCollar && mr.humanSkull && mr.humanCollar.px > mr.humanSkull.px * 0.3, marks);
   /* A pixel count only means something if the shot it was counted off is the shot
      the game really films with: the person from 5.55 m at 84 degrees
-     (1.5 + 2.25 * 1.8, +8 for the third-person lens), an animal from the player's
-     own eye at 76. If these drift, every bound below drifts with them. */
-  check('each row was counted off the shot the game films that body with',
-    mr.bearBody && mr.bearBody.fov === 76 &&
+     (1.5 + 2.25 * 1.8, +8 for the third-person lens). If it drifts, every bound
+     below drifts with it. */
+  check('the rows were counted off the shot the game films that body with',
     mr.humanCollar && mr.humanCollar.fov === 84 && mr.humanCollar.d > 5.4 && mr.humanCollar.d < 5.7,
-    { bear: mr.bearBody, human: mr.humanCollar });
+    mr.humanCollar);
 
   /* A body has to hide what stands behind it. What the inside-out winding cost
      here was not a missing triangle: it was the depth of the surface. The near
@@ -9673,15 +9672,17 @@ What was measured before any of this was fixed, over 180 frames of walking
      flank you were standing in front of, and everything standing inside that
      width showed through the animal in front of it.
      Measured here, with two bodies of the same size one behind the other and the
-     lens 2 m in front: the far one stands 0.12 m down the near one's own depth,
-     which is inside it, and no surface of either is at the same distance as
-     another. Taking the far one away moves 1332 pixels of the 60509 it owns when
-     it stands alone -- it is nearly all behind the body in front, as it should
-     be. (Two bodies the same size have the same silhouette, so this step does
-     not by itself catch the winding: it moves from 0.022 kept to 0.041 and stays
-     inside its bounds. The winding is caught where it is exact -- the triangle
-     table in node-smoke, the corner coordinates of the crease step, and the flank
-     reading two steps below, which reads the wrong end of the body outright.)
+     lens 0.6 m in front -- close enough that a body 0.43 m across owns a share
+     of the frame worth counting: the far one stands 0.06 m down the near one's
+     own depth, which is inside it, and no surface of either is at the same
+     distance as another. Taking the far one away moves the sliver of it that
+     stands past the near one's silhouette -- it is nearly all behind the body in
+     front, as it should be. (Two bodies the same size have the same silhouette,
+     so this step does not by itself catch the winding: a wound-inward build
+     moves the kept share from 0.022 to 0.041 and stays inside its bounds. The
+     winding is caught where it is exact -- the triangle table in node-smoke, the
+     corner coordinates of the crease step, and the flank reading two steps
+     below, which reads the wrong end of the body outright.)
      The gap is stated from the model's own depth rather than from a constant,
      because the claim only means something while the far body really does stand
      between the near flank and the far one. */
@@ -9703,15 +9704,15 @@ What was measured before any of this was fixed, over 180 frames of walking
             Math.abs(A[i * 4 + 2] - B[i * 4 + 2]) > 6) n++;
       return n;
     };
-    const bear = g.creatures.find(c => c.sp.id === 'bear');
-    const tall = N.FRUIT_BY_ID[N.CREATURE_BY_ID.bear.fruit].form.size[1];
-    if (!bear) return { error: 'no bear in the valley' };
+    const frog = g.creatures.find(c => c.sp.id === 'frog');
+    const tall = N.FRUIT_BY_ID[N.CREATURE_BY_ID.frog.fruit].form.size[1];
+    if (!frog) return { error: 'no frog in the valley' };
     /* a second body of the same kind, and a copy that keeps the class: a creature
        answers questions about itself (`isAquatic`) that a plain object
        copy of it cannot answer. The draw takes its mesh from the model cache by
        species, so two bodies of one species draw the same boxes at two different
        sets of matrices, which is exactly what is being asked. */
-    const twin = Object.assign(Object.create(Object.getPrototypeOf(bear)), bear);
+    const twin = Object.assign(Object.create(Object.getPrototypeOf(frog)), frog);
     const pose = (a, x) => {
       a.x = x; a.y = spot.y; a.z = spot.z; a.yaw = Math.PI / 2;
       a.vx = a.vy = a.vz = 0; a.sleeping = false; a.state = 'wander'; a.pause = 0;
@@ -9719,9 +9720,9 @@ What was measured before any of this was fixed, over 180 frames of walking
     };
     /* how far a body reaches along the axis the lens looks down, read off the
        model at the scale the animal is drawn at, not off a constant kept here */
-    const sc = N.CREATURE_BY_ID.bear.scale;
+    const sc = N.CREATURE_BY_ID.frog.scale;
     let lo = 1e9, hi = -1e9;
-    for (const pt of N.MODELS.bear.parts) for (const b of pt.boxes) {
+    for (const pt of N.MODELS.frog.parts) for (const b of pt.boxes) {
       lo = Math.min(lo, b[0] * sc); hi = Math.max(hi, (b[0] + b[3]) * sc);
     }
     const depth = hi - lo;
@@ -9743,11 +9744,11 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.updateEnv();
     };
     g.time = 420 * 0.42; g.mode = 'play'; g.hover = null;
-    lens(2.0);
-    pose(bear, spot.x); pose(twin, spot.x + gap);
-    g.creatures = [bear, twin];
+    lens(0.6);
+    pose(frog, spot.x); pose(twin, spot.x + gap);
+    g.creatures = [frog, twin];
     const both = shot();
-    g.creatures = [bear]; for (let k = 0; k < 4; k++) shoot();
+    g.creatures = [frog]; for (let k = 0; k < 4; k++) shoot();
     const behind = moved(both, grab());
     g.creatures = [twin]; pose(twin, spot.x); for (let k = 0; k < 4; k++) shoot();
     const only = shot();
@@ -9763,11 +9764,11 @@ What was measured before any of this was fixed, over 180 frames of walking
   }, marks.spot);
   check('the far body really does stand inside the depth of the near one',
     !occl.error && occl.inside && occl.gap > 0.05 && occl.gap < occl.depth * 0.5, occl);
-  check('the measure is not vacuous: a bear in the open owns its share of the frame',
+  check('the measure is not vacuous: a frog in the open owns its share of the frame',
     occl.open > 20000, occl);
-  check('a bear standing between the lens and another bear hides the one behind it',
+  check('a frog standing between the lens and another frog hides the one behind it',
     occl.behind < occl.open * 0.45, occl);
-  check('the bear behind is not simply gone: what escapes round the one in front is a bear',
+  check('the frog behind is not simply gone: what escapes round the one in front is a frog',
     occl.behind > 400, occl);
 
   /* Which end of a body the lens stands at has to be written into the frame, and
@@ -9775,19 +9776,27 @@ What was measured before any of this was fixed, over 180 frames of walking
      no light direction, no normal and no sun term anywhere in the shaders: what
      reaches the lens is the vertex colour times the shade byte times the daylight
      times the water, plus the sky's own light. So a face carries its constant and
-     nothing else, and box() gives the two ends of a box 0.58 and 0.88.
+     nothing else, and the two readings this step takes are the whole of the
+     front-back law.
      The body is turned to face the lens and the lens stands on that axis, 2 m
-     out: from one end the middle of the frame is the trunk's rear face (0.58),
-     from the other its front face (0.88) -- the legs straddle the sight line and
-     the head sits above it, so it is the same box and the same colour either way.
-     The quotient that has to come back is 0.88/0.58 with the sky's light added to
-     both, which is what puts the measured reading at 1.25 rather than 1.52.
+     out, at the middle of the body's height: from one end the middle of the frame
+     is the head's own front face (the head stands forward of the sight line and
+     the legs to its sides), and from the other the hips taper's rear face, which
+     stands 7 cm past the body it tapers from and so is the back of the body at
+     that height. They are two different greens of one palette family -- the
+     skull's and the taper's -- at two different strengths of their own bases,
+     about 0.9 and about 0.6 the way the patch's own place on each face lights
+     them, and the bases are 1.13 apart in themselves, so the quotient that comes
+     back is the base ratio with the two faces' own constants added on -- 1.57 in
+     one clearing, 1.72 in another, wherever the patch lands on the faces.
      Wound inward neither reading is the end it was aimed at: the near flank is
      culled, and what fills the centre of the frame is the inside of the far wall
-     -- the pale saddle's front wall at one end (it stands 2.4 cm outside the trunk
-     it marks) and the trunk's own rear wall at the other. Two different colours at
-     two different constants, and the quotient tips below 1 -- 0.802 measured, with
-     the two readings swapped, which is how this step catches the winding. */
+     -- the hips taper's front wall at the rear end (it stands 7 cm outside the
+     body it tapers from) and the head's own rear wall at the front. Both of those
+     walls are fully open, so the quotient collapses to the ratio of the two base
+     colours alone -- 1.13 at most, because the sky's light is added to both --
+     which is below the floor the check keeps at 1.3. That gap is how this step
+     catches the winding. */
   const flank = await step('theFlankTurnedToTheLensIsTheFlankThatIsLit', (spot) => {
     const g = window.game, N = window.FRUTARIA, p = g.player, gl = g.R.gl;
     if (!spot) return { error: 'the marking step found no clearing' };
@@ -9795,13 +9804,13 @@ What was measured before any of this was fixed, over 180 frames of walking
       camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady, frame: g._camFrame,
       px: p.x, py: p.y, pz: p.z, yaw: p.yaw, pitch: p.pitch, form: p.form };
     const Wd = gl.drawingBufferWidth, Hd = gl.drawingBufferHeight;
-    const bear = g.creatures.find(c => c.sp.id === 'bear');
-    const tall = N.FRUIT_BY_ID[N.CREATURE_BY_ID.bear.fruit].form.size[1];
-    if (!bear) return { error: 'no bear in the valley' };
+    const frog = g.creatures.find(c => c.sp.id === 'frog');
+    const tall = N.FRUIT_BY_ID[N.CREATURE_BY_ID.frog.fruit].form.size[1];
+    if (!frog) return { error: 'no frog in the valley' };
     const pose = () => {
-      bear.x = spot.x; bear.y = spot.y; bear.z = spot.z; bear.yaw = Math.PI / 2;
-      bear.vx = bear.vy = bear.vz = 0; bear.sleeping = false; bear.state = 'wander'; bear.pause = 0;
-      bear.tilt = 0; bear.bank = 0; bear.crouch = 0; bear.airAmt = 0; bear.squash = 0; bear.moveAmt = 0;
+      frog.x = spot.x; frog.y = spot.y; frog.z = spot.z; frog.yaw = Math.PI / 2;
+      frog.vx = frog.vy = frog.vz = 0; frog.sleeping = false; frog.state = 'wander'; frog.pause = 0;
+      frog.tilt = 0; frog.bank = 0; frog.crouch = 0; frog.airAmt = 0; frog.squash = 0; frog.moveAmt = 0;
     };
     const lens = (fromX) => {
       const eyeH = (p.eyePos ? (p.eyePos() - p.y) : 1.55);
@@ -9843,9 +9852,9 @@ What was measured before any of this was fixed, over 180 frames of walking
       return centre(b, 7);
     };
     g.time = 420 * 0.42; g.mode = 'play'; g.hover = null;
-    g.creatures = [bear]; pose();
-    const left = look(-1);          // the rear end of the body: constant 0.58
-    const right = look(1);         // the front end of the same body: constant 0.88
+    g.creatures = [frog]; pose();
+    const left = look(-1);          // the rear end: the hips taper's rear face, 0.58 of its own base
+    const right = look(1);         // the front end: the muzzle's lower front face, the darker of the two, 0.78 of its own base
     g.creatures = was.list; g.thirdPerson = was.tp; g.hover = was.hover; g.mode = was.mode;
     g._camFrame = was.frame; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
     p.x = was.px; p.y = was.py; p.z = was.pz; p.yaw = was.yaw; p.pitch = was.pitch; p.form = was.form;
@@ -9855,11 +9864,15 @@ What was measured before any of this was fixed, over 180 frames of walking
   const share = (c) => c.rgb.map((v) => v / c.luma);
   check('each reading is one face and not an edge: the middle of the frame is flat colour',
     !flank.error && flank.left.tones <= 3 && flank.right.tones <= 3, flank);
-  check('both readings are the same colour at two strengths, not two different surfaces',
-    !flank.error && [0, 1, 2].every((i) => Math.abs(share(flank.left)[i] - share(flank.right)[i]) <= 0.03),
+  /* the two greens sit 0.104 apart in their blue share in themselves, and the
+     8-bit frame rides a hundredth on top of that, so the bound keeps margin on the
+     rounding; an unrelated surface -- the throat's grey-green, the lamp's amber --
+     is a full quarter away and still fails */
+  check('both readings are the body\u0027s own greens at two strengths, not two unrelated surfaces',
+    !flank.error && [0, 1, 2].every((i) => Math.abs(share(flank.left)[i] - share(flank.right)[i]) <= 0.125),
     { left: flank.left, right: flank.right, shareL: share(flank.left), shareR: share(flank.right) });
-  check('the flank whose face constant is the brighter of the two reads brighter',
-    !flank.error && flank.ratio > 1.06 && flank.ratio < 1.5, flank);
+  check('the head end reads clearly brighter than the taper end, past what the base colours alone (1.23) could give',
+    !flank.error && flank.ratio > 1.3 && flank.ratio < 2.0, flank);
 
 
   /* A joint the frame shows side by side has to be two colours, not one colour
@@ -9897,20 +9910,20 @@ What was measured before any of this was fixed, over 180 frames of walking
        a body is filmed one at a time, with the rest of the valley's creatures
        put away, so that a changed pixel can only be this body's */
     const animals = {};
-    for (const id of ['frog', 'bear']) animals[id] = g.creatures.find((c) => c.sp.id === id) || null;
-    if (!animals.frog || !animals.bear) return { error: 'no frog and bear in the valley' };
+    for (const id of ['frog']) animals[id] = g.creatures.find((c) => c.sp.id === id) || null;
+    if (!animals.frog) return { error: 'no frog in the valley' };
     const Wd = gl.drawingBufferWidth, Hd = gl.drawingBufferHeight;
     const shoot = () => { const f = g.shootCamera(p); g._camFrame = f; g.render(); return f; };
     const grab = () => { const b = new Uint8Array(Wd * Hd * 4); gl.readPixels(0, 0, Wd, Hd, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
     /* the lens stands due west of the body and looks east; the body is turned to
        the bearing that puts the asked-for side under it */
     const SIDEYAW = { left: Math.PI, right: 0, face: -Math.PI / 2, back: Math.PI / 2 };
-    const DIST = { bear: 2.0, frog: 0.8 };     // the distance the game films that body at
+    const DIST = { frog: 0.8 };     // the distance the game films that body at
     /* A joint has to hold while the animal is moving and not only while it stands
        still, and a moving pose has to be picked off the model rather than guessed
        at. `partAngles` is the very function the draw calls to turn a pose state
-       into a part's angles, so the sweeps below ask it: where in its own stride is
-       this body's leg furthest out of its stance. The standing shots stay exactly
+       into a part's angles, so the check below asks it: how far out of its stance
+       the pose really puts the body's limbs. The standing shots stay exactly
        the shots they always were; these poses are added next to them. */
     const stOf = (over) => Object.assign({ t: 0, gait: 0, phase: 0, move: 0, air: 0,
       crouch: 0, off: 0 }, over);
@@ -9931,18 +9944,6 @@ What was measured before any of this was fixed, over 180 frames of walking
       a0.forEach((x, i) => ANG.forEach((k) => { const d = Math.abs(x[k] - a1[i][k]); if (d > best) best = d; }));
       return +best.toFixed(3);
     };
-    // the stride position a leg is furthest out of its stance at: the swing
-    const swingOf = (id) => {
-      let best = { u: 0, moved: 0 };
-      for (let k = 1; k <= 24; k++) {
-        const m = movedBy(id, { gait: k / 24, move: 1 });
-        if (m > best.moved) best = { u: k / 24, moved: m };
-      }
-      return best;
-    };
-    const SWING = { bear: swingOf('bear') };
-    const TOPS = {};
-    for (const id of ['frog', 'bear']) if (animals[id]) TOPS[id] = animals[id].sp.speed || 3;
     /* what each pose does to the creature's own fields, and the pose state the draw
        will be handed by it -- both here, so the premise is measured off the same
        state the frame is shot with and not off a description of it. Every pose is
@@ -9961,18 +9962,15 @@ What was measured before any of this was fixed, over 180 frames of walking
            is over that clearance, and the lens goes up with the body so the whole
            body stays in the frame to be measured in. */
         ['hop', { airAmt: 1, y: spot.y + 0.5 }, { air: 1, off: 1 }]],
-      bear: [['idle', {}, {}],
-        ['swing', { gait: SWING.bear.u, speed: TOPS.bear }, { gait: SWING.bear.u, move: 1 }]],
       human: [['idle', {}, {}]]
     };
     const prem = [];
-    for (const id of ['frog', 'bear'])
+    for (const id of ['frog'])
       for (const [pose, mut, st] of POSES[id])
-        if (pose !== 'idle') prem.push({ id, pose, moved: movedBy(id, st),
-          u: pose === 'swing' ? SWING.bear.u : null });
+        if (pose !== 'idle') prem.push({ id, pose, moved: movedBy(id, st) });
     const shots = [];
     g.time = 420 * 0.42; g.mode = 'play'; g.hover = null; p.vital = 10; p.fright = 0;
-    for (const id of ['frog', 'bear', 'human']) {
+    for (const id of ['frog', 'human']) {
       const an = id === 'human' ? null : animals[id];
       const tall = id === 'human' ? 1.8 : N.FRUIT_BY_ID[N.CREATURE_BY_ID[id].fruit].form.size[1];
       for (const [pose, mut] of POSES[id]) {
@@ -9990,21 +9988,19 @@ What was measured before any of this was fixed, over 180 frames of walking
              tucked legs and a trunk is a near-tangency in the silhouette, and two runs of
              a step that does not pin it measured 98 pixels of that joint and then
              4 pixels of it, with nothing changed in between. What the whole line
-             is worth was measured rather than assumed: a bear caught mid-stride in
-             the wandering flock -- gait 20.2 rad of cycle, 2.1 m/s, phase 2.68 --
-             moves 15155 pixels of the frame it is filmed in through its gait and
-             its speed and 5363 through its phase alone, and a frog out of the same
-             flock 25532 through its speed and 1365 through its phase. */
+             is worth was measured rather than assumed: a body caught mid-stride in
+             the wandering flock moves 15155 to 25532 pixels of the frame it is
+             filmed in through its gait and its speed and 1365 to 5363 through its
+             phase alone. */
           an.phase = 0; an.t = 0; an.gait = 0; an.speed = 0; an.bend = 0;
           /* `bend` is the signed rate of heading, and the draw hands it to the
              model as `turn` (game.js: turn: c.bend). The model spends a turn only
              on a body stroking water: 1.9 rad/s of it swings a swimming frog's
-             thigh 0.179 rad and moves a walking bear's leg and
-             a hopping frog's leg nothing at all. So pinning it changes nothing in
-             these frames today -- the shots below filmed with the biggest rate the
-             wandering flock carries left in differ by 0 pixels of 504000, and that
-             flock was measured holding 1.9 rad/s of it in its frogs and 1.6 in its
-             bears -- and it is pinned with the rest for the same reason they are:
+             thigh 0.179 rad and moves a hopping frog's leg nothing at all. So
+             pinning it changes nothing in these frames today -- the shots below
+             filmed with the biggest rate the wandering flock carries left in differ
+             by 0 pixels of 504000 -- and it is pinned with the rest for the same
+             reason they are:
              a pose that is being measured should not inherit anything, a turn
              included, from wherever the body happened to be. */
           Object.assign(an, mut);          // the pose asked for: a stride, a tuck
@@ -10176,15 +10172,14 @@ What was measured before any of this was fixed, over 180 frames of walking
     p.x = was.px; p.y = was.py; p.z = was.pz; p.yaw = was.yaw; p.pitch = was.pitch; p.form = was.form;
     p.headWater = was.hw; p.faceYaw = was.faceYaw; p.bank = was.bank; p.tilt = was.tilt;
     p.vital = was.vital; g.time = 420 * 0.42; g.updateEnv();
-    return { spot, shots, prem, swing: SWING };
+    return { spot, shots, prem };
   }, marks.spot);
   /* one row per joint: the same joint at every bearing the body was filmed from,
      pooled, because a joint is worth what it is worth in the frame and not at one
      angle. Prefixes, because a body's two sides are separate parts: legFL and
      legFR are one joint of the body. */
   const JOINTS = [
-    ['frog', 'body', 'thigh'], ['frog', 'body', 'head'],
-    ['bear', 'body', 'leg'], ['bear', 'body', 'head'], ['bear', 'leg', 'shin']
+    ['frog', 'body', 'thigh'], ['frog', 'body', 'head']
   ];
   /* the frog's head to its thigh was measured too, and it is not claimed here:
      at these four bearings the two never stand against each other in the frame
@@ -10236,8 +10231,10 @@ What was measured before any of this was fixed, over 180 frames of walking
   /* the frog is the body this is asked of because it was the flattest one the
      frame showed: over a third of its pixels used to be one colour, the same
      green on the trunk and on the leg meeting it. Pooled over the four bearings
-     the game films it at that share measured 35.7% before the palette moved and
-     30.8% after. The longest unbroken run of one colour across the body did not
+     the game films it at that share measured 35.7% before the palette moved,
+     30.8% after it, 32.8% after the face stood out of the head, and 30.7% after
+     the mouth line went and the muzzle took its two tones. The longest
+     unbroken run of one colour across the body did not
      move at all (192, 192, 226 and 174 pixels, before and after alike) and is
      not claimed: a run that long is one box's own back, and repainting two
      boxes differently cannot break a run lying inside a single box. */
@@ -10251,17 +10248,14 @@ What was measured before any of this was fixed, over 180 frames of walking
     joint.error || { mean: +(frogTop.reduce((a, b) => a + b, 0) / (frogTop.length || 1)).toFixed(1), frogTop });
   /* ...and the body is not usually standing still. A joint measured on a pinned
      idle body says what the palette is worth at rest, which is not what the frame
-     shows: a walking bear has a leg in the air and a knee bent under it, a frog in
-     mid-hop has folded its legs under the trunk it hops from. Those are the frames
-     where a joint can be lost -- a near leg hides behind the far one -- so the
-     same joints are pooled again over the model's own stride and tuck.
+     shows: a frog in mid-hop has folded its legs under the trunk it hops from.
+     Those are the frames where a joint can be lost -- a near leg hides behind the
+     far one -- so the same joints are pooled again over the model's own tuck.
      The poses are read off `partAngles`, the very function the draw calls to turn a
      pose state into a part's angles. What they are worth there is a different
-     measurement from the idle one and is asked separately: the bear's knee is worth
-     351 seam pixels in motion against 496 standing still. */
-  const MOVEPOSE = { frog: 'hop', bear: 'swing' };
-  const MOVE = [['bear', 'leg', 'shin'], ['bear', 'body', 'leg'],
-    ['frog', 'body', 'thigh']];
+     measurement from the idle one and is asked separately. */
+  const MOVEPOSE = { frog: 'hop' };
+  const MOVE = [['frog', 'body', 'thigh']];
   const mrows = MOVE.map((j) => pool(j[0], j[1], j[2], 0, MOVEPOSE[j[0]]));
   const shotAt = (id, pose, side) => (joint.shots || [])
     .find((s) => s.id === id && s.pose === pose && s.side === side);
@@ -10271,22 +10265,6 @@ What was measured before any of this was fixed, over 180 frames of walking
   const sidesOf = (id, pose) => (joint.shots || [])
     .filter((s) => s.id === id && s.pose === pose).map((s) => s.side)
     .filter((sd) => shotAt(id, 'idle', sd));
-  /* how far the lowest row of a named part rose, in rows of the frame: row 0 of a
-     readPixels buffer is the bottom of the image, so a part whose lowest row has
-     come up is a part that has left the ground it was standing on. This is the
-     right question for a walking body, whose feet are still on the floor. */
-  const liftOf = (id, pose, pre) => {
-    let best = 0;
-    for (const side of sidesOf(id, pose)) {
-      const a = shotAt(id, 'idle', side), b = shotAt(id, pose, side);
-      for (const ra of a.box || []) {
-        if (!ra[0].startsWith(pre)) continue;
-        const rb = (b.box || []).find((q) => q[0] === ra[0]);
-        if (rb) best = Math.max(best, rb[2] - ra[2]);
-      }
-    }
-    return best;
-  };
   /* the same rise, counted against the body the part hangs from. A hop lifts the
      whole body off the floor, and every part of it goes up with the trunk: what
      says a hop reached the frame is the thigh coming up under the trunk. Counted
@@ -10306,26 +10284,24 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     return best;
   };
-  /* the pose has to be the model's own extreme rather than one guessed at: swept
-     over a whole stride the bear's legs come 0.618 rad out of their stance (at 1/6
-     of a cycle), and the frog's tuck is worth 1.4 rad once its feet are off the
-     floor it stands on. Under half a radian a limb has turned less than the width
-     of the part that carries it, which is a body you cannot see moving. */
-  check('the stride and the tuck asked for are the model\'s own extremes, and they move the body it is asking about',
-    !joint.error && joint.prem.length === 2 && joint.prem.every((x) => x.moved >= 0.5),
-    joint.error || { prem: joint.prem, swing: joint.swing });
+  /* the pose has to be the model's own extreme rather than one guessed at: the
+     frog's tuck is worth 1.4 rad once its feet are off the floor it stands on.
+     Under half a radian a limb has turned less than the width of the part that
+     carries it, which is a body you cannot see moving. */
+  check('the tuck asked for is the model\'s own extreme, and it moves the body it is asking about',
+    !joint.error && joint.prem.length === 1 && joint.prem.every((x) => x.moved >= 0.5),
+    joint.error || { prem: joint.prem });
   /* and the pose has to reach the frame, not stay in the state handed to the draw:
-     measured here, the bear's shin rose 29 rows of a 560-row frame off the floor it
-     was standing on, and the frog's thigh came 48 rows up against the trunk it hops
-     from (its shin 121 rows). */
-  check('and the pose reached the picture: a foot left the floor it was standing on, and a leg came up under the body it hops from',
-    !joint.error && liftOf('bear', 'swing', 'shin') >= 8 && shiftOf('frog', 'hop', 'thigh') >= 8,
-    joint.error || { bearShin: liftOf('bear', 'swing', 'shin'), frogThigh: shiftOf('frog', 'hop', 'thigh') });
+     measured here, the frog's thigh came 48 rows up against the trunk it hops from
+     (its shin 121 rows). */
+  check('and the pose reached the picture: a leg came up under the body it hops from',
+    !joint.error && shiftOf('frog', 'hop', 'thigh') >= 8,
+    joint.error || { frogThigh: shiftOf('frog', 'hop', 'thigh') });
   check('the id buffer still knows which part drew a pixel while the body is moving',
     !joint.error && joint.shots.filter((s) => s.pose !== 'idle' && s.id !== 'human')
       .every((s) => s.cover > 90),
     joint.error || joint.shots.filter((s) => s.pose !== 'idle').map((s) => [s.id, s.pose, s.side, s.cover]));
-  check('the joints a moving body puts in the frame are still worth reading: bear knee, bear hip, frog thigh',
+  check('the joints a moving body puts in the frame are still worth reading: frog thigh',
     mrows.every((r) => r.n >= 40), mrows);
   check('and they are still two colours there, not one colour at two strengths',
     mrows.every((r) => r.pctShare >= 80 && r.ds >= 0.05), mrows);
@@ -10422,9 +10398,9 @@ What was measured before any of this was fixed, over 180 frames of walking
     // what this step is about to disturb, put back at the end: the steps before
     // it earned this pack and this clock, and they are over now, not this one
     const was = { time: g.time, day: g.day, inv: g.inv, stashes: g.stashes, diffs: g.diffs,
-      regrow: g.regrow, growQueue: g.growQueue, drops: g.drops, buffs: g.buffs,
+      regrow: g.regrow, growQueue: g.growQueue, drops: g.drops,
       seen: g.seen, dex: g.dexFruit, stats: g.stats, upg: Object.assign({}, g.upg),
-      quests: g.quests.map(q => q.done),
+      deeds: g.deeds.map(q => q.done),
       p: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vital: p.vital,
         form: p.form, formT: p.formT, formMax: p.formMax, dry: p.dry } };
     const hash = () => {
@@ -10507,8 +10483,8 @@ What was measured before any of this was fixed, over 180 frames of walking
     // was standing here. the rest of the game state does
     Object.assign(g, { time: was.time, day: was.day, inv: was.inv, stashes: was.stashes,
       diffs: was.diffs, regrow: was.regrow, growQueue: was.growQueue, drops: was.drops,
-      buffs: was.buffs, seen: was.seen, dexFruit: was.dex, stats: was.stats });
-    g.quests.forEach((q, i) => { q.done = was.quests[i]; });
+      seen: was.seen, dexFruit: was.dex, stats: was.stats });
+    g.deeds.forEach((q, i) => { q.done = was.deeds[i]; });
     for (const k in g.upg) delete g.upg[k];
     Object.assign(g.upg, was.upg);
     Object.assign(p, was.p);

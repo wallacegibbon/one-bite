@@ -53,7 +53,7 @@
     if (dh < HILL.r) h += Math.pow(1 - dh / HILL.r, 1.4) * 8;
     /* Mirrorlake (bowl shaped: shallow at the shore, deep in the middle).
        18 carved a puddle: 2,029 water columns, mean depth 5.5, and 41% of them
-       4 or shallower -- more shelf than lake. 22 gives 2,970 columns, mean 7.4,
+       4 or shallower -- more shelf than lake. 22 gives 2,958 columns, mean 7.4,
        53% at 8 or deeper. It is also as deep as this world can go: the surface
        is y14 and terrainH never returns below y3, so 11 is the deepest column
        possible and the bottom of the basin comes out flat. The shoreline term
@@ -67,7 +67,26 @@
     }
     // the island at the lake centre
     const di = dist(x, z, ISLE.x, ISLE.z);
-    if (di < ISLE.r + 3) h = Math.max(h, 21 + (1 - ss(8, 14, di)) * 2.5);
+    /* `<=`, not `<`: the island base that castle() builds over this same
+       circle fills every column at d <= 13 (its loop skips only d > 13), and
+       a strict < here left the rim ring -- the twelve integer columns at
+       exactly d = 13 from the lake centre, the 5-12-13 lattice points -- at
+       the lake's own floor: h 3, water y4..14. The base then overwrote
+       y6..21 of those columns with stone, and the water at y4-5 stayed
+       trapped beneath it: a pocket two cells deep, topmost water y5, in all
+       twelve columns, measured on seed 20261008. The aquatic law answers wet
+       to a pocket (two or more water cells anywhere in the column) while the
+       lamps' own cell at their hover height (y13) is the stone: a lamp that
+       stepped in was carried out of the stone at 0.1 m a frame, up the
+       sixteen-metre pillar, and held on the rim by the column's own altitude
+       law -- measured over six thousand frames of a fresh world, eight of the
+       ten lamps of Mirrorlake had left the water by the end, 22.35 the rim's
+       ground plus 0.35, 23.35 the keep's bridge deck over it. With the rim
+       raised here the base overwrites solid on solid and the pocket has
+       nowhere to form; the body-cell law beside the step gate in entities.js
+       answers the same question from the other side, for a world the player
+       digs. */
+    if (di <= ISLE.r + 3) h = Math.max(h, 21 + (1 - ss(8, 14, di)) * 2.5);
     // Lanternrow flat ground
     if (x > VILL.x0 - 6 && x < VILL.x1 + 6 && z > VILL.z0 - 6 && z < VILL.z1 + 6) {
       const w = Math.min(1, Math.min(x - (VILL.x0 - 6), (VILL.x1 + 6) - x, z - (VILL.z0 - 6), (VILL.z1 + 6) - z) / 6);
@@ -176,7 +195,7 @@
     }
   }
 
-  /* a burrow mound: a low earth heap. Whatever dug these is gone from the
+  /* a mound: a low earth heap. Whatever dug these is gone from the
      valley; the heaps are left, and the town still digs its cellars like this */
   function mound(x, z) {
     const y = gy(x, z);
@@ -235,7 +254,6 @@
     const gx = cx + 6, gz = cz + 6;
     box(gx - 2, base, gz - 2, gx + 2, base + 4, gz + 2, 21, true);
     set(gx, base + 1, gz, 14);
-    set(gx - 1, base + 1, gz - 1, N.FRUIT_BLOCK_REV['bruinfig']);
     set(gx + 1, base + 1, gz + 1, N.FRUIT_BLOCK_REV['frogpear']);
     // cellar entrance (marked)
     set(cx, base, cz + 4, N.BLOCK_ID.cellarCrate);
@@ -352,8 +370,8 @@
     }
   }
   function lakebed() {
-    // sunken tower -- the landmark lives in the zone data, because the lamp
-    // jellyfish field is defined as its outline and spawns from there
+    // sunken tower -- the landmark lives in the zone data, because the
+    // lanternfish field is defined as its outline and spawns from there
     const [tx, tz] = MIRROR.tower;
     plinth(tx - 3, tz - 3, tx + 3, tz + 3, 6);
     box(tx - 3, 6, tz - 3, tx + 3, 15, tz + 3, 12, true);
@@ -441,21 +459,6 @@
       const y = gy(x, z);
       if (get(x, y, z) === 1) set(x, y + 1, z, 76);
     }
-    for (let i = 0; i < 40; i++) {
-      const a = rnd() * 6.28, r = rnd() * 8;
-      const x = Math.round(gx + Math.cos(a) * r), z = Math.round(gz + Math.sin(a) * r);
-      const y = gy(x, z);
-      if (get(x, y, z) === 1 && !get(x, y + 1, z)) set(x, y + 1, z, rnd() < 0.6 ? 60 : 61);
-    }
-    // forest floor: glowcaps / glowseeds / leapers
-    for (let i = 0; i < 900; i++) {
-      const x = 8 + (rnd() * 144 | 0), z = 8 + (rnd() * 66 | 0);
-      if (dist(x, z, LAKE.x, LAKE.z) < LAKE.r + 1) continue;
-      const y = gy(x, z);
-      if (get(x, y, z) !== 1 || get(x, y + 1, z)) continue;
-      const r = rnd();
-      set(x, y + 1, z, r < 0.35 ? 60 : r < 0.72 ? 62 : r < 0.88 ? 64 : 61);
-    }
     // fallen logs: the old paths through the wood
     for (let i = 0; i < 16; i++) {
       const x = 14 + (rnd() * 130 | 0), z = 12 + (rnd() * 56 | 0);
@@ -473,7 +476,7 @@
       const a = rnd() * 6.28, r = 4 + rnd() * 9;
       bush(Math.round(gx + Math.cos(a) * r), Math.round(gz + Math.sin(a) * r), N.FRUIT_BLOCK_REV['frogpear']);
     }
-    // burrow mounds: in the wood and on the ridge
+    // mounds: in the wood and on the ridge
     for (let i = 0; i < 22; i++) {
       const x = 10 + (rnd() * 140 | 0), z = 10 + (rnd() * 62 | 0);
       if (dist(x, z, LAKE.x, LAKE.z) < LAKE.r + 2) continue;
@@ -483,17 +486,10 @@
       const a = rnd() * 6.28, r = rnd() * 20;
       mound(Math.round(MTN.x + Math.cos(a) * r), Math.round(MTN.z + Math.sin(a) * r));
     }
-    // bruin fig: Ashscale Ridge
-    for (let i = 0; i < 26; i++) {
-      const a = rnd() * 6.28, r = rnd() * 18;
-      const x = Math.round(MTN.x + Math.cos(a) * r), z = Math.round(MTN.z + Math.sin(a) * r);
-      const y = gy(x, z);
-      if (y > SEA + 6 && !get(x, y + 1, z) && [3, 15, 24, 2, 1].indexOf(get(x, y, z)) >= 0) set(x, y + 1, z, N.FRUIT_BLOCK_REV['bruinfig']);
-    }
     // cellar stones: one under the oldest tree + one near town
     for (const [x, z] of [[ORCH.x + 2, ORCH.z + 2], [116, 112]]) {
       const y = gy(x, z);
-      if (get(x, y, z) === 1 && !get(x, y + 1, z)) set(x, y + 1, z, 65);
+      if (get(x, y, z) === 1 && !get(x, y + 1, z)) set(x, y + 1, z, N.PLANT_BLOCK_REV['cellarseed']);
     }
   }
 

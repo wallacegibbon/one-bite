@@ -48,7 +48,7 @@
            a column with water in it shows, so the scan has to stop at it -- and
            it used to stop only at a **solid** block, which water is not: the
            scan walked straight down through the whole lake and stopped at the
-           lakebed, so every one of the valley's **2,970** wet columns was
+           lakebed, so every one of the valley's **2,958** wet columns was
            painted with the colour of its own floor (the sand and mud of
            Mirrorlake, 112/104/74 and 148/137/98) and the water palette below it
            was never reached at all. Cloud, fruit, reeds and the glowcap ring
@@ -256,9 +256,6 @@
       let me = '<h3>' + N.t('j.you') + '</h3><div class="dim">' + N.t('j.youEpithet', { e: N.disp(ep) }) +
         (g.name ? N.t('j.youNameSet', { n: g.name }) : N.t('j.youNameNone')) +
         N.t('j.youId', { id: g.id }) + '</div>';
-      let q = '<h3>' + N.t('j.quests') + '</h3>';
-      for (const qq of g.quests) q += '<div class="q' + (qq.done ? ' done' : '') + '"><b>' + (qq.done ? '✔ ' : '○ ') + N.disp(qq) +
-        '</b><div class="dim">' + N.disp(qq.hint) + '</div></div>';
       let b = '<h3>' + N.t('j.fruits') + '</h3><div class="dex">';
       for (const f of N.FRUITS) {
         const known = g.dexFruit[f.id];
@@ -279,7 +276,7 @@
           (known ? '<div class="lore">' + N.dexOf(sp) + '</div>' : '<div class="dim">' + N.t('j.notSeen') + '</div>') + '</div>';
       }
       c += '</div>';
-      el('journalBody').innerHTML = me + q + b + c;
+      el('journalBody').innerHTML = me + b + c;
     }
 
     showHelp(on) {

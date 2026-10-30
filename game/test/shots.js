@@ -14,7 +14,7 @@ const SHOTS = [
   ['lake', 'pos=58,17,96 yaw=1.15 pitch=-0.05 safe'],
   ['underwater', 'pos=92,11,120 yaw=0.5 pitch=-0.15'],
   // the lamps: midnight, one metre under the surface of Mirrorlake, looking at
-  // the sunken tower. The jellyfish parts are emissive, so this shot is the
+  // the sunken tower. The lanternfish parts are emissive, so this shot is the
   // proof that the lake has a light of its own at night (docs/02 s5)
   ['lamps', 'pos=60,13,112 yaw=2.36 pitch=-0.15 time=385'],
   ['forest', 'pos=104,25,32 yaw=1.2 pitch=-0.05 safe'],
@@ -30,21 +30,20 @@ const SHOTS = [
   // light rather than turn into a cut-out against it -- see the uAmb note in
   // docs/07 s3.2
   ['dusk', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe time=315'],
-  // the two bodies you can wear beside the human, seen from behind: the gait
+  // the one body you can wear beside the human, seen from behind: the gait
   // and the pose come out of the same physics the displacement uses, so a shot
   // of a body walking is a shot of the body, not of an animation pinned on top
   // of it
   ['human', 'pos=104,25,32 yaw=1.2 pitch=-0.05 safe tp=1'],
   ['frog', 'pos=92,11,120 yaw=0.5 pitch=-0.1 form=frogpear tp=1'],
-  ['bear', 'pos=142,32,18 yaw=2.2 pitch=-0.25 form=bruinfig tp=1 safe'],
-  ['inv', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=frogpear,bruinfig'],
-  ['cellarui', 'pos=136,26,134 yaw=0.2 pitch=-0.1 safe inv=frogpear,bruinfig cellar=1'],
+  ['inv', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=frogpear,frogpear'],
+  ['cellarui', 'pos=136,26,134 yaw=0.2 pitch=-0.1 safe inv=frogpear,frogpear cellar=1'],
   // identity: the valley calls you an epithet, the name is yours (N in game)
-  ['who', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q4'],
-  ['journal', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=q1,q4,q5,q6 journal=1'],
+  ['who', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=cellar,lake'],
+  ['journal', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=小满 epquest=cellar,lake,greenhouse journal=1'],
   // the same two screens after pressing L: the interface re-translates, the world does not move
-  ['inv_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=frogpear,bruinfig lang=en'],
-  ['journal_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=Xiaoman epquest=q1,q4,q5,q6 journal=1 lang=en'],
+  ['inv_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe inv=frogpear,frogpear lang=en'],
+  ['journal_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe name=Xiaoman epquest=cellar,lake,greenhouse journal=1 lang=en'],
   // the help panel: the rules a player is actually told, in the other language
   ['help_en', 'pos=136,26,132 yaw=0.2 pitch=-0.1 safe help=1 lang=en']
 ];
@@ -107,7 +106,7 @@ const SHOTS = [
       if (c.tp) g.thirdPerson = true;
       if (c.cellar) g.openStashUI(g.stashes[0]);
       if (c.name) g.setName(c.name);
-      if (c.epquest) { for (const q of c.epquest.split(',')) g.quests.find(x => x.id === q).done = true; g.checkEpithet(); }
+      if (c.epquest) { for (const q of c.epquest.split(',')) g.deeds.find(x => x.id === q).done = true; g.checkEpithet(); }
       g.updateEnv();
       return { zone: g.zoneName() };
     }, c);

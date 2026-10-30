@@ -135,8 +135,6 @@
           [-1.3, 0.85, -1.3, 2.6, 1.65, 2.6, '#5f8f4a'],
           [-1.05, 0.9, -1.85, 2.1, 1.35, 0.8, '#5a8746'],         // the hips taper
           [-1.15, 0.8, -1.1, 2.3, 0.5, 2.2, '#c8d8a0'],           // belly
-          [-0.95, 2.4, -0.8, 0.75, 0.22, 0.75, '#4e7a3c'],        // back spots
-          [0.2, 2.4, 0.1, 0.75, 0.22, 0.75, '#4e7a3c'],
           [-1.32, 1.5, -0.3, 0.16, 0.7, 1.3, '#4e7a3c'],          // flank
           [1.16, 1.5, -0.3, 0.16, 0.7, 1.3, '#4e7a3c']
         ] },
@@ -149,17 +147,40 @@
            (#5f8f4a -> #6d8a4a): the differences become 0.146 and 0.118, both seams
            are two colours end to end, and no pixel of either is one colour twice.
            And the commonest single colour in a frog's frame used to cover 35.7% of
-           its pixels pooled over the four bearings the game films it at, now
-           30.8%. */
+           its pixels pooled over the four bearings the game films it at: 30.8%
+           after the palette moved, 32.8% after the face stood out of the head,
+           30.7% after the mouth line went and the muzzle took two tones. */
         { name: 'head', parent: 'body', pivot: [0, 1.9, 1.15], anim: 'nod', boxes: [
           [-1.25, 1.3, 1.15, 2.5, 1.4, 1.05, '#68965c'],
-          [-1.05, 1.36, 2.16, 2.1, 0.26, 0.14, '#39592b'],        // mouth line
+          /* the snout: the face below the eyes used to be a flat plate of the
+             skull's own green -- a mask painted on a cube, and it read as one.
+             A frog's snout stands out of the head, so the muzzle does: the
+             head's own width, 0.15 of the model's own units past the skull,
+             lighter than the skull so the step reads at a distance, and the
+             eyes' own fronts standing flush with it, the way a frog's do.
+             The face asks for nothing more: no nose, no mouth, the snout and
+             the two eyes over it. The front face is two greens, a lighter
+             over a darker, split 0.35 up from the bottom: one colour over
+             the whole face is a wall, and the joint step (play.js) asks that
+             the commonest single colour of the frog stay under a third of
+             the frame pooled over the four bearings the game films it at --
+             a single-tone muzzle was 44.9% of the face bearing. The split
+             also sits above the 15x15 patch the flank step reads (model y
+             1.74..2.10), so that patch still sits on one tone. How far out
+             the step may stand is the collision box's own law (node-smoke):
+             every corner of the model must sit inside 0.35 m of the body's
+             centre line, and the muzzle's corners are the ones that answer
+             for it -- 0.346 m out, the eye plates beside them 0.343. */
+          [-1.25, 1.45, 1.5, 2.5, 0.7, 0.85, '#76a264'],         // the muzzle's lower face, the darker of the two
+          [-1.25, 2.15, 1.5, 2.5, 0.35, 0.85, '#7ca869'],        // the muzzle's upper face, the lighter
           [-1.2, 2.5, 1.3, 0.85, 0.8, 0.85, '#e8e0a0'],          // eyes, on top, at the corners
           [0.35, 2.5, 1.3, 0.85, 0.8, 0.85, '#e8e0a0'],
-          [-1.05, 2.6, 2.02, 0.5, 0.5, 0.24, '#1a1208'],         // pupils
-          [0.55, 2.6, 2.02, 0.5, 0.5, 0.24, '#1a1208'],
-          [-0.56, 2.15, 2.14, 0.26, 0.22, 0.16, '#39592b'],       // nostrils
-          [0.3, 2.15, 2.14, 0.26, 0.22, 0.16, '#39592b']
+          /* the front of an eye is all black: the small dark square a pupil
+             used to be sat in a cream face and read as a robot's lens. A frog's
+             eye is the black that shows; the cream is the dome of the socket
+             it rides in, and it still shows as the rim over the black */
+          [-1.2, 2.5, 2.1, 0.85, 0.8, 0.25, '#1a1208'],          // the front of the eye, black, flush with the muzzle's front
+          [0.35, 2.5, 2.1, 0.85, 0.8, 0.25, '#1a1208']
         ] },
         { name: 'throat', parent: 'head', pivot: [0, 1.4, 1.4], anim: 'pulse', boxes: [
           [-0.78, 1.0, 1.35, 1.56, 0.42, 0.85, '#d5e0b0']
@@ -195,100 +216,55 @@
       ]
     },
 
-    /* ---------------- bear ----------------
-       1.5 m at the shoulder, and the whole animal has to live inside the
-       1.4 x 1.5 box the data gives it, because that box is what will not fit a
-       low hole (docs/04 s4). The head used to hang 0.58 m in front of it, so
-       a bear walking into a wall put its head through the wall; the muzzle is
-       now carried over the chest instead of out in front of the body. */
-    bear: {
-      eye: 1.15,
-      parts: [
-        { name: 'body', anim: 'bob', boxes: [
-          [-1.6, 2.4, -2.4, 3.2, 3.0, 4.4, '#6a6258'],
-          /* the grizzly saddle: the pale cape over the shoulders and along the
-             back. It used to be a shell one unit larger than the trunk in every
-             direction, which buried the trunk's own flank (six faces drawn for
-             the brown body, and a shell of pale hiding them all). Now it stands
-             0.1 past the flank and above the topline, and stops short of the
-             hips: a grizzly's pale ends at the shoulders and the brown body
-             shows again along the hindquarter. */
-          [-1.7, 4.4, -1.3, 3.4, 1.1, 3.2, '#8a8272'],
-          [-1.3, 5.3, -0.8, 2.6, 0.6, 3.0, '#5f574e']             // shoulder hump
-        ] },
-        /* three of this body's joints were one colour at two strengths, because
-           skull, haunch and paw were all the trunk's grey-brown at other strengths:
-           across the frame the joints measured 189, 197 and 496 pixels of seam
-           holding colour differences of 0.016, 0.019 and 0.010 -- a channel's share
-           of its own pixel's light, which no scalar multiplication can move -- and
-           0%, 1% and 0% of those pixels read as two colours. The skull (#7a7266 ->
-           #786a58), the haunch (#5a5248 -> #5e5344) and the paw (#4c453d ->
-           #474441) each move along a different ratio now: 0.070, 0.079 and 0.133,
-           with 100%, 98% and 96% of the seam reading as two colours. The ears keep
-           the colour they always had: ear against skull was never one of the joints
-           in question, and the two were never the same colour to begin with. */
-        { name: 'head', parent: 'body', pivot: [0, 4.6, 1.4], anim: 'nod', boxes: [
-          [-1.15, 4.2, 1.1, 2.3, 1.9, 1.6, '#786a58'],
-          [-0.6, 4.25, 2.6, 1.2, 0.95, 0.55, '#a89a86'],          // muzzle
-          [-0.28, 4.9, 3.1, 0.56, 0.4, 0.15, '#2a2420'],          // nose
-          [-1.1, 5.95, 1.3, 0.6, 0.45, 0.5, '#5a5248'],           // ears
-          [0.5, 5.95, 1.3, 0.6, 0.45, 0.5, '#5a5248'],
-          [-0.8, 5.4, 2.62, 0.4, 0.4, 0.24, '#1a1410'],           // eyes
-          [0.4, 5.4, 2.62, 0.4, 0.4, 0.24, '#1a1410']
-        ] },
-        { name: 'legFL', parent: 'body', pivot: [-1.45, 3.0, 1.6], anim: 'walk', stands: 1, sign: 1,
-          boxes: [[-2.0, 1.0, 0.9, 1.1, 2.0, 1.4, '#5e5344']] },
-        { name: 'shinFL', parent: 'legFL', pivot: [-1.45, 1.0, 1.6], anim: 'knee', sign: 1, bend: -1,
-          boxes: [[-2.0, 0, 0.85, 1.1, 1.0, 1.55, '#474441']] },
-        { name: 'legFR', parent: 'body', pivot: [1.45, 3.0, 1.6], anim: 'walk', stands: 1, sign: -1,
-          boxes: [[0.9, 1.0, 0.9, 1.1, 2.0, 1.4, '#5e5344']] },
-        { name: 'shinFR', parent: 'legFR', pivot: [1.45, 1.0, 1.6], anim: 'knee', sign: -1, bend: -1,
-          boxes: [[0.9, 0, 0.85, 1.1, 1.0, 1.55, '#474441']] },
-        { name: 'legBL', parent: 'body', pivot: [-1.45, 3.0, -1.6], anim: 'walk', stands: 1, sign: -1,
-          boxes: [[-2.0, 1.0, -2.3, 1.1, 2.0, 1.4, '#5e5344']] },
-        { name: 'shinBL', parent: 'legBL', pivot: [-1.45, 1.0, -1.6], anim: 'knee', sign: -1, bend: 1,
-          boxes: [[-2.0, 0, -2.4, 1.1, 1.0, 1.55, '#474441']] },
-        { name: 'legBR', parent: 'body', pivot: [1.45, 3.0, -1.6], anim: 'walk', stands: 1, sign: 1,
-          boxes: [[0.9, 1.0, -2.3, 1.1, 2.0, 1.4, '#5e5344']] },
-        { name: 'shinBR', parent: 'legBR', pivot: [1.45, 1.0, -1.6], anim: 'knee', sign: 1, bend: 1,
-          boxes: [[0.9, 0, -2.4, 1.1, 1.0, 1.55, '#474441']] }
-      ]
-    },
-
-    /* ---------------- lamp jellyfish ----------------
+    /* ---------------- lanternfish ----------------
        The lamps of Mirrorlake, and the only animal in the valley that bears no
-       fruit. A bell that squeezes and releases -- `pulse` is how a jellyfish
-       swims, not a decoration -- four oral arms gathered under it and a frill
-       of short tentacles along the rim, all hanging under the anchor, which is
-       where the animal sits in the water. Every part is emissive: at night the
-       lake is black and this is the only thing down there that is not. It has
-       no collision box because nothing in the game collides with it: you swim
-       through it and it treats you as water. */
-    jelly: {
+       fruit. A small fish of light: a spindle widest at the gill and thinner
+       toward both ends, a tapering nose that pitches with the course the water
+       gives it, a forked tail that kicks the way every other swimmer kicks --
+       a joint, not a squeeze -- and a back fin that steps down toward the tail,
+       the way a shark's does. The body itself sways a little ahead of the tail,
+       so the kick reads as the fish swimming and not as a body sliding along
+       with a wagging tail. A lamp under the belly carries the body in the
+       dark. Every part is emissive: at night the lake is black and this is the
+       only thing down there that is not. It has no collision box because
+       nothing in the game collides with it: you swim through it and it treats
+       you as water. */
+    lanternfish: {
       parts: [
-        { name: 'bell', anim: 'pulse', emis: true, boxes: [
-          [-1.2, 1.0, -1.2, 2.4, 1.5, 2.4, '#8fd0ff'],            // the bell
-          [-0.7, 2.5, -0.7, 1.4, 0.9, 1.4, '#bfe8ff'],            // the dome over it
-          [-1.35, 0.85, -1.35, 2.7, 0.25, 2.7, '#6fb8e8']         // the rim, the darkest part
+        /* the body itself sways a little, a quarter beat ahead of the tail: a
+           fish that kicks its tail but holds its body straight reads as sliding
+           along, and the sway is what carries the kick from the body out to the
+           tail. It is smaller than the tail's kick, because the body is the part
+           that is mostly going straight and the tail is the part that swings. */
+        { name: 'body', emis: true, anim: 'wag', wagAmp: 0.16, wagIdle: 0.04, wagPhase: 1.5708, boxes: [
+          [-0.55, -0.42, -0.45, 1.1, 1.0, 0.9, '#8fd0ff'],        // the trunk, widest at the gill
+          [-0.42, -0.35, 0.4, 0.84, 0.85, 0.7, '#8fd0ff'],        // the forequarter, thinning to the head
+          [-0.4, -0.38, -0.9, 0.8, 0.83, 0.5, '#8fd0ff'],         // the hindquarter, thinning to the peduncle
+          [-0.22, -0.28, -1.1, 0.44, 0.58, 0.3, '#8fd0ff'],       // the peduncle
+          [-0.42, -0.62, -0.7, 0.84, 0.27, 1.3, '#bfe8ff']        // the belly, the lamp
         ] },
-        { name: 'arm0', parent: 'bell', pivot: [-0.55, 1.1, -0.55], anim: 'wag', sign: 1, emis: true,
-          boxes: [[-0.7, -1.2, -0.7, 0.3, 2.3, 0.3, '#a8dcff']] },
-        { name: 'arm1', parent: 'bell', pivot: [0.55, 1.1, 0.55], anim: 'wag', sign: -1, emis: true,
-          boxes: [[0.4, -1.2, 0.4, 0.3, 2.3, 0.3, '#a8dcff']] },
-        { name: 'arm2', parent: 'bell', pivot: [-0.55, 1.1, 0.55], anim: 'wag', sign: -1, emis: true,
-          boxes: [[-0.7, -1.0, 0.4, 0.3, 2.1, 0.3, '#8fd0ff']] },
-        { name: 'arm3', parent: 'bell', pivot: [0.55, 1.1, -0.55], anim: 'wag', sign: 1, emis: true,
-          boxes: [[0.4, -1.0, -0.7, 0.3, 2.1, 0.3, '#8fd0ff']] },
-        /* the frill: short tentacles along the rim, so the silhouette is not
-           four legs under a slab */
-        { name: 'fr0', parent: 'bell', pivot: [-1.2, 0.9, 0], anim: 'wag', sign: 1, emis: true,
-          boxes: [[-1.3, -0.9, -0.1, 0.2, 1.8, 0.2, '#bfe8ff']] },
-        { name: 'fr1', parent: 'bell', pivot: [1.2, 0.9, 0], anim: 'wag', sign: -1, emis: true,
-          boxes: [[1.1, -0.9, -0.1, 0.2, 1.8, 0.2, '#bfe8ff']] },
-        { name: 'fr2', parent: 'bell', pivot: [0, 0.9, -1.2], anim: 'wag', sign: -1, emis: true,
-          boxes: [[-0.1, -0.8, -1.3, 0.2, 1.7, 0.2, '#bfe8ff']] },
-        { name: 'fr3', parent: 'bell', pivot: [0, 0.9, 1.2], anim: 'wag', sign: 1, emis: true,
-          boxes: [[-0.1, -0.8, 1.1, 0.2, 1.7, 0.2, '#bfe8ff']] }
+        { name: 'head', parent: 'body', pivot: [0, 0.05, 0.9], anim: 'nod', emis: true, boxes: [
+          [-0.34, -0.28, 0.85, 0.68, 0.7, 0.5, '#8fd0ff'],        // the skull
+          [-0.2, -0.15, 1.35, 0.4, 0.4, 0.25, '#8fd0ff'],         // the snout
+          [-0.44, 0.0, 1.0, 0.14, 0.2, 0.14, '#1a2a3a'],          // the left eye, outside the skull
+          [0.3, 0.0, 1.0, 0.14, 0.2, 0.14, '#1a2a3a']             // the right eye
+        ] },
+        { name: 'tail', parent: 'body', pivot: [0, 0, -1.05], anim: 'wag', sign: 1, emis: true, boxes: [
+          [-0.1, -0.35, -1.35, 0.2, 0.7, 0.35, '#6fb8e8'],        // the base of the fin
+          [-0.07, 0.0, -1.99, 0.14, 0.52, 0.7, '#6fb8e8'],        // the upper lobe
+          [-0.07, -0.52, -1.99, 0.14, 0.52, 0.7, '#6fb8e8'],      // the lower lobe
+          [-0.05, -0.28, -1.86, 0.1, 0.56, 0.58, '#6fb8e8']       // the middle lobe
+        ] },
+        { name: 'finL', parent: 'body', pivot: [-0.42, -0.15, 0.5], anim: 'wag', sign: -1, emis: true, boxes: [
+          [-0.95, -0.3, 0.05, 0.55, 0.12, 0.5, '#a8dcff']         // the left pectoral fin
+        ] },
+        { name: 'finR', parent: 'body', pivot: [0.42, -0.15, 0.5], anim: 'wag', sign: 1, emis: true, boxes: [
+          [0.4, -0.3, 0.05, 0.55, 0.12, 0.5, '#a8dcff']           // the right pectoral fin
+        ] },
+        { name: 'dorsal', parent: 'body', emis: true, boxes: [
+          [-0.08, 0.45, -0.35, 0.16, 0.4, 0.7, '#a8dcff'],        // the front of the back fin
+          [-0.06, 0.4, -0.95, 0.12, 0.22, 0.6, '#a8dcff']         // the rear, stepping down
+        ] }
       ]
     },
   };
@@ -296,7 +272,7 @@
   /* How tall each model is, in its own units: the top of the highest box it is
      carved from. Whatever asks "how far off the ground is this body" wants a
      body-relative answer -- a body a third of its own height in the air is a
-     body that has left the ground, whether it is a frog or a bear -- and this
+     body that has left the ground, whether it is a man or a frog -- and this
      is the body's own measure of itself. */
   const MODEL_H = {};
   for (const k in MODELS) {
@@ -309,9 +285,11 @@
   /* How wide each model's own body is, in its own units: the footprint of the part
      every limb hangs from, not of the limbs themselves. A body is not only tall.
      Two bodies standing in one place are one body drawn twice, and the space each
-     of them claims is this rectangle turned by its heading -- a bear end on is
-     1.1 m long and 0.77 m across, a frog is 0.41 by 0.34, and a circle wide enough
-     for the bear leaves the two of them standing nose to nose inside each other. */
+     of them claims is this rectangle turned by its heading -- a person's body
+     is 0.29 m long and 0.41 m across, a frog's 0.41 long by 0.34 across, and
+     the asymmetry runs the other way for each: one is wider than it is long,
+     the other longer than it is wide, so the space is carried as a rectangle
+     and not a radius. */
   const MODEL_W = {};
   for (const k in MODELS) {
     const p = MODELS[k].parts[0];
@@ -329,7 +307,7 @@
      knee -- carries the corner of the foot that points the way of the swing
      down through that line. Nothing about the gait is wrong when that happens;
      the model is simply missing a joint, and the limb has to make up for it by
-     lifting. Read off the draw: a bear walking on flat ground had its hind foot
+     lifting. Read off the draw: a body walking on flat ground had its hind foot
      0.09 m inside the ground in a third of the frames, a person its boot 0.03 m
      in a sixth.
      So every part that turns in the land gait, and whose limb reaches the
@@ -343,7 +321,7 @@
      it, which is what a stepping foot does: heel first, then the toe.
      The other half of the same rule is the heave. The body breathes and bobs as
      it walks, and the limbs hang off it, so a body that dips takes its feet with
-     it: 0.17 of the bear's own units, 4 cm into the floor, twice a second, on
+     it: 0.17 of a body's own units, 4 cm into the floor, twice a second, on
      every step. A limb that is standing on the ground does not go down when the
      body comes up, so the limb cancels the heave of the body above it -- and
      only the top of the limb does that, or the cancel would be counted twice.
@@ -497,15 +475,38 @@
   const STANCE_WALK = 0.62;  // the share of a stride a foot is on the ground, at a walk
   const STANCE_RUN = 0.30;   // ... and at the fastest the body travels: it flies between steps
   const SWIM_RATE = 4.2;  // the stroke's own clock, in rad/s: one stroke every 1.5 s
+  /* How much of the stroke a body the water holds up does when it is going
+     nowhere: the tread. A body at rest in the water is not kicking at the lake,
+     but the water is holding it up and something has to do the work, so the
+     legs do the same stroke shrunken to the effort of holding still -- the floor
+     the stroke's amplitude used to be missing. The floor sits under the stroke,
+     not under the speed: as the body goes somewhere the stroke it is pushing
+     water with takes over and the floor falls away. */
+  const TREAD = 0.18;
+  /* The clock of the tread's own swing, in rad/s: one slow pump every 3 s. A
+     body at rest in the water does not run the stroke's own clock -- that clock
+     carries a hold, the last 44 % of the cycle the legs shut behind the body
+     and do nothing, and a leg that holds is a leg that has stopped: from the
+     bank a body at rest read as one that reached back, froze, sat still, and
+     started again, twice a stroke. It runs this slower clock instead, and it
+     runs the same table on it with the hold taken out, so the legs pump through
+     the gather and the drive continuously and never once come to rest. */
+  const TREAD_RATE = 2.1;
   /* How much harder the leg on the outside of a turn strokes than the leg on the
      inside, and the turn rate at which that difference is complete: a body
      turning at TURN_FULL or faster kicks with one leg, a body going straight
-     kicks with both equally. 1.9 rad/s is the tightest arc a body with a kick
+     kicks with both equally. 0.9 rad/s is the tightest arc a body with a kick
      holds -- the frog's own `turn` in data/creatures.js, and the rate a swimming
-     body was measured holding when asked to carve as hard as it can. See the
-     `turn` term in the swimKick branch of partAngles. */
+     body is measured holding when asked to carve as hard as it can. The record
+     held 1.9 for a while, and it was lowered with the record: a frog's errands
+     lie somewhere off its nose, and a correction wider than half a turn at 1.9
+     is a head swung at 109 degrees a second, which from the bank reads as a
+     frog whose head goes where its body is not. Small corrections run against
+     the 2.2 x how-far-off-course cap before the limit is ever reached, so they
+     are the same at 0.9 as at 1.9; only the wide ones glide where they used to
+     whip. See the `turn` term in the swimKick branch of partAngles. */
   const TURN_KICK = 0.7;
-  const TURN_FULL = 1.9;  // rad/s of heading
+  const TURN_FULL = 0.9;  // rad/s of heading
   /* The fold of the knee is the recovery and not the push, and a breaststroke
      recovers both legs together -- that is what makes it one stroke rather than
      two legs going up and down -- so the turn takes only this share of its
@@ -566,10 +567,9 @@
      The cycle used to be one clock for every legged body -- the hip at sin(t *
      7), the rate a constant, the body driven along by its own speed -- and the
      two were never the same thing. Read off the matrices the draw uploads, a
-     bear's foot was moving along the ground at 2.3 m/s while its body went past
-     at 2.1, and a person's at 3.0 against 4.1: a foot was on the ground for four
-     frames in five and held still in none of them, and the whole animal was
-     skating on grass. It is not a tuning problem. The foot is at the bottom of
+     person's foot was moving along the ground at 3.0 m/s while its body went past
+     at 4.1: a foot was on the ground for four frames in five and held still in
+     none of them, and the whole animal was skating on grass. It is not a tuning problem. The foot is at the bottom of
      its arc exactly where the sine is turning over fastest, so the fastest moment
      of the swing is the moment the foot needs to be at its slowest, and no rate
      fixes that.
@@ -595,8 +595,7 @@
      running on the spot; and the rate of the steps stops being a constant and
      comes out of the leg alone. Read off the matrices the draw uploads, a person
      at 4.7 m/s takes 1.85 m steps at 2.33 a second and at 2 m/s takes steps of
-     under a metre at the same rate; a bear at 5.2 m/s takes 1.95 m steps at
-     2.29. A body with short legs steps fast and a body with long legs steps
+     under a metre at the same rate. A body with short legs steps fast and a body with long legs steps
      slowly, which is what animals do, and the length of a step, not its rate, is
      what the speed buys. */
 
@@ -681,7 +680,7 @@
      one the foot hangs from, and the lift that keeps a foot out of the ground
      (the FOOT block above) moves the whole limb. So it is measured, once per
      model, through the matrices the draw uploads. A body with no leg that walks
-     -- a frog hops, a jelly drifts -- reaches nowhere, and 0 is how the caller
+     -- a frog hops, a lanternfish drifts -- reaches nowhere, and 0 is how the caller
      learns not to run a cycle at all. */
   const SPAN = {};
   function stanceSpan(modelId) {
@@ -842,16 +841,30 @@
     } else if (anim === 'nod') {
       rx = Math.sin(t * 1.9 + ph) * (st.move * 0.06 + 0.02);
     } else if (anim === 'wag') {
-      ry = Math.sin(t * 1.6 + ph) * (st.move * 0.5 + 0.12);
+      /* the side-to-side kick of a swimmer's tail, and the sway of the body that
+         drives it. A body that kicks its tail but does not sway itself reads as
+         sliding: the tail goes left and right and the body goes straight, which
+         is a body being dragged, not a body swimming. So a part built to carry
+         the sway (the fish's own body) gets it on the same clock, smaller -- the
+         body is the part that is mostly going straight and the tail is the part
+         that swings -- and a little ahead of the tail, because the kick travels
+         from the body out to the tail, not the other way round: a wave that runs
+         tail-to-body is a fish swimming backwards. `wagAmp` and `wagIdle` set
+         the size (the idle part keeps swaying because a fish at rest in the water
+         is still a fish in the water), and `wagPhase` sets where the part sits on
+         the kick: 0 is with the tail, positive is ahead of it. The tail and the
+         fins keep the old kick whole, because they are the parts that were always
+         meant to swing. */
+      const wamp = p.wagAmp === undefined ? st.move * 0.5 + 0.12
+                                          : st.move * p.wagAmp + (p.wagIdle || 0);
+      ry = Math.sin(t * 1.6 + ph + (p.wagPhase || 0)) * wamp;
     } else if (anim === 'bob') {
       /* On the ground the heave is the stride: the body is at its highest over
          the middle of a stance, where the leg under it is straight and holding
          it up, and at its lowest at the ends of one, where the leg is angled
          away and the other is coming through under it -- twice a stride, because
          the body stands now on one leg and now on the other. On the clock it was
-         a sine of its own that had nothing to do with the feet: read off the
-         draw, a bear at its own speed took 2.8 steps a second while its body
-         came up and down 0.35 times a second. The idle part stays on the clock,
+         a sine of its own that had nothing to do with the feet. The idle part stays on the clock,
          because a body standing still still breathes; and a body with no leg
          that walks has no stride to ride either, so it keeps the sine whole.
          `rideOf` turns the same cosine over once the stride grows an airborne
@@ -905,20 +918,50 @@
        crossing the lake at its own speed. */
     const swim = st.swim || 0, held = st.held || 0, turn = st.turn || 0;
     if (swim > 0.01 || held > 0.01) {
-      const a = strokeAt((t * SWIM_RATE + ph) / (Math.PI * 2));
       /* how much of the stroke the body is doing: all of it at the speed its own
-         record swims at, none of it at a standstill. A stroke is the thing that
-         pushes water behind a body, so it is sized by the water the body is
-         actually pushing: a body coasting to a stop strokes less and less as it
-         coasts, and a body that is simply sitting in the water -- the player
-         holding no key, a frog hovering -- holds its legs in the pose the water
-         holds them in and moves them not at all. The old floor of 0.55 of the
-         stroke under everything made a body kick at a lake it was going nowhere
-         through: read off the matrices the draw uploads, a frog floating with its
-         speed at nothing still walked its feet 1.55 m through 4 s of water. The
-         hold ramps the whole thing in, so a body sinking towards the lakebed
-         stops stroking over a few frames instead of at one instant. */
-      const amp = Math.min(1, swim) * Math.min(1, held * 3);
+         record swims at, and at a standstill the share a body needs to hold
+         itself up -- the tread. A stroke is the thing that pushes water behind
+         a body, so it is sized by the water the body is actually pushing: a body
+         coasting to a stop strokes less and less as it coasts, and the floor the
+         stroke sits on is the work of staying still, not of going. The old floor
+         of 0.55 of the stroke under everything got that backwards: it was the
+         work of going charged at a body that was going nowhere, and read off the
+         matrices the draw uploads a frog floating with its speed at nothing still
+         walked its feet 1.55 m through 4 s of water -- a body pushing water in no
+         direction at all, which is the one thing every animal on that lake does
+         not do. A body that is simply sitting in the water -- the player holding
+         no key, a frog hovering -- is not kicking at the lake, but it is not a
+         statue either: the water is holding it up and something has to do the
+         work. The floor sits under the stroke, not under the speed: as the body
+         goes somewhere the stroke it is pushing water with takes over and the
+         floor falls away. The hold ramps the whole thing in, so a body sinking
+         towards the lakebed stops stroking over a few frames instead of at one
+         instant. */
+      const s1 = Math.min(1, swim);
+      const amp = Math.min(1, held * 3) * Math.max(s1, TREAD * (1 - s1));
+      /* and the stroke itself this frame, read off the table. Going somewhere
+         it is the full STROKE on its own clock. At a standstill it is not a
+         stroke at all: a stroke carries a hold, the last 44 % of the cycle the
+         legs shut behind the body and do nothing, and a body that is treading to
+         stay afloat does not stop its legs -- the water is holding it up the
+         whole time, so something has to keep doing the work the whole time, and
+         a leg that reached back, froze, sat still, and started again is a leg
+         that is not treading. At rest the body therefore runs the same table on
+         the slower TREAD clock with the hold taken out: a continuous pump
+         between the gather, where the feet are drawn up beside the hips, and the
+         drive, where they shoot back, one slow pump every 3 s. The two are
+         traded for each other over the first third of the way to the body's own
+         speed, so the legs never stop and start again as the body gets up to
+         speed -- they just get faster. */
+      const hand = Math.min(1, s1 / 0.35);
+      const aN = strokeAt((t * SWIM_RATE + ph) / (Math.PI * 2));
+      const a = hand >= 1 ? aN : (function () {
+        const uT = 0.49 + 0.07 * Math.sin(t * TREAD_RATE + ph);
+        const aT = strokeAt(uT);
+        const out = new Array(5);
+        for (let i = 0; i < 5; i++) out[i] = aT[i] + (aN[i] - aT[i]) * hand;
+        return out;
+      })();
       if (p.swimKick) {
         /* A body that is turning kicks harder with the leg on the outside of the
            turn: that leg has to carry the body round the arc as well as along

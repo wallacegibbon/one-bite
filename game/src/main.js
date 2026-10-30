@@ -14,7 +14,7 @@
   /* Switching the interface language is a live operation: the static markup is
      re-translated, any open panel is re-rendered, and the log feed is dropped
      rather than left showing half one language and half the other. Nothing in
-     the save file is touched -- stores and quests carry no translated text. */
+     the save file is touched -- stores and deeds carry no translated text. */
   function setLocale(id) {
     if (!N.i18n.set(id)) return false;
     const cur = N.LANGS.find(l => l.id === N.i18n.locale);

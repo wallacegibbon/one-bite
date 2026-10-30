@@ -24,9 +24,9 @@ There is no mystery to solve, no one to rescue, no villain. You are here for two
 
 | Survive | Experience |
 |---|---|
-| Fruit spoils, the backpack has 24 slots, and the valley is bigger than the life of a single fruit — so you arrange, you store, you choose | Sink to the bottom of Mirrorlake as a frog, force a path open as a bear: every body shows you a part of the valley you could not otherwise see |
+| Fruit spoils, the backpack has 24 slots, and the valley is bigger than the life of a single fruit — so you arrange, you store, you choose | Sink to the bottom of Mirrorlake as a frog: every body shows you a part of the valley you could not otherwise see |
 
-Failing is simple too: drowning, the cold on the northern ridge, a frog body drying out on the shore, the fog at the edge, and time running out. There is no failure cutscene — you wake up in town, and what you were carrying lies where you fell.
+Failing is simple too: drowning, a frog body drying out on the shore, the fog at the edge, and time running out. There is no failure cutscene — you wake up in town, and what you were carrying lies where you fell.
 
 ## 3. The Grey Fog (the edge of the world)
 
@@ -41,13 +41,13 @@ A grey band of fog around the valley, roughly 400 m thick and too tall to see th
 ## 4. How transformation works (see 04)
 
 - Eat the fruit → become the animal it remembers → the time bar runs out → you are human again.
-- **You inherit the whole body**: everything it can do, and everything it cannot. Claws cannot open storage, antlers will not fit a low hole, skin dries out of water. **The mind is untouched** — inside a bear's body you are still you (04 §5.0).
+- **You inherit the whole body**: everything it can do, and everything it cannot. Claws cannot open storage, antlers will not fit a low hole, skin dries out of water. **The mind is untouched** — inside a frog's body you are still you (04 §5.0).
 - **One body at a time.** Eating a second fruit while you are still in a body simply changes you into that one — the body you were in ends immediately. There is no penalty and no organ that holds two magics; the cost is the body you ended early and the fruit you spent (04 §5.1).
 - A fruit starts spoiling the moment it leaves the tree. A dormant fruit becomes a pit; a pit can be planted, and in a hundred years or so there may be a new fruit tree where it was.
 
 ## 5. Voice and style
 
-- The world does not explain itself. Every piece of setting arrives through **fruit descriptions**, **journal entries**, **town rules** and **quest-failure text**.
+- The world does not explain itself. Every piece of setting arrives through **fruit descriptions**, **journal entries**, **town rules** and the valley's own log lines.
 - How journal text is written: one verifiable fact, then one unverifiable rumour.
   > e.g. "A small green fruit on a stem, in the reeds of Mirrorlake, only visible from the water. The night watch says: the best way to pick a frog pear is to become a frog first."
 - Banned words: mana, level, XP, quest reward, upgrade.

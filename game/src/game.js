@@ -1,5 +1,5 @@
 /* ==========================================================================
- *  game.js -- game state: time/day-night, fruit backpack, storage, transformation, quests, interaction
+ *  game.js -- game state: time/day-night, fruit backpack, storage, transformation, deeds, interaction
  * ========================================================================== */
 (function (N) {
   const RAR = N.RARITY, FRU = N.FRUIT_BY_ID, PLANT = N.PLANT_BY_ID, STO = N.STORAGE, IDEN = N.IDENTITY;
@@ -9,7 +9,9 @@
   // cutting a fruit renumbers the world. An old save would plant the wrong fruit
   // in someone's orchard, which is a worse surprise than losing the world.
   // v2 was the roster cut to four fruits; v3 is the cut to three (the jellyfish
-  // body is gone), which moved frog pear and bruin fig down one block each.
+  // body is gone), which moved frog pear and bruin fig down one block each. The
+  // two cuts after v3 -- the owl, then the bruin fig -- left one fruit block in
+  // the world, the frog pear at 40.
   const SAVE_KEY = 'frutaria.save.v3';
 
   /* A save is data the browser hands back forever, not data the game is holding
@@ -83,7 +85,7 @@
       this.diffs = [];                     // block edits (for saving)
       this.seen = {};                      // codex
       this.dexFruit = {};
-      this.quests = [];
+      this.deeds = [];                   // what the valley has seen you do (docs/06 s2)
       this.mode = 'play';                  // play | cellar | journal | help | dead
       this.openStash = null;
       this.hover = null;                   // the block the crosshair ray points at
@@ -96,8 +98,6 @@
       this.creatureMeshes = {};
       this.env = null;
       this.night = 0;
-      this.playerStealth = 1;
-      this.buffs = {};
       this.stats = { harvested: 0, eaten: 0, reverted: 0, deaths: 0 };
       this.progress = 0;
       this.ready = false;
@@ -136,24 +136,19 @@
       // earned by deeds, the name is the player's own (docs/03 section 6).
       this.id = IDEN.idPrefix + Math.random().toString(36).slice(2, 2 + IDEN.idBytes);
       this.name = IDEN.nameDefault;
-      // quests: a quest is an invitation to use a body (docs/06 s3), so its
-      // text lives here next to the check that completes it
-      this.quests = [
-        { id: 'q1', cn: '认识主果窖', en: 'Know the main cellar', done: false,
-          hint: { cn: '去灯笼镇的果窖（按 E 打开），把任意果实存进去',
-                  en: 'go to the Lanternrow cellar (press E to open) and store any fruit' } },
-        { id: 'q4', cn: '镜湖的门票', en: 'The ticket to Mirrorlake', done: false,
-          hint: { cn: '变成雨蛙下水，在沉塔的窗台上取一颗蛙果',
-                  en: 'become a frog, get in the water, take a Frog Pear from the sill of the sunken tower' } },
-        { id: 'q5', cn: '一颗棕熊果', en: 'One Bruin Fig', done: false,
-          hint: { cn: '在北岭岩坡上摘一颗棕熊果：它占 12 格，7 分钟就失活——把它带进仓库',
-                  en: 'pick a Bruin Fig off the ridge rock: it costs 12 slots and sleeps in 7 minutes — get it into a cellar' } },
-        { id: 'q6', cn: '温室的银丝网', en: 'The silver mesh in the greenhouse', done: false,
-          hint: { cn: '去星坠堡的果实温室，找那张银丝隔层',
-                  en: "go to Starfall's fruit greenhouse, on the deck over the island, and find the silver divider" } }
+      // deeds: what the valley has seen you do. There is no quest list in the
+      // game -- no checklist, no hint, no "done" line in the log -- only two
+      // consequences: the storage the valley hands you (checkDeeds) and the
+      // name it starts to use for you (epithet, docs/06 s2). A deed carries
+      // no text the player reads, so nothing of it is ever stored or
+      // translated.
+      this.deeds = [
+        { id: 'cellar',     cn: '存果',     en: 'Storing fruit', done: false },
+        { id: 'lake',       cn: '泅镜湖',   en: 'Swimming Mirrorlake', done: false },
+        { id: 'greenhouse', cn: '到温室',   en: 'Reaching the greenhouse', done: false }
       ];
       // which epithet the valley has already been heard using. This is read off
-      // the quest list, so it has to be taken after the quests exist.
+      // the deed list, so it has to be taken after the deeds exist.
       this.epithetSeen = this.epithet();
       this.meshTotal = this.world.cx * this.world.cz;
       this.meshDone = 0;
@@ -174,13 +169,16 @@
     }
 
     spawnCreatures() {
-      const counts = { frog: 12, bear: 2, jelly: 10 };
+      const counts = { frog: 8, lanternfish: 10 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
         /* A species may name a landmark of its habitat zone instead of the
-           whole zone. The lamp field is the sunken tower's outline, not
-           "somewhere in a lake of radius 34" -- from the surface the field is
-           what traces the tower, so the tower is what places the field. */
+           whole zone. The lamp field used to be the sunken tower's outline --
+           the tower placed the field, and "somewhere in the lake" was the
+           answer the field was not allowed to be. It is the lake's own water
+           now: the landmark is the centre of the lake and the spread its
+           radius, so a lamp is sent to open water, and the tower it stands in
+           is what the lamps steer round now and then. */
         const zone = N.ZONE_BY_ID[sp.habitat[0]];
         const at = sp.at && zone ? zone[sp.at] : null;
         for (let i = 0; i < n; i++) {
@@ -244,10 +242,11 @@
         let x, zz;
         if (at) {
           /* A spread is a radius, not a half-width: every other branch below
-             samples a disc, and the creature data, the dex ("the field sits on
-             the tower's outline") and the test all read it that way. Sampling a
-             square instead let a lamp stand 5.7 m from a 4 m spread, and the
-             field's honest bound -- twice the spread -- came out wrong. */
+             samples a disc, and the creature data, the dex ("the field is the
+             open water of the lake") and the test all read it that way.
+             Sampling a square instead let a lamp stand 5.7 m from a 4 m
+             spread, and the field's honest bound -- twice the spread -- came
+             out wrong. */
           const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * spread;
           x = at[0] + Math.cos(a) * r; zz = at[1] + Math.sin(a) * r;
         } else if (z.kind === 'circle') {
@@ -567,7 +566,7 @@
       const d = fid ? FRU[fid] : PLANT[pid];
       this.logMsg(N.t('log.pick', { n: N.disp(d), r: N.disp(RAR[d.rarity]), s: RAR[d.rarity].slots }), 'good');
       if (fid) this.regrow.push({ x, y, z, b, t: RAR[d.rarity].regrow * DAY_LEN * (0.8 + Math.random() * 0.4) });
-      if (this.quests) this.checkQuests();
+      if (this.deeds) this.checkDeeds();
     }
     setBlock(x, y, z, b) {
       this.world.set(x, y, z, b);
@@ -602,9 +601,9 @@
       if (!f || !f.duration) { this.logMsg(N.t('log.notEdible'), 'warn'); return; }
       const p = this.player;
       /* The body you are about to wear has to fit where you are standing. docs
-         04 s4 makes the collision box a hard gate -- a bear at 1.4x1.5 does not
-         fit the 1x1 crevice a frog does -- and a body that cannot fit cannot be
-         worn, so the fruit is not spent and the valley says why. A body that
+         04 s4 makes the collision box a hard gate -- a person at 0.62 x 1.8 does
+         not fit the 0.5 x 0.5 crevice a frog does -- and a body that cannot fit
+         cannot be worn, so the fruit is not spent and the valley says why. A body that
          ends on a timer cannot be refused, so `unstick` is still the net under
          revert, death and load. */
       const was = p.form;
@@ -626,7 +625,7 @@
       this.logMsg(N.t('log.eat', { n: N.disp(f), f: N.disp(f.form), c: f.cost.length ? N.t('log.eatCost', { c: N.costList(f) }) : '' }), 'good');
       this.particleBurst(p.x, p.y + 1, p.z, N.RARITY[f.rarity].color, 40);
       this.ensureModel(f.creature);
-      this.checkQuests();
+      if (this.deeds) this.checkDeeds();
     }
     revert(why) {
       const p = this.player;
@@ -637,23 +636,12 @@
       this.logMsg(N.t('log.revert', { w: why || N.t('log.revertTime') }), '');
     }
     usePlant(it, slotIdx) {
-      const p = this.player, pl = PLANT[it.id];
-      if (pl.effect === 'plant') {
-        // plant it in the ground
-        const t = this.world;
-        const bx = Math.floor(p.x), bz = Math.floor(p.z);
-        const by = N.groundY(t, bx, bz, Math.floor(p.y + 3));
-        if (by < 1) return;
-        this.setBlock(bx, by, bz, N.PLANT_BLOCK_REV[it.id]);
-        this.inv.splice(slotIdx, 1);
-        this.logMsg(N.t('log.plantSeed', { n: N.disp(pl) }), 'good');
-        return;
-      }
-      if (pl.effect === 'build') { this.buildCellarTree(); this.inv.splice(slotIdx, 1); return; }
-      const dur = pl.effect === 'light' ? 300 : pl.effect === 'jump' ? 90 : pl.effect === 'stealth' ? 120 : 90;
-      this.buffs[pl.effect] = dur;
-      this.inv.splice(slotIdx, 1);
-      this.logMsg(N.t('log.eatPlant', { n: N.disp(pl), d: N.descOf(pl) }), 'good');
+      const pl = PLANT[it.id];
+      // one plant is left in the valley and it builds: the cellar tree.
+      // (The powers you used to eat -- light, jump, silence, guard -- are
+      // cut, so there is no buff branch any more; unknown ids are dropped by
+      // the loader, so this is the whole of using a plant.)
+      if (pl && pl.effect === 'build') { this.buildCellarTree(); this.inv.splice(slotIdx, 1); return; }
     }
     plantPit(it, slotIdx) {
       const p = this.player;
@@ -710,7 +698,7 @@
       const capTo = dir === 'in' ? s.slots : this.cap();
       if (this.used(to) + this.slotOf(it) > capTo) { this.logMsg(N.t('log.noRoom'), 'bad'); return; }
       from.splice(idx, 1); to.push(it);
-      if (this.quests) this.checkQuests();
+      if (this.deeds) this.checkDeeds();
     }
 
     /* ------------------------- damage / status ------------------------- */
@@ -725,10 +713,14 @@
       this.damage(dt * 0.5, N.disp(c.sp));
       if (Math.random() < dt * 2) this.logMsg(N.t('log.chased', { n: N.disp(c.sp) }), 'bad');
     }
-    /* The lamp jellyfish is not chasing anyone -- you are standing inside it.
-       The warning is throttled so wading through a field of ten does not fill
-       the log, and it says what the answer is, because the answer is a body. */
+    /* The lanternfish is not chasing anyone -- the sting is the light, and the
+       light is standing where you are. The warning is throttled so wading
+       through a field of ten does not fill the log, and it says what the
+       answer is, because the answer is a body. */
     onSting(c, dt) {
+      // The sting is the valley's only contact damage: the creatures do not
+      // touch a player at all, and the one body the lake is lit for (the frog,
+      // poisonImmune by data) does not take it either.
       this.damage(dt * c.sp.sting, N.t('log.causeSting'));
       if (this._stungAt === undefined || this.time - this._stungAt > 12) {
         this._stungAt = this.time;
@@ -790,43 +782,17 @@
       if (this.ui) this.ui.showDead(true);
     }
 
-    /* ------------------------- per-game-day rolls ------------------------- */
-    /* docs/05: a cellar tree is a living store -- it attracts thieves. The main cellar is guarded by Old Mei and is never robbed. */
-    dailyRolls() {
-      // the town cellar is deliberately skipped: the docs state theft as a rule of
-      // field storage (05, cellar-tree table), not of the town, which has Old Mei.
-      for (const s of this.stashes) {
-        if (s.kind === 'cellar') continue;
-        if (!s.items.length) continue;
-        if (Math.random() >= STO.treestash.raidChance) continue;
-        const near = Math.hypot(this.player.x - s.x, this.player.z - s.z) < STO.treestash.raidScareRadius;
-        const who = N.t(Math.random() < 0.6 ? 'log.raiderBear' : 'log.raiderMan');
-        const where = s.kind === 'tree' ? N.t('store.yourTree') : storeName(s);
-        if (near) {
-          this.logMsg(N.t('log.raidScared', { w: who, p: where }), 'good');
-          this.stats.raidsScared = (this.stats.raidsScared || 0) + 1;
-        } else {
-          const n = Math.min(s.items.length, STO.treestash.raidMin +
-            ((Math.random() * (STO.treestash.raidMax - STO.treestash.raidMin + 1)) | 0));
-          const taken = [];
-          for (let k = 0; k < n; k++) {
-            const j = (Math.random() * s.items.length) | 0;
-            const it = s.items.splice(j, 1)[0];
-            taken.push(it ? itemName(it.id) : '?');
-          }
-          this.logMsg(N.t('log.raidTaken', { w: who, p: where, n: N.tlist(taken) }), 'bad');
-          this.stats.raidsLost = (this.stats.raidsLost || 0) + n;
-        }
-      }
-    }
-
-    /* ------------------------- quests ------------------------- */
-    checkQuests() {
+    /* ------------------------- deeds -------------------------
+       Three things the valley has seen you do, and only three. Sealing a deed
+       is silent: the log line is the handover itself (the upgrade), which the
+       valley says in its own voice -- a thank-you, or a finding, not a
+       completion announcement (docs/06 s1). */
+    checkDeeds() {
       const p = this.player;
-      const q = (id) => this.quests.find(x => x.id === id);
-      const done = (qq, msg) => { if (qq && !qq.done) { qq.done = true; this.logMsg(N.t('log.questDone', { n: N.disp(qq), m: msg ? N.t('log.questDoneMsg', { m: msg }) : '' }), 'good'); } };
+      const d = (id) => this.deeds.find(x => x.id === id);
+      const seal = (dd) => { if (dd && !dd.done) dd.done = true; };
       /* One pass over the backpack and every shelf. This used to filter the
-         same arrays eight times over, once per quest, and it ran every frame. */
+         same arrays eight times over, once per deed, and it ran every frame. */
       const have = {};
       for (const it of this.inv) if (it.kind === 'fruit') have[it.id] = (have[it.id] || 0) + 1;
       for (const s of this.stashes) for (const it of s.items) have[it.id] = (have[it.id] || 0) + 1;
@@ -839,14 +805,11 @@
         this.upg[uid] = true;
         this.logMsg(N.t('log.upgrade', { n: N.disp(u), e: u.slots ? N.t('log.upgSlots', { n: u.slots }) : N.t('log.upgRare'), d: N.descOf(u) }), 'good');
       };
-      if (this.cellar().items.length > 0) { done(q('q1')); grant('pouch1'); }
-      if (n('frogpear') >= 1) { done(q('q4')); grant('pouch2'); }
-      // q5 asks for the fruit, not the body: a legendary one costs 12 of 24
-      // slots and sleeps in 420 s, so the quest is the carry, not the climb
-      if (n('bruinfig') >= 1) done(q('q5'));
-      // q6: walk to the door the generator marks at the keep's fruit greenhouse
+      if (this.cellar().items.length > 0) { seal(d('cellar')); grant('pouch1'); }
+      if (n('frogpear') >= 1) { seal(d('lake')); grant('pouch2'); }
+      // the greenhouse deed: stand at the door the generator marks at the keep
       const gh = N.POIS.find(x => x.id === 'greenhouse');
-      if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { done(q('q6'), N.t('log.q6msg')); grant('divider'); }
+      if (gh && Math.hypot(p.x - gh.x, p.z - gh.z) < 6 && p.y > gh.y - 6 && p.y < gh.y + 10) { seal(d('greenhouse')); grant('divider'); }
       this.checkEpithet();
     }
     /* The HUD asks for this every frame. The answer only changes when the player
@@ -896,7 +859,7 @@
       this._fpsT = (this._fpsT || 0) + dt; this._fpsN = (this._fpsN || 0) + 1;
       if (this._fpsT > 1) { this.fps = this._fpsN / this._fpsT; this._fpsT = 0; this._fpsN = 0; }
       this.time += dt;
-      if (this.hour < 0.01 && this.lastHour !== undefined && this.lastHour > 20) { this.day++; this.dailyRolls(); }
+      if (this.hour < 0.01 && this.lastHour !== undefined && this.lastHour > 20) this.day++;
       this.lastHour = this.hour;
       this.updateEnv();
 
@@ -916,9 +879,6 @@
         p.formT -= dt * rate;
         if (p.formT <= 0) this.revert();
       }
-      // buff
-      for (const k in this.buffs) { this.buffs[k] -= dt; if (this.buffs[k] <= 0) delete this.buffs[k]; }
-      this.playerStealth = (this.buffs.stealth ? 0.3 : 1);
 
       // creatures. The middle of a herd is worked out once a tick for the whole
       // valley, not once per animal per neighbour.
@@ -999,13 +959,13 @@
           } else this.hover = null;
         } else this.hover = null;
       }
-      /* Quests are an invitation, not a poll. Everything that can complete one
-         (harvest, eat, moving an item into a store) already calls checkQuests()
-         the moment it happens; the periodic pass is only there for the two that
-         depend on where the player is standing, and four times a second notices
-         that as well as every frame does. */
-      this._questT = (this._questT || 0) - dt;
-      if (this._questT <= 0) { this._questT = 0.25; this.checkQuests(); }
+      /* Deeds are a fact, not a poll. Everything that can seal one (harvest,
+         moving an item into a store) already calls checkDeeds() the moment it
+         happens; the periodic pass is only there for the one that depends on
+         where the player is standing, and four times a second notices that as
+         well as every frame does. */
+      this._deedT = (this._deedT || 0) - dt;
+      if (this._deedT <= 0) { this._deedT = 0.25; this.checkDeeds(); }
     }
 
     ambient(dt) {
@@ -1082,10 +1042,22 @@
          backed off to the **face** of the block in the way. Sampling points along
          the line and stepping back a fixed 0.35 m from the first sample that
          landed inside a block left the lens buried in a hillside: a sample
-         inside a block says nothing about where that block's surface is. */
+         inside a block says nothing about where that block's surface is.
+         The pull-back then had two holes of its own. The floor: `max(0.55, t-0.2)`
+         drove to 0.55 m whenever the face was nearer than 0.75 m, so a face at
+         0.3 m stood the lens 0.25 m **inside** the block, where back-face
+         culling (engine, CULL_FACE) throws the near face away and the wall
+         simply vanishes from the frame -- orbiting the body beside a wall, a
+         trunk, or the tower was the way to meet it. And the 0.2 m gap: a face
+         that close behind the subject is the whole frame on any down-glance.
+         So the wall stands 0.55 m behind the subject when it can, and when it
+         cannot the lens hugs 0.08 m ahead of the face -- never inside it, and
+         never so close that the face crosses the 0.06 m near clip (the engine's
+         persp), below which it stops being drawn and the wall you are pressed
+         to vanishes instead of filling the frame. */
       if (this.thirdPerson) {
         const hit = this.world.raycast(p.x, eyeY, p.z, ox, oy, oz, cam.d, true);
-        if (hit) d = Math.max(0.55, hit.t - 0.2);
+        if (hit) d = Math.min(cam.d, Math.max(0.08, hit.t - 0.55));
       }
       const x = p.x + ox * d, y = eyeY + oy * d, z = p.z + oz * d;
       /* pulled in this far, the lens is inside the body it is filming: the world
@@ -1202,7 +1174,7 @@
              of the way -- see partAngles in models.js, and the `stands` flag. */
           off: Math.max(0, Math.min(1,
             (c.y - N.groundY(W, Math.floor(c.x), Math.floor(c.z), Math.floor(c.y))) / (N.MODEL_H[c.sp.model] * sc))),
-          // only a body the data gives a swim speed to: a bear wading still walks
+          // only a body the data gives a swim speed to is stroked by the water
           swim: strokeOf(c.held, c.speed, c.sp.swimSpeed),
           held: c.held || 0,
           // signed rad/s of heading: the outside leg of a turn does the work
@@ -1261,8 +1233,11 @@
           // signed rad/s of heading: the outside leg of a turn does the work
           turn: p.bend || 0
         };
-        const wopt = bodyWater(p, this.env.liqK);
-        for (const e of parts) R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts), wopt);
+        // The body's own water.
+        const bw = bodyWater(p, this.env.liqK);
+        for (const e of parts)
+          R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts),
+            { waterY: bw.waterY, waterK: bw.waterK });
       }
       // glass, drawn over the world and the bodies it is in front of. It writes
       // no depth (blend does that), so what shows through it is decided by the
@@ -1304,18 +1279,18 @@
     }
 
     /* ------------------------- identity (docs/03 section 6) ------------------------- */
-    // the valley's name for you: the last earned epithet wins.
-    // The HUD reads this every frame and the answer only moves when a quest
-    // does, so it is cached on the quest flags themselves -- a test that flips
+    // the valley's name for you: the last sealed deed wins.
+    // The HUD reads this every frame and the answer only moves when a deed
+    // does, so it is cached on the deed flags themselves -- a test that flips
     // a `done` by hand still gets a fresh answer, because the flags changed.
     epithet() {
-      const flags = this.quests.map(q => q.done ? 1 : 0).join('');
+      const flags = this.deeds.map(q => q.done ? 1 : 0).join('');
       if (flags === this._epFlags) return this._ep;
       this._epFlags = flags;
-      const met = id => id === 'all' ? this.quests.every(q => q.done)
-                                     : !!(this.quests.find(q => q.id === id) || {}).done;
+      const met = id => id === 'all' ? this.deeds.every(q => q.done)
+                                     : !!(this.deeds.find(q => q.id === id) || {}).done;
       let cur = IDEN.epithetDefault;
-      for (const e of IDEN.epithets) if (met(e.quest)) cur = e;
+      for (const e of IDEN.epithets) if (met(e.deed)) cur = e;
       this._ep = cur;
       return cur;
     }
@@ -1359,8 +1334,8 @@
     /* Everything that would otherwise be lost on a reload is written here: the
        block diff rather than the voxels, the queues (regrowth, planting, fruit
        scattered on death), the stores, the identity and the clock.
-       Nothing translated is stored -- a store is named by its kind, a quest
-       keeps its text next to the check that completes it. */
+       Nothing translated is stored -- a store is named by its kind, and a
+       deed is a flag, not a sentence: there is no text to store. */
     save() {
       try {
         const p = this.player;
@@ -1373,8 +1348,7 @@
           stashes: this.stashes.map(s2 => ({ id: s2.id, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
           diffs: this.diffs, seen: this.seen, dex: this.dexFruit,
           regrow: this.regrow, growQueue: this.growQueue, drops: this.drops,
-          buffs: this.buffs,
-          quests: this.quests.map(q => [q.id, q.done]), stats: this.stats, upg: this.upg
+          deeds: this.deeds.map(q => [q.id, q.done]), stats: this.stats, upg: this.upg
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(s));
         this.logMsg(N.t('log.saved'), 'good');
@@ -1388,8 +1362,13 @@
       this.id = typeof s.id === 'string' ? s.id : this.id;
       this.name = typeof s.name === 'string' ? s.name : '';
       this.time = num(s.time, this.time); this.day = num(s.day, this.day);
-      this.inv = rows(s.inv);
+      // items the valley no longer grows wake up as nothing: a save written
+      // before the plant cut may still carry a mushroom the world does not
+      // have any more, and an unknown id must not reach usePlant or slotOf
+      const keeps = it => it && it.id && (it.kind === 'plant' ? PLANT[it.id] : FRU[it.id]);
+      this.inv = rows(s.inv).filter(keeps);
       this.stashes = this.mergeStashes(s.stashes);
+      for (const st of this.stashes) st.items = (st.items || []).filter(keeps);
       this.seen = plain(s.seen) ? s.seen : {};
       this.dexFruit = plain(s.dex) ? s.dex : {};
       this.stats = plain(s.stats) ? s.stats : this.stats;
@@ -1410,7 +1389,6 @@
       this.regrow = rows(s.regrow);
       this.growQueue = rows(s.growQueue);      // a planted pit must still be growing after a reload
       this.drops = rows(s.drops);              // fruit scattered on death stays recoverable
-      this.buffs = plain(s.buffs) ? s.buffs : {};
       const p = this.player, sp = plain(s.p) ? s.p : {};
       Object.assign(p, { x: num(sp.x, p.x), y: num(sp.y, p.y), z: num(sp.z, p.z),
         yaw: num(sp.yaw, p.yaw), pitch: num(sp.pitch, p.pitch),
@@ -1423,12 +1401,17 @@
       // the block diffs are applied above, so a cellar tree may have grown into
       // the spot the save was written at: the body it restores has to fit again
       p.unstick();
-      for (const q of list(s.quests)) {
+      // deeds; a save written before the cut carries the quest list they used
+      // to be -- the names changed, the memory does not (q1/q4/q6 map onto the
+      // three deeds)
+      const OLD_DEEDS = { q1: 'cellar', q4: 'lake', q6: 'greenhouse' };
+      for (const q of list(s.deeds || s.quests)) {
         if (!Array.isArray(q)) continue;
-        const qq = this.quests.find(x => x.id === q[0]); if (qq) qq.done = !!q[1];
+        const dd = this.deeds.find(x => x.id === (OLD_DEEDS[q[0]] || q[0]));
+        if (dd) dd.done = !!q[1];
       }
       if (plain(s.upg)) Object.assign(this.upg, s.upg);
-      // read off the restored quests, so it has to come after them
+      // read off the restored deeds, so it has to come after them
       this.epithetSeen = this.epithet();
       this.lastHour = this.hour;               // a loaded clock must not read as a new day
       // the diffs above flagged their chunks; the budgeted rebuild in update()

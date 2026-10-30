@@ -33,7 +33,7 @@
            /* How much of a light's own glow this stuff lets through at full
               haze. Air lets through 0.75, which is what makes a lantern across
               the valley still read as a lantern; the same 0.75 inside the lake
-              put a lamp jellyfish 3.6 m away back at luminance 246 -- a sun
+              put a lanternfish 3.6 m away back at luminance 246 -- a sun
               sitting on the lakebed. A lamp under water is a lamp seen through
               water, so the water gets to say how much of it survives. */
            fogEmis: 0.15,
@@ -117,13 +117,8 @@
   const PLANT_BLOCK = {}, PLANT_BLOCK_REV = {};
   N.PLANTS.forEach((p, i) => {
     const id = 60 + i;
-    const emis = (p.id === 'glowcap' || p.id === 'glowseed' || p.id === 'cellarseed') ? 1 : 0;
-    const c = p.id === 'glowcap' ? [0.55, 1.0, 0.75] :
-      p.id === 'glowseed' ? [0.7, 1.0, 0.6] :
-        p.id === 'leaper' ? [0.9, 0.5, 0.35] :
-          p.id === 'drifter' ? [0.6, 0.62, 0.85] :
-            p.id === 'thorn' ? [0.75, 0.35, 0.4] :
-              p.id === 'cellarseed' ? [0.85, 0.75, 0.4] : [0.8, 0.6, 0.4];
+    const emis = (p.id === 'cellarseed') ? 1 : 0;
+    const c = p.id === 'cellarseed' ? [0.85, 0.75, 0.4] : [0.8, 0.6, 0.4];
     def(id, {
       cn: p.cn, solid: false, opaque: false, emis, c,
       micro: [[0.42, 0.0, 0.42, 0.16, 0.34, 0.16], [0.26, 0.32, 0.26, 0.48, 0.22, 0.48]]
@@ -147,8 +142,7 @@
      lake. There the emissive mesh takes 0 pixels out of the noon frame and the
      ordinary micro mesh 3,549 -- largest difference 4.9, against a bound of
      200 -- which is the stalks, and it is the lake that lights them. The
-     glowcap ring and the glowcap itself glow because that is what they are;
-     this is grass under water. */
+     glowcap ring glows because that is what it is; this is grass under water. */
   def(75, { cn: '水草', solid: false, opaque: false, c: [0.3, 0.75, 0.55], micro: [[0.4, 0.0, 0.4, 0.2, 0.9, 0.2], [0.25, 0.2, 0.5, 0.16, 0.5, 0.16]] });
   def(76, { cn: '荧光菇环', solid: false, opaque: false, emis: 1, c: [0.6, 1.0, 0.7], micro: [[0.44, 0.0, 0.44, 0.14, 0.4, 0.14], [0.2, 0.38, 0.2, 0.6, 0.26, 0.6]] });
   def(77, { cn: '窖树核心', solid: false, opaque: false, emis: 1, c: [1.0, 0.85, 0.45], micro: [[0.3, 0.1, 0.3, 0.4, 0.5, 0.4]] });

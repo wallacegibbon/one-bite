@@ -2,9 +2,9 @@
  *  FRUTARIA
  *  Fruit / plant / rarity data -- the single source of truth shared by the design docs and the game
  *  Mirrors: docs/04-fruit-and-transformation.md and docs/05-backpack-and-storage.md
- *  One fruit per species, and one species per niche: two fruits, two bodies.
+ *  One fruit per species, and one species per niche: one fruit, one body.
  *  The rarity ladder still has five rungs; the valley currently only grows
- *  two of them (rare / legendary).
+ *  one of them (rare).
  * ========================================================================== */
 (function (N) {
 
@@ -44,9 +44,7 @@
    *   dryTimer    : seconds out of water before the skin starts to dry (amphibian bodies)
    *   nightVision : 0..1 brightening in the dark, and the same eye washed out by daylight
    *   stealth     : creature alert-radius multiplier (<1 = harder to spot)
-   *   aura        : intimidation radius (>0 scares off lesser creatures / raises alert)
-   *   coldImmune  : the altitude cold of the northern ridge does not bite
-   *   poisonImmune: the lamp jellyfish sting does not bite -- the body the lake
+   *   poisonImmune: the lanternfish sting does not bite -- the body the lake
    *                 already gave you is the body the lake's lamps are lit for
    *   step        : auto step-up height in metres
    *   fov         : field of view
@@ -59,7 +57,10 @@
    * world, and a hand bolted to the corner of the lens was never part of the
    * body you were wearing. `poisonImmune` came back with the lamps: the animal
    * is back without a body of its own, so the immunity sits on the body that
-   * already lives in that water.
+   * already lives in that water. `aura` and `coldImmune` went with the bear:
+   * nothing in the valley carries a radius the smaller bodies scatter from,
+   * and the ridge's altitude cold went with the one body that was exempt from
+   * it.
    * A field comes back when a fruit asks for it, not before.
    * Nothing here is a mental effect: a form inherits a body and the world's
    * reaction to that body, never a mind (docs/04 s5.0).
@@ -73,59 +74,31 @@
       duration: 420,
       form: {
         cn: '雨蛙', en: 'frog', size: [0.5, 0.5], speed: 0.9, jump: 1.3, hop: { up: 0.72, kick: 1.25, period: 0.22 },
-        swim: 1.1, turn: 1.9, breatheAir: false, poisonImmune: true,
+        swim: 1.1, turn: 0.9, breatheAir: false, poisonImmune: true,
         dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, step: 0.3
       },
       cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '太小：够不到高处的果，也推不开门'],
       costEn: ['the skin must stay wet: after 90 s out of water it dries and vitality keeps draining', 'too small: cannot reach high fruit, cannot push a door open'],
       lore: '长在芦苇半腰的绿果，雨后一夜之间全出来。它不喝水——它靠皮肤喝，所以它把这份本事也给了你。',
       loreEn: 'A green fruit halfway up a reed, all of them out overnight after rain. It does not drink water — it drinks through its skin, so it hands you that trick as well.'
-    },
-
-    /* ============ legendary ============ */
-    {
-      id: 'bruinfig', cn: '棕熊果', en: 'Bruin Fig', rarity: 'legendary', creature: 'bear',
-      habitat: ['mountains', 'whisperwood'], habitatCn: '北岭岩坡 · 冬眠穴', habitatEn: 'Northern Ridge rock face · hibernation den',
-      duration: 480,
-      form: {
-        cn: '棕熊', en: 'bear', size: [1.4, 1.5], speed: 1.1, jump: 0.9, coldImmune: true,
-        turn: 1.6, aura: 8, step: 1.1, fov: 68
-      },
-      cost: ['无法精细操作（不能采摘小果、不能开仓库）', '体重：薄冰会裂，木桥会塌'],
-      costEn: ['no fine motor control (cannot pick small fruit, cannot open storage)', 'weight: thin ice breaks, wooden bridges collapse'],
-      lore: '熊会把它埋起来，忘了它，然后在春天被它找到。',
-      loreEn: 'A bear buries it, forgets it, and then in spring it is found by it.'
     }
   ];
 
   /* ------------------------------------------------------------------
-   * Wondrous plants (no form change; temporary buffs / tools)
+   * Wondrous plants (no form change; tools, not powers)
    * A plant takes the slots of its rarity: slotOf() goes through RARITY and
-   * nothing else, so there is no per-plant `slots` field here. Six plants used
-   * to carry one, each exactly equal to its rarity's cost, which made it look
-   * like a knob that was not connected to anything. If a plant is ever meant
-   * to be lighter or heavier than its rarity, add the field AND the override
-   * in slotOf() in the same change.
+   * nothing else, so there is no per-plant `slots` field here. If a plant is
+   * ever meant to be lighter or heavier than its rarity, add the field AND the
+   * override in slotOf() in the same change.
+   * The valley used to carry six of these, five of them powers you ate -- a
+   * light, a jump, a silence, a guard, a fixed point of light -- and they are
+   * cut: a power you eat is not a law the valley runs on. What is left is the
+   * one thing a plant may honestly do: grow.
    * ------------------------------------------------------------------ */
   const PLANTS = [
-    { id: 'glowcap', cn: '荧光菇', en: 'Glowcap', rarity: 'common', effect: 'light',
-      desc: '摘下后 5 分钟自身发光，可放置成路标。蘑菇圈的特产。',
-      descEn: 'Glows by itself for 5 minutes after picking; can be placed as a waymarker. A specialty of the Glowglade.' },
-    { id: 'leaper', cn: '弹弹菇', en: 'Leaper', rarity: 'common', effect: 'jump',
-      desc: '跳跃 +80%，持续 90 秒。吃多会手抖（视角抖动）。',
-      descEn: 'Jump +80% for 90 seconds. Too many and your hands shake (the camera jitters).' },
-    { id: 'drifter', cn: '雾隐菇', en: 'Drifter', rarity: 'uncommon', effect: 'stealth',
-      desc: '生物警觉半径 −70%，脚步声消失，持续 120 秒。吃后说话别人听不见。',
-      descEn: 'Creature alert radius −70%, footsteps gone, 120 seconds. After eating it, others cannot hear you speak.' },
-    { id: 'thorn', cn: '刺刺菇', en: 'Thorncap', rarity: 'uncommon', effect: 'defense',
-      desc: '90 秒内近身伤害反弹，但移动速度 −20%。',
-      descEn: '90 seconds of melee damage reflection, but movement speed −20%.' },
-    { id: 'glowseed', cn: '发光种子', en: 'Glowseed', rarity: 'common', effect: 'plant',
-      desc: '可种在任何泥土上：长成永久光点，也可作为“窖树”的锚点标记。',
-      descEn: 'Plant it in any soil: it becomes a permanent point of light, and can mark the anchor of a cellar tree.' },
     { id: 'cellarseed', cn: '窖树种', en: 'Cellar Stone', rarity: 'rare', effect: 'build',
-      desc: '种下后长成“窖树”：一座 24 果格的野外小仓库，腐坏速度 1/3，会被熊与窃果贼光顾。',
-      descEn: 'Planted, it grows into a cellar tree: a 24-slot field store, decay 1/3, visited by bears and fruit thieves.' }
+      desc: '种下后长成“窖树”：一座 24 果格的野外小仓库，腐坏速度 1/3。',
+      descEn: 'Planted, it grows into a cellar tree: a 24-slot field store, decay 1/3.' }
   ];
 
   /* ------------------------------------------------------------------
@@ -142,16 +115,12 @@
     // store.cellar / store.tree), so a save file can never freeze one language
     // into a warehouse.
     cellar:    { slots: 96, decay: 0.1 },
-    // A cellar tree is alive, so it has a body: it can be robbed, and it must
-    // not be planted on top of its sibling's roots. These are the numbers the
-    // docs quote (05, "cellar tree" rule table) -- docs-sync.js compares the
-    // prose against them, so changing one here forces the docs to change too.
+    // A cellar tree is alive, so it must not be planted on top of its
+    // sibling's roots. These are the numbers the docs quote (05, "cellar tree"
+    // rule table) -- docs-sync.js compares the prose against them, so changing
+    // one here forces the docs to change too.
     treestash: { slots: 24, decay: 0.33, max: 3,
-                 minDist: 20,          // m between two cellar trees
-                 raidChance: 0.30,     // one roll per game day
-                 raidMin: 1,           // fruits taken when the raid lands
-                 raidMax: 3,
-                 raidScareRadius: 45 }  // player this close always scares it off
+                 minDist: 20 }         // m between two cellar trees
   };
 
   N.RARITY = RARITY;

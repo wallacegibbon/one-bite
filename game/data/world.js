@@ -36,24 +36,25 @@
       id: 'deepgrove', cn: '深鹿林', en: 'The Deep Grove', kind: 'circle',
       cx: 104, cz: 32, r: 18,
       danger: 3,
-      desc: '银色的树，没有风也会响。旧鹿径在这里收拢成一条；跟着走，会走到水边，也会走到熊。'
+      desc: '银色的树，没有风也会响。旧鹿径在这里收拢成一条；跟着走，会走到水边。'
     },
     {
       id: 'mountains', cn: '北岭 · 鹰喙峰', en: 'Ashscale Ridge', kind: 'circle',
       cx: 142, cz: 18, r: 26,
       danger: 3,
-      // the cold is the ridge's own: it depends on height, not on the hour, and
-      // it bites harder the higher you go (rate is reached `ramp` metres above
-      // the line). A bear body is its own weatherproofing.
-      cold: { above: 26, rate: 0.06, ramp: 10 },
-      desc: '棕熊的坡，风把雪粒横着吹。山顶能看见灰雾墙在远处缓慢地“呼吸”。'
+      desc: '风把雪粒横着吹。山顶能看见灰雾墙在远处缓慢地“呼吸”。'
     },
     {
       id: 'mirrorlake', cn: '镜湖', en: 'Mirrorlake', kind: 'circle',
       cx: 78, cz: 106, r: 38,
       danger: 3,
-      // the sunken tower: worldgen builds it here, and the lamp jellyfish field
-      // sits on its outline (data/creatures.js asks for it by name)
+      // the water of the lake itself: the field the lanternfish swim is the
+      // disc of the zone's own radius round this point (data/creatures.js
+      // asks for it by name)
+      lake: [78, 106],
+      // the sunken tower: worldgen builds it here. The lanternfish field used
+      // to sit on its outline and the tower was what placed it; it stands in
+      // the field now, not at the centre of it
       tower: [66, 118],
       // the ring of sunken huts on the lakebed, the frogs' place (POI frogshall
       // sits in the middle of it); worldgen builds them at absolute heights
@@ -81,7 +82,7 @@
   ];
 
   /* Points of interest: minimap markers, and the named places the code anchors
-     things to -- the cellar door, the quest greenhouse, the lake the frogs call
+     things to -- the cellar door, the greenhouse door, the lake the frogs call
      in. A POI is a place with a name; a zone is a place with a shape.
      The two door markers carry the height of the door they name, not a height
      remembered from an older map: the generator marks a door with a cellar crate
@@ -94,8 +95,8 @@
      the island's plank fill. The docs-drift and docs-sync checks ask it.
      A name is a claim too, and the world answers it. This place used to be
      called a cellar in every language the game speaks -- in the zone's own
-     description, in the name the data gives the marker the minimap is drawn
-     from, and in the hint the codex prints under quest 6. Asked, the island
+     description, and in the name the data gives the marker the minimap is
+     drawn from. Asked, the island
      under that door holds no room: over the 441 columns of the keep's disc,
      every one of the 9,702 cells from the floor of the world up to the row the
      marker is printed at stands solid, and 0 of them are air. The fruit stands

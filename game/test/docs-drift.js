@@ -20,12 +20,10 @@ const run = () => {
 const DRIFTS = [
   ['04-fruit-and-transformation.md', '| legendary | 传说 | **12** |', '| legendary | 传说 | **11** |', 'legendary slots'],
   ['05-backpack-and-storage.md', '| **96** |', '| **90** |', 'cellar slots'],
-  ['05-backpack-and-storage.md', 'one roll per game day, 30%', 'one roll per game day, 40%', 'raid chance'],
   ['05-backpack-and-storage.md', '| Min distance | 20 m |', '| Min distance | 21 m |', 'cellar-tree min distance'],
-  ['05-backpack-and-storage.md', 'takes 1–3 fruits', 'takes 1–4 fruits', 'raid take maximum'],
   ['02-map-and-scenes.md', '| `cellar` | Main Cellar | (136,134) | 20 |', '| `cellar` | Main Cellar | (136,134) | 21 |', 'POI y'],
   ['02-map-and-scenes.md', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r38 | (78,106) |', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r30 | (78,106) |', 'zone radius'],
-  ['03-characters-and-creatures.md', '| `thorn` | 刺刺菇 | Thorncap |', '| `thorn` | 刺刺菇 | Thorny Cap |', 'plant name coverage'],
+  ['03-characters-and-creatures.md', '| `cellarseed` | 窖树种 | Cellar Stone |', '| `cellarseed` | 窖树种 | Cellar Seed |', 'plant name coverage'],
   ['05-backpack-and-storage.md', 'press F to use', 'press Q to use', 'unbound key claim'],
   // each phrase in the docs-sync `cut` list gets its own injection, so deleting
   // one entry from that list makes exactly one of these four go MISSED
@@ -33,18 +31,14 @@ const DRIFTS = [
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed stomach lets both bodies act at once.', 'cut design back in (mixed stomach)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed form is possible with the right talent.', 'cut design back in (mixed form)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nBeast residue accumulates per form.', 'cut design back in (beast residue)'],
-  ['00-overview-and-design-pillars.md', '| Fruits | 2 | 12–16 |', '| Fruits | 5 | 12–16 |', 'scale table fruit count'],
+  ['00-overview-and-design-pillars.md', '| Fruits | 1 | 12–16 |', '| Fruits | 3 | 12–16 |', 'scale table fruit count'],
   // the map chapter's heights, which only the world built from data/ can answer.
   // Each of these is a number the chapter carries as a measurement; none of them
   // appears in game/data/, so the table checks above cannot see any of them.
   ['02-map-and-scenes.md', 'Windows on all four faces at **y7/y10/y13**', 'Windows on all four faces at **y7/y10/y12**', 'sunken tower window rows'],
-  ['02-map-and-scenes.md', 'over all 2,970 water columns', 'over all 2,971 water columns', 'lake water-column census'],
+  ['02-map-and-scenes.md', 'over all 2,958 water columns', 'over all 2,959 water columns', 'lake water-column census'],
   ['02-map-and-scenes.md', 'the deepest at (72,83) where the water runs y4..y14', 'the deepest at (72,84) where the water runs y4..y14', 'which column is the lake\'s deepest'],
-  ['02-map-and-scenes.md', '258 columns stand at or above that line', '268 columns stand at or above that line', 'ridge columns at the full-bite line'],
   ['02-map-and-scenes.md', 'surface is **y23–36** (mean 30', 'surface is **y23–37** (mean 30', 'ridge surface band'],
-  ['02-map-and-scenes.md', '87% of the ridge\'s columns are already cold', '89% of the ridge\'s columns are already cold', 'ridge cold share'],
-  ['02-map-and-scenes.md', 'the 24 bruin figs hang at **y23..37**', 'the 24 bruin figs hang at **y23..38**', 'bruin fig rows'],
-  ['02-map-and-scenes.md', 'most of them at 37', 'most of them at 36', 'the row most figs hang at'],
   ['02-map-and-scenes.md', '**Greenhouse** y21', '**Greenhouse** y23', 'the row the keep greenhouse marker stands on'],
   // what the island under that door holds, and the room the town's door does
   // open onto: the chapter states both as counts, and the counts are what say
@@ -59,10 +53,11 @@ const DRIFTS = [
   // word the world refuses that place and stay green
   ['02-map-and-scenes.md', '| `greenhouse` | Fruit Greenhouse | (78,110) | 21 |', '| `greenhouse` | Fruit Greenhouse (cellar) | (78,110) | 21 |', 'a marker name claiming a room the island has no air for'],
   ['02-map-and-scenes.md', '| `frogshall` | Frogshall | (92,120) | 7 |', '| `frogshall` | Frogshale | (92,120) | 7 |', 'a marker name nothing else in the chapter mentions'],
-  // the quest chapter's two text columns: the codex prints these strings, the
-  // chapter copies them out of game.js, and every other column of that table
-  // was compared while these two were not
-  ['06-quests-and-progression.md', "| `q6` | The silver mesh in the greenhouse | go to Starfall's fruit greenhouse, on the deck over the island, and find the silver divider |", "| `q6` | The silver mesh in the cellar | go to Starfall's fruit greenhouse cellar, on the deck over the island, and find the silver divider |", 'a quest title and hint the game no longer shows']
+  // the life chapter's two text columns: the game never prints these strings
+  // (a deed carries no text), but the chapter copies the names out of game.js
+  // and the handovers out of the data -- a name or a handover the data no
+  // longer matches is drift
+  ['06-quests-and-progression.md', '| `lake` | Swimming Mirrorlake | Deep Pouch |', '| `lake` | Swimming the mirror lake | Deep Pouch |', 'a deed name the data no longer matches']
 ];
 
 let missed = 0;

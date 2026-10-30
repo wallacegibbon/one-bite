@@ -221,6 +221,9 @@
     vec4 vp = uView * wp;
     gl_Position = uProj * vp;
     float d = length(vp.xyz);
+    // aData.y is the light a thing is built with: the fruit block, the ring,
+    // the cellar core, the lamps -- nothing in the valley lends a body a
+    // light any more, so the built-in value is the whole of it.
     float emis = aData.y;
     // The haze has two laws, because the stuff a lens looks through is not one
     // thing. Air scatters: nothing happens in the first metre and everything at
@@ -252,7 +255,7 @@
     // uEmisKeep is how much of a light's own glow the haze lets through. Air
     // says 0.75 -- a lantern across the valley is still a lantern -- and that
     // is far too much for five metres of lake: measured from 9 m away inside
-    // Mirrorlake, a lamp jellyfish came back at luminance 197, the same bright
+    // Mirrorlake, a lanternfish came back at luminance 197, the same bright
     // dot it is at 100 m through air. The stuff a light is seen through is a
     // fact about that stuff, so the number lives on the block row.
     //

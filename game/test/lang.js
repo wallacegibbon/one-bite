@@ -66,7 +66,7 @@ console.log(fallbackBad.join('\n'));
     g.player.x = 136.5; g.player.z = 130.5;
     for (let k = 46; k > 0; k--) if (g.world.solidAt(136, k, 130)) { g.player.y = k + 1; break; }
     g.player.yaw = 3.14; g.player.pitch = 0;
-    g.addItem('fruit', 'frogpear'); g.addItem('fruit', 'bruinfig');
+    g.addItem('fruit', 'frogpear'); g.addItem('fruit', 'frogpear');
     g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 400, maxFresh: 900 });
     window.startGame();
   });
@@ -132,7 +132,7 @@ console.log(fallbackBad.join('\n'));
   // 3. translation is presentation only: the world is the same game underneath
   const state = () => page.evaluate(() => {
     const g = window.game;
-    return JSON.stringify({ day: g.day, inv: g.inv, stashes: g.stashes, quests: g.quests.map(q => [q.id, q.done]), upg: g.upg });
+    return JSON.stringify({ day: g.day, inv: g.inv, stashes: g.stashes, deeds: g.deeds.map(q => [q.id, q.done]), upg: g.upg });
   });
   await page.evaluate(() => window.setLocale('zh'));
   await new Promise(r => setTimeout(r, 250));
@@ -167,7 +167,7 @@ console.log(fallbackBad.join('\n'));
     const cEn = document.getElementById('cellarTitle').textContent + '|' + document.getElementById('cellarSub').textContent;
     return { jEn, jZh, cZh, cEn };
   });
-  check('the codex re-renders on switch', panels.jEn !== panels.jZh && /Quests|任务/.test(panels.jEn) && /Quests|任务/.test(panels.jZh),
+  check('the codex re-renders on switch', panels.jEn !== panels.jZh && /codex|图鉴/i.test(panels.jEn) && /codex|图鉴/i.test(panels.jZh),
     { en: panels.jEn.slice(0, 120), zh: panels.jZh.slice(0, 120) });
   check('the storage panel re-renders on switch', panels.cZh !== panels.cEn, { zh: panels.cZh, en: panels.cEn });
 

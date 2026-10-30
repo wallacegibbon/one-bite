@@ -60,7 +60,7 @@
       return v === undefined ? '' : v;
     },
 
-    /* a list of setting strings (a fruit's costs, a raid's loot) */
+    /* a list of setting strings (a fruit's costs) */
     list(arr, sep) {
       const s = sep !== undefined ? sep : this.t('j.listSep');
       return (arr || []).map(x => (typeof x === 'string' ? x : this.disp(x))).join(s);

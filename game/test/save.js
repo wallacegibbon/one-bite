@@ -38,7 +38,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     const g = window.game, N = window.FRUTARIA;
     g.inv.length = 0;
     g.addItem('fruit', 'frogpear'); g.addItem('plant', 'cellarseed');
-    // the town cellar gets a fruit, so q1 state is non-trivial
+    // the town cellar gets a fruit, so the first deed is non-trivial
     g.stashes[0].items.push({ kind: 'fruit', id: 'frogpear', fresh: 500, maxFresh: 900 });
     // a cellar tree. The spot is found, not remembered: it has to be open
     // ground with ten clear cells above it, because the pit planted in the same
@@ -64,26 +64,23 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     g.plantPit(g.inv[g.inv.length - 1], g.inv.length - 1);
     // fruit scattered by a death
     g.drops.push({ x: spot.x, y: spot.y, z: spot.z - 2, item: { kind: 'fruit', id: 'frogpear', fresh: 700, maxFresh: 900 }, t: 600 });
-    // a plant buff and a form in progress. The bear body is 1.4 x 1.5 m and
-    // the cellar tree it just built stands inside that box, so the eat gate --
-    // a body that cannot fit where it stands is refused and the fruit is not
-    // spent -- would refuse it on the spot. Stand a few cells off the tree
-    // before the bite. The fig goes in after the pit: the pack is 24 slots
-    // and frogpear (4) + cellar stone (4) + fig (12) only fit once the pit's
-    // 2 slots are gone.
-    g.buffs.stealth = 60;
-    g.addItem('fruit', 'bruinfig');
+    // a form in progress. The tree it just built stands in
+    // the planter's own feet cell -- the core block and the trunk that grows
+    // up through the body that planted it -- so the eat gate, a body that
+    // cannot fit where it stands is refused and the fruit is not spent, would
+    // refuse any form asked for there. Stand a few cells off the tree before
+    // the bite. The pear goes in after the pit: the pack is 24 slots and frog
+    // pear (4) + cellar stone (4) fit round it.
+    g.addItem('fruit', 'frogpear');
     let stand = null;
     for (let dx = 4; dx <= 9; dx++) {
       const ex = spot.x + dx;
       const ey = N.groundY(g.world, ex, spot.z, 40);
       if (ey < 15 || ey > 34) continue;
-      // the bear's box at (ex + 0.5, ey, spot.z + 0.5) covers exactly these
-      // cells; the eat gate asks solidAt of each of them, so ask them here
-      let clear = true;
-      for (let zz = -1; zz <= 1 && clear; zz++) for (let xx = -1; xx <= 1; xx++)
-        for (let yy = 0; yy <= 1; yy++) if (g.world.solidAt(ex + xx, ey + yy, spot.z + zz)) { clear = false; break; }
-      if (clear) { stand = { x: ex, y: ey }; break; }
+      // the frog's box at (ex + 0.5, ey, spot.z + 0.5) covers exactly this one
+      // cell at feet level; the eat gate asks solidAt of the cells the body
+      // spans, so ask the same cell here
+      if (!g.world.solidAt(ex, ey, spot.z)) { stand = { x: ex, y: ey }; break; }
     }
     if (!stand) throw new Error('no clear ground within 9 cells of the cellar tree');
     g.player.x = stand.x + 0.5; g.player.y = stand.y; g.player.z = spot.z + 0.5;
@@ -91,7 +88,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     const tree = g.stashes.find(s => s.kind === 'tree');
     return {
       id: g.id, inv: g.inv.map(i => i.kind + ':' + i.id), stashes: g.stashes.map(s => s.id + '/' + s.kind),
-      growQueue: g.growQueue.length, drops: g.drops.length, buffs: Object.keys(g.buffs),
+      growQueue: g.growQueue.length, drops: g.drops.length,
       form: g.player.form, formT: +g.player.formT.toFixed(1), formMax: g.player.formMax,
       treeAt: tree ? [tree.x, tree.y, tree.z] : null,
       coreBlock: tree ? g.world.get(tree.x, tree.y, tree.z) : null
@@ -199,7 +196,7 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     return {
       id: g.id, inv: g.inv.map(i => i.kind + ':' + i.id), stashes: g.stashes.map(s => s.id + '/' + s.kind),
       cellarFirst: g.stashes[0].id, cellarKind: g.stashes[0].kind,
-      growQueue: g.growQueue.length, drops: g.drops.length, buffs: Object.keys(g.buffs),
+      growQueue: g.growQueue.length, drops: g.drops.length,
       form: g.player.form, formT: +g.player.formT.toFixed(1), formMax: g.player.formMax,
       fraction: +(g.player.formT / g.player.formMax).toFixed(3),
       treeAt: tree ? [tree.x, tree.y, tree.z] : null,
@@ -213,7 +210,6 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
   check('the cellar tree survives', JSON.stringify(back.treeAt) === JSON.stringify(made.treeAt), { before: made.treeAt, after: back.treeAt });
   check('the planted pit is still growing', back.growQueue === made.growQueue && back.growQueue > 0, back);
   check('scattered fruit is still recoverable', back.drops === made.drops && back.drops > 0, back);
-  check('a plant buff survives', JSON.stringify(back.buffs) === JSON.stringify(made.buffs), { before: made.buffs, after: back.buffs });
   check('the form bar keeps its fraction', back.form === made.form && back.fraction > 0 && back.fraction <= 1, { saved: made.formT + '/' + made.formMax, after: back });
 
   // the loaded world is the same world: the cellar tree is standing where it was
