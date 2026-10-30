@@ -74,7 +74,13 @@ log line that announces it says so). A fourth line came out of the round's
 own cut: removing the word for the buff system from the technical chapter's
 save-line in `cc08b55` doubled the word it sat inside (`all come backar all
 come back`), and the re-read un-mangled it to what the save round trip
-actually returns (`ebf6a22`). The standing watch on the cut's tree,
+actually returns (`ebf6a22`). Three more lines of the round's own old
+ids stood in the storage chapter's upgrade line, the map chapter's
+gating diagram and the technical chapter's test table: the cut keyed the
+upgrades to the deeds the valley keeps (cellar, lake, greenhouse), and
+the loader keeps the old ids only for the saves that carry them, so the
+lines now name the deeds the way the grant and the test do, fixed beside
+this record. The standing watch on the cut's tree,
 loop 15, did its work and found the one thing the round's own cut owed:
 green on its first six runs and red on the seventh, on the crossing law
 (a wild frog crossing the lake kicks the same way, feet behind it). The

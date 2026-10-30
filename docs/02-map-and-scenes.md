@@ -135,7 +135,7 @@ Radius 38, deepest at the centre at 11 blocks, with **62** stalks of kelp on the
     ├─ mounds / low root holes ─→ no gate, and nothing down there either
     │
     ├─ Mirrorlake ──────────────→ frog (breatheAir:false, skin breathing)
-    │      └─ tower sills ──────→ frog pear (q4)
+    │      └─ tower sills ──────→ frog pear (lake deed)
     │
     └─ Ashscale Ridge ──────────→ no gate, and nothing up there either
 ```

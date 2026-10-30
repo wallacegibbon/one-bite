@@ -166,7 +166,7 @@ These three turn "the warehouse" from a static UI into **something you manage, s
 | main cellar (96 slots, ×0.1, fixed coordinates) | ✅ implemented (`stashes[0]`, block 78 cellar crate) |
 | cellar tree (24 slots, ×0.33, cap 3) | ✅ implemented (`buildCellarTree`, block 79/77) |
 | storage UI (two-way transfer) | ✅ implemented (`openStashUI/moveItem`, `ui.renderCellar`) |
-| backpack upgrades (Pouch / Deep Pouch / Silver Divider) | ✅ implemented (`Game.upg` + `cap()/slotOf()`; q1→Pouch, q4→Deep Pouch, q6→Silver Divider; saved) |
+| backpack upgrades (Pouch / Deep Pouch / Silver Divider) | ✅ implemented (`Game.upg` + `cap()/slotOf()`; cellar→Pouch, lake→Deep Pouch, greenhouse→Silver Divider; saved) |
 | fruit block regrowth | ✅ implemented (`Game.regrow[]`, `RARITY.regrow` game days ×±20%, saved) |
 | cellar-tree spacing (min 20 m) | ✅ implemented (`Game.buildCellarTree()` refuses a tree planted inside a sibling's roots) |
 | every number in the rule table above | ✅ lives in `N.STORAGE.treestash` (`max` / `minDist` / `slots` / `decay`); `docs-sync.js` compares the prose against the data, and `docs-drift.js` proves it can fail |
