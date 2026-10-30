@@ -55,9 +55,21 @@ twenty-four green on the tree of `aa84552`; the trees that followed it --
 gate-5 double run on the final tree of the stage), `a8ae110` (flight and
 the owl, the full contract twice on its own tree) and `cc08b55` (this cut,
 the full contract twice on its own tree) -- came back green on the gates
-they owed. The standing watch on this tree is loop 15. The issues 1-8 of
-round 26 stand closed as recorded; 2f (the walking soak) and 2g (the flock
-crown) stand recorded and watched with the loop.
+they owed. The standing watch on this tree is loop 15. The re-read pass of
+the round, run while the watch does its work, found three more lines of
+drift against the code, all fixed to what the code does and landed as
+`803d71e`: the technical chapter's particle line still named the glowing
+seeds the round had just cut and the splashes that never existed (the
+spawner makes fireflies by night, bubbles under water, and the sparks a
+transformation lets go); the README's cut list pointed "the first four" the
+docs-sync check guards at the wrong four (the check reads mixed form /
+mixed stomach / magic stomach / beast residue, and the list's fourth was
+the twelve side quests, a thing the check does not guard); and the
+worldview chapter's banned-word list still banned the word the storage
+mechanics now own (a handover is an `upgrades` entry in the data, and the
+log line that announces it says so). The issues 1-8 of round 26 stand
+closed as recorded; 2f (the walking soak) and 2g (the flock crown) stand
+recorded and watched with the loop.
 
 
 ## 1. Night sky read as black blocks when looking up out of the lake
