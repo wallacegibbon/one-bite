@@ -83,7 +83,7 @@ NPC dialogue trees; the HUD bar for the frog body's drying skin (the drying itse
 
 ## Cut from the design — not on the roadmap
 
-Mixed forms, the magic stomach, beast residue, the twelve side quests, the trading company and its agent, the protagonist's fruit list and its hidden reveal, Empty fruit, the fruit-thief traps, the `strength` and `tongue` abilities, and the pangolin, deer and spider animals. These are decisions, not unfinished work; `game/test/docs-sync.js` fails the build if the first four reappear in either language.
+Mixed forms, the mixed stomach, the magic stomach, beast residue, the twelve side quests, the trading company and its agent, the protagonist's fruit list and its hidden reveal, Empty fruit, the fruit-thief traps, the `strength` and `tongue` abilities, and the pangolin, deer and spider animals. These are decisions, not unfinished work; `game/test/docs-sync.js` fails the build if the first four reappear in the docs.
 
 ## Layout
 

@@ -50,6 +50,6 @@ A grey band of fog around the valley, roughly 400 m thick and too tall to see th
 - The world does not explain itself. Every piece of setting arrives through **fruit descriptions**, **journal entries**, **town rules** and the valley's own log lines.
 - How journal text is written: one verifiable fact, then one unverifiable rumour.
   > e.g. "A small green fruit on a stem, in the reeds of Mirrorlake, only visible from the water. The night watch says: the best way to pick a frog pear is to become a frog first."
-- Banned words: mana, level, XP, quest reward, upgrade.
+- Banned words: mana, level, XP, quest reward. *Upgrade* is no longer on the list: the storage mechanics own the word now — the three handovers are the `upgrades` under the backpack in `game/data/fruits.js`, and the log line that announces one says so.
 - The humour is dry and administrative:
   > "Cellar trees: 3 at most — the valley cannot remember more places than that."
