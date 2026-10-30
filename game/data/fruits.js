@@ -44,8 +44,6 @@
    *   dryTimer    : seconds out of water before the skin starts to dry (amphibian bodies)
    *   nightVision : 0..1 brightening in the dark, and the same eye washed out by daylight
    *   stealth     : creature alert-radius multiplier (<1 = harder to spot)
-   *   poisonImmune: the lanternfish sting does not bite -- the body the lake
-   *                 already gave you is the body the lake's lamps are lit for
    *   step        : auto step-up height in metres
    *   fov         : field of view
    * Fields that no body in the valley uses any more (climb, dig, armor, web,
@@ -55,9 +53,8 @@
    * no body in the valley holds a second of extra breath or carries a light of
    * its own. `hand` went with the first-person hand it named: the lens shows the
    * world, and a hand bolted to the corner of the lens was never part of the
-   * body you were wearing. `poisonImmune` came back with the lamps: the animal
-   * is back without a body of its own, so the immunity sits on the body that
-   * already lives in that water. `aura` and `coldImmune` went with the bear:
+   * body you were wearing. `poisonImmune` went with the lamps it shielded:
+   * the sting it answered is gone with the animal that cast it. `aura` and `coldImmune` went with the bear:
    * nothing in the valley carries a radius the smaller bodies scatter from,
    * and the ridge's altitude cold went with the one body that was exempt from
    * it.
@@ -74,7 +71,7 @@
       duration: 420,
       form: {
         cn: '雨蛙', en: 'frog', size: [0.5, 0.5], speed: 0.9, jump: 1.3, hop: { up: 0.72, kick: 1.25, period: 0.22 },
-        swim: 1.1, turn: 0.9, breatheAir: false, poisonImmune: true,
+        swim: 1.1, turn: 0.9, breatheAir: false,
         dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, step: 0.3
       },
       cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '太小：够不到高处的果，也推不开门'],

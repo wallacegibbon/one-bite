@@ -152,7 +152,7 @@ const extents = (modelId, sc) => {
   }
   /* the same rule read off the bodies as the model builder really builds them,
      crease shades and all */
-  for (const id of ['human', 'frog', 'lanternfish']) {
+  for (const id of ['human', 'frog']) {
     let outward = 0, mine = 0;
     for (const part of F.MODELS[id].parts) {
       const m = new F.MeshBuilder();
@@ -175,25 +175,15 @@ const extents = (modelId, sc) => {
   if (bad.length) process.exitCode = 1;
 }
 
-/* The lanternfish has no fruit, so there is no collision box for the gate
-   above to measure it against -- it is the only model in the game nobody
-   measures. Its size is pinned anyway, because a model nobody measures is a
-   model that quietly grows: 0.64 m across, 0.24 m from the back fin to the
-   belly, at its scale of 0.16 (docs/07 s1). */
+/* No body carries a light of its own: the models nobody measures against a
+   collision box are the ones that glow, and the valley draws none of them
+   any more (docs/07 s1). Nothing you pick lends a body a light any more, so
+   asking the models' parts is the whole question. */
 {
-  const sc = F.CREATURE_BY_ID.lanternfish.scale, e = extents('lanternfish', sc);
   const bad = [];
-  if (F.FRUITS.some(f => f.creature === 'lanternfish')) bad.push('a fruit claims a bodyless animal');
-  if (F.CREATURE_BY_ID.lanternfish.fruit) bad.push('the animal claims a fruit');
-  if (Math.abs(e.r * 2 - 0.64) > 0.02) bad.push(`宽 ${(e.r * 2).toFixed(3)} != 0.64`);
-  if (Math.abs((e.top - e.bottom) - 0.24) > 0.02) bad.push(`高 ${(e.top - e.bottom).toFixed(3)} != 0.24`);
-  /* The one self-lit model in the game, and the only one: no body you can wear
-     carries a light in its parts (docs/07 s1). Nothing you pick lends a body a
-     light any more, so asking the model's parts is the whole question. */
-  if (!F.MODELS.lanternfish.parts.every(p => p.emis)) bad.push('a lamp part is not lit');
   for (const id of ['human', 'frog'])
     if (F.MODELS[id].parts.some(p => p.emis)) bad.push(`${id} glows`);
-  console.log('灯鱼', bad.length ? '!! ' + bad.join(', ') : `OK ${e.r * 2} m 宽 / ${e.top - e.bottom} m 高`);
+  console.log('自发光', bad.length ? '!! ' + bad.join(', ') : 'OK 模型不带光源');
   if (bad.length) process.exitCode = 1;
 }
 

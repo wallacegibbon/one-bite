@@ -77,24 +77,17 @@ sit here looking implemented while nothing reads it.
 | `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 | live |
 | `nightVision` | brightening in the dark, 0–1, and the same eye overwhelmed by daylight | frog 0.3 | live |
 | `stealth` | creature alert-radius multiplier | frog 0.5 = hard to spot | live |
-| `poisonImmune` | the lanternfish sting does not bite | only the frog | live |
 | `step` | auto step-up height in metres | human 0.55 / frog 0.3 — the height a body steps up without jumping | live |
 | `fov` | field of view | human 76 / frog 100 | live |
-
-One of those fields is a switch rather than a number: `poisonImmune`
-changes what can hurt you at all, not how much. It is the animal-shaped answer
-to the lamps of Mirrorlake, and the log line that reports a sting says the
-answer out loud ("only a frog body shrugs this off"). It is a rule the code
-runs now.
 
 `tongue` used to sit on this table (frog, 4 m of plucking reach). It is gone: the
 frog's niche is swimming and breathing water, and a second way of reaching
 things would have made the size gate — the gap only the frog's 0.5×0.5 box fits through —
 one door among several instead of the only one.
 
-All eighteen fields on the three forms are read by the code. `game/test/reach.js`
-re-asks that question on every run -- twenty keys on the form record in all, the
-eighteen plus the form's own display name in each language -- and fails if a
+All twelve fields on the frog form are read by the code. `game/test/reach.js`
+re-asks that question on every run -- fourteen keys on the form record in all,
+the twelve plus the form's own display name in each language -- and fails if a
 field is added to the data and nothing in `game/src/` reads it, so this column
 cannot quietly rot back into advertising.
 
@@ -113,7 +106,7 @@ Costs come from exactly two places:
 | Source | Examples | Why |
 |---|---|---|
 | **this body cannot** | a 0.5×0.5 body will not reach high fruit or push a door open; the skin dries after 90 s out of water | you changed body, so you changed the ability table |
-| **how the world reacts to this body** | the frogs on the shore ignore a human body, and settle — calm, staying in your group — only when you are wearing one of their own; the lamps in the lake ignore all of it and treat every body as water | they do not recognise *you*, they recognise this body |
+| **how the world reacts to this body** | the frogs on the shore ignore a human body, and settle — calm, staying in your group — only when you are wearing one of their own | they do not recognise *you*, they recognise this body |
 
 **The mind is untouched.** A form never makes you want anything and never stops you wanting anything. Inside a frog's body you are still you: what you think, what you fear, what you decide — exactly as in a human shape.
 

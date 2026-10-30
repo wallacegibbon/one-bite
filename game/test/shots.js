@@ -13,10 +13,11 @@ const SHOTS = [
   ['village', 'pos=140,26,142 yaw=3.9 pitch=-0.15 safe'],
   ['lake', 'pos=58,17,96 yaw=1.15 pitch=-0.05 safe'],
   ['underwater', 'pos=92,11,120 yaw=0.5 pitch=-0.15'],
-  // the lamps: midnight, one metre under the surface of Mirrorlake, looking at
-  // the sunken tower. The lanternfish parts are emissive, so this shot is the
-  // proof that the lake has a light of its own at night (docs/02 s5)
-  ['lamps', 'pos=60,13,112 yaw=2.36 pitch=-0.15 time=385'],
+  // the lake at midnight, one metre under the surface of Mirrorlake, looking
+  // at the sunken tower. The lamps are cut and the lake has no light of its
+  // own now: the only thing lit down there is the frog pear on the tower's
+  // sills (the fruit block is self-lit), the rest is the moon on the water
+  ['midnightlake', 'pos=60,13,112 yaw=2.36 pitch=-0.15 time=385'],
   ['forest', 'pos=104,25,32 yaw=1.2 pitch=-0.05 safe'],
   ['glade', 'pos=60,25,56 yaw=0.4 pitch=-0.05 safe'],
   ['cave', 'pos=28,28,34 yaw=1.0 pitch=0 safe'],

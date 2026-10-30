@@ -4,7 +4,7 @@
 
 1. A magic exploration game, **voxel style**: the map skeleton of castle / forest / lake / sky.
 2. Scenes: **castle, forest, lake, sky**, freely explorable.
-3. The forest holds **frogs**, plus magic plants such as **mushrooms and glowing seeds**; the lake holds **lanternfish**. Species are pruned by ecological niche — **one species per niche** (list in 03).
+3. The forest holds **frogs**, plus magic plants such as **mushrooms and glowing seeds**; the lake holds no animal yet. Species are pruned by ecological niche — **one species per niche** (list in 03).
 4. There is exactly one kind of magic: **magic fruit**. Eat it and you become the animal the fruit corresponds to, reverting after a while. Each animal's fruit only appears in its own habitat.
 5. The player has a **magic backpack with limited capacity**; **the rarer the fruit, the more space it occupies**, so you cannot carry many at once.
 6. The player has a **fixed-location warehouse**; warehouses **can be newly built**, but **the exact mechanism was left open** — this is the design this project had to complete.
@@ -85,6 +85,6 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 | World | 160×48×160 voxels | 1024×128×1024 |
 | Zones | 10 | 20–24 |
 | Fruits | 1 | 12–16 |
-| Creatures | 2 species (1 with a fruit) | 12–16 species + named individuals |
+| Creatures | 1 species (1 with a fruit) | 12–16 species + named individuals |
 | Deeds | 3 | none: the valley keeps its places until an animal arrives with a fruit, a niche and a door only it can open |
 | One day | 420 seconds | 1200 seconds |

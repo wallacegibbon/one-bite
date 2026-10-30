@@ -48,13 +48,12 @@
       id: 'mirrorlake', cn: '镜湖', en: 'Mirrorlake', kind: 'circle',
       cx: 78, cz: 106, r: 38,
       danger: 3,
-      // the water of the lake itself: the field the lanternfish swim is the
-      // disc of the zone's own radius round this point (data/creatures.js
-      // asks for it by name)
+      // the water of the lake itself: the landmark is the centre of the lake,
+      // the point the field the creatures used to place stood in
       lake: [78, 106],
-      // the sunken tower: worldgen builds it here. The lanternfish field used
-      // to sit on its outline and the tower was what placed it; it stands in
-      // the field now, not at the centre of it
+      // the sunken tower: worldgen builds it here. It stands in the open
+      // water of its lake, an obstacle the animals that swim the lake steer
+      // round
       tower: [66, 118],
       // the ring of sunken huts on the lakebed, the frogs' place (POI frogshall
       // sits in the middle of it); worldgen builds them at absolute heights

@@ -95,8 +95,8 @@
      with its body instead of running on the spot against it. And the ground a
      body covers while the water is holding it up does not count either -- a
      frog swimming across the lake is not walking across it.
-     A body with no leg that walks reaches nowhere: a frog hops and a
-     lanternfish drifts, and their gait is left unset, which is how the draw knows there is
+     A body with no leg that walks reaches nowhere: a frog hops, and its gait
+     is left unset, which is how the draw knows there is
      no stride for that body to ride. */
   function walkGait(body, modelId, sc, move, dx, dz, spd, dt) {
     const len = N.gaitStride(modelId, sc, move);
@@ -811,8 +811,8 @@
      film of the lake it stands in, the scan hits brick, and the column answers
      that there is no water in it at all. Twenty-five columns inside the disc
      the lamps belong to read that way -- film at 15, lakebed at 7, **8 metres**
-     of water each -- and the dex says the field sits exactly in the outline of
-     that tower. One answer decides four things here: where a swimming body may
+     of water each -- and the field the lamps made sat exactly in the outline
+     of that tower. One answer decides four things here: where a swimming body may
      be put, where it may be sent, which way it may swim, and the height it
      hangs at. So a bell that gets into one of those columns -- a shove from its
      own kind asks only about solid and stone -- is pinned on the lakebed under
@@ -837,7 +837,8 @@
      +z (see M4.faceY), so the farthest box the model carries along its own
      fore-and-aft axis is the nose. The step gate below asks it of the ground
      the nose is about to enter, because the centre column can stay wet while
-     the nose is already in the brick: the snout of the lanternfish stands 1.6
+     the nose is already in the brick: the snout of the lanternfish, when the
+     valley still kept one, stood 1.6
      of its own units ahead of the centre (the tip of the snout box), 0.256 m
      at its 0.16 scale, and a column is a metre wide -- the centre stood in
      the wet column next door while the snout was drawn inside the brick of
@@ -955,13 +956,13 @@
      0.41, so the distance that keeps two of them apart depends on the way they
      stand to one another.
      TOUCH is how far into a neighbour a body may get at all: two lamps drifting
-     against one another touch, and a body that has been pushed into one is let
+     against one another touched, and a body that has been pushed into one is let
      back out the way it came rather than refused every place it could go. */
   const TOUCH = 0.02;
   function bodyClash(a, ax, az, b) {
     /* Two bodies share a space only where they also stand at one height. The
        height they have in common has to be more than a graze before it counts:
-       a lamp riding on the crown of another's bell is on top of it, not inside
+       a lamp riding on the crown of another's bell was on top of it, not inside
        it, and pushing the pair apart sideways for a 5 mm graze moves a body half
        a metre for nothing. Measured against the shorter of the two bodies, so
        the rule is the same for a frog and for a person. */
@@ -1149,14 +1150,14 @@
              belongs to a disc of `spread` round that landmark, and its errands are
              picked from that disc -- not from a disc of the same size round
              wherever it happens to be standing. The errand is not the only thing
-             that moves an animal: the tower that stands in the middle of the lamp
-             field makes the way round it longer than the way that was asked for,
-             so a lamp keeps the ground it gained sideways, and the errand after
-             that starts further out and reaches further out again. Measured over
+             that moves an animal: the tower that stood in the middle of the lamp
+             field made the way round it longer than the way that was asked for,
+             so a lamp kept the ground it gained sideways, and the errand after
+             that started further out and reached further out again. Measured over
              five minutes of the field with errands picked from home, the ten lamps
              stood up to 9.2 m from the tower and 5.6 m from the home they were
              born on: a field twice the spread it was meant to be, and drifting
-             away from the tower it is supposed to trace. */
+             away from the tower it was supposed to trace. */
           const r = this.isAquatic() ? (sp.spread || 6) : 14;
           const at = sp.at ? (N.ZONE_BY_ID[sp.habitat[0]] || {})[sp.at] : null;
           const ox = at ? at[0] : this.homeX, oz = at ? at[1] : this.homeZ;
@@ -1213,9 +1214,9 @@
                 bodyInSolid(world, this, cx, cz))) continue;
             /* And of the places it might go, the one with most room in it. An
                errand into the middle of a clump of its own kind is an errand to
-               stand inside a neighbour: the ten lamps pick from a disc round the
-               tower the size of two of them, so an errand picked at random is an
-               errand into a neighbour, and the pair that meets there stays there
+               stand inside a neighbour: the ten lamps picked from a disc round the
+               tower the size of two of them, so an errand picked at random was an
+               errand into a neighbour, and the pair that met there stayed there
                -- they were measured 0.54 m inside one another, one bell drawn on
                top of another. */
             let room = 9;
@@ -1329,8 +1330,7 @@
            cruising speed, and above that speed the arc it holds gets wider
            rather than the turn getting faster -- the same push has more body to
            swing about. This is the rule the player's own body obeys
-           (Player.update); a frog crossing the lake and a lamp crossing its
-           field are the same kind of body. What it replaces was an ease toward
+           (Player.update); a frog crossing the lake is the same kind of body. What it replaces was an ease toward
            the target bearing at 4 a second, measured: a frog in the water came
            about 90 degrees in 0.57 s. */
         const tgtYaw = Math.atan2(dx, -dz);
@@ -1343,8 +1343,8 @@
         this.yaw += dy > 0 ? bend : -bend;
         /* An animal that is close to where it is going, and off course, cannot
            get there at the speed it is travelling. The arc of a turn is the
-           speed over the rate: at 0.92 m/s a lanternfish that can bend its
-           course 0.8 rad/s a second holds an arc of 1.15 m, so a target nearer
+           speed over the rate: at 0.92 m/s a body that can bend its
+           course 0.8 rad/s holds an arc of 1.15 m, so a target nearer
            than that, or off to one side, is a place it circles for the rest of
            the afternoon and never arrives at (measured: 292 frames in 60
            seconds where the distance to its own wander target grew). Slowing is
@@ -2173,25 +2173,17 @@
          rather than integrated -- a frog settling onto its level is settling,
          whatever its velocity says. */
       const vRate = (this.y - y0) / Math.max(dt, 0.001);
-      /* Every body the water carries has a nose to point now -- the frog's
-         and the lanternfish's alike. The valley once exempted one: a bell that
-         pulses has no nose to point, and tilting one is a lampshade tipping
-         over. The exemption went with the bell. */
+      /* Every body the water carries has a nose to point now. The valley once
+         exempted one: a bell that pulses has no nose to point, and tilting one
+         is a lampshade tipping over. The exemption went with the bell. */
       const carried = inWater;
       const tiltWant = carried && this.speed > 0.3
         ? Math.max(-0.6, Math.min(0.6, Math.atan2(-vRate, Math.max(this.speed, 0.5))))
         : 0;
       this.tilt += (tiltWant - this.tilt) * N.ease(4.5, dt);
-      // contact effects
-      if (dp < (this.sp.scale || 0.2) * 8 + 0.8) {
-        if (this.state === 'chase') game.onCreatureTouch(this, dt);
-        /* A sting is not an attack. Nothing in the valley hunts the player; the
-           lanternfish simply is stinging, the way the water simply is deep,
-           and a body that is immune to it stands in the middle of the field.
-           Contacts stack, because a field is a field: the middle of it costs
-           more than its edge. */
-        else if (this.sp.sting && !pl.formDef.poisonImmune) game.onSting(this, dt);
-      }
+      // contact effects: no animal in the valley touches a player, except the
+      // one that chases
+      if (dp < (this.sp.scale || 0.2) * 8 + 0.8 && this.state === 'chase') game.onCreatureTouch(this, dt);
       walkGait(this, sp.model, sp.scale, N.walkMove(this.speed, sp.speed),
         this.x - gx, this.z - gz, this.speed, dt);
     }

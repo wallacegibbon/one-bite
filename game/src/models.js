@@ -23,8 +23,8 @@
   /* Part shape: { name, parent, pivot:[x,y,z], anim, sign:+-1, air:[rx,ry,rz],
                   crouch:[rx,ry,rz], emis:true, boxes:[[x,y,z,w,h,d,'#hex'],...] }
      `emis` makes the part self-lit in the shader -- the same switch a fruit
-     block uses. Only the lamps of Mirrorlake use it: no body you can wear
-     carries a light (docs/07 s1). */
+     block uses. No body you can wear carries a light of its own
+     (docs/07 s1): the switch now serves the fruit blocks alone. */
   const MODELS = {
     /* ---------------- human (untransformed) ----------------
        1.80 m tall, about 3.7 heads. A body you look at for an hour in third
@@ -215,59 +215,8 @@
           ] }
       ]
     },
-
-    /* ---------------- lanternfish ----------------
-       The lamps of Mirrorlake, and the only animal in the valley that bears no
-       fruit. A small fish of light: a spindle widest at the gill and thinner
-       toward both ends, a tapering nose that pitches with the course the water
-       gives it, a forked tail that kicks the way every other swimmer kicks --
-       a joint, not a squeeze -- and a back fin that steps down toward the tail,
-       the way a shark's does. The body itself sways a little ahead of the tail,
-       so the kick reads as the fish swimming and not as a body sliding along
-       with a wagging tail. A lamp under the belly carries the body in the
-       dark. Every part is emissive: at night the lake is black and this is the
-       only thing down there that is not. It has no collision box because
-       nothing in the game collides with it: you swim through it and it treats
-       you as water. */
-    lanternfish: {
-      parts: [
-        /* the body itself sways a little, a quarter beat ahead of the tail: a
-           fish that kicks its tail but holds its body straight reads as sliding
-           along, and the sway is what carries the kick from the body out to the
-           tail. It is smaller than the tail's kick, because the body is the part
-           that is mostly going straight and the tail is the part that swings. */
-        { name: 'body', emis: true, anim: 'wag', wagAmp: 0.16, wagIdle: 0.04, wagPhase: 1.5708, boxes: [
-          [-0.55, -0.42, -0.45, 1.1, 1.0, 0.9, '#8fd0ff'],        // the trunk, widest at the gill
-          [-0.42, -0.35, 0.4, 0.84, 0.85, 0.7, '#8fd0ff'],        // the forequarter, thinning to the head
-          [-0.4, -0.38, -0.9, 0.8, 0.83, 0.5, '#8fd0ff'],         // the hindquarter, thinning to the peduncle
-          [-0.22, -0.28, -1.1, 0.44, 0.58, 0.3, '#8fd0ff'],       // the peduncle
-          [-0.42, -0.62, -0.7, 0.84, 0.27, 1.3, '#bfe8ff']        // the belly, the lamp
-        ] },
-        { name: 'head', parent: 'body', pivot: [0, 0.05, 0.9], anim: 'nod', emis: true, boxes: [
-          [-0.34, -0.28, 0.85, 0.68, 0.7, 0.5, '#8fd0ff'],        // the skull
-          [-0.2, -0.15, 1.35, 0.4, 0.4, 0.25, '#8fd0ff'],         // the snout
-          [-0.44, 0.0, 1.0, 0.14, 0.2, 0.14, '#1a2a3a'],          // the left eye, outside the skull
-          [0.3, 0.0, 1.0, 0.14, 0.2, 0.14, '#1a2a3a']             // the right eye
-        ] },
-        { name: 'tail', parent: 'body', pivot: [0, 0, -1.05], anim: 'wag', sign: 1, emis: true, boxes: [
-          [-0.1, -0.35, -1.35, 0.2, 0.7, 0.35, '#6fb8e8'],        // the base of the fin
-          [-0.07, 0.0, -1.99, 0.14, 0.52, 0.7, '#6fb8e8'],        // the upper lobe
-          [-0.07, -0.52, -1.99, 0.14, 0.52, 0.7, '#6fb8e8'],      // the lower lobe
-          [-0.05, -0.28, -1.86, 0.1, 0.56, 0.58, '#6fb8e8']       // the middle lobe
-        ] },
-        { name: 'finL', parent: 'body', pivot: [-0.42, -0.15, 0.5], anim: 'wag', sign: -1, emis: true, boxes: [
-          [-0.95, -0.3, 0.05, 0.55, 0.12, 0.5, '#a8dcff']         // the left pectoral fin
-        ] },
-        { name: 'finR', parent: 'body', pivot: [0.42, -0.15, 0.5], anim: 'wag', sign: 1, emis: true, boxes: [
-          [0.4, -0.3, 0.05, 0.55, 0.12, 0.5, '#a8dcff']           // the right pectoral fin
-        ] },
-        { name: 'dorsal', parent: 'body', emis: true, boxes: [
-          [-0.08, 0.45, -0.35, 0.16, 0.4, 0.7, '#a8dcff'],        // the front of the back fin
-          [-0.06, 0.4, -0.95, 0.12, 0.22, 0.6, '#a8dcff']         // the rear, stepping down
-        ] }
-      ]
-    },
   };
+
 
   /* How tall each model is, in its own units: the top of the highest box it is
      carved from. Whatever asks "how far off the ground is this body" wants a
@@ -679,9 +628,9 @@
      The model's own numbers cannot say this: the hinge that is lowest is not the
      one the foot hangs from, and the lift that keeps a foot out of the ground
      (the FOOT block above) moves the whole limb. So it is measured, once per
-     model, through the matrices the draw uploads. A body with no leg that walks
-     -- a frog hops, a lanternfish drifts -- reaches nowhere, and 0 is how the caller
-     learns not to run a cycle at all. */
+     model, through the matrices the draw uploads. A body with no leg that
+     walks -- a frog hops -- reaches nowhere, and 0 is how the caller learns
+     not to run a cycle at all. */
   const SPAN = {};
   function stanceSpan(modelId) {
     if (SPAN[modelId] !== undefined) return SPAN[modelId];
@@ -840,24 +789,6 @@
       ry = footAt(u, stance) * st.move * 0.16;
     } else if (anim === 'nod') {
       rx = Math.sin(t * 1.9 + ph) * (st.move * 0.06 + 0.02);
-    } else if (anim === 'wag') {
-      /* the side-to-side kick of a swimmer's tail, and the sway of the body that
-         drives it. A body that kicks its tail but does not sway itself reads as
-         sliding: the tail goes left and right and the body goes straight, which
-         is a body being dragged, not a body swimming. So a part built to carry
-         the sway (the fish's own body) gets it on the same clock, smaller -- the
-         body is the part that is mostly going straight and the tail is the part
-         that swings -- and a little ahead of the tail, because the kick travels
-         from the body out to the tail, not the other way round: a wave that runs
-         tail-to-body is a fish swimming backwards. `wagAmp` and `wagIdle` set
-         the size (the idle part keeps swaying because a fish at rest in the water
-         is still a fish in the water), and `wagPhase` sets where the part sits on
-         the kick: 0 is with the tail, positive is ahead of it. The tail and the
-         fins keep the old kick whole, because they are the parts that were always
-         meant to swing. */
-      const wamp = p.wagAmp === undefined ? st.move * 0.5 + 0.12
-                                          : st.move * p.wagAmp + (p.wagIdle || 0);
-      ry = Math.sin(t * 1.6 + ph + (p.wagPhase || 0)) * wamp;
     } else if (anim === 'bob') {
       /* On the ground the heave is the stride: the body is at its highest over
          the middle of a stance, where the leg under it is straight and holding

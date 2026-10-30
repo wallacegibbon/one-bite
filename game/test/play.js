@@ -342,342 +342,7 @@ const { sim } = require('./simwait');
     return by;
   });
 
-  // 10b. the lamps of Mirrorlake: an animal with no fruit and no body to wear,
-  //      a field that is the open water of the lake itself, and -- the
-  //      interesting part -- the only species whose locomotion is 'water', so
-  //      the only one that must never end up on dry land.
-  const lamps = await step('lamps', () => {
-    const g = window.game, p = g.player, N = window.FRUTARIA;
-    const sp = N.CREATURE_BY_ID.lanternfish, zone = N.ZONE_BY_ID.mirrorlake;
-    const lake = sp.at ? zone[sp.at] : null;
-    if (!lake) return { error: 'the lamp field names no landmark the zone carries' };
-    const herd = () => g.creatures.filter(c => c.sp.id === 'lanternfish');
-    const wet = () => herd().filter(c =>
-      g.world.liquidAt(Math.floor(c.x), Math.floor(c.y + 0.2), Math.floor(c.z))).length;
-    /* Where a lamp is allowed to stand. The errands it swims are picked from a
-       disc of `spread` round the landmark the record names, and that disc is
-       the promise the dex makes ("the lanternfish swim the open water of the
-       lake") -- it is also the thing the old bug broke, when errands were
-       picked from a disc of the same size round wherever the lamp happened to
-       be standing: the field came out twice the size it was meant to be, and
-       one lamp sat 11 m from the landmark for five minutes. The body swimming
-       an errand is not the errand, though. It can only bend the course it is
-       already on, at `turn` radians a second, so at the speed its wandering
-       cruises at (0.42 of the speed its row swims at: 0.92 m/s for this one)
-       the tightest arc its own table allows is 1.16 m -- and a lamp that
-       reaches the place it was sent to still carrying a course it cannot shed
-       swings past it and back. The field's outer edge is the disc plus that
-       swing, not the disc.
-       The bound also has to be paid frame by frame rather than at two instants.
-       Read at the start and the end of this step only, the field peaked between
-       5.7 and 7.4 m from the landmark over ten watches of ten minutes each,
-       and a check written against the disc plus a bare 2 m went red on roughly
-       one run in three with nothing in the game changed. Paid frame by frame
-       instead: the field peaks a few metres inside its water, and of the 60000
-       lamp-frames a five-minute watch runs, none stand outside the disc of the
-       water. The errands themselves never leave the disc: several hundred of
-       them a watch, the furthest one inside its radius. What can stand further
-       out than the disc does is nothing at all, because the disc is the water
-       and a lamp cannot leave it -- the bound below asks the far tail of the
-       disc anyway, the way a bound is asked.
-       The sunken tower stands in the water, 17 m off the centre -- the middle
-       of the water is the isle the keep is built on, and it is dry too -- and
-       the brick of the tower pokes up through the film, and the column of it
-       answers "no water" to the question the picker and the step gate ask. So
-       the tower is an obstacle the field swims round now and then, the same
-       way a pillar is an obstacle to a fish that swims the room it stands in. The
-       wait below counts how often the brick still leaves a lamp with nowhere
-       to go: 322 to 422 a watch while the way round the brick ran for home and
-       the heading was never told to follow it, a handful since the contour
-       runs toward the errand and the heading follows the step, and the nose
-       test keeps the snout out of the brick the centre is not allowed into. */
-    const cruise = (sp.swimSpeed || sp.speed || 3) * 0.42;   // entities.js: wander cruises at 0.42
-    const arc = cruise / (sp.turn || 1);                     // the tightest arc the row allows
-    const edge = sp.spread + 2 * arc;                        // the disc, plus one swing past it
-    let maxFar = 0, maxErrand = 0, errands = 0, boxedIn = 0, outFrames = 0, lampFrames = 0;
-    // standing in the field is not free (see the sting step), and this step
-    // parks the player in it for 90 seconds, so the body is put back after
-    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital };
-    const one = herd()[0];
-    const atts = [null, 'frogpear'].map((f) => {
-      p.form = f; p.x = one.x + 1.5; p.y = one.y; p.z = one.z;
-      return one.attitudeTo(f);
-    });
-    const before = { n: herd().length, wet: wet() };
-    /* Five minutes of game time, animals only: enough for several hundred wander
-       targets, and every one of those targets has to be water. Long, because the
-       way an aquatic animal used to escape the lake was a slow one -- it took the
-       field a while to walk one of its own into the tower wall. And the field is
-       counted as it swims, metre by metre, rather than by how far it got from
-       where it started: a field that is kept to its landmark does not get far
-       from where it started, and that is the whole point of the landmark. */
-    const field = herd();
-    const prev = field.map(c => [c.x, c.z]);
-    const lastErrand = field.map(c => c.tx + ',' + c.tz);
-    const swam = new Float64Array(field.length);
-    /* Where the water holds a lamp. The depth a body of this kind hangs at is on
-       the animal's own row and is measured to the crown of the body, so the crown
-       has to hang that far under the film -- not a block deeper, which is what
-       happens when metres are subtracted from the index of a cell: the film sits
-       one block above that index. */
-    let crownMin = 9, crownMax = -9, crownSum = 0, through = 0, bedded = 0, seen = 0;
-    for (let i = 0; i < 6000; i++) for (let k = 0; k < field.length; k++) {
-      const c = field[k];
-      /* Where the lamp stood when the frame opened. A lamp that is boxed in
-         against the tower's brick sets its errand to that place and cannot move;
-         the keep-apart pass at the end of an update then shoves it, so the errand
-         is at the feet it stood on when it was set, not at the feet it stands on
-         now -- which is why it is asked that way and not as an equality. */
-      const bx0 = prev[k][0], bz0 = prev[k][1];
-      c.update(0.05, p, g.world, g);
-      swam[k] += Math.hypot(c.x - bx0, c.z - bz0);
-      prev[k][0] = c.x; prev[k][1] = c.z;
-      // the field's own extent, over every frame of the watch and not at two instants
-      const dfar = Math.hypot(c.x - lake[0], c.z - lake[1]);
-      lampFrames++;
-      if (dfar > maxFar) maxFar = dfar;
-      if (dfar > edge) outFrames++;
-      const err = c.tx + ',' + c.tz;
-      if (err !== lastErrand[k]) {
-        lastErrand[k] = err;
-        /* A lamp with nowhere it can get to sets its errand to the place it is
-           standing and waits; that is not a place this field was sent to, so it
-           is counted apart from the errands rather than loosening the bound on
-           them. It is also worth reporting: it says how often the tower's brick
-           leaves a lamp with nowhere to go. */
-        if (Math.hypot(c.tx - bx0, c.tz - bz0) < 1e-9) boxedIn++;
-        else {
-          errands++;
-          const de = Math.hypot(c.tx - lake[0], c.tz - lake[1]);
-          if (de > maxErrand) maxErrand = de;
-        }
-      }
-      if (i % 20 === 19) {
-        const s = g.world.liquidSurfaceAt(Math.floor(c.x), Math.floor(c.z));
-        if (s < 0) continue;
-        seen++;
-        const under = s - (c.y + c.tall);
-        crownSum += under;
-        if (under < crownMin) crownMin = under;
-        if (under > crownMax) crownMax = under;
-        if (under < 0) through++;
-        if (c.y < N.groundY(g.world, Math.floor(c.x), Math.floor(c.z), Math.floor(c.y)) + 0.02) bedded++;
-      }
-    }
-    /* The exact way an aquatic animal used to walk out of the lake: home on the
-       far side of the sunken tower, the tower in between. The homeward step is
-       tested like every other step now; unchecked, it dragged the animal through
-       the brick, and the altitude code -- finding no water in that column --
-       left it standing on the tower's roof for good. */
-    const stuck = herd()[0];
-    const keep = { x: stuck.x, y: stuck.y, z: stuck.z, homeX: stuck.homeX, homeZ: stuck.homeZ };
-    stuck.x = 63.2; stuck.y = 13; stuck.z = 114.6;         // wet, just off the tower wall
-    stuck.homeX = 69.5; stuck.homeZ = 121.5;               // wet, on the far side
-    stuck.tx = stuck.homeX; stuck.tz = stuck.homeZ;        // head home the whole way:
-    stuck.pause = 1e9;                                     // the wander roll is not the thing under test
-    const startD = Math.hypot(stuck.x - stuck.homeX, stuck.z - stuck.homeZ);
-    let dryFrames = 0, solidFrames = 0, swum = 0, px = stuck.x, pz = stuck.z;
-    for (let i = 0; i < 1800; i++) {      // 90 s: a lanternfish crosses 0.34 m of
-      stuck.update(0.05, p, g.world, g);  // water per second, so give it a minute
-      if (!g.world.liquidAt(Math.floor(stuck.x), Math.floor(stuck.y + 0.2), Math.floor(stuck.z))) dryFrames++;
-      if (g.world.solidAt(Math.floor(stuck.x), Math.floor(stuck.y), Math.floor(stuck.z))) solidFrames++;
-      swum += Math.hypot(stuck.x - px, stuck.z - pz); px = stuck.x; pz = stuck.z;
-    }
-    /* Not "it arrives": the lake's water is one basin, but the sunken tower and
-       the island rock leave a dead-end pocket on its north side, and nothing in
-       this game path-finds. What has to be true is that the animal keeps
-       swimming, stays in the water and never ends up inside rock. */
-    const swumM = +swum.toFixed(1);
-    void startD;
-    Object.assign(stuck, keep);
-    const after = { wet: wet() };
-    // an animal that cannot leave the water can also be frozen by it: every
-    // step it tries runs into the tower, so "still wet" alone is not alive. What
-    // is counted here is the water an animal moves through, not the ground it
-    // covers: five minutes of a lamp that never got further than a few metres
-    // from where it began is still five minutes of swimming.
-    const drift = Array.from(swam).sort((a, b) => a - b);
-    Object.assign(p, was);
-    return {
-      n: before.n, wet: before.wet, after, atts,
-      spread: sp.spread, cruise: +cruise.toFixed(2), arc: +arc.toFixed(2), edge: +edge.toFixed(2),
-      errands, boxedIn, maxErrand: +maxErrand.toFixed(4),
-      drift: +drift[Math.floor(drift.length / 2)].toFixed(1),
-      dryFrames, solidFrames, swumM, maxFar: +maxFar.toFixed(1),
-      outFrames, lampFrames,
-      hover: { want: sp.hover, min: +crownMin.toFixed(2), max: +crownMax.toFixed(2),
-        mean: +(crownSum / Math.max(1, seen)).toFixed(2), through, bedded, seen },
-      bears: !!sp.fruit, worn: N.FRUITS.some(f => f.creature === 'lanternfish'),
-      name: N.disp(sp), lore: N.dexOf(sp)
-    };
-  });
-  check('the lamps are an animal and bear no fruit',
-    lamps.n === 10 && lamps.bears === false && lamps.worn === false, lamps);
-  check('the lamps never leave the water',
-    lamps.wet === lamps.n && lamps.after.wet === lamps.n, lamps);
-  /* The errand is the promise the dex makes, and this is the tight question:
-     every place a lamp is sent to has to lie inside the disc of its field. It
-     is exact by construction -- a radius, sampled as a radius -- so it is
-     asked without slack, and it is what a field that had drifted off its
-     landmark would trip, which is exactly the bug this step was written for.
-     Asked both ways: the furthest errand of the watch must also have reached
-     out into the disc, or the field is the disc in name only. */
-  check('a lamp is sent to the water of its field, not to wherever it happens to be standing',
-    lamps.errands > 500 && lamps.maxErrand >= 25 && lamps.maxErrand <= lamps.spread + 0.001, lamps);
-  /* The body that swims an errand, on the other hand, is a body: it carries
-     the course it was travelling on past the place it was sent to, and comes
-     back round. The disc is the water, and a lamp cannot leave the water --
-     the step gate refuses the dry column -- so the far edge a body can ever
-     stand is the edge of the disc a column's width out, and the bound asks it
-     with a swing left over: nothing a lamp can do buys it ground past the
-     water. The swing-past count is kept as it was when the disc was a ring:
-     under one frame in a hundred. */
-  check('the lamp field is the open water of the lake, and a lamp stays in it',
-    lamps.maxFar <= lamps.spread + 4 && lamps.outFrames * 100 <= lamps.lampFrames, lamps);
-  check('the lamps do not read bodies', lamps.atts.every(a => a === 'ignore'), lamps);
-  check('the lamps have a dex entry', lamps.name.length > 0 && lamps.lore.length > 20, lamps);
-  check('the lamps still get around the tower', lamps.drift > 20, lamps);
-  check('a lamp is never dragged through the tower out of the water',
-    lamps.dryFrames === 0 && lamps.solidFrames === 0, lamps);
-  check('a lamp against the tower is still swimming', lamps.swumM > 3, lamps);
-  /* The depth a lamp hangs at is a height, and it is on the animal's own row. The
-     branch used to take metres off the index of the topmost water cell, and the
-     film sits one block above that index, so the whole field hung a block deeper
-     than the sentence said: over 12000 samples of the ten lamps, the crown
-     **1.52-3.12 m** under the film (mean 2.22) for a body **0.54 m** tall, where
-     the row states 1.2 m plus or minus the 0.8 m of bob it drifts on. The band
-     accepted here is that depth, the bob, and the 0.4 m the 1.6/s ease lags a
-     sine that keeps turning round -- the mean, which the ease cannot bias, is
-     pinned to the row itself. And the body has to be **born** at that depth: the
-     sample puts a creature's feet on the ground of its column, and the ten lamps
-     were born standing on the lakebed under eight metres of their own lake. At
-     the animal's very first update its crown read **8.73 m** under the film, and
-     the height closed at **0.72 m a frame** -- 14.4 m/s, against the 2.2 m/s a
-     lamp swims. The band then read differently depending on how long the page had
-     been alive: 3.4 m and 226 of 60000 lamp-frames outside it seconds after the
-     world was made, 1.89 m and no frames outside minutes later. Born where its own
-     row says it hangs, every page reads 0.51 to 1.89 m. */
-  check('a lamp hangs at the depth its own row states, measured to its crown under the film, ' +
-        'and never through the film or through the lakebed',
-    lamps.hover.seen > 100 && lamps.hover.min > 0.2 &&
-    lamps.hover.max < lamps.hover.want + 0.8 + 0.4 &&
-    Math.abs(lamps.hover.mean - lamps.hover.want) < 0.35 &&
-    lamps.hover.through === 0 && lamps.hover.bedded === 0, lamps);
-
-  // 10c. the lamps sting. This is measured rather than asserted loosely, because
-  //      the number is the design: the field has to cost something to loiter in
-  //      and must not kill the 18-second dive to the tower sills, which is the
-  //      one fruit the lake gives you before it asks anything (docs/02 s4).
-  const sting = await step('sting', () => {
-    const g = window.game, p = g.player, N = window.FRUTARIA;
-    const herd = g.creatures.filter(c => c.sp.id === 'lanternfish');
-    const mid = (k) => herd.reduce((a, c) => a + c[k], 0) / herd.length;
-    const was = { form: p.form, x: p.x, y: p.y, z: p.z, vital: p.vital, vx: p.vx, vy: p.vy, vz: p.vz };
-    const run = (form, y, secs, track) => {
-      p.form = form; p.vital = 10; p.x = mid('x'); p.y = y; p.z = mid('z');
-      g.log.length = 0;
-      g._stungAt = undefined;                       // the throttle is per wade, not per run
-      let frames = 0, contacts = 0, worstNear = 0, spread = 0;
-      for (let i = 0; i < secs / 0.05 && p.vital > 0; i++) {
-        for (const c of herd) c.update(0.05, p, g.world, g);
-        /* Stay where the lamps are. They wander the open water of the lake --
-           a spread is a radius and they pick a new point inside it every few
-           seconds -- so a body left where it was dropped can find the field has
-           walked off without it, and then this measures luck rather than the
-           cost of standing in the field. The claim being tested is "you are
-           standing among the lamps", so with 'lamp' the body stands at the lamp
-           nearest the middle of the field -- the point of the field closest to
-           its own middle -- and at that lamp's own height. 'overhead' is the
-           worst case the dive to the sills has to answer: the body keeps the
-           x, z of the nearest lamp -- a lamp directly over it, the nearest a
-           lamp can be at the sill's own depth -- and holds the y it was
-           dropped at. The sills are the exception, and they are asked the way
-           the player asks them: the body drops to the depth the sill sits --
-           y9, one block under the lower window the frog pear hangs on, the one
-           fruit the lake gives before it asks anything (docs/02 s4) -- and
-           stays under the lamp, whatever the lamps do sideways. Whatever
-           sideways, the lamps hang where their own row says they hang: 1.2 m
-           under the film, measured to the crown, so their bases hang at 13.66
-           under this film at 15 (the crown less the 0.136 m the model is
-           tall), and the lower sill at y9 sits 3.9-5.5 m under those bases at
-           any depth the 0.5-1.9 m band they drift on allows, against a reach
-           of 2.08 m. The depth alone keeps them out. The upper sill at y12
-           sits 0.9-2.5 m under those same bases: inside the reach for a lamp
-           that is not up in the top of its band, which is why the body that
-           pays there is the one that cannot take the fruit, and the one that
-           can take it takes it immune. */
-        let bx = mid('x'), bz = mid('z'), by = y;
-        if (track) {
-          let best = null, bd = 1e9;
-          for (const c of herd) {
-            const d = track === 'overhead'
-              ? Math.hypot(c.x - bx, c.z - bz)
-              : Math.hypot(c.x - bx, c.y - mid('y'), c.z - bz);
-            if (d < bd) { bd = d; best = c; }
-          }
-          bx = best.x; bz = best.z;
-          if (track === 'lamp') by = best.y;
-        }
-        p.x = bx; p.y = by; p.z = bz;
-        let n = 0, near = 1e9;
-        for (const c of herd) {
-          const d = Math.hypot(c.x - p.x, c.y - p.y, c.z - p.z);
-          if (d < (c.sp.scale || 0.2) * 8 + 0.8) n++;
-          if (d < near) near = d;
-          spread = Math.max(spread, d);
-        }
-        contacts += n; if (near > worstNear) worstNear = near;
-        frames++;
-      }
-      const warn = N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.lanternfish) });
-      // the death line is 'bad' too, so the warning is matched by text
-      return {
-        lost: +(10 - p.vital).toFixed(2), secs: +(frames * 0.05).toFixed(1),
-        // how much field the body was standing in, and how far the field's own
-        // middle was from its nearest lamp: the number below means nothing
-        // without these
-        lamps: +(contacts / frames).toFixed(2), near: +worstNear.toFixed(2),
-        spread: +spread.toFixed(2),
-        warns: g.log.filter(l => l.text === warn).length,
-        line: (g.log.filter(l => l.text === warn)[0] || {}).text || ''
-      };
-    };
-    const surface = mid('y');
-    const human = run(null, surface, 18, 'lamp');
-    const frog = run('frogpear', surface, 18, 'lamp');
-    const sill = run(null, 9, 18, 'overhead');       // the lower sill, the worst case the dive can meet: a lamp directly over the body
-    const sillHigh = run(null, 12, 18, 'overhead');  // the upper sill, the same worst case: its cost is the design, not a fluke
-    Object.assign(p, was);
-    return {
-      rate: N.CREATURE_BY_ID.lanternfish.sting, human, frog, sill, sillHigh, surface: +surface.toFixed(1),
-      immune: N.FRUITS.filter(f => f.form.poisonImmune).map(f => f.id),
-      cause: N.t('log.causeSting'),
-      warnText: N.t('log.stung', { n: N.disp(N.CREATURE_BY_ID.lanternfish) })
-    };
-  });
-  /* Measured with the body held among the lamps, snapped to the lamp nearest the
-     middle of the field every frame: at least one lamp is inside it at any
-     moment, so at 0.25 a second it loses 4.5 of the 10 in the 18 seconds. The
-     bound is the loose half on purpose -- what it must never do is come back
-     near zero, which is what a snap that no longer finds a lamp reports. The
-     sills are asked the way the worst case asks them: the body holds the sill's
-     own depth and the x, z of the lamp nearest it -- a lamp directly overhead,
-     the nearest a lamp can be there -- for the whole 18 seconds. At the lower
-     sill (y9) that lamp is 3.9-5.5 m off against a reach of 2.08 m, so the run
-     must report 0 whatever the lamps do sideways; at the upper sill (y12) the
-     same lamp is 0.9-2.5 m off, inside the reach for a lamp that is not up in
-     the top of its band, so the run must pay -- and the body that pays is the
-     one the fruit is not for. */
-  check('the lamps sting a body that is not immune', sting.human.lost > 2, sting);
-  check('the lamps do not sting the body the lake already gave you', sting.frog.lost === 0, sting);
-  check('the dive to the depth of the sills stays out of reach of the lamps', sting.sill.lost === 0, sting);
-  check('a lamp directly overhead reaches the upper sill, and not the lower one',
-    sting.sillHigh.lost > 2 && sting.sill.lost === 0, { sill: sting.sill, sillHigh: sting.sillHigh });
-  check('the sting warning names the body that answers it', /雨蛙|frog/.test(sting.warnText), sting);
-  check('the sting warns once, not every frame', sting.human.warns >= 1 && sting.human.warns <= 2, sting);
-  check('exactly one body shrugs the sting off', sting.immune.length === 1 && sting.immune[0] === 'frogpear', sting);
-
-  // 10c. one integer still names exactly one block (the highlight box used to
+  // 10b. one integer still names exactly one block (the highlight box used to
   // be cached by one; it is aimed by a model matrix now, and the name is left
   // in place for anything that needs it)
   const hl = await step('blockKeyIsUnique', () => {
@@ -692,7 +357,7 @@ const { sim } = require('./simwait');
   });
   check('the block key is unique across the whole world', hl.duplicates === null && hl.unique === hl.blocks, hl);
 
-  // 10d. particles carry their own gravity: bubbles rise, motes hover, embers fall
+  // 10c. particles carry their own gravity: bubbles rise, motes hover, embers fall
   const part = await step('particleGravity', () => {
     const g = window.game, W = g.world, P = g.particles;
     const n0 = P.n;
@@ -734,7 +399,7 @@ const { sim } = require('./simwait');
   check('a bubble pops at the surface of the lake it was born in, instead of floating away through the open air',
     part.live === 3 && part.under > 0.5, part);
 
-  // 10e. dying ends the tick: the fall must not overwrite the respawn point
+  // 10d. dying ends the tick: the fall must not overwrite the respawn point
   const death = await step('deathEndsTheTick', () => {
     const g = window.game, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, form: p.form, formT: p.formT, formMax: p.formMax, vital: p.vital };
@@ -760,7 +425,7 @@ const { sim } = require('./simwait');
   check('the body is back at the town cellar', death.at.join(',') === death.want.join(','), death);
   check('the fall did not leave them at y=30 above the roof', death.airborne === false, death);
 
-  // 10f. an open storage panel is built when it changes, not on every frame
+  // 10e. an open storage panel is built when it changes, not on every frame
   const still = await step('cellarPanelStaysStill', () => {
     const g = window.game;
     window.ui.showCellar(false); g.mode = 'play';
@@ -790,7 +455,7 @@ const { sim } = require('./simwait');
   check('an open storage panel is not rebuilt while nothing changes', still.mutations === 0, still);
   check('it is rebuilt as soon as the backpack changes', still.packNow === 2, still);
 
-  // 10g. the main verb of the game: look at a thing, use it. The cellar crate is
+  // 10f. the main verb of the game: look at a thing, use it. The cellar crate is
   // the one block the game asks about by what it is for ("can I store things in
   // this?") rather than by its number, so this is what proves that wiring works.
   const crate = await step('lookAndUseCrate', () => {
@@ -839,7 +504,7 @@ const { sim } = require('./simwait');
   check('looking at a cellar crate asks you to open it', crate.promptIsCellar === true, crate);
   check('using it opens the store behind that crate', crate.mode === 'cellar' && crate.open === 'cellar', crate);
 
-  // 10h. how a body moves is data: the frog crosses the lake at its swimming
+  // 10g. how a body moves is data: the frog crosses the lake at its swimming
   // speed, a dusk animal keeps the dusk even when no animal in the valley does,
   // and a frog that wanders off hops back to its own kind
   const beasts = await step('creatureBehaviour', () => {
@@ -3216,53 +2881,6 @@ const { sim } = require('./simwait');
     tR.shinR.cross <= 0.012 && tR.shinL.cross <= 0.012 &&
     tR.shinR.leg <= 0.23 && tR.shinL.leg <= 0.23, turn);
 
-  /* And the fish that swims reads as swimming, not as a body sliding along
-     with a tail. The lamp's tail has always kicked -- a joint, not a squeeze --
-     but the body it hung from held its heading straight while the tail went
-     left and right, which from the bank is a body being dragged rather than a
-     body moving. So the body now sways on the tail's own clock: the same 1.6
-     rad/s the tail kicks at, smaller (the body is the part that is mostly going
-     straight and the tail is the part that swings), and a quarter beat ahead of
-     the tail, because the kick travels from the body out to the tail -- a wave
-     that ran tail-to-body would be a fish swimming backwards. The claim is read
-     off the model's own angles (N.partAngles), so the fish's heading never
-     enters it, over two of the kick's own cycles with the speed held at the
-     body's own cruise, so the two sines come out clean. */
-  const fishSwim = await step('fishBodySwimsWithItsTail', () => {
-    const N = window.FRUTARIA;
-    const body = { part: N.MODELS.lanternfish.parts.find((p) => p.name === 'body') };
-    const tail = { part: N.MODELS.lanternfish.parts.find((p) => p.name === 'tail') };
-    const sp = N.CREATURE_BY_ID.lanternfish;
-    const move = N.walkMove(sp.speed, sp.speed);   // 1: the wag at the body's own cruise speed
-    const t0 = 123.456;                            // an odd start, so a peak is not on the window's edge
-    const rows = [];
-    for (let i = 0; i < 480; i++) {
-      const s = { t: t0 + i / 60, phase: 0, move };
-      rows.push([N.partAngles(body, s).ry, N.partAngles(tail, s).ry]);
-    }
-    const peak = (idx) => { let hi = -1e9, hp = 0;
-      for (let i = 0; i < rows.length; i++) if (rows[i][idx] > hi) { hi = rows[i][idx]; hp = i; }
-      return { hi: +hi.toFixed(3), at: +(hp / 60).toFixed(2) }; };
-    const range = (idx) => { let lo = 1e9, hi = -1e9;
-      for (const r of rows) { const v = r[idx]; if (v < lo) lo = v; if (v > hi) hi = v; }
-      return +(hi - lo).toFixed(3); };
-    const bPeak = peak(0), tPeak = peak(1);
-    const PER = 2 * Math.PI / 1.6;
-    let lag = tPeak.at - bPeak.at;                 // the tail's peak after the body's
-    while (lag < -PER / 2) lag += PER;
-    while (lag > PER / 2) lag -= PER;
-    return { bodyRange: range(0), tailRange: range(1),
-      tailOverBody: +(range(1) / range(0)).toFixed(2),
-      bodyLeadRad: +(lag * 1.6).toFixed(3), quarterRad: +(Math.PI / 2).toFixed(3),
-      move: +move.toFixed(2) };
-  });
-  check('the lampfish sways its body as it swims, and not only its tail',
-    fishSwim.bodyRange >= 0.25, fishSwim);
-  check('and the tail swings wider than the body it drives',
-    fishSwim.tailOverBody >= 1.5, fishSwim);
-  check('and the body leads the tail by about a quarter of the kick, the wave running from the body out to the tail',
-    Math.abs(fishSwim.bodyLeadRad - fishSwim.quarterRad) <= 0.3, fishSwim);
-
   /* 10w. and the body that is drawn never reaches under the ground it is
      standing on. Everything above asks what the legs are *doing*; this asks
      where they end up, in the world, against the surface the body is standing
@@ -4377,14 +3995,17 @@ What was measured before any of this was fixed, over 180 frames of walking
      that lights itself, so that a lantern across the valley is still a lantern
      -- and the discount was a constant 0.75 written in the shader, which the
      lake had no say in. The lanternfish sat on the outline of the sunken tower
-     when this was measured -- the field is the open water of the lake now, and
-     the ring was what the field used to be -- so the shot below pins its own
-     ring on that outline, ten lamps on a circle of 4.5 m round the tower with
-     the lens 3.6 m off the nearest of them, and asks the water about one lamp:
+     when this was measured, and the ring was what the field used to be, so the
+     shot then pinned its ring on that outline, ten lamps on a circle of 4.5 m
+     round the tower with the lens 3.6 m off the nearest of them, and asked the
+     water about one lamp:
      with the air's 0.75 in force the frame came back with pixels at luminance
      246, its 99th percentile at 176 and 0.82% of it over 200. With the
      lake's own 0.15 in the way the same frame is 230, 156 and 0.24%. That is
-     the difference between a lamp and the "sun" on the lakebed.
+     the difference between a lamp and the "sun" on the lakebed. The lamps are
+     cut now, and the one fragment that still lights itself under water is the
+     fruit block: the shot places a frog pear on the same line of sight, 4.0 m
+     off the lens, and asks the water the same question of it.
 
      Both facts belong to the liquid rather than to the renderer, so both live
      on the water's row in the block table and reach the shader as the
@@ -4406,30 +4027,21 @@ What was measured before any of this was fixed, over 180 frames of walking
      asked of that surface and never of the haze a second time; the water the
      lens itself sits in; and the water between the lens and the surface it is
      looking through. The surface is drawn twice because survival is per colour
-     and a blend can only scale the whole frame by one number. The lamps feel it
-     too: the light leaving a fish now climbs out through the same law, and the
-     frame 3.6 m off the ring is 167 at its brightest, 134 at its 99th percentile
-     and nothing at all over 200. */
+     and a blend can only scale the whole frame by one number. The self-lit
+     fragments in the lake feel it too: the light leaving one now climbs out
+     through the same law, and the frame 4.0 m off the pear the shot places
+     keeps the same bound it kept for the ring of lamps -- nothing over 200. */
   const lakebedView = await step('theLakebedIsUnderWater', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
-    const fish = g.creatures.filter(c => c.sp.model === 'lanternfish');
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
       form: p.form, third: g.thirdPerson, camD: g.cam.d, camFov: g.cam.fov, ready: g.camReady,
-      time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
-      fish: fish.map(c => ({ c, x: c.x, y: c.y, z: c.z, t: c.t, ph: c.phase, st: c.state,
-        yaw: c.yaw, bank: c.bank, tilt: c.tilt, squash: c.squash, speed: c.speed,
-        inWater: c.inWater, held: c.held, airAmt: c.airAmt, crouch: c.crouch })) };
+      time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover };
     const back = (r) => {
       Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
         vx: was.vx, vy: was.vy, vz: was.vz, form: was.form });
       g.thirdPerson = was.third; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.ready;
       g.time = was.time; g.mode = was.mode; g._lens = was.lens; g._camFrame = was.frame; g.env = was.env;
       g.hover = was.hover;
-      for (const j of was.fish) {
-        Object.assign(j.c, { x: j.x, y: j.y, z: j.z, t: j.t, phase: j.ph, state: j.st,
-          yaw: j.yaw, bank: j.bank, tilt: j.tilt, squash: j.squash, speed: j.speed,
-          inWater: j.inWater, held: j.held, airAmt: j.airAmt, crouch: j.crouch });
-      }
       return r;
     };
     p.form = null; g.mode = 'play'; g.thirdPerson = false;
@@ -4438,7 +4050,6 @@ What was measured before any of this was fixed, over 180 frames of walking
     const lake = N.ZONES.find(z => z.id === 'mirrorlake');
     if (!lake || !lake.tower) return back({ error: 'no sunken tower in the mirrorlake zone data' });
     const [tx, tz] = lake.tower;
-    if (!fish.length) return back({ error: 'no lanternfish in the valley' });
 
     // a shallow shelf of lake and a deep stretch of it, both searched for, and
     // the arm's-length bed B15 is about: two metres of water over the sand, so
@@ -4459,17 +4070,18 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     if (!shallow || !deep || !arm) return back({ error: 'no shallow shelf, no deep stretch and no arm-length shelf in the lake' });
 
-    const shot = (lx, lensY, lz, yaw, pitch, solo, dry) => {
+    const shot = (lx, lensY, lz, yaw, pitch, dry) => {
       const eyeOff = p.eyePos() - p.y;
       p.x = lx; p.y = lensY - eyeOff; p.z = lz; p.vx = p.vy = p.vz = 0;
       p.yaw = yaw; p.pitch = pitch;
-      /* Only the lamps are allowed in this frame. The shot is a question about
-         water and about the ring of lamps around the tower, and an animal
-         wandering past the tower, or a fruit that happened to fall near it,
-         changes the 99th percentile of the frame by dozens between two runs of
-         identical code: the drops are drawn with an emissive boost of their own. */
-      const herd = g.creatures, dropsWas = g.drops;
-      g.creatures = solo ? [] : fish; g.drops = [];
+      /* No animals are allowed in this frame. The shot is a question about
+         water, and an animal wandering past the tower, or a fruit that
+         happened to fall near it, changes the 99th percentile of the frame by
+         dozens between two runs of identical code: the drops are drawn with an
+         emissive boost of their own. (Shot 4's pear is the one exception, and
+         it is pinned to its own cell, not its own mood.) */
+      const herdWas = g.creatures, dropsWas = g.drops;
+      g.creatures = []; g.drops = [];
       /* A dry shot is the control: the same lens with nothing the water does to
          light left anywhere in the frame. The law, the haze, the colour the
          water scatters back into the ray and the surface itself are all taken
@@ -4493,7 +4105,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         g.updateEnv = ueWas;
         for (const [ci, c] of wetMesh) W.chunks[ci][2].count = c;
       }
-      g.creatures = herd; g.drops = dropsWas;
+      g.creatures = herdWas; g.drops = dropsWas;
       const env = { fogDen: +g.env.fogDen.toFixed(4), emisKeep: g.env.emisKeep,
         waterK: g.env.waterK.map(v => +v.toFixed(3)), waterY: g.env.waterY,
         liqK: (g.env.liqK || [0, 0, 0]).map(v => +v.toFixed(3)),
@@ -4539,23 +4151,25 @@ What was measured before any of this was fixed, over 180 frames of walking
     const up = shot(shallow.x, shallow.top - 0.6, shallow.z, 0, 1.2);
     // 3. the bed at the bottom of the deep stretch, 9 m of water above it
     const floor = shot(deep.x, deep.top - 0.6, deep.z, 0, -1.2);
-    /* 4. the lamps, pinned on their ring so this measures the water and not the
-       animals: 3.6 m of lake between the lens and the nearest fish. Pinned means
-       the pose as well as the place. The fish are emissive and they are most of
-       the bright end of the frame, and a lamp with its tail out at one side
-       covers a different number of pixels from one with it swung the other way:
-       with only the position held, the 99th percentile of this frame came
-       back anywhere between 122 and 160 from one run of identical code to the
-       next, which is most of the width of the thing being measured. */
-    fish.forEach((c, i) => {
-      const a = i / fish.length * 6.283;
-      c.x = tx + 0.5 + Math.cos(a) * 4.5; c.y = 11 + (i % 3) * 0.5;
-      c.z = tz + 0.5 + Math.sin(a) * 4.5;
-      c.t = 0; c.phase = 0; c.speed = 0; c.state = 'wander';
-      c.yaw = 0; c.bank = 0; c.tilt = 0; c.squash = 0; c.inWater = true;
-      c.held = 1; c.airAmt = 0; c.crouch = 0;
-    });
-    const lamps = shot(tx + 0.5, 12.0, tz + 8.5, 0, Math.atan2(11.5 - 12.0, 8));
+    /* 4. the water's discount of a self-lit fragment, asked of the one kind
+       that still lights itself under water: the fruit block. The lamps the
+       question was measured on are cut; the pear stands on the same side of
+       the tower their ring kept, on the same line of sight, 4.0 m off the
+       lens, in a column twelve metres deep, so the discount has the metres it
+       needs. A block is drawn from the chunk's own micro mesh, so the world
+       is re-meshed with it in place and the cell is put back the way it was. */
+    let pearCell = null, pearOrig = 0;
+    for (let dz = 4; dz >= 2 && !pearCell; dz--) {
+      const x = tx, y = 11, z = tz + dz;
+      if (W.liquidAt(x, y, z) && W.liquidAt(x, y + 1, z) && !W.solidAt(x, y, z))
+        { pearCell = { x, y, z }; pearOrig = W.get(x, y, z); }
+    }
+    if (!pearCell) return back({ error: 'no water column on the shot line for the pear' });
+    W.set(pearCell.x, pearCell.y, pearCell.z, N.FRUIT_BLOCK_REV.frogpear);
+    W.rebuildDirty(gl, 1e9);
+    const pear = shot(tx + 0.5, 12.0, tz + 8.5, 0, Math.atan2(11.5 - 12.0, 8));
+    W.set(pearCell.x, pearCell.y, pearCell.z, pearOrig);
+    W.rebuildDirty(gl, 1e9);
     // 5. the same lens lifted out of the water: the air's answer
     const air = shot(shallow.x, shallow.top + 2.0, shallow.z, 0, -1.2);
     /* 6. and what the draw of a body standing in that lake is handed. A body's
@@ -4633,10 +4247,10 @@ What was measured before any of this was fixed, over 180 frames of walking
        from 57.4 to 45.5. That the bed's colours go one after another -- red
        first, blue last -- and that they keep going as the bed goes deeper under a
        lens that has not moved, is the difference between a depth and a tint. */
-    const armDown = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true);
-    const armDry = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true, true);
-    const armDeep = shot(shallow.x, shallow.top + 1 - 0.25, shallow.z, 0, -1.5, true);
-    return back({ shallow, deep, arm, fish: fish.length, down, up, floor, lamps, air,
+    const armDown = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5);
+    const armDry = shot(arm.x, arm.top + 1 - 0.25, arm.z, 0, -1.5, true);
+    const armDeep = shot(shallow.x, shallow.top + 1 - 0.25, shallow.z, 0, -1.5);
+    return back({ shallow, deep, arm, down, up, floor, pear, air,
       body, conventions, armDown, armDry, armDeep });
   });
   check('a body looking down at the lakebed sees water: the frame is blue over red',
@@ -4647,9 +4261,9 @@ What was measured before any of this was fixed, over 180 frames of walking
     lakebedView.up && lakebedView.up.blueMinusRed > 60 && lakebedView.up.meanLum > 45, lakebedView);
   check('the deep bed, 9 m down, is tinted by the water twice over: coming and going',
     lakebedView.floor && lakebedView.floor.blueMinusRed > 45 && lakebedView.floor.meanLum < 95, lakebedView);
-  check('a lamp 3.6 m off in the lake is a lamp, not a sun sitting on the lakebed',
-    lakebedView.lamps && lakebedView.lamps.p99 < 170 && lakebedView.lamps.over200 < 0.7 &&
-    lakebedView.lamps.meanLum < 75, lakebedView);
+  check('a fruit block 4.0 m off in the lake is a fruit block, not a sun sitting on the lakebed',
+    lakebedView.pear && lakebedView.pear.p99 < 170 && lakebedView.pear.over200 < 0.7 &&
+    lakebedView.pear.meanLum < 75, lakebedView);
   check('the water says what it does to light, and the environment carries it',
     lakebedView.down && lakebedView.down.env.lensInWater === true && lakebedView.down.env.emisKeep < 0.5 &&
     lakebedView.down.env.waterK[0] > lakebedView.down.env.waterK[2] * 4 &&
@@ -4852,9 +4466,9 @@ What was measured before any of this was fixed, over 180 frames of walking
       let F, Rt, U;
       /* What stands in front of one pixel of the lens: a level stretch of bed
          with at least two metres of water over the top of it, and nothing
-         self-lit standing in the water above it -- a lanternfish, or a frog
-         pear hung up in the sunken tower -- is allowed to be bright and is not
-         what this is about. Only faces that look straight up are asked: the
+         self-lit standing in the water above it -- a frog pear hung up in the
+         sunken tower -- is allowed to be bright and is not what this is about.
+         Only faces that look straight up are asked: the
          wall of the basin has its four corners at two depths at once and is
          looked at along itself, which is the next step's question and not this
          one's. */
@@ -4973,7 +4587,7 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and the lakebed is put back the way it was: the frame rebuilt after the broken one reads pixel for pixel as it did before',
     JSON.stringify(faceDepth.goodAgain) === JSON.stringify(faceDepth.good), faceDepth);
 
-  /* The lakebed grows kelp again, and a stalk of it is a plant, not a lamp. It
+  /* The lakebed grows kelp again, and a stalk of it is a plant, not a light. It
      states no light of its own, and it stands in the water, so it wears the
      water the way the bed under it does -- which the mesher could not do for
      anything micro, because the corners of a micro box are not on a column line
@@ -4993,10 +4607,10 @@ What was measured before any of this was fixed, over 180 frames of walking
      grabs differ by zero pixels), so a low threshold counts the stalk with no
      noise to count instead. Read the frame three ways: whole, with the
      emissive micro mesh taken out, and with the ordinary one taken out. A lake
-     frame at noon has no self-lit block in it -- the lanternfish lamps are
-     bodies and are drawn elsewhere -- so the first pair has to be the same
+     frame at noon has no self-lit block in it -- the pears this lake wears are
+     on its shore, the other's question -- so the first pair has to be the same
      frame, and the kelp is in the frame, so the second pair has to be different. */
-  const kelpFrame = await step('theKelpInTheLakeIsNotALamp', () => {
+  const kelpFrame = await step('theKelpInTheLakeStatesNoLight', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch,
       vx: p.vx, vy: p.vy, vz: p.vz, form: p.form, third: g.thirdPerson, time: g.time,
@@ -6175,10 +5789,8 @@ What was measured before any of this was fixed, over 180 frames of walking
       return r;
     };
     const out = {};
-    const fish = g.creatures.find(c => c.isAquatic());
     const frog = g.creatures.find(c => c.isAmphibian());
     // every animal that remains is out at every hour, so no hour is set here
-    if (fish) out.lanternfish = turnOf(fish);
     if (frog && lake) {
       /* the frog is a herd animal: a wanderer more than 12 m from its kind's
          middle is steered to that middle instead of the target the test sets, and
@@ -6199,7 +5811,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     Object.assign(p, was);
     return out;
   });
-  for (const who of ['lanternfish', 'frog']) {
+  for (const who of ['frog']) {
     check(`the wild ${who} turns at its own rate and no faster`,
       !!animals[who] && animals[who].peak <= animals[who].limit + 0.15 && animals[who].peak > 0.3, animals);
   }
@@ -6304,13 +5916,11 @@ What was measured before any of this was fixed, over 180 frames of walking
     check(`the wild ${who} spends its afternoon walking rather than standing still`,
       !!roaming[who] && roaming[who].movingPct > 60, roaming);
   }
-  check('and the lamp field keeps drifting round the lake',
-    !!roaming.lanternfish && roaming.lanternfish.movingPct > 50, roaming);
 
   /* 11i. And an animal sent to a place gets there. A body that can only bend
      its course at a fixed rate holds a turn arc as wide as its speed over that
-     rate: a lanternfish drifting at 0.92 m/s with a course it can bend 0.8
-     rad/s a second is swinging an arc 1.15 m across, so a target nearer than
+     rate: a body drifting at 0.92 m/s with a course it can bend 0.8
+     rad/s is swinging an arc 1.15 m across, so a target nearer than
      that is a place it circles for the rest of the afternoon. The animal slows
      for the turn, and the speed to slow to is the one whose arc passes through
      the place: the way to it is a chord of the circle the animal is describing,
@@ -6377,14 +5987,12 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
       /* Phase two: the case the animal's own wander retarget produces every few
          seconds -- a new place a step or two off, to one side of the way it is
-         facing. The arc an animal holds is its speed over its turn rate: 1.15 m
-         for a lanternfish drifting at 0.92 m/s, 2.1 m for a frog at 0.9. A
-         place nearer than that, off to the side, is a place it circles for the
-         rest of the pause. Measured without the animal slowing for a turn it
-         cannot hold, over 25 seconds at a target this far to one side: the
-         lanternfish walks 23 m and ends 0.9-1.4 m from a place 0.9 m away, the
-         frog walks 48 m for a place 1.2 m away. */
-      const d = c.isAquatic() ? 0.9 : 1.2;
+         facing. The arc an animal holds is its speed over its turn rate:
+         2.1 m for a frog at 0.9. A place nearer than that, off to the side, is
+         a place it circles for the rest of the pause. Measured without the
+         animal slowing for a turn it cannot hold, over 25 seconds at a target
+         this far to one side: the frog walks 48 m for a place 1.2 m away. */
+      const d = 1.2;
       c.yaw = 0; c.speed = 0;                        // facing off at right angles to it
       const sx = c.x - d, sz = c.z;                  // and the place is back over open ground
       let smin = 1e9, smax = 0, spath = 0, qpx = c.x, qpz = c.z;
@@ -6405,30 +6013,26 @@ What was measured before any of this was fixed, over 180 frames of walking
     };
     const out = {};
     const frog = g.creatures.find(c => c.isAmphibian());
-    const fish = g.creatures.find(c => c.isAquatic());
     if (frog) out.frog = sent(frog, 24);
-    if (fish) out.lanternfish = sent(fish, 24);
     Object.assign(p, was);
     return out;
   });
   /* An animal sent somewhere arrives there and stands still: the frog closes to
-     0.8 m and stops, the lanternfish to 0.8 m, each along a path of 4-5 m, and
-     the state never leaves 'wander' -- no sleep, no panic taking over the run.
-     `arc` is the width of the widest turn the animal makes at the fastest it
-     travelled (2.1 m for the frog, 1.2 for the lanternfish), so arriving inside a
-     metre is not the animal failing to move. */
-  for (const who of ['frog', 'lanternfish']) {
+     0.8 m and stops along a path of 4-5 m, and the state never leaves 'wander'
+     -- no sleep, no panic taking over the run. `arc` is the width of the widest
+     turn the animal makes at the fastest it travelled (2.1 m for the frog), so
+     arriving inside a metre is not the animal failing to move. */
+  for (const who of ['frog']) {
     check(`the wild ${who} gets to the place it was sent to and stops there`,
       !!arrive[who] && !arrive[who].error && arrive[who].states === 'wander' &&
       arrive[who].min < 0.9 && arrive[who].max < 1.2 && arrive[who].arc > 0.5, arrive);
   }
   /* And it gets there when the place is one it cannot walk into at the speed it
      is travelling: a target a step to one side, inside the width of its own
-     turn. The frog stands 0.79 m from a place 1.2 m off having walked 1 m; the
-     lanternfish 0.8 m from one 0.9 m off having walked 0.4 m. Before the animal
-     was taught to slow for a turn it cannot hold, the same two walked 48 m and
-     23 m round those two places and never stopped at either. */
-  for (const who of ['frog', 'lanternfish']) {
+     turn. The frog stands 0.79 m from a place 1.2 m off having walked 1 m.
+     Before the animal was taught to slow for a turn it cannot hold, it walked
+     48 m round that place and never stopped at it. */
+  for (const who of ['frog']) {
     check(`the wild ${who} does not circle a place that is too close for its turn to reach`,
       !!arrive[who] && !arrive[who].error && !!arrive[who].side &&
       arrive[who].side.min < 0.9 && arrive[who].side.max < 1.2 && arrive[who].side.path < 8, arrive);
@@ -7964,7 +7568,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     /* Nobody is holding a key, and the body is parked where the valley put it at
        the boot. The step before this one leaves its own keys in g.input, and the
        steps before that leave the body wherever their own rig wanted it -- a day
-       of that walks or leaves a player standing in the lamps, they go
+       of that walks or leaves a player standing in the lake, they go
        down, and their fruit scatters, which puts the drop count and the log up:
        exactly the two things this step is watching for, caused by nothing in the
        world at all. */
@@ -7994,7 +7598,8 @@ What was measured before any of this was fixed, over 180 frames of walking
       dropKinds: g.drops.map(d => d.item && d.item.id) };
   });
   check('an animal is put down on the ground, not on the tree that grows out of it',
-    soak.placed.n > 160 && !soak.placed.onCrown.length && !soak.placed.inTrunk.length, soak.placed);
+    soak.placed.n === 10 * soak.countsBefore.creatures &&
+    !soak.placed.onCrown.length && !soak.placed.inTrunk.length, soak.placed);
   check('a whole day of the world running leaves every animal a body in a place',
     !soak.after.notANumber.length && !soak.after.outside.length && !soak.after.inRock.length &&
     !soak.after.underTheMap.length && !soak.after.aboveTheAir.length, soak.after);
@@ -8006,11 +7611,14 @@ What was measured before any of this was fixed, over 180 frames of walking
      walking with three of them. Every number a body carries is swept here, the
      body's own physics having handed most of them to itself. `seen` is the guard
      on the guard -- a field no body has is a field this check never looked at,
-     and the list is only as wide as the bodies actually are. */
+     and the list is only as wide as the bodies actually are, and it must see
+     every one of them -- the valley's crowd plus the body you wear -- on the
+     fields it asks of, so a field a body stops carrying fails here, not in
+     the draw. */
   check('and every number a body carries stays a number, for the animals and for the body you wear',
     !soak.after.bodyNaN.length && !soak.before.bodyNaN.length &&
-    soak.after.seen.wSurf > 16 && soak.after.seen.tilt > 16 && soak.after.seen.bank > 16 &&
-    soak.after.seen.held > 16 && soak.after.seen.airAmt > 16 && soak.after.seen.yaw > 16, soak.after);
+    ['wSurf', 'tilt', 'bank', 'held', 'airAmt', 'yaw'].every(k =>
+      soak.after.seen[k] >= soak.countsBefore.creatures + 1), soak.after);
   check('and no frame of that day moves a body further than its own body can',
     soak.jump.worst <= 0.4, soak.jump);
   check('the log, the scattered fruit and the queues do not grow without bound',
@@ -8050,10 +7658,11 @@ What was measured before any of this was fixed, over 180 frames of walking
      overlap, at the rate the world's own corrections work at -- and it is taken
      once for every pair that overlaps, so a body standing inside several of its
      own kind is moved several times in the same frame, and nothing bounded the
-     frame. The lamp field is where that shows, because it is the field that is
-     born overlapping: with the frame unbounded the worst frame of this window
-     moved a lamp 0.127 m at a sixtieth of a second, 7.6 m/s, 3.46 times what
-     that lamp's own fins would have carried it, for an animal whose row says it
+     frame. The lamp field was where that showed, because it was the field that
+     was born overlapping: with the frame unbounded the worst frame of the
+     window then moved a lamp 0.127 m at a sixtieth of a second, 7.6 m/s, 3.46
+     times what that lamp's own fins would have carried it, for an animal whose
+     row says it
      swims at 2.2 and wanders at 0.92; over five-minute watches of the field a
      player actually meets the worst frame was 0.133-0.156 m (7.9-9.4 m/s), and
      on one page the whole five minutes averaged 17.9 m/s, with a worst frame of
@@ -8061,32 +7670,32 @@ What was measured before any of this was fixed, over 180 frames of walking
      Each body now has one budget a frame, and the budget is its own speed: a
      neighbour may add to the body's own walk at most the walk the body itself
      has, so a frame may be twice the animal and is not eight times it. The worst
-     frame of the same window is 0.052 m, 3.1 m/s, 1.42 times what that lamp's
-     fins would have carried it. The slower undo is not worse for the crowd
+     frame of that window was 0.052 m, 3.1 m/s, 1.42 times what a body that
+     swims at 2.2 would have been carried. The slower undo is not worse for the
+     crowd
      either, and where it is worse it is worse by a fingernail: 2856 pair-frames
      deeper than 12 cm against 3653, a mean depth of 0.084 against 0.091, the
-     worst pair 0.229 against 0.223, a fish that may not be thrown clear in one
+     worst pair 0.229 against 0.223, a body that may not be thrown clear in one
      frame taking two frames to get clear.
      Second: the crowd that does not fit its ground is put down on top of itself
      by the birth loop, which used to take the first sample clear and otherwise
      whatever the tenth throw landed on. 29 of the 49 columns of the lamp's disc
-     are water and the rest is the tower's brick, the room a lamp asks of its own
-     kind is 0.83 m, and ten lamps do not fit; in the worst of five mornings the
-     nearest pair stood 0.23 m apart -- fish inside fish -- and the field spent
-     the rest of the morning undoing it. Of the places a species will accept, the
-     one taken is now the one furthest from its own kind, the rule the animal
-     already follows when it picks somewhere to swim to, and the worst nearest
-     pair of the same five mornings is 0.67 m. What the ring cannot hold it still
-     cannot hold, and that is reported rather than hidden: six of the ten were
-     born with a neighbour inside the room and eight are now, while the nearest
-     pair moved from 0.23 m to 0.67 m -- what the law refuses is not a lamp born
-     close to a lamp, it is a fish born on top of a fish.
+     were water and the rest the tower's brick, the room a lamp asked of its own
+     kind was 0.83 m, and ten lamps did not fit; in the worst of five mornings
+     the nearest pair stood 0.23 m apart -- fish inside fish -- and the field
+     spent the rest of the morning undoing it. Of the places a species will
+     accept, the one taken is now the one furthest from its own kind, the rule
+     the animal already follows when it picks somewhere to swim to; the worst
+     nearest pair of the lamp's five mornings was 0.67 m. What a ground cannot
+     hold it still cannot hold, and that is reported rather than hidden: what
+     the law refuses is not a body born close to its own kind, it is a body
+     born on top of one.
      Third, and it is asked of the place a shove lands rather than of the body:
-     the step below hunts a shore the law can be asked of, and it costs this
-     window depth -- without that law the worst pair of this window is 0.192 m
-     and 2089 frames deeper than 12 cm, with it 0.229 and 2856 -- because a body
-     refused the way out it was offered must find another or stay where it is
-     pressed. The trade is between being inside a neighbour and being inside a
+     the step below hunts a shore the law can be asked of, and it cost the
+     window then depth -- without that law the worst pair of the window was
+     0.192 m and 2089 frames deeper than 12 cm, with it 0.229 and 2856 --
+     because a body refused the way out it was offered must find another or
+     stay where it is pressed. The trade is between being inside a neighbour and being inside a
      bank, and the bank is the one that used to be reported at all: the flock
      step of this file found a frog inside a block for 1 to 5 frames of the 2400
      wet frames of its window, on some pages and not on others. */
@@ -8110,10 +7719,11 @@ What was measured before any of this was fixed, over 180 frames of walking
        The morning measured below is one morning and is seeded, so that the same
        code measured twice gives the same answer. A birth spread is not a property
        of one morning: it is a property of every morning the valley can be made
-       from, and the crowd that overfills its ground is the crowd that shows it --
-       the ten lamps of the tower field into the wet ring round the tower's brick.
-       So the birth is audited over five mornings, each its own seed, and the worst
-       of the five is what is reported. */
+       from, and the crowd that overfilled its ground was the crowd that showed
+       it -- the ten lamps of the tower field into the wet ring round the
+       tower's brick, when the valley still kept one. So the birth is audited
+       over five mornings, each its own seed, and the worst of the five is what
+       is reported. */
     const roomOf = (sp) => {
       const mw = N.MODEL_W[sp.model] || [0.5, 0.5, 0, 0];
       return Math.max(mw[0], mw[1]) * (sp.scale || 0.2) * 2 + 0.4;
@@ -8161,7 +7771,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        either of them could be pulled out of the other. Two bodies a metre apart
        in height are not in one place, and the height they have in common has to
        be more than a graze of the shorter one before it counts at all -- a lamp
-       riding on another's back is on top of it, not inside it. */
+       riding on another's back was on top of it, not inside it. */
     const deepIn = (a, b) => {
       const v = Math.min(a.y + a.tall, b.y + b.tall) - Math.max(a.y, b.y);
       if (v <= 0.15 * Math.min(a.tall, b.tall)) return 0;
@@ -8192,7 +7802,8 @@ What was measured before any of this was fixed, over 180 frames of walking
        they stood when the frame began, and it is applied once for every pair that
        overlaps, so a body standing inside several of its own kind is moved once
        per pair, each at the rate the world's corrections work at; the field of
-       the sunken tower is that field, and the same law that pulls two fish apart
+       the sunken tower was that field, and the same law that pulls two bodies
+       apart
        was measured throwing a lamp 0.133 m at a sixtieth of a second -- 8 m/s for
        an animal whose row says 2.2 m/s, and on one page of the same field an
        average of 17.9 m/s over five whole minutes, with a worst frame of 82 m/s.
@@ -8277,14 +7888,14 @@ What was measured before any of this was fixed, over 180 frames of walking
     const quiet = cs.filter(c => awake.get(c) > 60 * 60 && path.get(c) < 1);
     const still = quiet.filter(c => near.get(c) > 60 * 60).map(detail);
     const lake = (N.ZONE_BY_ID.mirrorlake || {}).lake || [0, 0];
-    const lampFar = cs.filter(c => c.sp.id === 'lanternfish')
+    const frogFar = cs.filter(c => c.sp.id === 'frog')
       .map(c => +Math.hypot(c.x - lake[0], c.z - lake[1]).toFixed(1)).sort((a, b) => b - a);
     const per = {};
     for (const k in kind) per[k] = { frames: kind[k].frames, deep: kind[k].deep,
       worst: +kind[k].worst.toFixed(3), mean: +(kind[k].sum / kind[k].frames).toFixed(3) };
     return { seconds: SECS, bodies: cs.length, worst: +seen.worst.toFixed(3),
       deep: seen.deep, touch: seen.touch, mean: +(seen.sum / Math.max(seen.touch, 1)).toFixed(3),
-      per, still, quiet: quiet.map(detail), lampFar: lampFar.slice(0, 3),
+      per, still, quiet: quiet.map(detail), frogFar: frogFar.slice(0, 3),
       jump, lift, birth,
       walked: +Math.max.apply(null, cs.map(c => path.get(c))).toFixed(1) };
   });
@@ -8294,8 +7905,12 @@ What was measured before any of this was fixed, over 180 frames of walking
     space.deep <= 5000 && space.mean <= 0.12, space);
   check('a body guided round its neighbours still goes somewhere',
     !space.still.length && space.walked > 20, space);
-  check('the lamps stay in the water of the lake they were born in',
-    space.lampFar[0] <= 40, space);
+  /* The frog's home is the water of the lake it was born in, no more than 34 m
+     from the centre of it, and its errands are picked from a disc of 14 m
+     round that home: 52 is the sum of the two with a swing left over, and it
+     is what a frog that had wandered across the valley would trip. */
+  check('the frogs stay round the lake they were born in',
+    !!space.frogFar.length && space.frogFar[0] <= 52, space);
   /* And the two laws this window is now asked to hold. The first is about how a
      body is moved: every frame of the window is read against the speed the body's
      own row gives it, and the crowd is not allowed to be the one in front. The
@@ -8460,41 +8075,48 @@ What was measured before any of this was fixed, over 180 frames of walking
      and subtracting "the highest solid found by scanning down from two cells above
      it". The brick of the sunken tower pokes up through the film of the lake it
      stands in, so that scan hits the brick and the column answers that there is no
-     water in it at all: twenty-five columns inside the lamps' own disc -- the
-     field the dex says sits "exactly in the outline of the sunken tower" -- read
-     that way, 8 metres of water each, film at 15 and lakebed at 7, and the level
-     the water is said to hold a body at is the lakebed under it. That one answer
-     decides four things: where a swimming body may be put (the crowd's room
-     question), where it may be sent (the errand picker), which way it may swim
-     (the step gate) and the height it hangs at. Nothing visible was wrong when
-     this was found -- of 90,000 lamp-frames in a five minute watch not one stood
-     in such a column, because the picker and the step gate kept the field out of
-     columns they believed were dry -- but the field was not in the outline the dex
-     gives it, and a fish that got into one of
-     those columns, by a shove from its own kind, which asks only about solid and
-     stone, was pinned on the lakebed under the tower: ten seconds there and its
-     crown sat **6.27 m** under the film on the average and **7.11 m** at the
-     deepest, for a body whose row says **1.2 m** -- which is what the first check
-     below reports when only this law is taken out. Two laws, asked in the same
-     step. The water is told by the depth of the water in the column, which is the
-     bed searched from the topmost water cell and not from the brick standing over
-     it. And the height the water holds a body at is closed at no more than the
+     water in it at all: twenty-five columns of the lake -- the same twenty-five
+     the lamp's disc held, when the valley kept one -- read that way, 8 metres of
+     water each, film at 15 and lakebed at 7, and the level the water was said to
+     hold a body at was the lakebed under it. That one answer decided four things:
+     where a swimming body may be put (the crowd's room question), where it may be
+     sent (the errand picker), which way it may swim (the step gate) and the height
+     it hangs at. Nothing visible was wrong when this was found -- of 90,000
+     lamp-frames in a five minute watch not one stood in such a column, because the
+     picker and the step gate kept the field out of columns they believed were dry
+     -- but the field was not in the outline it was told to keep, and a body that
+     got into one of those columns, by a shove from its own kind, which asks only
+     about solid and stone, was pinned on the lakebed under the tower: ten seconds
+     there and its crown sat **6.27 m** under the film on the average and **7.11 m**
+     at the deepest, for a body whose row says **1.2 m** -- which is what the first
+     check below reports when only this law is taken out. Two laws, asked in the
+     same step. The water is told by the depth of the water in the column, which is
+     the bed searched from the topmost water cell and not from the brick standing
+     over it. And the height the water holds a body at is closed at no more than the
      speed that body swims -- the law the air branch of this file already carries
-     (docs 03 line 85, 23.9 -> 2.94 m/s) and the water branch never got: a fish
-     put on the lakebed at the bottom of the deepest column in that disc and let go
-     climbs the whole **9.31 m** of water (the deepest column in that disc is the
-     lake's own deepest now -- 11 m of it, lakebed at 4 -- where the disc the
-     field used to be put the rig in **8.91 m**, with the lamp's first, larger
-     model), and the ease that used to carry that height carried it **14.9 m/s**,
-     seven times its own speed, with **64** of its 600 frames faster than it swims. */
+     (docs 03 line 85, 23.9 -> 2.94 m/s) and the water branch never got: a body put
+     on the lakebed at the bottom of the deepest column of the lake and let go
+     climbs the whole of that column's water to the level the law answers for it,
+     and the ease that used to carry that height carried it **14.9 m/s**, seven
+     times its own speed, with **64** of its 600 frames faster than it swims. The
+     valley keeps no animal in that water now, so the step asks the two laws of a
+     body it builds for the asking -- the frog's model at 0.25, a water
+     locomotion, a speed and a hover -- of the columns of the lake itself. */
   const towerWater = await step('towerWater', () => {
     const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
-    const sp = N.CREATURES.find((s) => s.id === 'lanternfish');
+    /* The valley keeps no animal in that water now, so the two laws are asked of
+       a body the step builds for the asking: the frog's model at 0.25, a water
+       locomotion, the speed the water branch caps at, and nothing that would let
+       it leave the column the rig puts it in. It is not put in the world: the
+       world's animals are parked for the two rigs and put back after. */
+    const sp = { id: 'probe', model: 'frog', scale: 0.25, locomotion: 'water',
+      speed: 1, swimSpeed: 2.2, turn: 0.8, alert: 4, herd: 1, hover: 1.2,
+      active: 'both', attitude: { default: 'ignore' } };
     const zone = N.ZONE_BY_ID.mirrorlake || {};
-    const center = (sp.at && zone[sp.at]) || zone.tower || [0, 0];   // the field's own landmark
-    const field = g.creatures.filter((c) => c.sp.id === 'lanternfish');
-    if (!sp || !field.length) return { error: 'no lanternfish in the world' };
-    const TALL = field[0].tall;
+    const center = zone.lake || [78, 106];      // the ring the valley's water lives on
+    const RADIUS = 22;
+    const probe = new N.Creature(sp, center[0], 0, center[1]);
+    const TALL = probe.tall;
     const own = sp.swimSpeed || sp.speed || 3;
     const HOVER = sp.hover === undefined ? 0.8 : sp.hover;
     const BOB = 0.8;                      // the swing the water branch rides on
@@ -8524,17 +8146,17 @@ What was measured before any of this was fixed, over 180 frames of walking
        it, instead of being picked by the bug and vanishing when the bug goes. */
     const capAbove = (x, z, film) => W.solidAt(x, film, z);
 
-    /* every column of the disc the lamps belong to that holds water deep enough
-       for a fish: what height does the level law answer for one standing in it? */
+    /* every column of the lake inside the disc that holds water deep enough for a
+       body: what height does the level law answer for one standing in it? */
     let wet = 0, deep = 0, capped = 0, bedTakes = 0, worst = null, deepest = null, cappedDeep = null;
-    const x0 = Math.max(1, Math.ceil(center[0] - sp.spread - 1)), x1 = Math.min(W.w - 2, Math.floor(center[0] + sp.spread + 1));
-    const z0 = Math.max(1, Math.ceil(center[1] - sp.spread - 1)), z1 = Math.min(W.d - 2, Math.floor(center[1] + sp.spread + 1));
+    const x0 = Math.max(1, Math.ceil(center[0] - RADIUS - 1)), x1 = Math.min(W.w - 2, Math.floor(center[0] + RADIUS + 1));
+    const z0 = Math.max(1, Math.ceil(center[1] - RADIUS - 1)), z1 = Math.min(W.d - 2, Math.floor(center[1] + RADIUS + 1));
     for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
-      if (Math.hypot(x + 0.5 - center[0], z + 0.5 - center[1]) > sp.spread + 1) continue;
+      if (Math.hypot(x + 0.5 - center[0], z + 0.5 - center[1]) > RADIUS + 1) continue;
       const col = depthAt(x, z);
       if (col === null) continue;
       wet++;
-      if (col.depth < 4) continue;      // not water a fish could hang in, whatever the law says
+      if (col.depth < 4) continue;      // not water a body could hang in, whatever the law says
       deep++;
       if (!deepest || col.depth > deepest.depth)
         deepest = { x, z, depth: col.depth, film: col.film, bed: col.bed, row: f2(col.body) };
@@ -8551,13 +8173,15 @@ What was measured before any of this was fixed, over 180 frames of walking
           worst = { x, z, under: +under.toFixed(2), want: f2(want), film: col.film, depth: col.depth };
       }
     }
-    const out = { center, spread: sp.spread, tall: +TALL.toFixed(3), own, hover: HOVER,
+    const out = { center, radius: RADIUS, tall: +TALL.toFixed(3), own, hover: HOVER,
       wet, deep, capped, bedTakes, worst, deepest, cappedDeep };
-    if (!deepest) return Object.assign(out, { error: 'no column in the lamps disc holds water deep enough for a body' });
+    if (!deepest) return Object.assign(out, { error: 'no column of the lake holds water deep enough for a body' });
 
-    const fish0 = field[0];
-    const keep = ['x', 'y', 'z', 'homeX', 'homeZ', 'tx', 'tz', 'pause', 'state', 'yaw', 't', 'phase']
-      .map((k) => ({ k, v: fish0[k] }));
+    /* and the world's own animals parked for the two rigs: the probe is not one
+       of them, and a rig that reads the level law wants the level and nothing
+       else standing in the column with it. */
+    const herdWas = g.creatures;
+    g.creatures = [];
     const filmOf = (c) => filmAt(Math.floor(c.x), Math.floor(c.z));
     const spanSolid = (c) => {
       let n = 0;
@@ -8571,18 +8195,18 @@ What was measured before any of this was fixed, over 180 frames of walking
       let worstM = 0, over = 0, frames = 0, dry = 0, solid = 0;
       let min = 9, max = -9, sum = 0, seen = 0;
       for (let i = 0; i < Math.round(secs * 60); i++) {
-        const y0 = fish0.y;
-        fish0.update(1 / 60, p, W, g);
-        const d = Math.abs(fish0.y - y0);
+        const y0 = probe.y;
+        probe.update(1 / 60, p, W, g);
+        const d = Math.abs(probe.y - y0);
         frames++;
         if (d > worstM) worstM = d;
         // a frame at exactly its own speed is not a frame faster than it swims
         if (d * 60 > own + 1e-6) over++;
-        if (!W.liquidAt(Math.floor(fish0.x), Math.floor(fish0.y + 0.2), Math.floor(fish0.z))) dry++;
-        if (spanSolid(fish0)) solid++;
-        const film = filmOf(fish0);
+        if (!W.liquidAt(Math.floor(probe.x), Math.floor(probe.y + 0.2), Math.floor(probe.z))) dry++;
+        if (spanSolid(probe)) solid++;
+        const film = filmOf(probe);
         if (film !== null) {
-          const under = film - (fish0.y + TALL);
+          const under = film - (probe.y + TALL);
           seen++; sum += under;
           if (under < min) min = under;
           if (under > max) max = under;
@@ -8591,24 +8215,24 @@ What was measured before any of this was fixed, over 180 frames of walking
       return { frames, worstM: +worstM.toFixed(4), worstPerS: +(worstM * 60).toFixed(2),
         ratio: +(worstM * 60 / own).toFixed(2), over, dry, solid,
         under: seen ? { min: +min.toFixed(2), max: +max.toFixed(2), mean: +(sum / seen).toFixed(2), seen } : null,
-        at: [f2(fish0.x), f2(fish0.y), f2(fish0.z)] };
+        at: [f2(probe.x), f2(probe.y), f2(probe.z)] };
     };
 
-    /* rig A: a fish stood in the deepest of those columns, at the height the rest
-       of the field hangs at, and left to the level law for ten seconds with no
-       errand, no shove and no neighbour: what is left is the level and nothing
-       else. The row says a crown HOVER under the film, give or take the swing. */
+    /* rig A: a body stood in the deepest of the capped columns (or the deepest
+       the lake gives), 0.3 m under the level its row says, and left to the level
+       law for ten seconds with no errand, no shove and no neighbour: what is left
+       is the level and nothing else. The row says a crown HOVER under the film,
+       give or take the swing. */
     const place = (col, y) => {
-      fish0.x = col.x + 0.5; fish0.z = col.z + 0.5; fish0.y = y;
-      fish0.tx = fish0.x; fish0.tz = fish0.z; fish0.homeX = fish0.x; fish0.homeZ = fish0.z; fish0.pause = 1e9;
-      return [f2(fish0.x), f2(fish0.y), f2(fish0.z)];
+      probe.x = col.x + 0.5; probe.z = col.z + 0.5; probe.y = y;
+      probe.tx = probe.x; probe.tz = probe.z; probe.homeX = probe.x; probe.homeZ = probe.z; probe.pause = 1e9;
+      return [f2(probe.x), f2(probe.y), f2(probe.z)];
     };
-    const other = field.slice(1).reduce((m, c) => m + c.y, 0) / Math.max(1, field.length - 1);
     const hungIn = cappedDeep || deepest;
     out.hungIn = hungIn;
-    out.hung = Object.assign({ stood: place(hungIn, other) }, run(10));
+    out.hung = Object.assign({ stood: place(hungIn, hungIn.film - TALL - HOVER + 0.3) }, run(10));
 
-    /* rig B: the same column, a fish put down on the bottom of it and let go. This
+    /* rig B: the same column, a body put down on the bottom of it and let go. This
        asks the rate on its own, with no help from the level law: whatever the
        level is, the way up to it is not a lift, and it has to be a way that
        arrives -- a law satisfied by never moving anything would pass the rate and
@@ -8618,20 +8242,20 @@ What was measured before any of this was fixed, over 180 frames of walking
     out.risenIn = deepest;
     out.risen = Object.assign({ row: f2(row), stood: place(deepest, deepest.bed + 0.35),
       climb: f2(row - (deepest.bed + 0.35)) }, run(10));
-    /* a fish that reaches its level is within the swing of it; a fish left on the
+    /* a body that reaches its level is within the swing of it; a body left on the
        lakebed under the tower is the whole depth of the water away from it */
-    out.risen.arrived = Math.abs(fish0.y - row) < BOB + 0.4;
-    keep.forEach(({ k, v }) => { fish0[k] = v; });
+    out.risen.arrived = Math.abs(probe.y - row) < BOB + 0.4;
+    g.creatures = herdWas;
     return out;
   });
   check('the water a swimming body hangs in is told by the water in the column, not by the brick standing over it',
     !towerWater.error && towerWater.wet > 0 && towerWater.deep > 0 && towerWater.bedTakes === 0, towerWater);
-  check('a fish stood in the deepest of those columns hangs where its own row says it hangs, in water, out of brick',
+  check('a water body stood in the deepest of those columns hangs where its own row says it hangs, in water, out of brick',
     !!towerWater.hung && !!towerWater.hung.under &&
     towerWater.hung.under.min > 0.2 && towerWater.hung.under.max < towerWater.hover + 1.2 &&
     Math.abs(towerWater.hung.under.mean - towerWater.hover) < 0.35 &&
     towerWater.hung.dry === 0 && towerWater.hung.solid === 0, towerWater.hung);
-  check('a fish put on the bottom of that column comes up to its level, and the water never closes that height faster than it swims',
+  check('a body put on the bottom of that column comes up to its level, and the water never closes that height faster than it swims',
     !!towerWater.hung && !!towerWater.risen && towerWater.hung.ratio <= 1.05 &&
     towerWater.risen.climb > 3 && towerWater.risen.ratio <= 1.05 &&
     towerWater.risen.arrived === true, { hung: towerWater.hung, risen: towerWater.risen });
@@ -9309,7 +8933,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       return up0.call(this, gl);
     };
     const built = {};
-    for (const id of ['human', 'frog', 'lanternfish']) {
+    for (const id of ['human', 'frog']) {
       const old = g.creatureMeshes[id];
       cap.length = 0;
       delete g.creatureMeshes[id];
@@ -9320,7 +8944,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     N.MeshBuilder.prototype.upload = up0;
 
-    let posErr = 0, faces = 0, creasedFaces = 0, worstRatio = 1, fishErr = 0;
+    let posErr = 0, faces = 0, creasedFaces = 0, worstRatio = 1;
     const tones = {};
     /* the shade at each of one face's four corners, as a share of the face
        constant: the mesh of a part is built box by box, six vertices a face in
@@ -9354,16 +8978,12 @@ What was measured before any of this was fixed, over 180 frames of walking
         }
       }
     }
-    for (const p of N.MODELS.lanternfish.parts) {
-      for (let bi = 0; bi < p.boxes.length; bi++) for (let fi = 0; fi < 6; fi++)
-        if (at('lanternfish', p.name, bi, fi).some(x => Math.abs(x - 1) > 0.01)) fishErr++;
-    }
     let bootCrease = 0;
     for (let fi = 0; fi < 6; fi++) {
       const f = at('human', 'shinL', 1, fi);
       if (spread(f) > 0.02 || Math.min(...f) < 0.99) bootCrease++;
     }
-    const out = { faces, creasedFaces, posErr, fishErr, bootCrease,
+    const out = { faces, creasedFaces, posErr, bootCrease,
       worstRatio: +worstRatio.toFixed(3), tones: Object.keys(tones).reduce((o, k) => (o[k] = tones[k].size, o), {}) };
     for (const [k, v] of Object.entries({
       frogLeg: ['frog', 'legFL', 0, 4], frogToe: ['frog', 'legFL', 1, 4],
@@ -9391,7 +9011,6 @@ What was measured before any of this was fixed, over 180 frames of walking
     crease.worstRatio > 0.70, crease.worstRatio);
   check('a body is no longer lit by six flat values',
     crease.tones && crease.tones.frog > 12, crease.tones);
-  check('a lamp is self-lit and takes no crease', crease.fishErr === 0, crease.fishErr);
   check('the crease is on the joints and not smeared over the body',
     crease.creasedFaces > crease.faces * 0.1 && crease.creasedFaces < crease.faces * 0.6, crease);
 
@@ -9824,7 +9443,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     !flank.error && flank.left.tones <= 3 && flank.right.tones <= 3, flank);
   /* the two greens sit 0.104 apart in their blue share in themselves, and the
      8-bit frame rides a hundredth on top of that, so the bound keeps margin on the
-     rounding; an unrelated surface -- the throat's grey-green, the lamp's amber --
+     rounding; an unrelated surface -- the throat's grey-green, the bed's grey --
      is a full quarter away and still fails */
   check('both readings are the body\u0027s own greens at two strengths, not two unrelated surfaces',
     !flank.error && [0, 1, 2].every((i) => Math.abs(share(flank.left)[i] - share(flank.right)[i]) <= 0.125),

@@ -169,44 +169,25 @@
     }
 
     spawnCreatures() {
-      const counts = { frog: 8, lanternfish: 10 };
+      const counts = { frog: 8 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
-        /* A species may name a landmark of its habitat zone instead of the
-           whole zone. The lamp field used to be the sunken tower's outline --
-           the tower placed the field, and "somewhere in the lake" was the
-           answer the field was not allowed to be. It is the lake's own water
-           now: the landmark is the centre of the lake and the spread its
-           radius, so a lamp is sent to open water, and the tower it stands in
-           is what the lamps steer round now and then. */
-        const zone = N.ZONE_BY_ID[sp.habitat[0]];
-        const at = sp.at && zone ? zone[sp.at] : null;
         for (let i = 0; i < n; i++) {
           /* A body is born where a body of its own kind is not already standing.
-             The field of the sunken tower is ten lamps sampled into a disc of
-             radius four round the tower -- 29 of its 49 columns are water and the
-             rest is the tower's own brick -- and the room a body asks of its own
-             kind is two trunks wide, 0.83 m for a lamp. Ten lamps do not fit in
-             that at that spacing, and a loop that takes the first sample clear
-             and otherwise whatever the tenth throw landed on answers a crowd it
-             cannot satisfy with the worst of the ten: two of them were once born
-             9 cm apart, and the nearest pair of the worst of five mornings stood
-             0.23 m, six of the ten born inside the room its own kind asks. The
-             pair spent the afternoon inside one another, because they started
-             that way and the lake never gave them a reason to part. So of the
-             places the species will accept, the one taken is the one furthest
-             from its own kind -- the same rule the animal follows when it picks
-             somewhere to swim to -- and a crowd the ground cannot hold is at
-             least spread as wide as that ground allows: the nearest pair of the
-             worst of five mornings went 0.23 m to 0.67 m. What the ring cannot
-             hold it still cannot hold -- eight of the ten are born inside the
-             room even now, six of them were before this -- and that is what the
-             test reports, rather than a number made to pass a bound. */
+             A loop that took the first clear sample answered a crowd the ground
+             cannot hold with the worst of the throws: two of them were once born
+             9 cm apart, and the pair spent the afternoon inside one another,
+             because they started that way and the lake never gave them a reason
+             to part. So of the places the species will accept, the one taken is
+             the one furthest from its own kind -- the same rule the animal
+             follows when it picks somewhere to swim to. What the water cannot
+             hold it still cannot hold, and that is what the test reports,
+             rather than a number made to pass a bound. */
           const mw = N.MODEL_W[sp.model] || [0.5, 0.5, 0, 0];
           const room = (Math.max(mw[0], mw[1]) * (sp.scale || 0.2)) * 2 + 0.4;
           let p = null, bestGap = -1;
           for (let t = 0; t < 10; t++) {
-            const q = this.samplePos(sp.habitat[0], at, sp.spread || 4);
+            const q = this.samplePos(sp.habitat[0]);
             if (!q) break;
             let gap = 1e9;
             for (const c of this.creatures) {
@@ -220,36 +201,23 @@
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);
           /* A body that swims has to be **born in the water**. The sample puts its feet
-             on the ground of the column, and the ten lamps of Mirrorlake were born
-             standing on the lakebed under eight metres of their own lake: their
-             first updates were spent being yanked up to the depth their row states
-             -- the crown read **8.73 m** under the film at the animal's very first
-             update, closing at **0.72 m a frame**, which is 14.4 m/s against the
-             2.2 m/s a lamp swims at. A lamp does not shoot up from the mud, and the
-             reading of the depth a lamp hangs at came to depend on how long the
-             page had been alive: 3.4 m under the film, 226 of 60000 lamp-frames
-             over the band the row allows, measured seconds after the world was
-             made; 1.89 m and no frames over, measured minutes later. */
+             on the ground of the column, and an animal of the water born on the lakebed
+             would spend its first updates being yanked up to the depth its row states --
+             the lamps paid it once, at 14.4 m/s against the 2.2 m/s they swam, and their
+             depth reading came to depend on how long the page had been alive. No animal
+             in the valley is aquatic now, so the line stands for the one the water next
+             holds. */
           if (c.isAquatic()) c.y = N.hoverLevel(sp, this.world, p.x, p.z, c.tall);
           this.creatures.push(c);
         }
       }
     }
-    samplePos(zoneId, at, spread) {
+    samplePos(zoneId) {
       const z = N.ZONE_BY_ID[zoneId] || N.ZONE_BY_ID.whisperwood;
       const W = this.world;
       for (let t = 0; t < 300; t++) {
         let x, zz;
-        if (at) {
-          /* A spread is a radius, not a half-width: every other branch below
-             samples a disc, and the creature data, the dex ("the field is the
-             open water of the lake") and the test all read it that way.
-             Sampling a square instead let a lamp stand 5.7 m from a 4 m
-             spread, and the field's honest bound -- twice the spread -- came
-             out wrong. */
-          const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * spread;
-          x = at[0] + Math.cos(a) * r; zz = at[1] + Math.sin(a) * r;
-        } else if (z.kind === 'circle') {
+        if (z.kind === 'circle') {
           const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * z.r;
           x = z.cx + Math.cos(a) * r; zz = z.cz + Math.sin(a) * r;
         } else if (z.kind === 'rect') {
@@ -712,20 +680,6 @@
       p.fright = Math.min(1, p.fright + dt * 0.9);
       this.damage(dt * 0.5, N.disp(c.sp));
       if (Math.random() < dt * 2) this.logMsg(N.t('log.chased', { n: N.disp(c.sp) }), 'bad');
-    }
-    /* The lanternfish is not chasing anyone -- the sting is the light, and the
-       light is standing where you are. The warning is throttled so wading
-       through a field of ten does not fill the log, and it says what the
-       answer is, because the answer is a body. */
-    onSting(c, dt) {
-      // The sting is the valley's only contact damage: the creatures do not
-      // touch a player at all, and the one body the lake is lit for (the frog,
-      // poisonImmune by data) does not take it either.
-      this.damage(dt * c.sp.sting, N.t('log.causeSting'));
-      if (this._stungAt === undefined || this.time - this._stungAt > 12) {
-        this._stungAt = this.time;
-        this.logMsg(N.t('log.stung', { n: N.disp(c.sp) }), 'bad');
-      }
     }
     onVeil(p) {
       this.veilWarn = (this.veilWarn || 0) + 1;

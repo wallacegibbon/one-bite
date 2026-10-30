@@ -174,8 +174,6 @@
       'log.causeDry': '脱水',
       'log.causeDrown': '溺水',
       'log.causeFall': '坠落',
-      'log.causeSting': '灯鱼电击',
-      'log.stung': '{n}的光蜇进来了——变成雨蛙就不怕它。',
       'log.nameAsk': '给自己起个名字（留空 = 不要名字）：',
       'log.nameTooLong': '名字最多 {n} 个字。',
       'log.langTo': '界面语言：{n}'
@@ -330,8 +328,6 @@
       'log.causeDry': 'drying out',
       'log.causeDrown': 'drowning',
       'log.causeFall': 'a fall',
-      'log.causeSting': 'a lanternfish sting',
-      'log.stung': '{n} light stings you — only a frog body shrugs this off.',
       'log.nameAsk': 'Choose a name (leave empty = no name):',
       'log.nameTooLong': 'A name is {n} characters at most.',
       'log.langTo': 'Interface language: {n}'

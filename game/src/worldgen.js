@@ -370,8 +370,9 @@
     }
   }
   function lakebed() {
-    // sunken tower -- the landmark lives in the zone data, because the
-    // lanternfish field is defined as its outline and spawns from there
+    // sunken tower -- the landmarks (the lake's centre, the tower, the huts)
+    // live in the zone data as world facts; the field that used to be defined
+    // by this tower's outline went with the lamps
     const [tx, tz] = MIRROR.tower;
     plinth(tx - 3, tz - 3, tx + 3, tz + 3, 6);
     box(tx - 3, 6, tz - 3, tx + 3, 15, tz + 3, 12, true);
