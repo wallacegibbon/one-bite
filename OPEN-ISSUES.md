@@ -7,141 +7,58 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: round 26, tree `098ae22` (the docs prose drift of
-issue 9 pushed to both remotes with its gates green), with two further
-pieces in flight: the docs keep one language (issue 10) and the valley
-narrows to the frog (issue 11, staged). The watch (loop 14) ran to
-twenty-four green on the pre-removal tree; the next watch starts on the
-final tree. Issue 1 (night
-sky read as black blocks) is
-root-caused, fixed and pinned by the `theSkyBelowTheHorizon` law. Issue 3
-(POI heights + teleport waypoint) is measured and fixed, data and docs
-only. The meshing red of loop 3 run 7 is root-caused to CPU preemption and
-the statistic is now the min of the chunk's three passes (2d). Law 2c (the
-tower-masonry inside count of the day soak) is root-caused and fixed: a frog
-deep in its dive steps flat across the wall face into the tower's frogpear
-door (the doors are not rock), and the lift that raises a body onto its
-floor asked nothing about the ceiling over its head, so it lifted the frog
-into the glass and the solid-exit correction carried it up the masonry to
-the roof; the lift now caps at the body's own column ceiling minus its
-height while the feet are not already inside a hard block (a buried body
-keeps the lift onto its floor — the lakebed law), the inside count is
-aligned to the hard world (a leaf at the feet is the bush the body is
-hopping through, as every gate already excuses), the soak is instrumented
-with a per-frame entry window near the tower column, and a pinned-door
-canary asks the fix directly. The check the fix owed — whether the new
-ceiling and the climbTo step it rides interact — found the cap had asked
-the hop gate's material question (leaves excused, the trunk counted)
-where it owes the step gate's (rock over the step top is a wall, wood is
-the tree the walker goes under): over one of the worldgen's fallen logs,
-which the meadow's dip leaves floating a cell above the grass, the cap
-read the log as the roof and held a frog aimed at the step at four-fifths
-of it for the whole watch (584 of 600 frames, measured); the cap now asks
-the step gate's table, all wood excused, and the same frog is over the
-edge by the fiftieth frame. The tower's glass is rock, so the door canary
-is untouched and still pins the door, and a second pinned canary asks the
-step directly. On the tree of `6494e99` the soak loops came back
-twenty-four green in a row (loops 4 and 5) -- forty-one consecutive
-faithful full green runs altogether -- so the dust half of the flake (2a)
-was closed on the resolution it was set to close on (guard provable,
-measured airtight, the recorded red line never reproduced), and the
-frog-ceiling half (2b) stood watched with the loop: its recorded red line
-is a mid-development artifact of a rig the committed code cannot print.
-The watch that was running when the material correction was found (loop 6,
-on the previous tree) stood fourteen green and was stopped to make way;
-loop 7 on `0236ff1` came back twenty-four green in a row, and loop 8 stood
-nineteen green before it was stopped to land the night-sky star fix. The
-user's night-sky report (a regular dot grid filling the sky at 00:50 over
-Mirrorlake) is root-caused to the star hash leaving the range a mediump
-float can hold and is fixed and pinned on `9d75468` (issue 4). The watch
-loop 9, started on that tree, went green on its first run and red on its
-second -- the highest-isle dust law, the 2a half of the soak flake, red
-after forty-four green runs on the corrected tree: the airtight proof that
-closed it (section 2a) asked the wall of the double-precision destination
-while the position is stored in float32, and a destination a hair below a
-cell boundary in double stores as the boundary itself, so the guard let a
-mote born in air across the face of a solid cell it was stored in, and the
-rule that keeps the move of a mote already inside a block then carried it
-through the canopy for the rest of its life (**134** of **61,626** samples
-in the red line, **130** of **61,626** reproduced on the fifty-eighth fresh
-attempt of a live probe that audits the guard's own inputs on every mote
-every frame and watched the twenty-seven cells around the trap for any
-world change, and saw none). The wall is now asked of the cell the mote is
-*stored* in, and 150 fresh attempts of the same rig come back clean. The
-watch loop 10 on the fixed tree came back green on its first three runs and
-red on its fourth, on a new line (section 2f below): the afternoon-walk law
-read the two bears at **57** of their frames moving for **99 m**, against a
-bound of 60 and a green range of 86-99, outside every measured range; the
-read found the walk-stop-walk the wander state gives a bear between errands
-and no fault in the bear's code, so the game was not changed, and the rig
-now carries the per-body read so the next red of it is readable in the log.
-The user's lake-squares question (issue 5) is root-caused to the water mesh
-drawing a flat one-metre pane against every kelp cell -- kelp is a micro
-block, non-opaque and visually water, so the water rule read it as "not
-water" -- and is fixed (the water now culls the face against a micro cell,
-the way it already culls it against water) and pinned; the proof is an
-eight-thousand-pixel A/B that takes the squares out and restores the frame
-pixel for pixel. The fix surfaced a fifth red in the round: the kelp law's
-non-vacuity read was riding on two far stalks at the edge of the frame whose
-contrast the cull took, and it is resolved by the test-only amendment that
-puts the lens under the surface a metre and a half above a stalk and reads
-it at two lum. The watch of the lake-squares tree (loop 11) came back
-twenty-four green in a row -- no red, nothing to parse. The user's star
-report (issue 7: all the stars lit and dimmed in unison) is root-caused to
-the star mask's own value doubling as the twinkle's phase -- the mask pins
-each star's hash in a sliver of 0.0035, and the phase fed to the twinkle,
-that value times forty, spans 0.14 radians, so every star shared one phase
-and one speed and the whole sky breathed as one lamp -- and is fixed with
-two more full-range hashes of the star's cell, one for the phase (uniform on
-the circle) and one for the speed (a fifth to a quarter of a turn per
-second), the mask untouched, and pinned by a new law of the sky family:
-measured at the scatter's lens over four game seconds, in every second
-454..524 star pixels brightened while 408..491 dimmed at the same time (the
-suite's 900x560 frame; at the 1200x700 probe frame the same read counts
-749..823 against 726..808), all the star pixels that ever lit swung more
-than thirty of luminance across the four seconds, the scatter at its own
-time reads 0.151% of the frame with its largest bright patch 30 pixels,
-the midnight count reads 710 against its bound of fifty, and no star moved
-a pixel from its place between the grabs. The user's underwater-glow
-question (issue 6: blocks under the water still lit) is measured to be the
-lake's own lamps, not a leftover of the kelp panes: the census counts zero
-self-lit blocks under the water, the kelp law still reads its close-up
-stalk with its emissive removal at exactly zero, and the dots the user
-photographed are the ten lamp jellies drifting a metre or two under the
-surface on the sunken tower's outline (their own dex: from the surface, the
-tower glows) and the eight frogpears on the tower's window sills, which the
-water's own path turns from the lamps' blue to the green the user saw. The
-minimap's defect (issue 8, found by re-reading while the standing watch ran:
-the dots of the corner map spin twice as fast as the map they stand on, and
-sit stretched off the markers they are meant to sit on) is root-caused to the
-dots being rotated by hand in a frame the context has already rotated to the
-heading -- the terrain image sits one pixel per cell in that frame, so the
-dots needed no turn of their own and no stretch, and the hand rotation spun
-them twice as fast while the stretch of 1.3871 pixels per cell parked them
-38.7 % out from their own markers -- and fixed (the hand rotation and the
-stretch go, the dots keep their alpha and their size) and pinned by a new
-law that reads the minimap's own canvas at two stands and three headings and
-checks every in-range place shows a dot-sized warm mark on its terrain
-position; the proof is the same read on both sides, 16.5-17.9 px from the
-mark before the fix, 0.7 px after. The comment the fix owed -- the kelp note
-of the block table, still telling the pre-amendment story as if it were
-current -- was aligned to the amended law's lens at `e0b20c2`. The watch of
-the star-fixed tree (loop 12) came back twenty-four green in a row. The watch
-started on that tree this session (loop 13) came back five green and red on
-its sixth run, on a new line (section 2g below): the flock's crown law read
-sixty-nine of the owls' frames at or over the top of everything in their
-column, against a bound of seventy -- the documented bottom of the post-fix
-range -- and the read found two of the six owls holding a low line in the
-leaf layer of the crowns they crossed, the altitude the flight gives them,
-with the hard-world reads of the same window at their own record; the game
-was not changed and the law was not moved, and the rig now carries the
-per-owl crown read so the next red of the line names the bird dragging the
-mean. The round now has one hundred and ninety-seven faithful full green
-runs, the six red lines of the round stand as recorded -- the first three
-root-caused and fixed, the kelp-law fifth resolved with its close-up read,
-the walking-soak fourth and the crown-line sixth read, recorded and watched
-(2f and 2g) -- and the standing watch is loop 14 on the tree of this commit,
-started after loop 13 came back five green and red on its sixth run.
+State at time of writing: round 27, tree `cc08b55` (the quest skin and the
+buff mushrooms cut, pushed to both remotes with the gates green twice on
+its own tree). The round's driving change was the user's: the valley's
+three quests keep what they give and lose what they say -- they become the
+three deeds the valley keeps for itself (cellar, lake, greenhouse: a deed
+carries no text the player reads, no checklist and no hint; the only
+consequences are the storage it hands over, which still arrives with the
+plain upgrade line it always had, and the name it starts to use for you,
+the epithet) -- and the four buff mushrooms and the buff system they fed
+(the stealth, the jump, the guard and the glow the player wore for a
+while) go out of the game, the glowseed with them, so the plants the
+valley grows are the one that was always the valley's own: the cellarseed,
+block 60, now the only self-lit plant standing in the world (the glowcap's
+ring, block 76, keeps its place in Glowglade as the scenery the world
+always had). The cut also lands issue 11's stage B: the bear, its fruit
+and form, the mountains' cold and the raids go with the owl the stage
+before took, and the valley keeps three bodies and no flight. The stage C
+demotion of the frog pear to common did not land with it: the valley grows
+one fruit and it is rare (docs/04 says so and the data agrees), the
+five-rung ladder stays, and the demotion stands as the user's open design
+call. The landing owed three findings. The first was a bug of the game's
+own: the journal panel was still concatenating the section it had lost
+(ui.js renderJournal said `me + q + b + c` with `q` gone, a
+`ReferenceError` that opening the journal in a browser would have
+thrown); it now says `me + b + c`, and the language test that renders the
+panel in both languages reads it back. The second was the world moving
+under the laws: the cut takes content out of the worldgen's seeded draw,
+so the placements the scatter's scan hunts for stand in new columns, and
+the spark law's wall scan owed the air-birth premise its crown scan
+already carried -- the burst is let go at the terrain row plus a lift of
+a random metre, so the cells it can be born in must be air, or the
+question asked is no longer "does the air keep it"; the scan now asks that
+of the cells it can be born in, on the wall and the crown alike. The
+third was the standing count of the valley's rebuild: the cut takes the
+micro and emissive bucket meshes the scatter content held, so the meshes
+the valley stands on move from 269 to 185, the mesh-count law's lower
+bound now asks for over 100, and the docs say 185. A save written before
+the cut still lands on the right deeds: the three that remain keep their
+ids (the loader maps the old ids q1, q4 and q6 onto cellar, lake and
+greenhouse), and the flags the quests the owl and the bear took with them
+carried land on nothing and are lost, the way they were meant to; the
+round-trip law puts the whole valley back off the save and reads the deeds
+off it the way it read the quests. The watch loop 14 finished its
+twenty-four green on the tree of `aa84552`; the trees that followed it --
+`1dadbf4` (the docs' one language, gates 1-4 on the flat tree, its
+gate-5 double run on the final tree of the stage), `a8ae110` (flight and
+the owl, the full contract twice on its own tree) and `cc08b55` (this cut,
+the full contract twice on its own tree) -- came back green on the gates
+they owed. The standing watch on this tree is loop 15. The issues 1-8 of
+round 26 stand closed as recorded; 2f (the walking soak) and 2g (the flock
+crown) stand recorded and watched with the loop.
+
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -590,7 +507,12 @@ of this commit), and loop 12 on the star-fixed tree came back twenty-four
 green in a row, loop 11 the same on the lake-squares fixed tree, loop 13
 came back five green and red on its sixth run (the line 2g below), and the
 four all.sh gate runs of the minimap fix and of the kelp comment it owed
-came back green on the trees they landed on.
+came back green on the trees they landed on. Loop 14 (the standing watch on
+`aa84552`) finished its twenty-four runs green; the trees that followed
+it -- `1dadbf4`, `a8ae110` and `cc08b55` -- came back green on the gates
+each owed (the docs-only one on gates 1-4, the other two on the full
+contract twice on their own trees), and the standing watch on `cc08b55` is
+loop 15.
 
 Instrumentation shipped in this round (test-only, `game/test/play.js`):
 the dust rig's trails and `bad` dump (2a), the frog rig's full `traj` (2b),
@@ -1261,9 +1183,10 @@ What changed:
   game sources, in this same commit (the sweep waits for the watch to
   release `game/`).
 
-Status: flat rewrite done. Gates 1-4 re-run on the flat tree; the full
-contract with gate 5 lands once the watch (loop 14) ends, so the commit's
-double all.sh runs on the final tree of the stage.
+Status: closed. Landed as `1dadbf4` (gates 1-4 on the flat tree); the
+full contract with gate 5 ran twice on the final tree of the stage
+(`a8ae110`, flight and the owl, pushed to both remotes) after the watch it
+waited on (loop 14) came back twenty-four green on `aa84552`.
 
 ## 11. The valley narrows to the frog (round 26; user decision, staged)
 
@@ -1354,9 +1277,14 @@ READMEs done; the gate contract runs next on this tree:
   frog pear stays rare until Stage C demotes it to common.
 - Issue 10 landed as 1dadbf4, the stated precondition of this round.
 
-Status: Stage A's gate contract runs on this tree, then the stage commits and
-stages B and C follow in order; the standing watch stays on the pre-round
-tree until Stage C's final double.
+Status: stage A landed as `a8ae110` (the full contract twice on its own
+tree, pushed to both remotes). Stage B (the bear, its fruit and form, the
+mountains' cold and the raids) landed with the round 27 cut, `cc08b55` (the
+full contract twice on its own tree, pushed to both remotes). The stage C
+demotion of the frog pear to common did not land: the valley grows one
+fruit and it is rare (docs/04 and the data agree, the five-rung ladder
+stays), so it stands as the user's open design call, recorded here so the
+stage is not read as done. The standing watch is loop 15 on `cc08b55`.
 
 ## Standing contract (every session, in order)
 
