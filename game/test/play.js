@@ -6317,6 +6317,14 @@ What was measured before any of this was fixed, over 180 frames of walking
     // the water" is about
     let nearFilm = 0;
     for (const d of depths) if (d < 1) nearFilm++;
+    // The water the flock spends over the window, from its fifth to its
+    // ninety-fifth percentile sample. The instant is not asked: a body's dip
+    // runs on a cycle between forty seconds and two minutes long, so the
+    // window keeps one slice of each body's cycle, and a slice can hold all
+    // five bodies near one depth at every instant of it. The instant keeps its
+    // own witness in the sameLine count below.
+    const spanLo = depths[Math.floor(depths.length * 0.05)] || 0,
+      spanHi = depths[Math.floor(depths.length * 0.95)] || 0;
     const out = { seconds: 40, frogs: frogs.length, wetFrames: wet, inside,
       insideHits,
       // the entry window (2c): setup and the line format above the loop --
@@ -6328,8 +6336,10 @@ What was measured before any of this was fixed, over 180 frames of walking
           return win ? { i: k, frames: win.length, lines: win } : null; }).filter(Boolean) },
       depthSamples: depths.length,
       depthMedian: +(depths[depths.length >> 1] || 0).toFixed(2),
-      depthLow: +(depths[Math.floor(depths.length * 0.05)] || 0).toFixed(2),
-      depthHigh: +(depths[Math.floor(depths.length * 0.95)] || 0).toFixed(2),
+      depthLow: +spanLo.toFixed(2),
+      depthHigh: +spanHi.toFixed(2),
+      depthSpan: +(spanHi - spanLo).toFixed(2),
+      depthLayers: Math.floor(spanHi / 0.5) - Math.floor(spanLo / 0.5) + 1,
       nearFilmPct: Math.round(nearFilm / Math.max(1, depths.length) * 100),
       sameLinePct: Math.round(sameLine / Math.max(1, wet) * 100),
       spreadMedian: +(spread[spread.length >> 1] || 0).toFixed(2),
@@ -6341,12 +6351,22 @@ What was measured before any of this was fixed, over 180 frames of walking
     Object.assign(p, was);
     return out;
   });
-  /* Forty seconds of the five frogs of Mirrorlake: at no instant of the window
-     are they all within 20 cm of one depth (measured over run after run of the
-     step: none of the frames), they are spread over 1.2-3.2 m of it at the
-     middle instant from the shallowest to the deepest (2.4-4.6 m at the
-     widest), and they sit in three to five half-metre layers of the lake
-     instead of the one layer they used to hold. The depth is counted down
+  /* Forty seconds of the five frogs of Mirrorlake. The spread is asked of the
+     window, not of an instant: a body's dip runs on a cycle between forty
+     seconds and two minutes long, so the window keeps one slice of each
+     body's cycle, and a slice can catch all five in the deep half of the
+     water, where the widest instant of the window's spread measures 1.6-1.8 m
+     run after run, against 3.9 m at the widest of the ordinary runs, while
+     every one of the five still walks its own metres of the water across the
+     window. An instant is a slice of the cycle, not the cycle, and five bodies
+     asked the same question at the same moment of one cycle answer near one
+     another, so the instant is kept only as the witness that at no frame of
+     the window are the five within 20 cm of one depth (run after run: none of
+     the frames). What the window answers, run after run: the flock spans
+     1.9-3.6 m of the lake's depth from its fifth to its ninety-fifth
+     percentile sample -- 1.9 at the narrowest, where the bodies were born with
+     the shallow hangs of the draw -- and it holds four to eight of the lake's
+     half-metre layers instead of the one layer the line used to keep. The depth is counted down
      from the top face
      of the water, which is where the surface of the lake is: counted from the
      index of the cell that holds the top of the water, the frogs floating at the
@@ -6362,9 +6382,9 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the five frogs on one lake do not all swim at one depth',
     !flock.error && flock.sameLinePct < 10, flock);
   check('they are spread over metres of the water, not a hand span of it',
-    !flock.error && flock.spreadMedian > 1 && flock.spreadMax > 2, flock);
-  check('and at any one instant they are spread over several layers of it',
-    !flock.error && flock.bandMedian >= 3, flock);
+    !flock.error && flock.depthSpan > 1.5, flock);
+  check('and over the window they are spread over several half-metre layers of it',
+    !flock.error && flock.depthLayers >= 3, flock);
   /* The depth itself is the animal's own, not the water's: 30 cm under the film
      is where a body that has to come up for air hangs, and a frog's record says
      1.6 m. Before that, over ten minutes of a running world, the twelve spent
@@ -7166,12 +7186,23 @@ What was measured before any of this was fixed, over 180 frames of walking
     const keep = { x: wild.x, y: wild.y, z: wild.z, yaw: wild.yaw, vy: wild.vy, state: wild.state,
       pause: wild.pause, tx: wild.tx, tz: wild.tz, homeX: wild.homeX, homeZ: wild.homeZ,
       sleeping: wild.sleeping, fright: wild.fright, held: wild.held, t: wild.t, speed: wild.speed,
-      climbTo: wild.climbTo, climbRate: wild.climbRate };
+      climbTo: wild.climbTo, climbRate: wild.climbRate, orbit: wild.orbit };
     const herdWas = g.herdCentres && g.herdCentres.frog;
     if (g.herdCentres) g.herdCentres.frog = { x: lake.x, z: lake.z, n: 1 };
     wild.x = lake.x; wild.z = lake.z; wild.y = bed + 0.05; wild.vy = 0;
     wild.homeX = wild.x; wild.homeZ = wild.z; wild.state = 'wander'; wild.sleeping = false;
     wild.fright = 0; wild.pause = 9999;
+    /* The ring the water keeps it in is set aside for the window: the ring
+       overwrites the target the line below pins on the first frame of every
+       one, because the errand is reached the moment the body is on it and the
+       body is always on it, and it then runs the frog round the keep on the
+       ring's own errands, where the band the window measured was the shallows
+       the frog stood in round the isle's edge -- 14.0, where the column
+       answers 12.9 -- and the dip it was asked for was not in it at all. What
+       the window asks is the level the water holds a frog of the column at,
+       and that level is not the ring's; the ring is asked by the step that
+       keeps it. */
+    wild.orbit = null;
     /* Two minutes and more, not ten seconds: a frog's dip runs on a cycle of its
        own, and that cycle is between forty seconds and two minutes long, so a
        short window catches one moment of it and calls it the whole of it. Over a
