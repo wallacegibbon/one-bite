@@ -3486,7 +3486,15 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   check('the turn is real: the frog is in the water and ends up facing a quarter away from where it started',
     !!lean.swim && lean.swim.wet && Math.abs(lean.swim.turned) > 0.5, lean);
-  check('a body the water is holding leans into it', !!lean.swim && lean.swim.peak > 0.15, lean);
+  /* The bound sits under the band the body's own pace leaves, and not at a
+     point of it: the lean is built on the speed -- the sideways push the arc
+     needs over the pull of the earth -- and the speed the body spends this
+     turn at is its own draw, 0.85-1.25 of the cruise its row states, so the
+     peak the drive above measures runs 0.13-0.20 rad over the band (the
+     slowest measured 0.133, the fastest 0.201, run after run at the band's
+     ends), and 0 for the ground, which the check below asks. A bound above
+     the band's bottom would refuse a body the valley actually keeps. */
+  check('a body the water is holding leans into it', !!lean.swim && lean.swim.peak > 0.12, lean);
   check('a body on foot does not: the same frog turning on land stays level', !!lean.walk && lean.walk.peak < 0.02, lean);
   check('and the renderer reads the lean: the same body level and tilted is not the same frame',
     !!lean.swim && lean.diff > 300, lean);
