@@ -7,7 +7,56 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: round 29, tree `10a4c35` (the user's frog
+State at time of writing: round 29 follow, tree `0835510` (the
+watch of the round 29 tree went red on its eighth run, on a flake the
+round's own pace draw had planted in the lean: the turning step asks
+the peak a body banks through a quarter turn, the peak is built on the
+speed, and the speed is the body's own pace (0.85-1.25 of the cruise),
+so the peak runs 0.13-0.20 rad over the band and the 0.15 bound the
+step kept sat inside the band; the bound now sits at 0.12, under the
+worst measured peak, and the chapter's measured peak is the band the
+current bodies leave instead. The two gate runs on the nose tree then
+surfaced the two flakes the round's other draws had planted. The first
+was in the dip window: the window pins the frog's target to the column
+it asks the water of, and the ring the round put on the same frog
+overwrote that pin on the first frame of every one -- the errand is
+reached the moment the body is on it, and the body is always on it --
+so the frog lapped the shallows round the isle's edge for the whole
+window and the level the column answers (12.9) came back as 14.0; the
+ring is set aside for the window and restored on the way out, and the
+ring is asked by the step that keeps it. The second was in the flock:
+the forty-second window keeps one slice of each body's dip cycle, and
+the cycle is between forty seconds and two minutes long, so a slice
+can catch all five in the deep half of the water, where the widest
+instant of the window's spread measures 1.6-1.8 m against 3.9 m at the
+widest of the ordinary runs, and the 2 m bound the instant carried sat
+inside the hang the draw leaves there; the spread is now asked of the
+window, not of the instant -- the flock spans 1.9-3.6 m of the lake's
+depth from its fifth to its ninety-fifth percentile sample and holds
+four to eight of the lake's half-metre layers, run after run over sixty
+flocks, 1.9 at the narrowest where the bodies were born with the
+shallow hangs of the draw -- the bound sits at 1.5, under that band,
+where the formation the law replaced answers 0, and the instant is kept
+only as the witness that at no frame of the window are the five within
+20 cm of one depth, the measure the paragraph below still carries at
+the middle instant and the window has now stopped making. And the
+round owed one more finding the gates had not owed: the nose the step
+gate of a body that lives in the water asks was read off the body's
+own model line, and a body is worn as nothing -- the model line is a
+record the player alone has -- so every wild body's nose was 0 and the
+brick the snout stood in, 0.31 m ahead of the frog's centre at the
+scale the frog draws at, was asked nothing at all; the rig that wears
+a line pins the body's x and z and so never asked the ground the snout
+enters, and no creature's row names the water body today, but the
+machinery stayed measured and tested for the next animal the valley
+puts in that water, and the model is read off the species's own line
+now, the one that already gives the reach its scale. Every tree of the
+chain was gated twice with the suite whole and the play log clean
+(10/10, 0 CHECK FAILED) before it was pushed to both remotes: `2ab1fbd`
+the round's record, then `ec4f764` the lean bound, `a1ef6c5` the two
+window fixes, and `0835510` the nose; the standing watch on this tree
+follows once this record is on both remotes), on the tree of
+`10a4c35` (the user's frog
 word landed in three stages, the first two already pushed: the frog
 pear demoted from rare to common, and the fish cut out of the valley
 with the machinery that had been measuring them. The stage that
