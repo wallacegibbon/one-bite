@@ -26,6 +26,15 @@
       id: 'frog', cn: '雨蛙', en: 'Mirrorlake Frog', model: 'frog', scale: 0.13,
       habitat: ['mirrorlake', 'glowglade', 'starfall'], active: 'both',
       locomotion: 'amphibian', speed: 1.8, swimSpeed: 4.6, turn: 0.9, hop: { up: 6.0, period: 0.9 }, alert: 12, herd: 8,
+      /* the ring the water keeps a frog of this species in: while the body is in
+         the water its errands run round the landmark its habitat's zone names
+         (`at`), at a lane of its own between `r0` and `r1` metres out, each
+         errand the next arc of the ring the body has not yet covered, all the
+         way round the same way. On the bank a frog wanders round its home as
+         before. The pace each body spends the ring at is its own (see `pace` in
+         the Creature constructor): the species sets the speed, the body sets
+         the tempo. */
+      orbit: { at: 'lake', r0: 25, r1: 30 },
       /* how far under the level the water floats it a resting body of this kind
          hangs: a frog built for the lake does not lie under the surface film. The
          body worn from this animal's fruit is held at the same depth. */

@@ -547,24 +547,43 @@ const { sim } = require('./simwait');
     const dusk = new N.Creature(Object.assign({}, N.CREATURE_BY_ID.frog, { active: 'dusk' }), 62, surf + 1 - 1.6, 88);
     out.duskNoon = run(dusk, 0); out.duskDusk = run(dusk, 0.6);
     Object.assign(frog, wasFrog);
-    // the herd: a synthetic one over open water, so the only thing that moves is
-    // the straggler going back to the middle of its own kind
-    const h = { x: 78, z: 106, n: 3 };
+    /* The pull of the herd is a law of the ground: a body that swims the ring
+       the water keeps it in is not pulled to a middle that sits in the middle
+       of the water it does not swim (the guard in the body's own update). So
+       the straggler stands on the dry rim of the lake -- ground above the film,
+       dry for the whole way it walks -- a throw from the middle of its kind,
+       and the run is a walk: the species walks at 42% of the 1.8 its table
+       names, a body spends that at its own 0.85-1.25, and seven seconds of
+       that is 4.5 m at the slowest body -- the 3 m the check asks, measured
+       over the slowest and the fastest bodies a draw can give. The straggler
+       stays 13 m or more from the middle the whole way, which is what keeps
+       the pull aimed at the middle and not at the errand it was born on. */
+    const herdWas = g.herdCentres && g.herdCentres.frog;
+    const h = { x: 114.5, z: 100.5, n: 3 };
     g.herdCentres.frog = h;
-    const straggler = new N.Creature(N.CREATURE_BY_ID.frog, 98, 10, 106);
-    straggler.state = 'wander'; straggler.pause = 99; straggler.tx = 98; straggler.tz = 106;
-    straggler.yaw = -Math.PI / 2;                     // pointing at the middle
+    const straggler = new N.Creature(N.CREATURE_BY_ID.frog, 121.5,
+      N.terrainY(g.world, 121, 81, g.world.h - 1) + 0.01, 81.5);
+    straggler.state = 'wander'; straggler.pause = 99;
+    straggler.tx = straggler.x; straggler.tz = straggler.z;   // the errand the herd answer replaces
+    straggler.yaw = Math.atan2(h.x - straggler.x, -(h.z - straggler.z));   // pointing at the middle
     g.night = 0.5;
     const before = +Math.hypot(straggler.x - h.x, straggler.z - h.z).toFixed(1);
-    // three seconds: a frog swims at 4.6 m/s and only 42% of that while strolling
-    for (let i = 0; i < 180; i++) straggler.update(1 / 60, p, g.world, g);
+    // seven seconds of walking
+    for (let i = 0; i < 420; i++) straggler.update(1 / 60, p, g.world, g);
     out.herd = { before, after: +Math.hypot(straggler.x - h.x, straggler.z - h.z).toFixed(1) };
+    g.herdCentres.frog = herdWas;
     g.creatures = crowd;
     g.night = was.night; Object.assign(p, was);
     return out;
   });
+  /* The band is the water cruise -- the 42% of the 4.6 the row names -- at the
+     body's own pace of 0.85-1.25: 1.64-2.42 m over the second the run walks,
+     with a hand's width of margin at each end. Below the band the body crossed
+     at the rate of the land (0.76 of it); above it the cruise fraction never
+     came down at all (4.6 is the row's swim, and a body that crosses the lake
+     at the full row number is not the animal the row names). */
   check('the frog crosses the lake at the rate its record names, not some other',
-    beasts.frogRun > 1.3 && beasts.frogRun < 2.4, beasts);
+    beasts.frogRun > 1.5 && beasts.frogRun < 2.5, beasts);
   check('a dusk animal is asleep at noon and abroad at dusk', beasts.duskNoon === 0 && beasts.duskDusk > 1.2, beasts);
   check('a frog that wanders off hops back to the herd', beasts.herd.after < beasts.herd.before - 3, beasts.herd);
 
@@ -1840,7 +1859,7 @@ const { sim } = require('./simwait');
     const grab = () => { const b = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
     const parts = g.ensureModel('frog');
     /* The body alone: the mesh a body is drawn from is shared with every animal of
-       that species, so zeroing it to find its pixels also blanks the eight frogs
+       that species, so zeroing it to find its pixels also blanks the five frogs
        that live in this lake -- and one of them wandering into the frame is worth
        2,000 pixels of mask and wrecks the symmetry. The animals are put away for
        the two draws and handed back after. */
@@ -2111,7 +2130,7 @@ const { sim } = require('./simwait');
        This rig borrows its body out of the crowd rather than building one, so it
        neither chooses that depth habit nor can be assumed to know it: sent 12 m
        out of the column the search used to pick, in each of 8 headings, 5 of 96
-       runs of the crowd's frogs -- twelve of them then; the valley drives eight
+       runs of the crowd's frogs -- twelve of them then; the valley drives five
        now -- lost the water's hold for 41 to 132 frames and
        were read standing on a bottom they had sunk up to 0.45 m into, and the
        step went red with nothing in the game changed. So the leg is asked for as
@@ -2387,6 +2406,16 @@ const { sim } = require('./simwait');
     if (wf) {
       const wasWF = { x: wf.x, y: wf.y, z: wf.z, yaw: wf.yaw, speed: wf.speed, phase: wf.phase,
         tx: wf.tx, tz: wf.tz, pause: wf.pause, state: wf.state, alarm: wf.alarm, sleeping: wf.sleeping };
+      /* the step is about a body that has been sent across the water, not
+         about the ring the body's kind names: with the ring on, the first
+         frame of a leg re-picks the errand onto the next arc of the ring and
+         carries the body off the leg -- the body the rig put on the shelf of
+         the shallows was read standing in the open water of the lake, held by
+         the water instead of on the shelf it was put on. The ring is set
+         aside for the length of the step and put back at the end, the way
+         the body's own numbers are. */
+      const wasOrbit = wf.orbit;
+      wf.orbit = null;
       wf.phase = 7.77;
       const mark = s => s.phase === 7.77;
       p.form = null; p.x = shore.x; p.z = shore.z; p.y = shore.gy + 1.01; p.vx = p.vy = p.vz = 0;
@@ -2401,7 +2430,7 @@ const { sim } = require('./simwait');
          its kind hangs -- the level the water holds a resting body at and up to
          4 m under that -- so a lens left level with the ground it stands on has
          that whole band under the bottom edge of its frame: over the 12 frogs
-         the valley drove when this was measured -- it drives eight now -- 5 of
+         the valley drove when this was measured -- it drives five now -- 5 of
          them were not in the frame the draw took at all, and the frame held
          the whole of that band at 2 of the 12 places they were read in and at
          no place along the leg. Turned onto the band, 0 of the 12 were out
@@ -2538,6 +2567,7 @@ const { sim } = require('./simwait');
           inWater: wf.inWater ? 1 : 0, state: wf.state };
         out.wildWade = s;
       }
+      wf.orbit = wasOrbit;
       Object.assign(wf, wasWF);
     }
     restore();
@@ -2641,7 +2671,7 @@ const { sim } = require('./simwait');
      hanging 11 to 15 m under a lens left level with the bank it stands on is not
      in the state the draw uploads at all, and a capture taken there reads
      nothing. Left level here, the 12 frogs the valley drove when this was
-     measured (it drives eight now) put 5 of themselves out of the frame at the
+     measured (it drives five now) put 5 of themselves out of the frame at the
      moment they were read, and the depth band their kind is born with was
      inside the frame at 2 of those 12 read points and at no point along the
      leg; turned onto that band -- 1.09 rad down on this place -- the band is
@@ -5971,6 +6001,14 @@ What was measured before any of this was fixed, over 180 frames of walking
         tx: c.tx, tz: c.tz, homeX: c.homeX, homeZ: c.homeZ, speed: c.speed };
       const herdWas = g.herdCentres && g.herdCentres[c.sp.id];
       if (g.herdCentres) g.herdCentres[c.sp.id] = { x: at.from.x, z: at.from.z, n: 1 };   // no herd to walk back to
+      /* the step is about a body that has been sent a road and walked it: the
+         ring a body of this kind names would re-pick the errand on the first
+         frame of the run and carry the body off the road -- the arrival and
+         the side-turn below both went red the moment the ring took the
+         errand back. The ring is set aside for the length of the step and put
+         back at the end, the way the herd's middle is. */
+      const orbitWas = c.orbit;
+      if (c.orbit) c.orbit = null;
       c.x = at.from.x; c.y = at.from.y; c.z = at.from.z;
       c.homeX = c.x; c.homeZ = c.z;                  // and no home to go back to either
       c.state = 'wander'; c.sleeping = false; c.pause = 9999;
@@ -6003,6 +6041,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (i > 300) { const q = Math.hypot(sx - c.x, sz - c.z); smin = Math.min(smin, q); smax = Math.max(smax, q); }
       }
       if (g.herdCentres) g.herdCentres[c.sp.id] = herdWas;
+      c.orbit = orbitWas;
       Object.assign(c, keep);
       // the width of the widest turn this animal makes at the fastest it went:
       // how far it was travelling, not how it ended up standing still
@@ -6038,6 +6077,101 @@ What was measured before any of this was fixed, over 180 frames of walking
       arrive[who].side.min < 0.9 && arrive[who].side.max < 1.2 && arrive[who].side.path < 8, arrive);
   }
 
+  /* 10y. The frogs of the valley swim the ring the water keeps them in. The
+     isle the academy stands on lives in the middle of the lake, and the water
+     the frogs were born in runs round it: a frog in the water is sent to the
+     next arc of a ring of its own round that isle -- 25-30 m out, all the way
+     round the same way, at a pace of its own -- and on the bank it wanders
+     round its home as before. What this step asks of the ring: that the
+     errands run the ring (the place each frog is sent to stays 23-32 m from
+     the centre of the water), that the bodies keep the water the ring is in,
+     that every one of them is swimming rather than standing, that they all
+     run it the same way round, and that the pace each of them spends it at is
+     its own and the paces differ. Measured on the ring before it was asked:
+     the water answers wet at every point of it, 3-4 m of it at the shallowest,
+     and the brick of the sunken tower and the huts of the frog's place both
+     stand in of it (17 m and 20 m out), so the ring is open water the whole
+     way round. */
+  const ring = await step('theFrogsSwimTheRingOfTheKeep', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
+    const lake = (N.ZONE_BY_ID.mirrorlake || {}).lake || [78, 106];
+    const frogs = g.creatures.filter(c => c.sp.id === 'frog');
+    if (!frogs.length) return { error: 'no frogs in the valley' };
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form, vital: p.vital, time: g.time };
+    // the body parked where none of them can be sent: the ring lives out in the water
+    p.form = null; p.vital = 10; p.x = 4; p.z = 4; p.y = W.h - 2;
+    const col = (x, z) => {
+      const wt = N.waterTop(W, Math.floor(x), Math.floor(z), W.h - 1);
+      return wt >= 0 && wt + 1 - N.groundY(W, Math.floor(x), Math.floor(z), wt) >= 2 ? wt + 1 : null;
+    };
+    const dist = (x, z) => Math.hypot(x - lake[0], z - lake[1]);
+    const keep = frogs.map(c => ({ c, x: c.x, y: c.y, z: c.z, yaw: c.yaw, vy: c.vy, t: c.t,
+      state: c.state, pause: c.pause, tx: c.tx, tz: c.tz, homeX: c.homeX, homeZ: c.homeZ,
+      speed: c.speed, held: c.held, climbTo: c.climbTo, climbRate: c.climbRate,
+      orbit: Object.assign({}, c.orbit) }));
+    // settle each frog onto the arc of its own lane the ring owes it, in the water
+    for (let i = 0; i < frogs.length; i++) {
+      const c = frogs[i];
+      if (!c.orbit) continue;
+      const a = i / frogs.length * Math.PI * 2;
+      let x = lake[0] + Math.cos(a) * c.orbit.r, z = lake[1] + Math.sin(a) * c.orbit.r;
+      let film = col(x, z);
+      for (let d = 1; d <= 3 && !film; d++) {
+        x = lake[0] + Math.cos(a) * (c.orbit.r + d);
+        z = lake[1] + Math.sin(a) * (c.orbit.r + d);
+        film = col(x, z);
+      }
+      if (!film) continue;
+      c.x = x; c.z = z; c.y = film - 1;        // in the water, above the level it settles to
+      c.orbit.a = a;
+      c.orbit.errand = true;                   // the errand the step puts on it is an arc of the ring
+      c.tx = lake[0] + Math.cos(a + 0.4) * c.orbit.r;
+      c.tz = lake[1] + Math.sin(a + 0.4) * c.orbit.r;
+      c.state = 'wander'; c.pause = 0.5; c.vy = 0; c.climbTo = null; c.climbRate = 0;
+    }
+    const each = frogs.map(c => ({ c, a0: c.orbit ? c.orbit.a : 0, px: c.x, pz: c.z, path: 0 }));
+    const n = Math.round(30 / 0.05);          // thirty seconds of the valley running
+    let wet = 0, errIn = 0, bodyIn = 0;
+    g.herdCentres = {};                        // the ring, not the middle of the kind, is what the water asks
+    for (let i = 0; i < n; i++) {
+      for (const e of each) {
+        const c = e.c;
+        c.update(0.05, p, W, g);
+        if (c.inWater) wet++;
+        const de = dist(c.tx, c.tz), db = dist(c.x, c.z);
+        if (de >= 23 && de <= 32) errIn++;
+        if (db >= 16 && db <= 35) bodyIn++;
+        e.path += Math.hypot(c.x - e.px, c.z - e.pz);
+        e.px = c.x; e.pz = c.z;
+      }
+    }
+    const per = each.map(e => ({ path: +e.path.toFixed(1),
+      meanSpd: +(e.path / (n * 0.05)).toFixed(2),
+      turn: e.c.orbit ? +(e.c.orbit.a - e.a0).toFixed(2) : 0 }));
+    const paces = frogs.map(c => +c.pace.toFixed(2));
+    const res = {
+      seconds: n * 0.05, frogs: frogs.length,
+      wetPct: +(100 * wet / n / frogs.length).toFixed(1),
+      errPct: +(100 * errIn / n / frogs.length).toFixed(1),
+      bodyPct: +(100 * bodyIn / n / frogs.length).toFixed(1),
+      paces,
+      paceSpread: +(Math.max.apply(null, paces) - Math.min.apply(null, paces)).toFixed(2),
+      per
+    };
+    // the frogs back where the step found them, the ring's angle where it stood
+    for (const k of keep) { const { c, orbit, ...v } = k; Object.assign(c, v); if (orbit) c.orbit = orbit; }
+    Object.assign(p, was); g.time = was.time; g.updateEnv();
+    return res;
+  });
+  check('the frogs of the valley swim the ring round the keep: their errands run the ring and they keep the water it is in',
+    !!ring.frogs && ring.frogs >= 5 && ring.wetPct > 90 && ring.errPct > 80 && ring.bodyPct > 80, ring);
+  check('and they are swimming it, not standing on it: every one of them covers ground at a few metres a second',
+    !!ring.frogs && ring.per.every(r => r.path > 20 && r.meanSpd >= 0.8 && r.meanSpd <= 3.5), ring);
+  check('and they all run the ring the same way round, each one of them through more than a quarter turn of it',
+    !!ring.frogs && ring.per.every(r => r.turn > 0.8), ring);
+  check('and they do not swim it in step: each frog spends the ring at a pace of its own, and the paces differ',
+    !!ring.frogs && ring.paces.every(q => q >= 0.85 && q <= 1.25) && ring.paceSpread > 0.05, ring);
+
   /* 10z. a flock is not a formation. Twelve frogs were put on one lake and every
      one of them swam 30 cm under the surface, at the same instant, for as long as
      the world ran: the code asked the water where its surface was and asked the
@@ -6051,7 +6185,7 @@ What was measured before any of this was fixed, over 180 frames of walking
   const flock = await step('flockIsNotAFormation', () => {
     const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
     const frogs = g.creatures.filter(c => c.sp.id === 'frog');
-    if (frogs.length < 8) return { error: 'not enough animals to count' };
+    if (frogs.length < 5) return { error: 'not enough animals to count' };
     const was = { x: p.x, y: p.y, z: p.z, form: p.form, vital: p.vital, time: g.time };
     const keep = frogs.map(c => ({ c, x: c.x, y: c.y, z: c.z, yaw: c.yaw, vy: c.vy,
       t: c.t, speed: c.speed, held: c.held, state: c.state, pause: c.pause, tx: c.tx, tz: c.tz,
@@ -6153,7 +6287,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         const e = each.get(c);
         if (d < e.lo) e.lo = d; if (d > e.hi) e.hi = d;
       }
-      if (ys.length >= 6) {
+      if (ys.length >= 4) {
         let lo = 1e9, hi = -1e9;
         for (const v of ys) { if (v < lo) lo = v; if (v > hi) hi = v; }
         spread.push(hi - lo);
@@ -6199,12 +6333,13 @@ What was measured before any of this was fixed, over 180 frames of walking
     Object.assign(p, was);
     return out;
   });
-  /* Forty seconds of the eight frogs of Mirrorlake: at no instant are they all
-     within 20 cm of one depth (once they were, 96-97% of the time), they are
-     spread over 2.3-3.1 m of it from the shallowest to the deepest at any one
-     instant (2.9-3.4 m at the widest instant of the window), and they sit in
-     four to six half-metre layers of the lake instead of the one layer they
-     used to hold. The depth is counted down from the top face
+  /* Forty seconds of the five frogs of Mirrorlake: at no instant of the window
+     are they all within 20 cm of one depth (measured over run after run of the
+     step: none of the frames), they are spread over 1.2-3.2 m of it at the
+     middle instant from the shallowest to the deepest (2.4-4.6 m at the
+     widest), and they sit in three to five half-metre layers of the lake
+     instead of the one layer they used to hold. The depth is counted down
+     from the top face
      of the water, which is where the surface of the lake is: counted from the
      index of the cell that holds the top of the water, the frogs floating at the
      surface -- the ordinary thing a frog does -- looked like bodies that had left
@@ -6216,12 +6351,12 @@ What was measured before any of this was fixed, over 180 frames of walking
      through, which is the same excuse the body's own step gate and ceiling
      already give it, and the block that got a body into the tower's wall was
      masonry, not a bush. */
-  check('the eight frogs on one lake do not all swim at one depth',
+  check('the five frogs on one lake do not all swim at one depth',
     !flock.error && flock.sameLinePct < 10, flock);
   check('they are spread over metres of the water, not a hand span of it',
     !flock.error && flock.spreadMedian > 1 && flock.spreadMax > 2, flock);
   check('and at any one instant they are spread over several layers of it',
-    !flock.error && flock.bandMedian >= 4, flock);
+    !flock.error && flock.bandMedian >= 3, flock);
   /* The depth itself is the animal's own, not the water's: 30 cm under the film
      is where a body that has to come up for air hangs, and a frog's record says
      1.6 m. Before that, over ten minutes of a running world, the twelve spent
@@ -6233,7 +6368,7 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and none of them spends a frame inside the world',
     !flock.error && flock.inside === 0, flock);
 
-  /* 10z2. The door of the sunken tower is a door. The eight frogs of
+  /* 10z2. The door of the sunken tower is a door. The five frogs of
      Mirrorlake walk in and out of the hollow shaft of the tower through the
      holes of frogpear in its south wall -- the holes are not rock, so a frog
      walking deep in its dive steps flat across the face of the wall into one
@@ -6610,6 +6745,18 @@ What was measured before any of this was fixed, over 180 frames of walking
         body.tx = mode === 'under' ? ax + 3.5 : ax + 2.5;
         body.tz = az; body.homeX = ax; body.homeZ = az;
         body.pause = 0; body.alarm = 0; body.dry = 0;
+        /* the under rig is the one that asks what an arc does to the roof
+           over the column the body stands in, and the first arc is the read:
+           the body is born with its hop timer a draw of its own, and the
+           stream the constructor spends before that draw moved when it
+           learned the pace and the lane of the ring this body is born to
+           swim. Measured after that move, the same rig with the same seed
+           launched all seven of its arcs out of the column it started in --
+           air 203, hops 7, airIn 0 -- and the read the rig exists to take
+           came back clean for a body that had never once been under the
+           block when an arc was launched. The arc is due on the first frame
+           of the rig, where the body is. */
+        if (mode === 'under') body.hopT = 0.01;
         const tallOf = body.tall;
         /* during the rig the valley holds this body and nobody else: what is under
            test is one body and the blocks, and a rig whose answer also depends on
@@ -6775,7 +6922,7 @@ What was measured before any of this was fixed, over 180 frames of walking
 
   /* 11i4. A hop is an arc, and an arc has a top. The launch of one was asked
      about the ground under the body's feet and nothing about what was over its
-     head. The eight frogs of Mirrorlake walk in and out of the hollow shaft of
+     head. The five frogs of Mirrorlake walk in and out of the hollow shaft of
      the sunken tower -- brick floor at 11, the tower's glass a metre over it --
      and one of them pushed off there: 0.27 m in a single frame into the glass,
      then lifted out of the wall at 0.1 m a frame for 28 frames. The day soak of
@@ -7637,7 +7784,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      worst pair 0.54 m in: one fish drawn almost exactly on top of another. The
      frogs of Mirrorlake spent 46% of the morning with another frog inside them,
      0.43 m deep at the worst, and a frog inside a frog averaged 0.28 m --
-     twelve of them when the morning was measured; the valley drives eight now.
+     twelve of them when the morning was measured; the valley drives five now.
      Now the worst pair is 0.229 m, the frames more than 12 cm deep are a
      little over a fifth of what they were, and the mean depth of a pair that
      touches is 0.084 instead of 0.242. The frogs are in one another's way in far
@@ -7905,10 +8052,11 @@ What was measured before any of this was fixed, over 180 frames of walking
     space.deep <= 5000 && space.mean <= 0.12, space);
   check('a body guided round its neighbours still goes somewhere',
     !space.still.length && space.walked > 20, space);
-  /* The frog's home is the water of the lake it was born in, no more than 34 m
-     from the centre of it, and its errands are picked from a disc of 14 m
-     round that home: 52 is the sum of the two with a swing left over, and it
-     is what a frog that had wandered across the valley would trip. */
+  /* In the water the frog swims the ring the water keeps it in, 25-30 m out
+     round the isle at the centre of the lake it was born in, and on the bank
+     it wanders round the home it was born on: 52 is where a frog that has left
+     the water its ring lives in would be, and what a frog that had wandered
+     across the valley would trip. */
   check('the frogs stay round the lake they were born in',
     !!space.frogFar.length && space.frogFar[0] <= 52, space);
   /* And the two laws this window is now asked to hold. The first is about how a

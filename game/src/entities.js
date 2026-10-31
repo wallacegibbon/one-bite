@@ -1073,10 +1073,32 @@
          the valley swims in one line 30 cm under the surface, which is what
          the report "it can only swim in a fixed layer" is: measured over ten
          minutes of the world running, all twelve frogs of that crowd -- the
-         valley drives eight now -- sat at a mean depth of 0.30 m, every one
+         valley drives five now -- sat at a mean depth of 0.30 m, every one
          of them. */
       this.diveTo = 1.5 + Math.random() * 2.5;     // how deep this frog hangs, m under the surface
       this.diveRate = 0.05 + Math.random() * 0.10; // and how fast that cycle runs, rad/s
+      /* The pace this body spends its errands at: the speed a body moves at is
+         the cruise its own record gives times this, so a flock moves at
+         several speeds at once and never in step. 0.85-1.25: enough of a
+         spread that two neighbours part and re-join over an afternoon, not so
+         much that one species reads as two kinds. */
+      this.pace = 0.85 + Math.random() * 0.4;
+      /* The ring the water keeps a body of a species that names one: the
+         landmark its habitat's zone names (`orbit.at`), a lane of its own
+         between `orbit.r0` and `orbit.r1` metres out, and the arc of the ring
+         the body has covered so far, so every errand in the water is the next
+         arc the body has not yet run. The angle runs one way for every body,
+         which is what "the frogs swim round the isle" is; the lane is the
+         body's own, which is what keeps them out of one another's way. */
+      this.orbit = null;
+      if (spec.orbit) {
+        const zone = N.ZONE_BY_ID[spec.habitat[0]] || {};
+        const at = zone[spec.orbit.at];
+        if (at) this.orbit = { cx: at[0], cz: at[1],
+          r: spec.orbit.r0 + Math.random() * (spec.orbit.r1 - spec.orbit.r0),
+          a: Math.atan2(z - at[1], x - at[0]),
+          errand: false };      // the errand the body holds at birth is its birthplace, not an arc of the ring
+      }
       // the vertical velocity, and the same three signals the player carries, for
       // the same reason. It has to be a number: a body that is born on land and
       // hops integrates a fall out of this field on its very first frame.
@@ -1099,6 +1121,11 @@
          to raise itself onto a step has to be allowed to finish, or it takes the
          step at the height it had got to and ends up inside the ground. */
       this.climbTo = null; this.climbRate = 0;
+      /* The backstop a body that cannot get to where it is going is read
+         against: where the body stood 120 of its own frames ago. Kept in the
+         body's own frames so the read does not depend on the rate the loop
+         drives it. See the read at the end of the update. */
+      this.watchX = null; this.watchZ = null; this.watchF = 0;
     }
     attitudeTo(formId) {
       const a = this.sp.attitude || {};
@@ -1143,108 +1170,143 @@
       } else if (this.state !== 'wander') { this.state = 'wander'; }
 
       if (this.state === 'wander') {
-        this.pause -= dt;
-        if (this.pause <= 0) {
-          this.pause = 2 + Math.random() * 6;
-          /* Where an errand is picked from. A species that names a landmark
-             belongs to a disc of `spread` round that landmark, and its errands are
-             picked from that disc -- not from a disc of the same size round
-             wherever it happens to be standing. The errand is not the only thing
-             that moves an animal: the tower that stood in the middle of the lamp
-             field made the way round it longer than the way that was asked for,
-             so a lamp kept the ground it gained sideways, and the errand after
-             that started further out and reached further out again. Measured over
-             five minutes of the field with errands picked from home, the ten lamps
-             stood up to 9.2 m from the tower and 5.6 m from the home they were
-             born on: a field twice the spread it was meant to be, and drifting
-             away from the tower it was supposed to trace. */
-          const r = this.isAquatic() ? (sp.spread || 6) : 14;
-          const at = sp.at ? (N.ZONE_BY_ID[sp.habitat[0]] || {})[sp.at] : null;
-          const ox = at ? at[0] : this.homeX, oz = at ? at[1] : this.homeZ;
-          /* How far off its own heading an errand may fall. A body that swims
-             swims forward: the default errand is the course it is already
-             holding, a place a little further along that way. The pick is
-             asked for a bearing, and the bearing is a turn, of which a body
-             makes three kinds. Most keep the course -- the errand falls inside
-             a narrow cone round the heading the body is travelling, and the
-             body goes on the way it was going; a smaller share may bend it, a
-             visible turn; and only one in ten lets the errand fall
-             anywhere, which is the only kind a wide turn comes from. What this
-             replaces was a place picked uniformly in the disc whatever way the
-             body faced: every new pick faced the body a few degrees to a full
-             about-face, and a body that re-picks every two to eight seconds
-             spent its afternoon in short dashes and hard turns. The rate the
-             bend is held to stays the species' own -- the complaint was the
-             pattern of the errands, not the arc. */
-          const u = Math.random();
-          const cone = this.isAquatic() ? 0 : (u < 0.65 ? 0.35 : (u < 0.9 ? 1.0 : 0));
-          /* A creature that cannot leave the water should not be sent to a
-             place where it would have to. Pick again until the ground is wet;
-             after a few tries take it anyway, so a lake that has somehow
-             drained does not leave a water animal standing still. */
-          let tx = this.homeX, tz = this.homeZ, bestRoom = -1, lastX = tx, lastZ = tz;
-          for (let tries = 0; tries < 8; tries++) {
-            // a spread is a radius, not a half-width: the same shape the spawn sampled
-            const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * r;
-            const ux = ox + Math.cos(a) * rr, uz = oz + Math.sin(a) * rr;
-            lastX = ux; lastZ = uz;    // the in-disc sample: what a pick that finds no ground in front takes
-            let cx, cz;
-            if (cone > 0) {
-              /* The ground in front of the body: the bearing its heading plus a
-                 turn no wider than this kind of errand allows, at a distance
-                 the disc allows. The disc itself keeps the answer in the
-                 region the species belongs to -- a body at the edge of its
-                 ground, facing out of it, finds no ground in front, takes the
-                 uniform sample, and gets the wide turn the edge owes it. */
-              let inFront = false;
-              for (let s = 0; s < 4 && !inFront; s++) {
-                const b = this.yaw + (Math.random() * 2 - 1) * cone;
-                const d = Math.sqrt(Math.random()) * r;
-                cx = this.x + Math.sin(b) * d; cz = this.z - Math.cos(b) * d;
-                inFront = Math.hypot(cx - ox, cz - oz) <= r;
-              }
-              if (!inFront) continue;
-            } else { cx = ux; cz = uz; }
-            /* and the body's own cell at the body's own height: an errand into
-               a column that answers wet with the body's cell stone is an
-               errand to stand in the stone, and the correction's way out of
-               the stone is sixteen metres up the pillar (see the step
-               gate's cell ask). */
-            if (this.isAquatic() && (waterColumn(world, cx, cz) < 0 ||
-                bodyInSolid(world, this, cx, cz))) continue;
-            /* And of the places it might go, the one with most room in it. An
-               errand into the middle of a clump of its own kind is an errand to
-               stand inside a neighbour: the ten lamps picked from a disc round the
-               tower the size of two of them, so an errand picked at random was an
-               errand into a neighbour, and the pair that met there stayed there
-               -- they were measured 0.54 m inside one another, one bell drawn on
-               top of another. */
-            let room = 9;
-            if (game && game.creatures) {
-              for (const q of game.creatures) {
-                if (q === this || q.sp.id !== sp.id) continue;
-                /* where it stands, and where it is going: a place another body
-                   is swimming to is claimed, whether that body is in it yet or
-                   not. Two lamps whose errands were picked 4 m apart walked into
-                   one another because each was measured against where the other
-                   stood at the moment the pick was made. */
-                const d = Math.min(Math.hypot(q.x - cx, q.z - cz),
-                                   Math.hypot(q.tx - cx, q.tz - cz));
-                if (d < room) room = d;
-              }
+        const patrol = this.orbit && this.inWater;
+        if (patrol) {
+          /* In the water the errands of a body that names a ring run the ring:
+             the body is sent to the next arc of it, and to the arc after that
+             when it reaches the one it is on. That is the whole of the patrol:
+             the arc is short (20-45 degrees), the errand is retired the moment
+             it is reached, and the body runs the ring at the pace it spends it
+             at, without waiting at one spot on it. A re-pick on the clock does
+             not run the ring -- measured with the re-pick on a 0.4-1.6 s
+             pause, the errand ran the ring at 0.575 rad a second, nineteen
+             times the turn a frog makes of it at its own speed, and the body
+             chased the arc the way a swimmer chases a point that keeps moving:
+             it spent the hour inside the ring, lapping the middle of the water
+             the ring is round, and the ring was only ever the errand's. */
+          const ex = this.x - this.tx, ez = this.z - this.tz;
+          const reached = this.orbit.errand && ex * ex + ez * ez <= 1;
+          if (!this.orbit.errand || reached) {
+            /* The ring the water keeps this body in: the landmark its own
+               record names, at the lane the body was born with, plus a swing of
+               the lane's own width, and the arc of the ring the body has
+               covered so far, so the errand is the next arc the body has not
+               yet run. The angle advances, never retreats, and every body of
+               the species advances it the same way -- that is what "they swim
+               round the isle" is. The arc is spent only if the water answers
+               it: a column that answers dry, or a body of the world in it,
+               keeps the errand the body is on rather than taking it to dry
+               ground, and the angle the body has covered so far is not spent
+               on an errand it will not take. */
+            const a2 = this.orbit.a + 0.35 + Math.random() * 0.45;
+            const rr = this.orbit.r * (1 + (Math.random() * 2 - 1) * 0.05);
+            const wx = this.orbit.cx + Math.cos(a2) * rr;
+            const wz = this.orbit.cz + Math.sin(a2) * rr;
+            if (waterColumn(world, wx, wz) >= 0 && !bodyInSolid(world, this, wx, wz)) {
+              this.orbit.a = a2;
+              this.tx = wx; this.tz = wz;
+              this.orbit.errand = true;
             }
-            if (room > bestRoom) { bestRoom = room; tx = cx; tz = cz; }
-            if (bestRoom >= r * 0.4) break;      // roomy enough: stop looking
           }
-          if (bestRoom < 0) { tx = lastX; tz = lastZ; }
-          this.tx = tx; this.tz = tz;
+        } else {
+          if (this.orbit) this.orbit.errand = false;   // a pick on the ground is not a pick of the ring
+          this.pause -= dt;
+          if (this.pause <= 0) {
+            this.pause = 2 + Math.random() * 6;
+            /* Where an errand is picked from: a disc round the home the body was
+               born on. A body in the water of a species that names a ring does
+               not get here: its errands run the ring, in the branch above, off
+               the landmark its own record names. */
+            const r = this.isAquatic() ? (sp.spread || 6) : 14;
+            const ox = this.homeX, oz = this.homeZ;
+            /* How far off its own heading an errand may fall. A body that swims
+               swims forward: the default errand is the course it is already
+               holding, a place a little further along that way. The pick is
+               asked for a bearing, and the bearing is a turn, of which a body
+               makes three kinds. Most keep the course -- the errand falls inside
+               a narrow cone round the heading the body is travelling, and the
+               body goes on the way it was going; a smaller share may bend it, a
+               visible turn; and only one in ten lets the errand fall
+               anywhere, which is the only kind a wide turn comes from. What this
+               replaces was a place picked uniformly in the disc whatever way the
+               body faced: every new pick faced the body a few degrees to a full
+               about-face, and a body that re-picks every two to eight seconds
+               spent its afternoon in short dashes and hard turns. The rate the
+               bend is held to stays the species' own -- the complaint was the
+               pattern of the errands, not the arc. */
+            const u = Math.random();
+            const cone = this.isAquatic() ? 0 : (u < 0.65 ? 0.35 : (u < 0.9 ? 1.0 : 0));
+            /* A creature that cannot leave the water should not be sent to a
+               place where it would have to. Pick again until the ground is wet;
+               after a few tries take it anyway, so a lake that has somehow
+               drained does not leave a water animal standing still. */
+            let tx = this.homeX, tz = this.homeZ, bestRoom = -1, lastX = tx, lastZ = tz;
+            for (let tries = 0; tries < 8; tries++) {
+              // a spread is a radius, not a half-width: the same shape the spawn sampled
+              const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * r;
+              const ux = ox + Math.cos(a) * rr, uz = oz + Math.sin(a) * rr;
+              lastX = ux; lastZ = uz;    // the in-disc sample: what a pick that finds no ground in front takes
+              let cx, cz;
+              if (cone > 0) {
+                /* The ground in front of the body: the bearing its heading plus a
+                   turn no wider than this kind of errand allows, at a distance
+                   the disc allows. The disc itself keeps the answer in the
+                   region the species belongs to -- a body at the edge of its
+                   ground, facing out of it, finds no ground in front, takes the
+                   uniform sample, and gets the wide turn the edge owes it. */
+                let inFront = false;
+                for (let s = 0; s < 4 && !inFront; s++) {
+                  const b = this.yaw + (Math.random() * 2 - 1) * cone;
+                  const d = Math.sqrt(Math.random()) * r;
+                  cx = this.x + Math.sin(b) * d; cz = this.z - Math.cos(b) * d;
+                  inFront = Math.hypot(cx - ox, cz - oz) <= r;
+                }
+                if (!inFront) continue;
+              } else { cx = ux; cz = uz; }
+              /* and the body's own cell at the body's own height: an errand into
+                 a column that answers wet with the body's cell stone is an
+                 errand to stand in the stone, and the correction's way out of
+                 the stone is sixteen metres up the pillar (see the step
+                 gate's cell ask). */
+              if (this.isAquatic() && (waterColumn(world, cx, cz) < 0 ||
+                  bodyInSolid(world, this, cx, cz))) continue;
+              /* And of the places it might go, the one with most room in it. An
+                 errand into the middle of a clump of its own kind is an errand to
+                 stand inside a neighbour: the ten lamps picked from a disc round the
+                 tower the size of two of them, so an errand picked at random was an
+                 errand into a neighbour, and the pair that met there stayed there
+                 -- they were measured 0.54 m inside one another, one bell drawn on
+                 top of another. */
+              let room = 9;
+              if (game && game.creatures) {
+                for (const q of game.creatures) {
+                  if (q === this || q.sp.id !== sp.id) continue;
+                  /* where it stands, and where it is going: a place another body
+                     is swimming to is claimed, whether that body is in it yet or
+                     not. Two lamps whose errands were picked 4 m apart walked into
+                     one another because each was measured against where the other
+                     stood at the moment the pick was made. */
+                  const d = Math.min(Math.hypot(q.x - cx, q.z - cz),
+                                     Math.hypot(q.tx - cx, q.tz - cz));
+                  if (d < room) room = d;
+                }
+              }
+              if (room > bestRoom) { bestRoom = room; tx = cx; tz = cz; }
+              if (bestRoom >= r * 0.4) break;      // roomy enough: stop looking
+            }
+            if (bestRoom < 0) { tx = lastX; tz = lastZ; }
+            this.tx = tx; this.tz = tz;
+          }
         }
         tgtX = this.tx; tgtZ = this.tz;
       }
       /* Herd: the herd is how prey survives. One that has wandered more than
          about a throw of it walks back towards the middle of its own kind --
-         a middle the game works out once a tick, not once per animal. */
-      if ((sp.herd || 1) > 1 && this.state === 'wander') {
+         a middle the game works out once a tick, not once per animal. The
+         middle of the kind is a law of the ground: a body that swims the ring
+         the water keeps it in is not pulled to a middle that sits in the
+         middle of the water it does not swim. */
+      if ((sp.herd || 1) > 1 && this.state === 'wander' && !this.inWater) {
         const h = game.herdCentres && game.herdCentres[sp.id];
         if (h && h.n > 1 && Math.hypot(h.x - this.x, h.z - this.z) > 12) { tgtX = h.x; tgtZ = h.z; }
       }
@@ -1324,7 +1386,9 @@
            speed in the water (docs/03 s3). */
         const cruise = (inWater && sp.swimSpeed) ? sp.swimSpeed : (sp.speed || 3);
         const base = this.state === 'flee' || this.state === 'chase' ? cruise * 1.7 : cruise * 0.42;
-        spd = sleeping ? 0 : base;
+        /* times the pace the body spends it at (see `pace` in the constructor):
+           the species sets the speed, the body sets the tempo */
+        spd = sleeping ? 0 : base * this.pace;
         /* The animal goes where it is going, and the course bends. `turn` is
            the most radians a second the species adds to its heading at its own
            cruising speed, and above that speed the arc it holds gets wider
@@ -1865,7 +1929,7 @@
              animal turned upside down: a frog hangs at a depth and comes up for
              air now and then, it does not lie under the surface film and dive
              occasionally. Squared, the twelve frogs of Mirrorlake -- the
-             crowd then; the valley drives eight now -- spent 46% of a ten
+             crowd then; the valley drives five now -- spent 46% of a ten
              minute watch within a metre of the surface film at a mean of
              1.47 m down, which is the report that the frogs sit too near the
              top of the water. The surface is the ceiling and the bottom is
@@ -1906,7 +1970,7 @@
             /* A hop is an arc, and an arc has a top: `up*up/2g` over the feet,
                0.78 m for a launch of 6 m/s under this world's gravity, over a
                body that stands 0.43 m tall. The launch used to be asked nothing
-               about what was over the body's head. The eight frogs of Mirrorlake
+               about what was over the body's head. The five frogs of Mirrorlake
                walk in and out of the hollow shaft of the sunken tower, where the
                floor of the cavity they stand in is brick at 11 and the tower's
                glass is at 13: a metre of room. Measured, one of them pushed off
@@ -2071,7 +2135,7 @@
          where they stood when the frame began, and two bodies walking at one
          another both see an empty place to walk into: measured over the morning
          the game opens on, in a valley born the way the game bears it, that is
-         how the twelve frogs of Mirrorlake then -- the valley drives eight
+         how the twelve frogs of Mirrorlake then -- the valley drives five
          now -- spent 46% of it with another frog
          inside them, the worst pair 0.43 m deep -- one body drawn exactly on top
          of another -- and the ten lamps of the tower field then, 1.9
@@ -2186,6 +2250,31 @@
       if (dp < (this.sp.scale || 0.2) * 8 + 0.8 && this.state === 'chase') game.onCreatureTouch(this, dt);
       walkGait(this, sp.model, sp.scale, N.walkMove(this.speed, sp.speed),
         this.x - gx, this.z - gz, this.speed, dt);
+      /* The backstop for a body that cannot get to where it is going. Every
+         120 of the body's own frames it is read against where it stood then:
+         a body that has covered less than half a metre in them while its
+         target is still farther off than the distance it calls arrived is
+         walking at the target, not to it, and the target is retired the way
+         the contour retires it when every step of it is a wall -- a fresh
+         errand, and for a body that names a ring the fresh errand is the next
+         arc of the ring, so the one that goes round the other side of the
+         wall. Measured on a frog pinned at the corner of the sunken tower,
+         between the water of its moat and the stone of its face: a
+         centimetre at a time for the whole 2400 frames of the step that
+         watches the door -- its errand thirty-five metres out, and no law in
+         the frame finding it had stopped, because it had not -- and no pick
+         running either, because the pick runs on arrival and the arrival was
+         still thirty-five metres out. */
+      this.watchF++;
+      if (this.watchF % 120 === 1) {
+        const sx = this.watchX, sz = this.watchZ;
+        this.watchX = this.x; this.watchZ = this.z;
+        if (sx !== null && this.state === 'wander' &&
+            Math.hypot(this.x - sx, this.z - sz) < 0.5 &&
+            Math.hypot(this.tx - this.x, this.tz - this.z) > 0.8) {
+          this.tx = this.x; this.tz = this.z; this.pause = 0.5;
+        }
+      }
     }
   }
 

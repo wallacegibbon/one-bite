@@ -169,7 +169,7 @@
     }
 
     spawnCreatures() {
-      const counts = { frog: 8 };
+      const counts = { frog: 5 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
         for (let i = 0; i < n; i++) {
