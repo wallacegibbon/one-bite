@@ -29,12 +29,103 @@ const { sim } = require('./simwait');
      that needs to know what an earlier step measured takes it as a plain value
      instead of going out and measuring the world all over again. */
   const step = async (name, fn, ...args) => {
+    /* the wall time each step takes, in the line itself: the file's own log
+       says where a run's minutes went without a separate instrument. */
+    const t0 = Date.now();
+    /* the game's own loop used to keep running in the wall time between two
+       steps, and in that time it eased the camera on, stood the lens, and
+       moved the world clock by a number of clamped frames that came out
+       different every run -- so the state a step started from carried it, and
+       the same step measured a different frame on every green run. One
+       clamped frame (dt 0.05, the loop's own cap), replayed through the
+       game's own update-and-render at every boundary, puts the start state
+       back inside the run-to-run spread the baseline's own twenty-four green
+       runs showed, and the cull render keeps the frame at a few
+       milliseconds. The render runs so the frame it shot is consumed the way
+       the loop consumed it, and the basis it left in R is the one the step
+       reads. */
+    await page.evaluate(() => {
+      const g = window.game;
+      g.update(0.05);
+      g.render();
+    });
     const r = await page.evaluate(fn, ...args);
-    log.push(name + ': ' + JSON.stringify(r));
+    log.push(name + ' [' + (Date.now() - t0) + 'ms]: ' + JSON.stringify(r));
     return r;
   };
   // value assertions (the file used to fail only on console/page errors)
   const check = (name, cond, detail) => { if (!cond) errs.push('CHECK FAILED: ' + name + ' ' + JSON.stringify(detail)); };
+
+  /* The software rasterizer draws one full frame of the valley at the cost
+     this file used to wait for: minutes, for the whole of it. Almost none of
+     those frames is ever measured -- a frame that settles a camera, one that
+     flushes a pipeline, the game's own loop rendering between the steps --
+     and a frame that is never read can stand where nothing is visible: the
+     lens out past the far plane, where every chunk is culled as one and the
+     pass draws the sky and the bodies and nothing of the world, in a few
+     milliseconds. The bodies are what the matrix-reading steps capture, and
+     a body the lens is behind is still drawn: the draw is not the view.
+     The one frame a check reads is the exception, and it gets the whole
+     valley: readPixels below gives the real lens back, with the very camera
+     the last frame was shot with, and reads that. A step that measures the
+     draw calls themselves -- which meshes reach the frame at all -- opts
+     out with g._fullNext(), because for it the culling is the measurement. */
+  await page.evaluate(() => {
+    const g = window.game;
+    const M4 = window.FRUTARIA.M4;
+    const realRender = g.render.bind(g);
+    let lastCam = null, fullNext = false, fullAt = -1, renders = 0;
+    const cull = { x: 80, y: 10000, z: 10000, yaw: 0, pitch: 0, fov: 76, d: 0, inBody: false };
+    /* a cull frame leaves the cull lens standing in R: the matrices it set,
+       the planes it culled with, the vectors it drew the sky with. A step that
+       reads the basis after the render -- the frame's own vectors, its frustum,
+       its eye -- would read the cull lens, and a ray it casts from that basis
+       casts from nowhere. So after a cull frame the real lens's basis stands
+       in R again: the same math R.begin ran, without a second draw. The buffer
+       keeps the cull frame; the basis is the frame the step measured. */
+    const basis = (cam) => {
+      const R2 = g.R;
+      M4.persp(R2.proj, cam.fov * Math.PI / 180, R2.aspect, 0.06, g.env.far);
+      M4.lookYaw(R2.view, cam.x, cam.y, cam.z, cam.yaw, cam.pitch);
+      M4.mul(R2.mvp, R2.proj, R2.view);
+      const m = R2.mvp, P = R2.planes;
+      const rows = [[m[0], m[4], m[8], m[12]], [m[1], m[5], m[9], m[13]],
+                    [m[2], m[6], m[10], m[14]], [m[3], m[7], m[11], m[15]]];
+      const put = (i, v) => { const L = Math.hypot(v[0], v[1], v[2]) || 1; const p = P[i]; for (let k = 0; k < 4; k++) p[k] = v[k] / L; };
+      const R3 = rows[3];
+      const add = (r, c, s) => [r[0] + s * c[0], r[1] + s * c[1], r[2] + s * c[2], r[3] + s * c[3]];
+      put(0, add(R3, rows[0], 1)); put(1, add(R3, rows[0], -1));
+      put(2, add(R3, rows[1], 1)); put(3, add(R3, rows[1], -1));
+      put(4, add(R3, rows[2], 1)); put(5, add(R3, rows[2], -1));
+      R2.camPos = [cam.x, cam.y, cam.z];
+      const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+      R2.fwd = [sy * cp, sp, -cy * cp];
+      R2.right = [cy, 0, sy];
+      R2.up = [R2.right[1] * R2.fwd[2] - R2.right[2] * R2.fwd[1],
+               R2.right[2] * R2.fwd[0] - R2.right[0] * R2.fwd[2],
+               R2.right[0] * R2.fwd[1] - R2.right[1] * R2.fwd[0]];
+      R2.cam = cam; R2.env = g.env;
+    };
+    g._fullNext = () => { fullNext = true; };
+    g.render = function () {
+      lastCam = this._camFrame || this.shootCamera(this.player);
+      renders++;
+      if (fullNext) { fullNext = false; fullAt = renders; this._camFrame = lastCam; return realRender(); }
+      cull.fov = lastCam.fov; this._camFrame = cull;
+      const r = realRender();
+      basis(lastCam);
+      return r;
+    };
+    const gl = g.R.gl, realRP = gl.readPixels.bind(gl);
+    gl.readPixels = function (x, y, w, h, f, t, dst) {
+      // the render consumes the frame it was given (game.js sets _camFrame back
+      // to null), so the camera the step's frame was shot with has to be put
+      // back by hand: re-shot, it would be one ease step on from the one that
+      // drew, and the frame read would not be the frame measured
+      if (fullAt !== renders) { g._camFrame = lastCam; fullNext = true; g.render(); }
+      return realRP(x, y, w, h, f, t, dst);
+    };
+  });
 
   // 1. harvest: teleport next to a frogpear and call harvest directly
   await step('harvest', () => {
@@ -454,6 +545,18 @@ const { sim } = require('./simwait');
   });
   check('an open storage panel is not rebuilt while nothing changes', still.mutations === 0, still);
   check('it is rebuilt as soon as the backpack changes', still.packNow === 2, still);
+
+  /* The last step that counts the loop's own frames is over; from here the
+     world's clock is what the steps count by hand, not what the loop keeps
+     running in the gaps between them. A slow machine leaves almost no loop
+     frame in a gap and a fast one leaves seconds of wandering, and the
+     animals a step has not put in its places wander the answer off by a dip
+     cycle. The loop's own frames are a variable the steps do not own, so the
+     loop is stopped: the steps that need time of the world count their
+     frames themselves, the same way on every machine. The steps' own
+     requestAnimationFrame calls (the one above) are already over, and the
+     rest of the file measures, it does not wait. */
+  await page.evaluate(() => { window.requestAnimationFrame = () => 0; });
 
   // 10f. the main verb of the game: look at a thing, use it. The cellar crate is
   // the one block the game asks about by what it is for ("can I store things in
@@ -2250,7 +2353,10 @@ const { sim } = require('./simwait');
       const tp = g.thirdPerson; g.thirdPerson = true;
       g.cam.d = 1.5 + 2.25 * p.size()[1];
       g.updateEnv();
-      g._camFrame = g.shootCamera(p); g.render(); g._camFrame = null;
+      // the bodies the capture reads are the ones the draw uploads, and the
+      // draw throws a body away the lens is not looking at: a cull frame would
+      // upload the sky and nothing, and the read would find no body in it
+      g._camFrame = g.shootCamera(p); g._fullNext(); g.render(); g._camFrame = null;
       g.thirdPerson = tp;
       const hit = seen.find(pred);
       return hit ? Object.assign({}, hit) : null;
@@ -5045,8 +5151,11 @@ What was measured before any of this was fixed, over 180 frames of walking
       let real = null;
       if (!law) { real = P.draw; P.draw = function (R2) { real.call(this, R2, null); }; }
       g._camFrame = fr; g.render();
-      if (real) delete P.draw;
+      // the read below is where this frame is really drawn: the draw has to
+      // still be the patched one when it happens, so the patch outlives the
+      // render the step asked for and ends with the read
       gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, B);
+      if (real) delete P.draw;
       let n = 0, maxAdd = 0, red = 0, blue = 0, chk = 0, full = 0;
       for (let i = 0; i < B.length; i += 4) {
         full += A[i] * 65536 + A[i + 1] * 256 + A[i + 2];
@@ -8631,6 +8740,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       R.drawMesh = (mesh, m, o) => { set.add(mesh); return orig.call(R, mesh, m, o); };
       g.particles.n = 0; g.hover = null;
       g._camFrame = cf;
+      g._fullNext();                  // this step measures the draw calls: the culling is the measurement
       g.render();
       delete R.drawMesh;              // the wrapper was an own property
       return set;
