@@ -7,7 +7,52 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: round 28, tree `dd16d24` (the sky's cloud
+State at time of writing: round 29, tree `10a4c35` (the user's frog
+word landed in three stages, the first two already pushed: the frog
+pear demoted from rare to common, and the fish cut out of the valley
+with the machinery that had been measuring them. The stage that
+landed this round puts the water frogs of Mirrorlake on the ring
+round the keep: the isle at the centre of the lake is the landmark
+their record names, and a frog in the water has one errand, the next
+arc of a ring of its own round that isle -- a lane of its own between
+25 and 30 m out, run the same way round as every other frog, at a
+pace of its own (0.85-1.25 of the cruise its row gives) -- and the
+valley drives five of them now instead of eight. On the bank a frog
+wanders round the place it was born on as before, and the pull of the
+herd is a law of the ground: it asks the water first, so the ring is
+not dragged to a middle that sits in the middle of the water the
+body does not swim. The ring was surveyed before it was asked: the
+water answers wet at every point of a ring of 22-31 m out, 3-4 m
+deep at the shallowest, and neither the brick of the sunken tower
+nor the huts of the frog's place rises above the film. The landing
+owed two findings. The first was a pin the world could not see: the
+step that watches the keep's door found a frog cornered between its
+moat and the tower's stone walking a centimetre at a time for the
+whole 2400-frame window of the step, and no law found it had stopped
+because it had not; a progress backstop (a 120-own-frame sliding
+window over the body's own position, fired on under 0.5 m of ground
+with more than 0.8 m to go) retires the target the way the contour
+already retires it against a wall, and the ring's next arc runs the
+body out of the corner -- every pin episode bounded at under ten
+seconds, the body going round by the door, the hollow shaft and the
+bank of the tower, and never inside the world. A line-of-sight
+errand ask (skip the arcs whose straight line crosses solid) is a
+possible follow-up and is not done: the backstop bounds the cost of
+the corner, and the step keeps its one law. The second finding was a
+latent flake the pace draw introduced: the step that measures the
+frog crossing the lake at the rate its row names kept a band written
+before the pace existed, and the band was exceeded by a pace the
+draw was about to give (about two percent of runs); the band now
+covers the whole pace band (1.64-2.42 m over the second the run
+walks) with a hand's width of margin at each end. The docs and the
+READMEs carry the count and the ring with the measured numbers, run
+after run: 99-100% of the frames on the errand, 1.6-2.4 m/s, 1.9-3.5
+rad round the isle, the paces the frogs were born with differing by
+0.15-0.38 of the cruise, and the flock over its forty seconds at no
+instant within 20 cm of one depth, the middle instant spread over
+1.2-3.2 m, three to five half-metre layers, and the depth the dive
+gives the body never within a metre of the film), on the tree of
+`dd16d24` (the sky's cloud
 deck cut at the user's word -- the `sky()` generator that laid
 sixteen puffs of block 16 at y38-43 above the canopy and the law
 10q that read a cloud against the sky are gone; block 16 stays
