@@ -843,16 +843,20 @@
      at its 0.16 scale, and a column is a metre wide -- the centre stood in
      the wet column next door while the snout was drawn inside the brick of
      the sunken tower. Read off the model rather than kept as a constant here,
-     because the claim is about the nose the model draws. */
+     because the claim is about the nose the model draws -- and off the species's
+     own line, not off the body: the model a body carries is the one it is worn
+     as, and a wild body is worn as nothing, so the step above read the nose of
+     every wild body as 0 and asked the brick the snout stood in -- 0.31 m ahead
+     of the frog's centre at the scale the frog draws at -- nothing at all. */
   const _nose = {};
-  function noseReach(sp, modelId) {
-    const r = _nose[modelId];
+  function noseReach(sp) {
+    const r = _nose[sp.model];
     if (r !== undefined) return r * (sp.scale || 0.2);
     let reach = 0;
-    const m = N.MODELS[modelId];
+    const m = N.MODELS[sp.model];
     if (m) for (const p of m.parts) for (const b of (p.boxes || []))
       reach = Math.max(reach, b[2] + b[5]);
-    _nose[modelId] = reach;
+    _nose[sp.model] = reach;
     return reach * (sp.scale || 0.2);
   }
   /* The height a body of this kind hangs at in the column it stands in, in one
@@ -1466,7 +1470,7 @@
              neighbour is the snout touching a trunk, and the keep-apart law
              above answers for the body; what the nose is refused is the ground
              the body is not allowed into. */
-          const nose = noseReach(sp, this.modelId);
+          const nose = noseReach(sp);
           const fx = Math.sin(this.yaw) * nose, fz = -Math.cos(this.yaw) * nose;
           /* And the cell the body would occupy at the step. `wet` answers
              "does this column hold water somewhere", and a column can answer

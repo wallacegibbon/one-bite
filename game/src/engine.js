@@ -222,8 +222,9 @@
     gl_Position = uProj * vp;
     float d = length(vp.xyz);
     // aData.y is the light a thing is built with: the fruit block, the ring,
-    // the cellar core, the lamps -- nothing in the valley lends a body a
-    // light any more, so the built-in value is the whole of it.
+    // the cellar core. The lamps carried their own while the valley kept
+    // them, and nothing in the valley lends a body a light any more, so the
+    // built-in value is the whole of it.
     float emis = aData.y;
     // The haze has two laws, because the stuff a lens looks through is not one
     // thing. Air scatters: nothing happens in the first metre and everything at
