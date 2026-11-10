@@ -85,9 +85,11 @@
      dive and becomes a body sliding along the mud with still legs. Half the body,
      asked in just the units `surfCeiling` is asked in, so the two ends of the
      water's hold are one pair: a bigger water animal is kept as far off the floor
-     as it is hung under the film. A column too shallow for the water to hold a
-     body up has no floor here: its ground is a ground to stand on, and its feet
-     decide. */
+     as it is hung under the film. And it is a floor only where the water has a
+     level for that body above that ground -- where `floatLevel` sits above it. A
+     pool no deeper than the body's own hang depth has no such level: there the
+     ground is a ground to stand on, feet and all. Both bodies ask the question of
+     the same number, so neither is held up in water the other stands in. */
   function bedFloor(bedTop, tall) { return bedTop + tall * 0.5; }
 
   /* The speed the worn body's stride law is calibrated at, in m/s. See
@@ -544,7 +546,14 @@
         // own height, the depth a body of that animal's kind rests at under the
         // level it floats at, and for a body whose animal has no such number the
         // 30 cm its back hangs under the surface
-        if (heldUp && !inp.sneak) this.vy += (floatLevel(wSurf, this.size()[1], this.hoverDepth()) - this.y) * 2.2 * dt;
+        const fl = heldUp ? floatLevel(wSurf, this.size()[1], this.hoverDepth()) : -1;
+        /* Read once and kept, because the floor asked for below asks a question
+           about this same number: whether the level the water would hold this
+           body at is above the ground under it at all. A pool no deeper than the
+           body's own hang depth has no such level -- there the ground is a ground
+           to stand on, feet and dry pose and all, which is the answer the herd's
+           bodies take in that same water. */
+        if (heldUp && !inp.sneak) this.vy += (fl - this.y) * 2.2 * dt;
         else this.vy -= 5.2 * dt * 0.55;
         this.vy += (inp.jump ? push : 0) * dt;
         if (inp.sneak) this.vy -= push * 0.6 * dt;
@@ -590,10 +599,12 @@
            as long as the key is held the body slides along the mud with a dry
            pose and still legs -- what `bedFloor` above argues. The floor is
            asked of where the frame is about to put the body, over the substeps,
-           exactly as the ceiling is; and wading is untouched, because a column
-           too shallow for the water to hold a body up is not `heldUp` at all and
-           its ground stays a ground to stand on. */
-        if (heldUp && this.vy < 0 && this.y + this.vy * dt <= bedFloor(bedTop, this.size()[1])) this.vy = 0;
+           exactly as the ceiling is, and only where `fl` says this water has a
+           level for this body above that ground: a pool no deeper than the
+           body's own hang depth has no such level, and its ground stays a ground
+           to stand on -- which is the answer the herd's bodies take there, and
+           the two bodies are the same animal in the same water. */
+        if (heldUp && fl > bedTop && this.vy < 0 && this.y + this.vy * dt <= bedFloor(bedTop, this.size()[1])) this.vy = 0;
       } else {
         /* Feet that are on the bottom are feet that can push off it, water
            around them or not. That is the whole of getting out of a lake: the
@@ -1166,7 +1177,6 @@
     }
     /* which species the player is wearing right now (null in a human shape) */
     speciesOf(formId) { return formId && N.FRUIT_BY_ID[formId] ? N.FRUIT_BY_ID[formId].creature : null; }
-    sameSpeciesAs(formId) { return this.speciesOf(formId) === this.sp.id; }
     isAquatic() { return this.sp.locomotion === 'water'; }        // never leaves the water
     isAmphibian() { return this.sp.locomotion === 'amphibian'; }  // bank and water both
 
@@ -1979,19 +1989,20 @@
              reads, so the herd and the body you wear are the same animal and hang
              in the same water the same way. */
           const fl = floatLevel(wSurf, this.tall, hoverOf(this.sp));
-          /* The floor of a dive is a gap above the ground wherever the water
-             could hold the body clear of it. `held` just above says a body above
-             `gy + 0.2` is a body with no feet under it, and a dive floor at the
-             ground turns that body back into a standing one: the hold goes off,
-             the stroke stops, and a frog working its dive cycle along the deep
-             edge of the shallows stood up and swam again once a cycle. So the
-             floor is the one the body you wear dives to -- `bedFloor` above,
-             asked of this body's own height -- because the herd and the body you
-             wear are the same animal in the same water. Where the water cannot
-             hold a body up at all -- the one-block shelf it stands and wades in
-             -- the ground is a bottom to stand on, and the gap there is only the
-             5 cm its own feet ask for. */
-          const bed = fl > gy + 0.2 ? bedFloor(gyH, this.tall) : gyH + 0.05;
+          /* The floor of a dive is a gap above the ground wherever the water has
+             a level for this body above that ground. `held` just above says a
+             body above `gy + 0.2` is a body with no feet under it, and a dive
+             floor at the ground turns that body back into a standing one: the
+             hold goes off, the stroke stops, and a frog working its dive cycle
+             along the deep edge of the shallows stood up and swam again once a
+             cycle. So the floor is the one the body you wear dives to --
+             `bedFloor` above, asked of this body's own height and of the same
+             `floatLevel` -- because the herd and the body you wear are the same
+             animal in the same water. Where the water has no level for the body
+             above the ground -- the one-block shelf it stands and wades in, a
+             pool no deeper than its own hang depth -- the ground is a bottom to
+             stand on, and the gap there is only the 5 cm its own feet ask for. */
+          const bed = fl > gy ? bedFloor(gyH, this.tall) : gyH + 0.05;
           const target = Math.max(bed, fl - this.diveTo * Math.pow(cyc, 0.4));
           const rate = sp.swimSpeed || sp.speed || 1.5;
           const want = target - this.y;
