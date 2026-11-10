@@ -77,6 +77,18 @@
      surface (`inWater`, far above), and this leaves them half a body under it, so
      that answer cannot change its mind on the frame the body stops climbing. */
   function surfCeiling(wSurf, tall) { return wSurf - tall * 0.5; }
+  /* The bottom a body the water is holding up dives to: the top of the ground
+     under it, plus half the height of that body. The water holds a body up from
+     under it, the ground holds one up from under that, and a body against the
+     ground has feet -- the collision reports them, the draw reads them, and the
+     stroke stops with them -- so a dive that runs into the bottom stops being a
+     dive and becomes a body sliding along the mud with still legs. Half the body,
+     asked in just the units `surfCeiling` is asked in, so the two ends of the
+     water's hold are one pair: a bigger water animal is kept as far off the floor
+     as it is hung under the film. A column too shallow for the water to hold a
+     body up has no floor here: its ground is a ground to stand on, and its feet
+     decide. */
+  function bedFloor(bedTop, tall) { return bedTop + tall * 0.5; }
 
   /* The speed the worn body's stride law is calibrated at, in m/s. See
      `Player.walkMove` for why this is a number the player's body carries and a
@@ -520,10 +532,11 @@
            takes the arrival -- it comes up and stops, instead of coming up only
            to be pulled down again. The hold is a level, not a leash. A body that
            is *asking* to go down is a body swimming down: it keeps the dive it
-           always had, the lakebed stays reachable, and the water takes it back
-           up the moment the key comes off -- including off the bottom, which is
-           why the branch is picked by `heldUp` and not by `!grounded`. A body
-           that breathes air is not held up at all: it has to kick to stay off
+           always had, the lakebed stays in reach -- up to a small gap above it,
+           where the stroke can keep running -- and the water takes it back up the
+           moment the key comes off, including off the bottom, which is why the
+           branch is picked by `heldUp` and not by `!grounded`. A body that
+           breathes air is not held up at all: it has to kick to stay off
            the bottom, and that is what it costs to wear a body that was not
            built for the lake. */
         const push = speed * 1.5;
@@ -570,6 +583,17 @@
            was crossed twice in 240 frames with the key held, and every crossing
            took the body out of the water branch and put it back in. */
         if (heldUp && this.vy > 0 && this.y + this.vy * dt >= surfCeiling(wSurf, this.size()[1])) this.vy = 0;
+        /* The lakebed is the floor of the same hold, and the floor belongs to
+           `heldUp` for the same reason the ceiling does: both are limits of what
+           the water's answer allows, not facts about which way the body happens
+           to be moving. Without it a dive runs a body into the bottom, and for
+           as long as the key is held the body slides along the mud with a dry
+           pose and still legs -- what `bedFloor` above argues. The floor is
+           asked of where the frame is about to put the body, over the substeps,
+           exactly as the ceiling is; and wading is untouched, because a column
+           too shallow for the water to hold a body up is not `heldUp` at all and
+           its ground stays a ground to stand on. */
+        if (heldUp && this.vy < 0 && this.y + this.vy * dt <= bedFloor(bedTop, this.size()[1])) this.vy = 0;
       } else {
         /* Feet that are on the bottom are feet that can push off it, water
            around them or not. That is the whole of getting out of a lake: the
@@ -1954,7 +1978,21 @@
              height). The depth comes off the same animal record the body you wear
              reads, so the herd and the body you wear are the same animal and hang
              in the same water the same way. */
-          const target = Math.max(gyH + 0.05, floatLevel(wSurf, this.tall, hoverOf(this.sp)) - this.diveTo * Math.pow(cyc, 0.4));
+          const fl = floatLevel(wSurf, this.tall, hoverOf(this.sp));
+          /* The floor of a dive is a gap above the ground wherever the water
+             could hold the body clear of it. `held` just above says a body above
+             `gy + 0.2` is a body with no feet under it, and a dive floor at the
+             ground turns that body back into a standing one: the hold goes off,
+             the stroke stops, and a frog working its dive cycle along the deep
+             edge of the shallows stood up and swam again once a cycle. So the
+             floor is the one the body you wear dives to -- `bedFloor` above,
+             asked of this body's own height -- because the herd and the body you
+             wear are the same animal in the same water. Where the water cannot
+             hold a body up at all -- the one-block shelf it stands and wades in
+             -- the ground is a bottom to stand on, and the gap there is only the
+             5 cm its own feet ask for. */
+          const bed = fl > gy + 0.2 ? bedFloor(gyH, this.tall) : gyH + 0.05;
+          const target = Math.max(bed, fl - this.diveTo * Math.pow(cyc, 0.4));
           const rate = sp.swimSpeed || sp.speed || 1.5;
           const want = target - this.y;
           const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;

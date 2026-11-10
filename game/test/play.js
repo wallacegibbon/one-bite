@@ -2154,8 +2154,10 @@ const { sim } = require('./simwait');
      its body and sweeps them along the body's own level, under its belly (a foot
      that comes up as far as it goes back is a leg walking on air); the knee
      never straightens backwards, which is the one thing a hinge cannot do; a
-     body standing in the water -- the player dug down on the bed, a wild body
-     in water a block deep -- has feet to stand on and stops kicking, and keeps
+     body the water holds and keeps pushing down stops a small gap above the
+     bottom and keeps the stroke running there; a body standing in the water -- a
+     wild body in water a block deep, where the water has no hold to give -- has
+     feet to stand on, stops kicking, and keeps
      the pose it has on dry ground; and the land and air poses are untouched. */
   const kick = await step('kickReadOffTheDraw', () => {
     const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
@@ -2788,12 +2790,22 @@ const { sim } = require('./simwait');
     !!kWl && kWl.body.hold.band === 1, kick);
   check('a wild frog crossing the lake kicks the same way, feet behind it',
     !!kWl && kWl.held === 1 && kWl.back <= kick.BACK - 0.08 && kWl.travel >= 0.15, kick);
-  check('a body dug down on the bed has feet to stand on and stops kicking',
-    !!kDg && kDg.body.grounded === 1 && kDg.swim === 0 && kDg.held === 0, kick);
-  check('and it keeps the pose it has on dry ground',
-    !!kDg && !!kLd && Math.abs(kDg.back - kLd.back) < 0.002 && kLd.fwd > kick.BACK + 0.1, kick);
+  /* The body dug down at the bottom of deep water is no longer *on* the bottom.
+     It stops a small gap above the lakebed and keeps its stroke running there:
+     the reading this step used to record -- a body with feet on the bed, its legs
+     still, its pose the pose it wears on dry land -- was a frog sliding along the
+     mud with a dry body, and the gap is what asks it to stay a swimming body.
+     The pose of a body that really does have feet in water is still the dry pose:
+     that is read on the one-block shelf below, where the water has no hold to
+     give and the ground is a ground. */
+  check('a body dug down at the bottom of deep water stops a small gap above the lakebed and is read as the swimming body it is',
+    !!kDg && !!kFl && kDg.body.grounded === 0 && kDg.body.held > 0.9 &&
+    kDg.body.y >= kick.lake.top - kick.lake.n + 1.15 && kDg.body.y <= kick.lake.top - kick.lake.n + 1.40 &&
+    Math.abs(kDg.travel - kFl.travel) < 0.005 && Math.abs(kDg.back - kFl.back) < 0.002 &&
+    kDg.travel >= 0.02 && kDg.travel <= 0.15 && kDg.rise <= 0.08, kick);
   check('the land and air poses are untouched: standing keeps its feet under it, a hop takes them behind',
-    !!kLd && !!kick.hop && kLd.back > kick.BACK && kick.hop.air > 0.5 && kick.hop.back < kick.BACK, kick);
+    !!kLd && !!kick.hop && kLd.back > kick.BACK && kLd.fwd > kick.BACK + 0.1 &&
+    kick.hop.air > 0.5 && kick.hop.back < kick.BACK, kick);
   check('a wild body standing in water too shallow to hold it up has feet, not a kick',
     !!kick.wildWade && kick.wildWade.body.inWater === 1 && kick.wildWade.held === 0 &&
     kick.wildWade.swim === 0 && kick.wildWade.back > kick.BACK, kick);
@@ -7188,14 +7200,17 @@ What was measured before any of this was fixed, over 180 frames of walking
      one number: the water holds a body that breathes water at
      `floatLevel(surface, tall, hover)` -- the film of its own column, less the
      body's own height, less the depth its row asks for, all three in metres --
-     clamped by the bottom, whether or not its feet
+     clamped a small gap above the bottom wherever the water can hold a body
+     clear of it, whether or not its feet
      happen to be on something -- and a wild frog, which is never still, rides a
      slow cycle of its own between that level and deeper water, so the level the
      water holds the body you wear at is the shallow end of the band a wild frog
      holds, and the two bodies are only expected to agree when the frog is up
-     -- which is what brings a frog that has dived to
-     the lakebed back up when the dive key comes off, and what keeps the dive a
-     dive while the key is held. Whether the water can hold a body at all is a
+     -- which is what brings a frog that has dived to the floor of the water back
+     up when the dive key comes off, and what keeps the dive a dive while the key
+     is held. The gap is not a detail: at the bottom a body finds feet, the hold
+     goes off, and the stroke stops with it -- the body slides along the lakebed
+     with still legs. Whether the water can hold a body at all is a
      property of the place (the surface above the level the body would stand on),
      not of the body's distance to the surface: 183 columns of Mirrorlake are a
      one-block shelf, and a shelf is a bottom to stand on and push off from.
@@ -7369,8 +7384,9 @@ What was measured before any of this was fixed, over 180 frames of walking
     !buoy.error && buoy.surf.g === 0 && Math.abs(buoy.surf.y - buoy.wild.shallow) < 0.2, buoy);
   check('a body put on the lakebed and left alone gets off it',
     !buoy.error && buoy.fromBed.g === 0 && Math.abs(buoy.fromBed.y - buoy.wild.shallow) < 0.2, buoy);
-  check('a body that asks to go down still reaches the lakebed, and the water takes it back when it stops asking',
-    !buoy.error && buoy.dive.g === 1 && Math.abs(buoy.dive.y - buoy.bed) <= 0.01
+  check('a body the water holds and asks to go down stops a small gap above the lakebed instead of on it, ' +
+        'and the water takes it back when it stops asking',
+    !buoy.error && buoy.dive.g === 0 && Math.abs(buoy.dive.y - (buoy.bed + 0.25)) <= 0.05
     && buoy.diveLet.g === 0 && Math.abs(buoy.diveLet.y - buoy.wild.shallow) < 0.25, buoy);
   /* The water's hold has a top, and it is not the surface: a body the water is
      holding cannot kick itself out of the middle of a lake. It leaves the way a
