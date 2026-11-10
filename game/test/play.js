@@ -8248,14 +8248,29 @@ What was measured before any of this was fixed, over 180 frames of walking
      valley's own: on one page the file was still at the shore when the window
      closed and on the next it had swum 19 m to the company a previous step left
      it, which is the animals being animals and buries the question asked here.
-     The file is parked 0.15 m off the face with nothing else moving it (its
-     errand a quarter of an hour away, its player parked at the corner of the
-     map), and every frame of a quarter of a minute is asked whether any of the
-     four stands inside a block that is not foliage. Before: 8 frames of that
+     The draws were only half of that. What a body makes its picks from is its
+     own individuality, and that is kept from the page load rather than drawn in
+     the window: the ring round the isle its kind names and the lane on it, the
+     depth it hangs at and the speed of that cycle, its cruise, its phase, its
+     turning and climbing history. A body of this kind in the water spends every
+     window it is given running its ring, and left in, that is what took the
+     file 8-33 m away by the time the window closed and let its end-to-end span
+     -- the thing the second check reads -- land anywhere between 0.42 and
+     41.83 m from run to run. So the window pins everything the bodies' own
+     frames read, the pose and the individuality alike, and parks every other
+     body of the valley at the corner of the map, because the crowd law walks
+     every body the world holds and a fifth frog wandering up that shore would
+     be part of the window. The file is then stood 0.15 m off the face with
+     nothing moving it but its own neighbours (its errand a quarter of an hour
+     away, its ring taken from it, its player and every other body parked), and
+     every frame of a quarter of a minute is asked whether any of the four
+     stands inside a block that is not foliage. Before: 8 frames of that
      window, and the front body inside stone at 47.96. After: none, the file
      still spread as far as the bank lets it -- 0.75 m front to back when the
-     window opens and 1.07 m when it closes, the same both times the suite is
-     run -- and the way round taken instead. */
+     window opens and 1.07 m when it closes, byte for byte on every run -- and
+     the way round taken instead; and the four spend all 900 frames of it still
+     in one another's way, which is what a ground that tight holds: that count
+     is reported beside the law, not checked by it. */
   const shove = await step('aCrowdShoveNeverPutsABodyInsideTheWorld', () => {
     const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
     const hard = (x, y, z) => W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)];
@@ -8298,7 +8313,12 @@ What was measured before any of this was fixed, over 180 frames of walking
     const keep = file.map(c => ({ x: c.x, y: c.y, z: c.z, vy: c.vy, yaw: c.yaw, t: c.t,
       speed: c.speed, state: c.state, pause: c.pause, tx: c.tx, tz: c.tz, homeX: c.homeX,
       homeZ: c.homeZ, hovering: c.hovering, buoy: c.buoy, inWater: c.inWater,
-      sleeping: c.sleeping, hopT: c.hopT, wind: c.wind }));
+      sleeping: c.sleeping, hopT: c.hopT, wind: c.wind,
+      orbit: c.orbit, diveTo: c.diveTo, diveRate: c.diveRate, pace: c.pace,
+      phase: c.phase, alarm: c.alarm, bank: c.bank, bend: c.bend, tilt: c.tilt,
+      held: c.held, airAmt: c.airAmt, crouch: c.crouch, squash: c.squash,
+      climbTo: c.climbTo, climbRate: c.climbRate, gait: c.gait,
+      watchX: c.watchX, watchZ: c.watchZ, watchF: c.watchF }));
     const pw = { x: p.x, y: p.y, z: p.z, form: p.form, vital: p.vital };
     const t0 = g.time;
     g.time = 420 * 13 / 24; g.updateEnv();          // the frogs are abroad
@@ -8322,7 +8342,38 @@ What was measured before any of this was fixed, over 180 frames of walking
          a different number every run */
       c.yaw = Math.atan2(-spot.ux, -spot.uz);
       c.t = 0;
+      /* and the individuality the body was born with, which is every other
+         number its own frame reads: the ring round the isle its kind names and
+         the lane on it, the depth it hangs at and the speed of that cycle, its
+         cruise, its phase, and the turning, climbing and watching history it
+         carries. The seeded draw above covers the picks a body makes; it cannot
+         cover what the picks are made from -- these are page-load draws the body
+         keeps -- and a body of this kind in the water spends every window
+         running its ring, which is a thirty-metre walk from any shore. Left in,
+         that is what took the file 8-33 m away by the time the window closed
+         and let its end-to-end span land anywhere between 0.42 and 41.83 m from
+         run to run: the way home again, in the one place the herd pinning and
+         the seeding had not reached, and it buries the question here as surely
+         as the wander draws did. The ring is the way home of a body in the
+         water; these four are asked about the crowd. */
+      c.orbit = null;
+      c.diveTo = 1.6; c.diveRate = 0.1; c.phase = 0;
+      c.pace = 1; c.alarm = 0;
+      c.bank = 0; c.bend = 0; c.tilt = 0; c.held = 0;
+      c.airAmt = 0; c.crouch = 0; c.squash = 0;
+      c.climbTo = null; c.climbRate = 0; c.gait = null;
+      c.watchX = null; c.watchZ = null; c.watchF = 0;
     });
+    /* and nothing else of the valley stands near: the crowd law walks every
+       body the world holds, so the fifth frog of this one, or any other body
+       whose wandering happened to reach this shore, would be part of the
+       window. Every other body is parked at the corner of the map for the
+       length of it -- nothing updates them during the window, they are only
+       read for what they stand near -- and put back exactly where they stood
+       when it closes. */
+    const rest = g.creatures.filter(c => !file.includes(c));
+    const restKeep = rest.map(c => ({ x: c.x, y: c.y, z: c.z }));
+    rest.forEach(c => { c.x = 2.5; c.y = W.h - 2; c.z = 2.5; });
     const spanWas = Math.hypot(file[0].x - file[3].x, file[0].z - file[3].z);
     let inside = 0, touch = 0;
     const hits = [];
@@ -8350,6 +8401,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     out.drift = +Math.hypot(file[0].x - (spot.x + 0.5 + spot.ux * 0.35),
       file[0].z - (spot.z + 0.5 + spot.uz * 0.35)).toFixed(2);
     file.forEach((c, k) => Object.assign(c, keep[k]));
+    rest.forEach((c, k) => { c.x = restKeep[k].x; c.y = restKeep[k].y; c.z = restKeep[k].z; });
     if (g.herdCentres) g.herdCentres.frog = herdWas;
     g.time = t0; g.updateEnv();
     Object.assign(p, pw);
