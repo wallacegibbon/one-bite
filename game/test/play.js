@@ -3628,14 +3628,19 @@ What was measured before any of this was fixed, over 180 frames of walking
      more than once every three frames. So the pose eased to the air pose
      (airAmt 0.42 and steady) and the steering kept a third of its push, and
      walking the shore of the lake looked like floating.
-     The claim is measured three ways: standing in such a column the body is on
+     The claim is measured four ways: standing in such a column the body is on
      the bottom every frame and the pose says ground; wading along the shore it
-     is on the bottom most of the way and covers the ground it should; and the
-     flag is not glue -- a body that walks off a step is off the ground at once. */
+     is on the bottom most of the way and covers the ground it should; the flag
+     is not glue -- a body that walks off a step is off the ground at once; and
+     the line where the water starts holding a body up is measured from both
+     sides -- a pool two blocks deep, shallower than the body's own hang depth,
+     holds nothing up and a body stands on its bottom, and three blocks is the
+     far side, where a body set down on the bottom leaves it. */
   const wade = await step('wadingIsNotFloating', () => {
     const g = window.game, W = g.world, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
-      form: p.form, grounded: p.grounded, airAmt: p.airAmt, vital: p.vital, dry: p.dry, fright: p.fright };
+      form: p.form, formT: p.formT, formMax: p.formMax, air: p.air, held: p.held, tilt: p.tilt, bank: p.bank,
+      grounded: p.grounded, airAmt: p.airAmt, vital: p.vital, dry: p.dry, fright: p.fright };
     p.form = null; p.vital = 10; p.dry = 0; p.fright = 0;
     // a shore shelf: one block of water, bed under it, air above it, and six
     // columns of the same shelf in a row so a body walking it stays wading
@@ -3707,8 +3712,54 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
       off = { airFrames, airMax: +airMax.toFixed(2), drop: +(y0 - low).toFixed(2), y: +p.y.toFixed(2) };
     }
+    /* A pool two blocks deep is the other end of the same question. A frogpear
+       body hangs 1.6 m under the level the water floats it at and is itself half
+       a metre tall, so in two blocks of water the level the water would hold it
+       at is under its own bottom: this water has no level for this body above
+       that ground, there is no floor there for a dive to stop at, and the ground
+       is a ground to stand on -- feet, dry pose, and the hold off. That is the
+       answer the valley's own frogs take in the same column, and the two bodies
+       are one animal in one water. Three blocks of water is the other side of
+       that line: the level sits above the bottom, the water has a place for the
+       body, and a body set down on the bottom of that pool leaves it. */
+    const poolAt = (n) => {
+      for (let x = 40; x < 120; x++) for (let z = 70; z < 145; z++) {
+        let wt = -1, k = 0;
+        for (let y = W.h - 1; y >= 0; y--) {
+          if (W.liquidAt(x, y, z)) { if (wt < 0) wt = y; k++; }
+          else if (wt >= 0) break;
+        }
+        if (k !== n || !W.solidAt(x, wt - k, z)) continue;
+        return { x: x + 0.5, z: z + 0.5, wt, top: wt - k + 1 };
+      }
+      return null;
+    };
+    const standIn = (pool) => {
+      /* the form's own clock pinned, as every window that measures a worn body
+         does: a window that measures a body half way back to human is measuring
+         a body that was never held up in the first place */
+      p.form = 'frogpear'; p.formT = 9999; p.formMax = 9999; p.air = 999;
+      p.x = pool.x; p.z = pool.z; p.y = pool.top + 0.0001; p.yaw = 0;
+      p.vx = p.vy = p.vz = 0; p.grounded = false; p.airAmt = 0; p.held = 0;
+      p.squash = 0; p.crouch = 0; p.bank = 0; p.tilt = 0;
+      const n = 180;
+      let gr = 0, airMax = 0, heldMax = 0, yLo = p.y, yHi = p.y;
+      for (let i = 0; i < n; i++) {
+        p.update(1 / 60, {}, g);
+        if (p.grounded) gr++;
+        airMax = Math.max(airMax, p.airAmt);
+        heldMax = Math.max(heldMax, p.held);
+        yLo = Math.min(yLo, p.y); yHi = Math.max(yHi, p.y);
+      }
+      return { held: +p.held.toFixed(2), heldMax: +heldMax.toFixed(2), grPct: +(gr / n * 100).toFixed(0),
+        y: +p.y.toFixed(2), top: pool.top, span: +(yHi - yLo).toFixed(3),
+        airMax: +airMax.toFixed(2), inW: p.inWater ? 1 : 0 };
+    };
+    const shallow = poolAt(2), deep = poolAt(3);
+    const shallowRest = shallow ? standIn(shallow) : { error: 'no two-block pool to stand in' };
+    const deepRest = deep ? standIn(deep) : { error: 'no three-block pool to be lifted out of' };
     Object.assign(p, was);
-    return { spot, still, wading, dist, off };
+    return { spot, still, wading, dist, off, shallow, deep, shallowRest, deepRest };
   });
   check('standing in a one-block-deep shore, the body is on the bottom the whole time',
     wade.still && wade.still.grPct === 100 && wade.still.airMax < 0.05 && wade.still.drift < 0.02, wade);
@@ -3718,6 +3769,20 @@ What was measured before any of this was fixed, over 180 frames of walking
     wade.wading && wade.wading.grPct > 90 && wade.dist > 4, wade);
   check('the flag is not glue: walking off a step leaves the ground at once',
     !wade.off.error && wade.off.airFrames >= 2 && wade.off.airMax > 0.2 && wade.off.drop > 0.3, wade);
+  /* The floor the water gives a dive (entities.js `bedFloor`) exists only where
+     this water has a level for this body above that ground. A frogpear body
+     hangs 1.6 m under the level it floats at and is 0.5 m tall, so two blocks of
+     water give it no such level: the ground there is a ground to stand on, and
+     the body's feet find it -- the same answer the valley's own frogs take in
+     that column, which is the pair the law is written as. Three blocks is the
+     far side of that line, and the same body placed on that bottom leaves it. */
+  check('a pool no deeper than the hang depth of the body in it holds nothing up: it stands on the bottom, hold off',
+    !wade.shallowRest.error && wade.shallowRest.inW === 1 && wade.shallowRest.grPct === 100 &&
+    wade.shallowRest.heldMax < 0.05 && Math.abs(wade.shallowRest.y - wade.shallow.top) < 0.02 &&
+    wade.shallowRest.span < 0.02, wade);
+  check('and three blocks of the same water is the far side of that line: a body set on that bottom is lifted off it',
+    !wade.deepRest.error && wade.deepRest.inW === 1 && wade.deepRest.grPct === 0 &&
+    wade.deepRest.held > 0.9 && wade.deepRest.y > wade.deep.top + 0.5, wade);
 
   /* 10x. an underside is not a hole in the sky. 10q fixed the cloud, whose
      deck and law the user cut from the sky afterwards; the same face table
@@ -6215,8 +6280,10 @@ What was measured before any of this was fixed, over 180 frames of walking
      errands run the ring (the place each frog is sent to stays 23-32 m from
      the centre of the water), that the bodies keep the water the ring is in,
      that every one of them is swimming rather than standing, that they all
-     run it the same way round, and that the pace each of them spends it at is
-     its own and the paces differ. Measured on the ring before it was asked:
+     run it the same way round, and that the pace a body is handed is the speed
+     it swims at: five bodies handed five paces spread over a fifth of the
+     cruise come out at five speeds, every one of them one cruise rate. Measured
+     on the ring before it was asked:
      the water answers wet at every point of it, 3-4 m of it at the shallowest,
      and the brick of the sunken tower and the huts of the frog's place both
      stand in of it (17 m and 20 m out), so the ring is open water the whole
@@ -6236,7 +6303,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const dist = (x, z) => Math.hypot(x - lake[0], z - lake[1]);
     const keep = frogs.map(c => ({ c, x: c.x, y: c.y, z: c.z, yaw: c.yaw, vy: c.vy, t: c.t,
       state: c.state, pause: c.pause, tx: c.tx, tz: c.tz, homeX: c.homeX, homeZ: c.homeZ,
-      speed: c.speed, held: c.held, climbTo: c.climbTo, climbRate: c.climbRate,
+      pace: c.pace, speed: c.speed, held: c.held, climbTo: c.climbTo, climbRate: c.climbRate,
       orbit: Object.assign({}, c.orbit) }));
     // settle each frog onto the arc of its own lane the ring owes it, in the water
     for (let i = 0; i < frogs.length; i++) {
@@ -6259,6 +6326,16 @@ What was measured before any of this was fixed, over 180 frames of walking
       c.state = 'wander'; c.pause = 0.5; c.vy = 0; c.climbTo = null; c.climbRate = 0;
     }
     const each = frogs.map(c => ({ c, a0: c.orbit ? c.orbit.a : 0, px: c.x, pz: c.z, path: 0 }));
+    /* The pace each of these five bodies spends the window at is set here rather
+       than taken from the draw it was born with. The window is what asks whether
+       a pace is worth anything -- that a body given a bigger one covers the ring
+       faster, by that much -- and a window of five bodies asked of five draws
+       landed a spread under 0.05 of the cruise about one run in a thousand: the
+       check went red with nothing in the game changed. That every body of a kind
+       is born with a pace of its own inside the band the row allows is a
+       question about the birth, and node-smoke.js asks it there, of sixty of
+       them. */
+    for (let i = 0; i < frogs.length; i++) frogs[i].pace = 0.9 + (i / Math.max(1, frogs.length - 1)) * 0.3;
     const n = Math.round(30 / 0.05);          // thirty seconds of the valley running
     let wet = 0, errIn = 0, bodyIn = 0;
     g.herdCentres = {};                        // the ring, not the middle of the kind, is what the water asks
@@ -6274,10 +6351,18 @@ What was measured before any of this was fixed, over 180 frames of walking
         e.px = c.x; e.pz = c.z;
       }
     }
-    const per = each.map(e => ({ path: +e.path.toFixed(1),
+    const per = each.map((e, i) => ({ path: +e.path.toFixed(1),
       meanSpd: +(e.path / (n * 0.05)).toFixed(2),
+      pace: +frogs[i].pace.toFixed(2),
+      /* what one unit of the record's cruise is worth in metres a second on this
+         ring: the number a body's own pace multiplies, and the same number for
+         every body of the five if the pace is really what drives the speed */
+      rate: +(e.path / (n * 0.05) / frogs[i].pace).toFixed(2),
       turn: e.c.orbit ? +(e.c.orbit.a - e.a0).toFixed(2) : 0 }));
     const paces = frogs.map(c => +c.pace.toFixed(2));
+    const rates = each.map((e, i) => e.path / (n * 0.05) / frogs[i].pace);
+    const rateMean = rates.reduce((a, b) => a + b, 0) / rates.length;
+    const spds = per.map(r => r.meanSpd);
     const res = {
       seconds: n * 0.05, frogs: frogs.length,
       wetPct: +(100 * wet / n / frogs.length).toFixed(1),
@@ -6285,6 +6370,11 @@ What was measured before any of this was fixed, over 180 frames of walking
       bodyPct: +(100 * bodyIn / n / frogs.length).toFixed(1),
       paces,
       paceSpread: +(Math.max.apply(null, paces) - Math.min.apply(null, paces)).toFixed(2),
+      // how much the five speeds differ, and how far any one of them is off the
+      // one cruise rate the other four imply
+      spdSpread: +(Math.max.apply(null, spds) / Math.min.apply(null, spds)).toFixed(2),
+      rateSpread: +(Math.max.apply(null, rates.map(r => Math.abs(r / rateMean - 1)))).toFixed(3),
+      rateMean: +rateMean.toFixed(2),
       per
     };
     // the frogs back where the step found them, the ring's angle where it stood
@@ -6298,8 +6388,9 @@ What was measured before any of this was fixed, over 180 frames of walking
     !!ring.frogs && ring.per.every(r => r.path > 20 && r.meanSpd >= 0.8 && r.meanSpd <= 3.5), ring);
   check('and they all run the ring the same way round, each one of them through more than a quarter turn of it',
     !!ring.frogs && ring.per.every(r => r.turn > 0.8), ring);
-  check('and they do not swim it in step: each frog spends the ring at a pace of its own, and the paces differ',
-    !!ring.frogs && ring.paces.every(q => q >= 0.85 && q <= 1.25) && ring.paceSpread > 0.05, ring);
+  check('and they do not swim it in step: five bodies given five paces over a fifth of the cruise make five speeds, and every one of them swims the ring at its own pace times one common cruise',
+    !!ring.frogs && ring.paces.every(q => q >= 0.85 && q <= 1.25) && ring.paceSpread > 0.25 &&
+    ring.spdSpread > 1.15 && ring.rateSpread < 0.15, ring);
 
   /* 10z. a flock is not a formation. Twelve frogs were put on one lake and every
      one of them swam 30 cm under the surface, at the same instant, for as long as
@@ -9613,22 +9704,35 @@ What was measured before any of this was fixed, over 180 frames of walking
      inside of its far side -- a surface the whole width of the body behind the
      flank you were standing in front of, and everything standing inside that
      width showed through the animal in front of it.
-     Measured here, with two bodies of the same size one behind the other and the
-     lens 0.6 m in front -- close enough that a body 0.43 m across owns a share
-     of the frame worth counting: the far one stands 0.06 m down the near one's
-     own depth, which is inside it, and no surface of either is at the same
-     distance as another. Taking the far one away moves the sliver of it that
-     stands past the near one's silhouette -- it is nearly all behind the body in
-     front, as it should be. (Two bodies the same size have the same silhouette,
-     so this step does not by itself catch the winding: a wound-inward build
-     moves the kept share from 0.022 to 0.041 and stays inside its bounds. The
-     winding is caught where it is exact -- the triangle table in node-smoke, the
-     corner coordinates of the crease step, and the flank reading two steps
-     below, which reads the wrong end of the body outright.)
-     The gap is stated from the model's own depth rather than from a constant,
-     because the claim only means something while the far body really does stand
-     between the near flank and the far one. */
-  const occl = await step('aBodyBetweenTheLensAndAnotherBodyIsTheBodyThatIsSeen', (spot) => {
+     Two bodies of one kind, the lens 0.6 m in front of the near one, close
+     enough that a body half a metre across owns a share of the frame worth
+     counting. The far body stands an eighth of the near one's own fore-and-aft
+     reach down that axis -- 0.068 m of a reach of 0.546 m, so its front is
+     inside the body in front of it -- and a quarter of its own 0.507 m beam to
+     one side of the line. That last part is stated rather than stumbled on: two
+     bodies of one species drawn in one pose have one silhouette, and the nearer
+     one is the bigger picture of the two, so set dead behind it leaves almost
+     nothing of the far body. Measured that way first, it keeps 0.004 of itself
+     -- 412 pixels of the 93981 it owns in the open. Stood a quarter of a body
+     aside it keeps 0.194: 18239 pixels, four fifths of it still hidden behind
+     the animal in front. Both bodies are stood still and given one phase and no
+     stride, because the frames this step measures were otherwise whatever the
+     animal the page happened to be driving had been doing: the same tree
+     measured a far body anywhere between 177 and 11732 pixels of itself, run
+     after run, with nothing in the game changed.
+     The dead-behind reading is not only the premise of the offset one. Both
+     bodies in one pose is also the reading that makes the surface depth visible:
+     wound inward again it leaves 3931 pixels rather than 412, which is 0.042 of
+     the body and past the bound this step holds. The offset reading does not
+     catch the winding -- 0.234 of itself instead of 0.194, still inside its
+     bounds -- and the winding is caught outright where it is exact: the triangle
+     table in node-smoke, the corner coordinates of the crease step, and the
+     flank reading two steps below, which reads the wrong end of the body
+     outright.
+     The gap, the offset and both bodies' sizes are read off the model rather
+     than kept as constants here, because the claim only means something while
+     the far body really does stand between the near flank and the far one. */
+  const occlRows = await step('aBodyBetweenTheLensAndAnotherBodyIsTheBodyThatIsSeen', (spot) => {
     const g = window.game, N = window.FRUTARIA, p = g.player, gl = g.R.gl;
     if (!spot) return { error: 'the marking step found no clearing' };
     const was = { list: g.creatures, tp: g.thirdPerson, hover: g.hover, mode: g.mode, time: g.time,
@@ -9649,25 +9753,46 @@ What was measured before any of this was fixed, over 180 frames of walking
     const frog = g.creatures.find(c => c.sp.id === 'frog');
     const tall = N.FRUIT_BY_ID[N.CREATURE_BY_ID.frog.fruit].form.size[1];
     if (!frog) return { error: 'no frog in the valley' };
+    /* what the borrowed animal was doing before this step sat it down: the fields
+       the draw reads are put back on it at the end, so a later step asking this
+       body asks the animal the valley drove, not one a frame test posed */
+    const wasCreature = {};
+    for (const k of ['phase', 'gait', 'speed', 'held', 'bend', 'hopT', 'wind', 't']) wasCreature[k] = frog[k];
     /* a second body of the same kind, and a copy that keeps the class: a creature
        answers questions about itself (`isAquatic`) that a plain object
        copy of it cannot answer. The draw takes its mesh from the model cache by
        species, so two bodies of one species draw the same boxes at two different
        sets of matrices, which is exactly what is being asked. */
     const twin = Object.assign(Object.create(Object.getPrototypeOf(frog)), frog);
-    const pose = (a, x) => {
-      a.x = x; a.y = spot.y; a.z = spot.z; a.yaw = Math.PI / 2;
+    const pose = (a, x, aside) => {
+      a.x = x; a.y = spot.y; a.z = spot.z + (aside || 0); a.yaw = Math.PI / 2;
       a.vx = a.vy = a.vz = 0; a.sleeping = false; a.state = 'wander'; a.pause = 0;
       a.tilt = 0; a.bank = 0; a.crouch = 0; a.airAmt = 0; a.squash = 0; a.moveAmt = 0;
+      /* The pose is part of the measurement, so it is stated here and not left
+         standing in the body. The draw reads a phase, a stride, a water's hold
+         and a turn off the body (the `st` in game.js), and a body copied off
+         another one drew whatever that animal had been doing when the page found
+         this clearing: the same tree measured a far body from 177 pixels to 11732
+         pixels of itself. Both bodies are told to stand still, and what is left to
+         differ between them is the thing this step asks about -- where they stand. */
+      a.phase = 0; a.gait = null; a.speed = 0; a.held = 0; a.bend = 0;
+      a.hopT = 0; a.wind = 0; a.t = 0;
     };
-    /* how far a body reaches along the axis the lens looks down, read off the
-       model at the scale the animal is drawn at, not off a constant kept here */
+    /* How far a body reaches along the axis the lens looks down, and how far it
+       reaches across it, read off the model at the scale the animal is drawn at
+       and not off a constant kept here. The lens looks down +x and the body is
+       turned to face that way (M4.faceY), and every model is authored facing +z,
+       so the fore-and-aft reach is the model's own z extent and its beam is its
+       x extent -- the first version of this step had those two the other way
+       round, and measured a gap against the width of the animal. */
     const sc = N.CREATURE_BY_ID.frog.scale;
-    let lo = 1e9, hi = -1e9;
+    let alo = 1e9, ahi = -1e9, wlo = 1e9, whi = -1e9;
     for (const pt of N.MODELS.frog.parts) for (const b of pt.boxes) {
-      lo = Math.min(lo, b[0] * sc); hi = Math.max(hi, (b[0] + b[3]) * sc);
+      alo = Math.min(alo, b[2] * sc); ahi = Math.max(ahi, (b[2] + b[5]) * sc);
+      wlo = Math.min(wlo, b[0] * sc); whi = Math.max(whi, (b[0] + b[3]) * sc);
     }
-    const depth = hi - lo;
+    const depth = ahi - alo;
+    const beam = whi - wlo;
     const gap = depth * 0.125;
     const lens = (dist) => {
       const eyeH = (p.eyePos ? (p.eyePos() - p.y) : 1.55);
@@ -9687,23 +9812,41 @@ What was measured before any of this was fixed, over 180 frames of walking
     };
     g.time = 420 * 0.42; g.mode = 'play'; g.hover = null;
     lens(0.6);
-    pose(frog, spot.x); pose(twin, spot.x + gap);
-    g.creatures = [frog, twin];
-    const both = shot();
-    g.creatures = [frog]; for (let k = 0; k < 4; k++) shoot();
-    const behind = moved(both, grab());
-    g.creatures = [twin]; pose(twin, spot.x); for (let k = 0; k < 4; k++) shoot();
-    const only = shot();
-    g.creatures = []; for (let k = 0; k < 4; k++) shoot();
-    const open = moved(only, grab());
+    /* The far body is stood `aside` to one side of the line the lens looks down.
+       Two bodies of one species drawn in one pose have one silhouette, and the
+       far one is the smaller picture of the two: set dead behind, it is gone
+       almost entirely, and what was left of it came from wherever its legs
+       happened to be. The share that escapes is therefore stated here, off the
+       body's own beam: it is a fact about where two bodies stand, not about what
+       a draw happened to be doing. The two readings are asked side by side so the
+       step keeps its own premise beside it -- hiding is real, and it is not all. */
+    const measure = (aside) => {
+      pose(frog, spot.x, 0); pose(twin, spot.x + gap, aside);
+      g.creatures = [frog, twin];
+      const both = shot();
+      g.creatures = [frog]; for (let k = 0; k < 4; k++) shoot();
+      const behind = moved(both, grab());
+      g.creatures = [twin]; pose(twin, spot.x, 0); for (let k = 0; k < 4; k++) shoot();
+      const only = shot();
+      g.creatures = []; for (let k = 0; k < 4; k++) shoot();
+      const open = moved(only, grab());
+      return { aside: +aside.toFixed(3), gap: +gap.toFixed(3), depth: +depth.toFixed(3),
+        beam: +beam.toFixed(3),
+        inside: gap + depth * 0.5 < depth,    // the far body's front is inside the near one
+        behind, open, kept: +(behind / open).toFixed(3) };
+    };
+    const dead = measure(0);
+    const side = measure(beam * 0.25);
+    /* the borrowed body back with the animation it was born with: this step is a
+       guest in the valley and the next one asks that animal as it found it */
+    for (const k of ['phase', 'gait', 'speed', 'held', 'bend', 'hopT', 'wind', 't']) frog[k] = wasCreature[k];
     g.creatures = was.list; g.thirdPerson = was.tp; g.hover = was.hover; g.mode = was.mode;
     g._camFrame = was.frame; g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
     p.x = was.px; p.y = was.py; p.z = was.pz; p.yaw = was.yaw; p.pitch = was.pitch; p.form = was.form;
     g.time = 420 * 0.42; g.updateEnv();
-    return { depth: +depth.toFixed(3), gap: +gap.toFixed(3),
-      inside: gap + depth * 0.5 < depth,      // the far body's front is inside the near one
-      behind, open, kept: +(behind / open).toFixed(3) };
+    return { dead, side };
   }, marks.spot);
+  const occl = occlRows.side;
   check('the far body really does stand inside the depth of the near one',
     !occl.error && occl.inside && occl.gap > 0.05 && occl.gap < occl.depth * 0.5, occl);
   check('the measure is not vacuous: a frog in the open owns its share of the frame',
@@ -9712,6 +9855,13 @@ What was measured before any of this was fixed, over 180 frames of walking
     occl.behind < occl.open * 0.45, occl);
   check('the frog behind is not simply gone: what escapes round the one in front is a frog',
     occl.behind > 400, occl);
+  /* One pose, one silhouette: with the far body set dead behind the near one and
+     both bodies standing still, almost nothing of it is left. This is the reason
+     the reading above stands a quarter of a body to one side, and it is what says
+     the two bodies in that reading are in one pose -- two bodies drawn in
+     different poses would leave a body worth counting here. */
+  check('two bodies of one species drawn in one pose are one silhouette: dead behind there is almost nothing left',
+    occlRows.dead.kept < 0.02 && occlRows.dead.open > 20000, occlRows.dead);
 
   /* Which end of a body the lens stands at has to be written into the frame, and
      the only thing in this renderer that writes it is the face constant. There is

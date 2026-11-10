@@ -96,8 +96,7 @@
       try { localStorage.setItem(LS_KEY, id); } catch (e) { /* private mode: keep it in memory */ }
       if (typeof document !== 'undefined') document.documentElement.lang = id === 'zh' ? 'zh-CN' : 'en';
       return true;
-    },
-    cycle() { return this.set(this.next().id); }
+    }
   };
 
   N.i18n = I18N;

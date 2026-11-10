@@ -187,6 +187,50 @@ const extents = (modelId, sc) => {
   if (bad.length) process.exitCode = 1;
 }
 
+/* A flock is not a formation because every body of a kind is born with habits of
+   its own: the pace it spends its errands at, the depth it hangs at in the water
+   it was born in, and how fast that cycle runs (the creature constructor). The
+   valley-side law is measured by play.js -- its ring window is handed five paces
+   on purpose, so what that window reads is the law and not a draw -- so the draw
+   itself is asked here, where it is made: two hundred bodies of the kind the
+   valley drives, every value inside the band its field states, and the band
+   actually covered, since a spread narrower than nine tenths of it is one line
+   with a jitter on it. Two hundred draws of one uniform band leave a spread
+   narrower than nine tenths of it about once in the tens of millions of runs;
+   five draws of the same band -- what the ring window used to ask, of the five
+   frogs the valley happened to be driving -- leave a spread that narrow often
+   enough to be seen: one page of a series of runs came back with all five inside
+   0.05 of one another, and that check went red with nothing in the game
+   changed. */
+{
+  const bad = [];
+  const sp = F.CREATURE_BY_ID.frog;
+  const v = { pace: [], diveTo: [], diveRate: [] };
+  for (let i = 0; i < 200; i++) {
+    const c = new F.Creature(sp, 80, 14, 106);
+    v.pace.push(c.pace); v.diveTo.push(c.diveTo); v.diveRate.push(c.diveRate);
+  }
+  const ask = (name, lo, hi) => {
+    const a = v[name];
+    const out = a.filter(x => !(x >= lo && x <= hi));
+    if (out.length) bad.push(`${name}: ${out.length}/${a.length} 个出生值落在 ${lo}-${hi} 之外`);
+    const s = Math.max.apply(null, a) - Math.min.apply(null, a);
+    const pct = (100 * s / (hi - lo)).toFixed(1);
+    // a spread that does not cover the band is one line with a jitter on it
+    if (s < (hi - lo) * 0.9) bad.push(`${name}: ${a.length} 次出生只铺到 ${pct}% 的带 (${s.toFixed(3)} / ${hi - lo})`);
+    return pct;
+  };
+  /* the bands the creature constructor draws from, restated here as the bounds
+     the field promises: a pace 0.85-1.25 times the cruise its row gives, a depth
+     1.5-4 m under the level the water holds a resting body at, and that cycle
+     turning on a 0.05-0.15 rad/s clock */
+  const pct = ['pace', 'diveTo', 'diveRate']
+    .map(k => k + '=' + ask(k, { pace: [0.85, 1.25], diveTo: [1.5, 4], diveRate: [0.05, 0.15] }[k][0],
+                            { pace: [0.85, 1.25], diveTo: [1.5, 4], diveRate: [0.05, 0.15] }[k][1]));
+  console.log('出生个体差异', pct.join(' '), bad.length ? '!! ' + bad.join(' ') : 'OK 每个身体带着自己的 pace/下潜深度/下潜周期');
+  if (bad.length) process.exitCode = 1;
+}
+
 /* The frog's eyes sit at the corners of its skull. A human asked for them to be
    further apart, and a face tuned by eye is a face that walks straight back the
    moment anybody touches the model again, so the shape is pinned here: the two

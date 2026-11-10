@@ -4,7 +4,7 @@
  * docs-sync.js proves the docs agree with the DATA. It proves nothing about
  * whether the CODE reads that data -- a field can sit in fruits.js, be quoted
  * in the docs, be counted by the drift canaries, and do absolutely nothing.
- * That is how eleven ability switches survived an entire audit (TODO D1).
+ * That is how eleven ability switches survived an entire audit.
  *
  * So: every field on a fruit record, on a fruit's `form` (the ability block)
  * and on a creature record must be read by at least one file in game/src/,
@@ -60,8 +60,8 @@ const groups = {
   /* Zones are deliberately NOT scanned. Every zone carries a `desc`, and the
      i18n rule above would score it as read because `descOf` exists and plants
      use it -- but no zone text is ever rendered anywhere. A check that passes
-     on a field nothing displays is worse than no check: that gap is tracked as
-     TODO D14 instead. */
+     on a field nothing displays is worse than no check, so the zone rows stay
+     out of the scan and the gap stays named here. */
 };
 
 /* Fields the codex reaches through the i18n layer instead of a property
