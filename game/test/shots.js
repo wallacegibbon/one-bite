@@ -77,25 +77,44 @@ const SHOTS = [
    body's own path -- the arc of a hop is exactly what the lens behind the body
    hides, and the two lenses answer that question together.
 
-   Usage: node test/shots.js strip [hop|stroke|turn|wild]                  */
+   `subject` says whose body the lens and the stepping follow: the one you wear,
+   or one of the valley's. It is not guessed from `where`: an animal stood in the
+   same corridor as the body you wear is still an animal.
+
+   Usage: node test/shots.js strip [hop|stroke|turn|wild|animal]           */
 const STRIPS = [
   // a frog-shaped body asked to go: the crouch, the push, the flight, the
-  // landing, and what the legs do while the body is off the ground
-  { name: 'hop', where: 'ground', form: 'frogpear', keys: 'fwd', settle: 90,
-    shots: 10, every: 4, views: 'own side' },
+  // landing, and what the legs do while the body is off the ground. The window
+  // is one whole cycle of the animal's own cadence and a bit over it -- 0.52 s
+  // in the air plus the 0.9 s its feet stay down, 2.2 s, sampled twelve times:
+  // at the frame spacing this rig used before, a worn body hopped five times as
+  // often as the animal it was worn from and the strip fitted.
+  { name: 'hop', where: 'ground', subject: 'self', form: 'frogpear', keys: 'fwd',
+    settle: 90, shots: 12, every: 11, views: 'own side' },
   // the same body in water deep enough to hold it up: one stroke and the
   // fold and run-out of the knees, at the rate the body's own row swims at
-  { name: 'stroke', where: 'water', form: 'frogpear', keys: 'fwd', settle: 120,
-    shots: 10, every: 6, views: 'own side' },
+  { name: 'stroke', where: 'water', subject: 'self', form: 'frogpear', keys: 'fwd',
+    settle: 120, shots: 10, every: 6, views: 'own side' },
   // a body changing its mind: the outside leg doing the work, the trunk
   // leaning into it, and the head staying where the player left it
-  { name: 'turn', where: 'ground', form: 'frogpear', keys: 'fwd,left', settle: 90,
-    shots: 8, every: 5, views: 'own side' },
+  { name: 'turn', where: 'ground', subject: 'self', form: 'frogpear', keys: 'fwd,left',
+    settle: 90, shots: 8, every: 5, views: 'own side' },
   // one of the valley's own, asked nothing: what an animal does when nobody is
   // holding keys is the thing a player actually sees. There is no `own` view
-  // here: nobody owns that lens, the game never films these bodies
-  { name: 'wild', where: 'herd', form: null, keys: '', settle: 240,
-    shots: 12, every: 10, views: 'side' }
+  // here: nobody owns that lens, the game never films these bodies. The window
+  // is the same length as the `hop` strip's on purpose: the two strips are read
+  // against each other, and a comparison of two gaits filmed over different
+  // windows is not a comparison.
+  { name: 'wild', where: 'herd', subject: 'animal', form: null, keys: '',
+    settle: 240, shots: 12, every: 11, views: 'side' },
+  // the animal that `hop` films through a body, in the open: stood in the same
+  // corridor and told to go and not to stop, which is the same ask the gait step
+  // in test/play.js makes of it. `wild` cannot answer whether the two gaits
+  // match -- the animal it films may spend the whole window walking or standing,
+  // and its `push` of 0 said exactly that. Same window as both, and the pair is
+  // read for the arc, the launch and the air share.
+  { name: 'animal', where: 'corridor', subject: 'animal', form: null, animal: 'frog',
+    keys: '', settle: 240, shots: 12, every: 11, views: 'side' }
 ];
 
 const boot = async () => {
@@ -182,9 +201,10 @@ const stopTheClock = page => page.evaluate(() => {
 });
 
 /* Put one body somewhere its action can happen at all: a flat dry place with
-   room to travel for a body on foot, a lane of water deep enough to hold a
-   body up for one that swims, and for a wild one nothing at all -- it is
-   already standing somewhere it agreed to. */
+   room to travel for a body on foot -- the same place for the body you wear and
+   for one of the valley's, so a pair of films can be read against each other --
+   a lane of water deep enough to hold a body up for one that swims, and for a
+   wild one nothing at all: it is already standing somewhere it agreed to. */
 const placeFor = (page, s) => page.evaluate(s => {
   const g = window.game, N = window.FRUTARIA, p = g.player, W = g.world;
   g.mode = 'play'; g.thirdPerson = false;
@@ -201,9 +221,12 @@ const placeFor = (page, s) => page.evaluate(s => {
     }
     return -1;
   };
-  if (s.where === 'ground') {
-    // flat for ten metres in the direction of travel, and nothing overhead the
-    // body's own arc would pass through
+  /* A stretch of ground a strip can cross: flat for ten metres in every direction
+     of travel, dry, and nothing overhead that a body's own arc would pass
+     through. Both the body you wear and one of the valley's are stood at its
+     start, so the two films are a comparison of one action and not of two
+     accidents. */
+  const clearCorridor = () => {
     for (let x = 30; x < 150; x += 2) for (let z = 30; z < 150; z += 2) {
       const gy = floor(x, z); if (gy < 5) continue;
       let ok = true;
@@ -215,11 +238,59 @@ const placeFor = (page, s) => page.evaluate(s => {
         }
       }
       if (!ok) continue;
-      p.x = x + 0.5; p.z = z + 0.5; p.y = gy + 1; p.vx = p.vy = p.vz = 0;
-      p.yaw = 0; p.pitch = 0; p.faceYaw = 0;
-      return { at: [p.x, p.y, p.z], ground: gy };
+      return { x: x + 0.5, z: z + 0.5, gy };
     }
-    return { error: 'no flat ground with room to travel' };
+    return null;
+  };
+  if (s.where === 'ground') {
+    const c = clearCorridor();
+    if (!c) return { error: 'no flat ground with room to travel' };
+    p.x = c.x; p.z = c.z; p.y = c.gy + 1; p.vx = p.vy = p.vz = 0;
+    p.yaw = 0; p.pitch = 0; p.faceYaw = 0;
+    return { at: [p.x, p.y, p.z], ground: c.gy };
+  }
+  if (s.where === 'corridor') {
+    /* One of the valley's animals stood where the `hop` strip stands the body you
+       wear, and given one instruction: go and do not stop -- the same ask the
+       gait step of test/play.js makes of it (`wander` at a target twelve metres
+       along, `pause` held off). Nothing else about it is touched: its own record
+       decides when its legs push, how high it goes and how often, and its own
+       business decides which way it goes. A body of a herding kind more than
+       twelve metres from the middle of its kind walks back to them, so which way
+       this one travels is not the point of the film: the arc, the launch and the
+       share of the time spent off the ground are, and those are the three the
+       `hop` strip measures for the body worn from the same animal. A wandering
+       animal travels at 0.42 of its cruise -- an animal strolling, not an animal
+       asked somewhere -- which is why `per` here reads below the cruise the row
+       states.
+       The body you start in is moved well out of sight first. A frog notices a
+       person twelve blocks off and runs, and a frightened animal crossing for its
+       life is not the animal this film is about; the same floor probe stands that
+       person on ground instead of inside a hillside, and dry, so nothing they do
+       during the film can end it. */
+    const c = clearCorridor();
+    if (!c) return { error: 'no flat ground with room to travel' };
+    const a = g.creatures.find(k => !k.dead && k.sp.id === s.animal) ||
+              g.creatures.find(k => !k.dead);
+    if (!a) return { error: 'the valley is driving no animals on this page' };
+    let sx = 0;
+    for (let x = 30; x < 150 && !sx; x += 3) for (let z = 30; z < 150; z += 3) {
+      if (sx) continue;
+      if (Math.hypot(x + 0.5 - c.x, z + 0.5 - c.z) < 30) continue;
+      const gy = floor(x, z);
+      if (gy < 5) continue;
+      let dry = true;
+      for (let h = 1; h <= 3 && dry; h++) if (W.liquidAt(x, gy + h, z)) dry = false;
+      if (!dry) continue;
+      sx = 1; p.x = x + 0.5; p.z = z + 0.5; p.y = gy + 1; p.vx = p.vy = p.vz = 0;
+    }
+    if (!sx) return { error: 'no ground to stand the person out of the animal\'s sight on' };
+    a.x = c.x; a.z = c.z; a.y = c.gy + 1; a.vy = 0;
+    a.state = 'wander'; a.pause = 99; a.tx = c.x; a.tz = c.z - 12; a.yaw = 0; a.alarm = 0;
+    window.__strip = a;
+    return { at: [+a.x.toFixed(2), +a.y.toFixed(2), +a.z.toFixed(2)], of: a.sp.id,
+      ground: c.gy, aimedAt: [c.x, c.z - 12], personMovedTo: [+p.x.toFixed(1), +p.z.toFixed(1)],
+      away: +Math.hypot(p.x - a.x, p.z - a.z).toFixed(1) };
   }
   if (s.where === 'water') {
     // A lane of the lake the body can cross: deep the whole way, so the stroke
@@ -279,16 +350,16 @@ const placeFor = (page, s) => page.evaluate(s => {
    `own`: nobody owns that lens. The tripod asks the share of the height that
    animal's own model stands at, at the field of view a body with no eye of its
    own is filmed at -- the person's 84. */
-const planTripod = (page, herd, frames) => page.evaluate(a => {
+const planTripod = (page, animal, frames) => page.evaluate(a => {
   const g = window.game, N = window.FRUTARIA;
-  const b = a.herd ? window.__strip : g.player;
+  const b = a.animal ? window.__strip : g.player;
   if (!b) return { error: 'no body to film' };
-  const tall = a.herd ? b.tall : b.size()[1];
+  const tall = a.animal ? b.tall : b.size()[1];
   /* how far that body reaches along its own heading: for a creature the
      rectangle its trunk takes up, for the body you wear the footprint the form
      gives it. It is added so the body's own length is not counted as free room */
-  const along = a.herd ? b.hl * 2 : b.size()[0];
-  const fov = a.herd ? 84 : b.fov() + N.CAM.fovBump;
+  const along = a.animal ? b.hl * 2 : b.size()[0];
+  const fov = a.animal ? 84 : b.fov() + N.CAM.fovBump;
   /* The distance the strip's own measurements ask for. The field of view is
      vertical (engine, persp(fovy, aspect)), exactly as the frame-share law asks
      it, so a frame at distance d is 2*d*tan(fov/2) tall and that wide times the
@@ -322,11 +393,11 @@ const planTripod = (page, herd, frames) => page.evaluate(a => {
     yaw, pitch: 0, fov, d };
   return { d: +d.toFixed(2), fov, aspect: +g.R.aspect.toFixed(2), travel: +travel.toFixed(2),
     arc: m.arc, y: +y.toFixed(2), shareRule: +N.CAM.shotFor(tall, fov).d.toFixed(2) };
-}, { herd, frames });
+}, { animal, frames });
 
 const stripFrame = (page, q) => page.evaluate(q => {
   const g = window.game, p = g.player;
-  const b = q.herd ? window.__strip : p;
+  const b = q.animal ? window.__strip : p;
   if (!b) return { error: 'no body to film' };
   /* one of the valley's bodies carries its own height; the body you wear gets it
      from the form it is wearing */
@@ -393,22 +464,31 @@ const stripFrame = (page, q) => page.evaluate(q => {
    body was asked to do and what it measured. */
 const stepWorld = (page, s, frames) => page.evaluate(a => {
   const g = window.game;
-  const b = a.s.where === 'herd' ? window.__strip : g.player;
+  const b = a.s.subject === 'animal' ? window.__strip : g.player;
   for (const k of ['fwd', 'back', 'left', 'right']) g.input[k] = a.s.keys.indexOf(k) >= 0;
-  let px = b.x, pz = b.z, travel = 0, low = Infinity, high = -Infinity;
+  let px = b.x, pz = b.z, travel = 0, low = Infinity, high = -Infinity, push = 0;
   const ys = [];
   for (let i = 0; i < a.frames; i++) {
     g.update(1 / 60);
     travel += Math.hypot(b.x - px, b.z - pz); px = b.x; pz = b.z;
     ys.push(b.y);
+    if (b.vy > push) push = b.vy;
   }
   ys.forEach(y => { if (y < low) low = y; if (y > high) high = y; });
   /* what counts as off the ground is the body's own floor, not a flag: the body
      you wear has one, one of the valley's does not, and an arc measured from the
-     positions is the same measurement for both */
+     positions is the same measurement for both.
+     `push` is the rate the body left the ground with, read after the frame that
+     pushed it -- the form both bodies keep it in, and the one number the two
+     records of one animal used to disagree about. The arc is asked of the ground
+     the body happened to be standing on, so it is only comparable where both
+     bodies stood on ground of the same kind: in open sky both come out at
+     0.73 m, and a wild body under a crown it will not hop through comes out
+     lower and says so in `airPct` as well. */
   const air = ys.filter(y => y > low + 0.03).length;
   const m = { travel: +travel.toFixed(2), v: +(travel / a.frames * 60).toFixed(2),
     low: +low.toFixed(2), high: +high.toFixed(2), arc: +(high - low).toFixed(2),
+    push: +push.toFixed(3),
     airPct: +(air / a.frames * 100).toFixed(1),
     at: [+b.x.toFixed(2), +b.y.toFixed(2), +b.z.toFixed(2)] };
   window.__measured = m;
@@ -436,23 +516,25 @@ const stepWorld = (page, s, frames) => page.evaluate(a => {
         if (placed.error) { console.log((s.name + '-' + view).padEnd(13), JSON.stringify(placed)); continue; }
         const settle = await stepWorld(page, s, s.settle);
         const plan = { strip: s.name, view, at: placed.at, of: placed.of, ground: placed.ground,
-          top: placed.top, deep: placed.deep, keys: s.keys || '(none)',
+          top: placed.top, deep: placed.deep, aimedAt: placed.aimedAt, away: placed.away,
+          keys: s.keys || '(none)',
           settle, frames: s.shots + ' x ' + s.every + '/60 s = ' + (s.shots * s.every / 60).toFixed(2) + ' s' };
-        if (view !== 'own') plan.tripod = await planTripod(page, s.where === 'herd', s.shots * s.every);
+        if (view !== 'own') plan.tripod = await planTripod(page, s.subject === 'animal', s.shots * s.every);
         console.log((s.name + '-' + view).padEnd(13), JSON.stringify(plan));
-        let low = Infinity, high = -Infinity, travel = 0, air = 0, stepped = 0, off = 0;
+        let low = Infinity, high = -Infinity, travel = 0, air = 0, stepped = 0, off = 0, push = 0;
         for (let i = 0; i < s.shots; i++) {
-          const st = await stripFrame(page, { view, herd: s.where === 'herd' });
+          const st = await stripFrame(page, { view, animal: s.subject === 'animal' });
           await page.screenshot({ path: path.join(OUT, TAG + '-' + s.name + '-' + view + '-' +
             String(i).padStart(2, '0') + '.png') });
           console.log(' ', String(i).padStart(2), JSON.stringify(st));
           if (!st.seen || !st.seen.in) off++;
           const m = await stepWorld(page, s, s.every);
           if (m.low < low) low = m.low; if (m.high > high) high = m.high;
+          if (m.push > push) push = m.push;
           travel += m.travel; air += m.airPct; stepped += s.every;
         }
         console.log('  =', JSON.stringify({ strip: s.name, view, travelled: +travel.toFixed(2),
-          arc: +(high - low).toFixed(2), airPct: +(air / s.shots).toFixed(1),
+          arc: +(high - low).toFixed(2), push: +push.toFixed(3), airPct: +(air / s.shots).toFixed(1),
           frames: stepped, per: +(travel / stepped * 60).toFixed(2), offFrame: off }));
       }
     }

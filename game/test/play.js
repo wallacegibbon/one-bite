@@ -714,17 +714,23 @@ const { sim } = require('./simwait');
   check('the sky does not change because of the eye', eyes.midnightFrog.sky === eyes.midnightHuman.sky, eyes);
   check('daylight washes out an eye built for the dark', eyes.noonFrog.fogDen > eyes.noonHuman.fogDen, eyes);
 
-  /* 10j. a hop is one event, not two stories. The body leaves the ground
-     because the physics says so, and the animation reads the same numbers off
-     it (airAmt / crouch / squash). The hopping body is measured against the
-     body that does not hop, so what is being tested is the `hop` block in
-     data/fruits.js and the one in data/creatures.js, not a coincidence about
-     frogs. A gait is only measurable on ground that cannot interrupt it: a
-     surface the same height all the way around (or the clearing found is a
-     town roof and the body spends the run falling off it) with twenty metres
-     of open corridor ahead and nothing solid for three blocks up -- longer than
-     the three seconds of walking below can ever cover, or the body walks out of
-     the clearing mid-run and what is measured is the terrain. */
+  /* 10j. The body you wear and the animal you wear it are moved by one record.
+     A hop is one event, not two stories: the body leaves the ground because the
+     physics says so, and the animation reads the same numbers off it (airAmt /
+     crouch / squash). What is measured here is therefore a body against its own
+     row and against the animal of the same kind the valley drives -- and not, as
+     this step used to measure it, a frog-shaped body against a person. That
+     comparison was only ever meaningful while the form record carried a second
+     set of motion numbers for the same animal (a 0.9 multiplier on the human's
+     4.7 m/s, a 1.3 on the human's jump, a hop of its own with a launch of its
+     own); with one row per animal there is one launch, one cruise and one period
+     to ask about, and both bodies are asked of it. A gait is only measurable on
+     ground that cannot interrupt it: a surface the same height all the way around
+     (or the clearing found is a town roof and the body spends the run falling off
+     it) with twenty metres of open corridor ahead and nothing solid for three
+     blocks up -- longer than the three seconds of walking below can ever cover,
+     or the body walks out of the clearing mid-run and what is measured is the
+     terrain. */
   const gait = await step('gait', () => {
     const g = window.game, N = window.FRUTARIA, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, vx: p.vx, vy: p.vy, vz: p.vz, form: p.form,
@@ -769,11 +775,12 @@ const { sim } = require('./simwait');
       const inp = { fwd: true };
       for (let i = 0; i < 40; i++) p.update(1 / 60, inp, g);          // settle onto the surface
       const y0 = p.y, x0 = p.x, z0 = p.z;
-      let apex = 0, arcs = 0, air = 0, up = false, crouch = 0, squash = 0;
+      let apex = 0, arcs = 0, air = 0, up = false, crouch = 0, squash = 0, push = 0;
       const n = Math.round(secs * 60);
       for (let i = 0; i < n; i++) {
         p.update(1 / 60, inp, g);
         apex = Math.max(apex, p.y - y0);
+        push = Math.max(push, p.vy);
         crouch = Math.max(crouch, p.crouch); squash = Math.max(squash, p.squash);
         /* the grounded flag flickers for a frame at a time even on flat ground
            (gravity moves the body 0.006 m and nothing is collided with that
@@ -781,6 +788,7 @@ const { sim } = require('./simwait');
         if (p.y > y0 + 0.06) { if (!up) { arcs++; up = true; } air++; } else up = false;
       }
       return { apex: +apex.toFixed(2), dist: +Math.hypot(p.x - x0, p.z - z0).toFixed(2),
+        push: +push.toFixed(3),
         arcs, airPct: +(air / n * 100).toFixed(0), crouch: +crouch.toFixed(2), squash: +squash.toFixed(2) };
     };
     // one press of the jump key, from stillness: the arc the key is worth
@@ -790,16 +798,21 @@ const { sim } = require('./simwait');
       p.vx = p.vy = p.vz = 0; p.grounded = false; p.air = p.maxAir(); p.airAmt = 0; p.squash = 0;
       for (let i = 0; i < 40; i++) p.update(1 / 60, {}, g);
       const y0 = p.y;
-      let apex = 0, hang = 0, off = false;
+      let apex = 0, hang = 0, off = false, push = 0;
       for (let i = 0; i < 200; i++) {
         p.update(1 / 60, { jump: i === 0 }, g);
         if (p.y > y0 + 0.06) { off = true; hang += 1 / 60; }
         apex = Math.max(apex, p.y - y0);
+        /* the rate the body leaves the ground with. This is read after the
+           frame's own update, so it is the launch less the one frame of gravity
+           the push-off spends falling -- which is exactly what the animal's step
+           leaves the ground with too, and the point of asking for it. */
+        push = Math.max(push, p.vy);
         if (off && p.y <= y0 + 0.02) break;
       }
-      return { apex: +apex.toFixed(2), hang: +hang.toFixed(2) };
+      return { apex: +apex.toFixed(2), hang: +hang.toFixed(2), push: +push.toFixed(3) };
     };
-    const human = walk(null, 3), frog = walk('frogpear', 3);
+    const human = walk(null, 3), frogWalk = walk('frogpear', 3);
     const jumpHuman = jump(null), jumpFrog = jump('frogpear');
     /* and the same for an animal: an amphibian used to have its height lerped
        onto the ground every frame, which pinned it there however it moved */
@@ -810,25 +823,66 @@ const { sim } = require('./simwait');
     npc.x = spot.x; npc.z = spot.z; npc.y = gy + 1; npc.vy = 0;
     npc.state = 'wander'; npc.pause = 99; npc.tx = spot.x; npc.tz = spot.z - 12; npc.yaw = 0; npc.alarm = 0;
     const away = { x: -999, y: 0, z: -999, form: null, formDef: {} };
-    let rise = 0, hops = 0, airF = 0, up = false, sq = 0;
+    let rise = 0, hops = 0, airF = 0, up = false, sq = 0, push = 0;
     for (let i = 0; i < 240; i++) {
       npc.update(1 / 60, away, g.world, g);
       rise = Math.max(rise, npc.y - (gy + 1)); sq = Math.max(sq, npc.squash);
+      push = Math.max(push, npc.vy);
       if (npc.y > gy + 1.05) { if (!up) { hops++; up = true; } airF++; } else up = false;
     }
-    const npcFrog = { rise: +rise.toFixed(2), hops, airPct: +(airF / 240 * 100).toFixed(0), squash: +sq.toFixed(2) };
+    const npcFrog = { rise: +rise.toFixed(2), push: +push.toFixed(3), hops, airPct: +(airF / 240 * 100).toFixed(0), squash: +sq.toFixed(2) };
     Object.assign(npc, wasN);
     Object.assign(p, was);
-    return { spot, human, frog, jumpHuman, jumpFrog, npcFrog, hop: N.FRUIT_BY_ID.frogpear.form.hop };
+    /* One record per body, and every measurement below asked of the record of
+       the body it was taken from -- not of the other body. `row` is what each
+       record states; `G` is the world's gravity, copied from src/entities.js the
+       way the ceiling rigs below already copy it; and `arcOf` is the height a
+       launch actually reaches in this world, which is the analytic `v*v/2G` the
+       ceiling gate asks less the one frame of the fall a push-off spends
+       (v*dt/2): 0.73 m for the frog where the gate's number is 0.78. Both
+       bodies spend that frame the same way now, so one number answers for both. */
+    const G = 23, dt = 1 / 60;
+    const arcOf = v => v * v / (2 * G) - v * dt / 2;
+    const frog = N.CREATURE_BY_ID.frog, humanRow = N.HUMAN_FORM;
+    return { spot, human, frog: frogWalk, jumpHuman, jumpFrog, npcFrog,
+      row: { land: frog.speed, launch: frog.hop.up, period: frog.hop.period,
+        humanLand: humanRow.speed, humanLaunch: humanRow.jump },
+      arc: +arcOf(frog.hop.up).toFixed(3), humanArc: +arcOf(humanRow.jump).toFixed(3),
+      /* what a launch has to leave the ground with, once the frame's own gravity
+         is taken off it: the same number for both bodies, to the millimetre */
+      push: +(frog.hop.up - G * dt).toFixed(3), humanPush: +(humanRow.jump - G * dt).toFixed(3) };
   });
   check('a flat open clearing was found to measure on', gait.spot !== undefined, gait);
-  check('a frog crosses the ground in arcs, not in a slide', gait.frog.arcs >= 2 && gait.frog.apex > 0.8 && gait.frog.apex < 3, gait);
+  check('a frog crosses the ground in arcs, not in a slide',
+    gait.frog.arcs >= 2 && Math.abs(gait.frog.apex - gait.arc) < 0.1, gait);
   check('the legs load before a hop and take the landing after it', gait.frog.crouch > 0.5 && gait.frog.squash > 0.02, gait.frog);
-  check('a hop is not a discount on walking: it covers the same ground',
-    Math.abs(gait.frog.dist - gait.human.dist) < 3, { frog: gait.frog.dist, human: gait.human.dist });
+  /* "A hop is not a discount on walking: it covers the same ground" -- that is
+     what this check used to say, and it compared a frog-shaped body's ground with
+     a person's and required them to agree within 3 m. The sentence only makes
+     sense if the body worn from an animal was expected to travel like a person,
+     and it held because the fruit's record multiplied the human's 4.7 m/s by 0.9.
+     Both bodies are asked of their own row now, which is the same question a
+     wild body is asked, and the answer the frog gives is the animal's. */
+  check('the body worn from a frog crosses the ground at the frog\'s own cruise, which is what its row states',
+    Math.abs(gait.frog.dist / 3 - gait.row.land) < 0.2, gait);
+  check('and the body you start in still crosses it at its own: making the animal honest did not move the person',
+    Math.abs(gait.human.dist / 3 - gait.row.humanLand) < 0.2, gait);
   check('a human does not hop', gait.human.arcs === 0 && gait.human.apex < 0.2, gait.human);
-  check('the jump key is a hop and not a balloon',
-    gait.jumpFrog.apex > gait.jumpHuman.apex && gait.jumpFrog.apex < 4 && gait.jumpHuman.apex < 2.5, gait);
+  /* One launch, asked of both bodies. The worn body from a press of the key, the
+     valley's own animal in the middle of hopping for itself: the rate each leaves
+     the ground with is the row's `hop.up` less the one frame of gravity a
+     push-off spends falling, and the two measurements come out the same number to
+     the millimetre. Their heights follow from it -- 0.73 m each -- where the two
+     records used to put the worn body 1.31 m up (1.38 measured) and the animal
+     0.78. The animal's height is held to a looser bound than the body you wear
+     because it is measured over a corridor it chose, and one arc there is a
+     corridor's business, not the launch's. */
+  check('a frog worn as a body and the frog itself are thrown by one launch',
+    Math.abs(gait.jumpFrog.push - gait.push) < 0.01 && Math.abs(gait.npcFrog.push - gait.push) < 0.01 &&
+    Math.abs(gait.jumpFrog.apex - gait.arc) < 0.06 && Math.abs(gait.npcFrog.rise - gait.arc) < 0.12, gait);
+  check('and the body you start in is thrown by its own record, not borrowed from an animal',
+    Math.abs(gait.jumpHuman.push - gait.humanPush) < 0.01 &&
+    Math.abs(gait.jumpHuman.apex - gait.humanArc) < 0.06, gait);
   check('a frog in the valley leaves the ground', gait.npcFrog.rise > 0.3 && gait.npcFrog.hops >= 2, gait.npcFrog);
 
   /* 10k. the lens is the hand. The watching camera used to trail the aim, so
@@ -2473,27 +2527,34 @@ const { sim } = require('./simwait');
       return { st, body: { y: +p.y.toFixed(2), spd: +Math.hypot(p.vx, p.vz).toFixed(2),
         grounded: p.grounded ? 1 : 0, inWater: p.inWater ? 1 : 0, held: +(p.held || 0).toFixed(2) } };
     };
-    const run = (at, y, phases, atFastest) => {
-      /* the frame to read the stroke off. A body that swims into the wall of the
-         lake comes dead to a stop, and the stroke of a stopped body is not the
-         stroke of a swim: where asked, the run is driven twice and the lens
-         opens on the frame the body was travelling fastest on. */
+    const run = (at, y, phases, pickFrame) => {
+      /* which frame to read the pose off.
+         'fast' -- the frame the body was travelling fastest on. A body that
+         swims into the wall of the lake comes dead to a stop, and the stroke of
+         a stopped body is not the stroke of a swim: where asked, the run is
+         driven twice and the lens opens on that frame.
+         'high' -- the frame the body was highest above the ground it was put on.
+         A hop is an arc and its air pose belongs to the top of the arc. The rig
+         used to read the last frame of its window instead and got an airborne
+         pose by luck: the hop period then happened to leave the body off the
+         ground at the end of the window, and the same rig with the animal's own
+         period in it read a body standing flat, with nothing tucked anywhere. */
       let bi = -1, hit = null;
       const drive = (pick) => {
         place(at, y);
-        let i = 0, best = -1, bspd = -1;
+        let i = 0, best = -1, bscore = -Infinity;
         for (const [secs, inp] of phases) {
           const n = Math.round(secs * 60);
           for (let k = 0; k < n; k++, i++) {
             p.update(1 / 60, inp, g);
-            const s = Math.hypot(p.vx, p.vz);
-            if (s > bspd) { bspd = s; best = i; }
+            const score = pickFrame === 'high' ? p.y - y : Math.hypot(p.vx, p.vz);
+            if (score > bscore) { bscore = score; best = i; }
             if (pick && i === bi) hit = snap();
           }
         }
         if (pick) { if (!hit) hit = snap(); } else bi = best;
       };
-      if (atFastest) drive(false);
+      if (pickFrame) drive(false);
       drive(true);
       const out = stroke(hit.st);
       out.body = hit.body;
@@ -2502,10 +2563,10 @@ const { sim } = require('./simwait');
     const out = { lake, dry, BACK: +BACK.toFixed(3), BELLY: +BELLY.toFixed(3), FLANK: +FLANK.toFixed(3),
       TOP: +TOP.toFixed(3), HIP: +HIP.toFixed(3), MID: +MID.toFixed(3), holdMin: +hold.toFixed(2) };
     out.float = run(lake, lake.top - 1.2, [[4, {}]]);
-    out.swim = run(lake, lake.top - 1.2, [[2, { fwd: true }]], true);
+    out.swim = run(lake, lake.top - 1.2, [[2, { fwd: true }]], 'fast');
     out.dug = run(lake, lake.top - 1.2, [[6, { sneak: true }]]);
     out.land = run(dry, dry.y + 0.01, [[3, {}]]);
-    out.hop = run(dry, dry.y + 0.01, [[0.5, { jump: true }], [0.35, {}]]);
+    out.hop = run(dry, dry.y + 0.01, [[0.5, { jump: true }], [0.35, {}]], 'high');
     /* and a wild body crossing the lake: the one a person watches. Its phase is
        set to a mark so its state can be picked out of the frame, and the lens
        stands on the bank the triple search put on the far side of the deep water
@@ -3362,12 +3423,12 @@ What was measured before any of this was fixed, over 180 frames of walking
   /* Two claims, and they are the two halves of one stride.
      First: one cycle of the legs is worth exactly as much ground as the model's
      own foot reaches. Measured metres over measured cycles against the number
-     the model gives for that body at that speed -- 1.85 against 1.85 for a
-     person. Before
+     the model gives for that body at that speed -- 1.97 against 1.97 for a
+     person at their own cruising speed. Before
      the stride was tied to the ground the cycle ran on a clock of its own and
      this ratio was the body's speed over that clock, which had nothing to do
      with the leg: a person took 6.3 m steps.
-     Second: a foot that is on the ground does not move along it. 0.006 of the
+     Second: a foot that is on the ground does not move along it. 0.007 of the
      ground the body covers, for a person -- the last of it is a foot with no
      ankle, which rocks from toe to heel as the leg sweeps under the body.
      Before, it was over 1: a foot was travelling along the
@@ -3401,13 +3462,15 @@ What was measured before any of this was fixed, over 180 frames of walking
      down at all: the body is flying and the leg is a spring, it comes down onto
      a foot, bends it and is thrown off it again, so it is LOWEST over the middle
      of a stance and highest in the middle of the flight. A person at their own
-     speed is in that second case -- a foot is down for 32% of a stride -- and
+     speed is in that second case -- a foot is down for 30% of a stride -- and
      the heave the models had was written for the first one, so the body was at
      the top of its rise exactly at the moment its own leg was taking its weight.
-     Measured off the pose the draw uploads: at 4.7 m/s a person's body falls
-     0.055 m and rises again across a stride, at the lowest point 0.16 of the
-     stride (the middle of the stance, 0.16) and the highest at 0.41 (the middle
-     of the flight, 0.41); at a walk -- a foot down for 56% of the stride -- the
+     Measured off the pose the draw uploads, where `move` is the share of the
+     speed the body's own record names -- so 1 is a person at their 4.7 m/s and
+     0.2 is that person walking: at their own speed a person's body falls
+     0.072 m and rises again across a stride, at the lowest point 0.15 of the
+     stride (the middle of the stance, 0.15) and the highest at 0.40 (the middle
+     of the flight, 0.40); at a walk -- a foot down for 56% of the stride -- the
      same body is highest at 0.28 (the middle of the stance, 0.28) and lowest at
      0.03 (the middle of the handover, 0.03).
      The bound on how big the heave has to be is not arbitrary either: at 0.12 of
@@ -3439,7 +3502,7 @@ What was measured before any of this was fixed, over 180 frames of walking
           midFlight: +((stance + 0.5) / 2).toFixed(3),
           handover: +((stance - 0.5) / 2).toFixed(3) };
       };
-      out[model] = { run: at(0.94), walk: at(0.2), slow: at(0.35) };
+      out[model] = { run: at(1), walk: at(0.2), slow: at(0.35) };
     }
     return out;
   });
@@ -3461,13 +3524,15 @@ What was measured before any of this was fixed, over 180 frames of walking
 
   /* A body's arms are the last thing still kept by a clock. They were already on
      the stride for the swing, but the *bend* of the elbow was one angle for every
-     speed: read off the pose the draw uploads, a person at 4.7 m/s held the elbow
-     at 0.12 rad -- seven degrees -- which is the angle a person standing still
-     holds it at, and swung a straight arm through the whole stride. A body
-     walking lets its arm hang; a body running carries it bent, because a straight
-     arm swung through 2.3 strides a second is a pendulum the body has to stop and
-     start again twice a stride. Measured after: the elbow is held at 0.12 rad
-     standing, 0.14 at a walk, 0.61 at a run, and reaches 0.89 in mid-swing. */
+     speed: read off the pose the draw uploads, a person at their own cruising
+     speed held the elbow at 0.12 rad -- seven degrees -- which is the angle a
+     person standing still holds it at, and swung a straight arm through the whole
+     stride. A body walking lets its arm hang; a body running carries it bent,
+     because a straight arm swung through 2.4 strides a second is a pendulum the
+     body has to stop and start again twice a stride. Measured after, at a share
+     of the speed the body's own record names: the elbow is held at 0.12 rad
+     standing, 0.14 at a walk, 0.26 at a jog, 0.67 at the speed its own
+     record names, and reaches 0.97 in mid-swing. */
   const arm = await step('armsAreCarriedNotSwung', () => {
     const N = window.FRUTARIA, g = window.game;
     const entries = g.ensureModel('human');
@@ -3485,7 +3550,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       return { mv, held: +held.toFixed(3), peak: +peak.toFixed(3),
         swing: +(hi - lo).toFixed(3) };
     };
-    return { stand: at(0), walk: at(0.2), jog: at(0.5), run: at(0.94) };
+    return { stand: at(0), walk: at(0.2), jog: at(0.5), run: at(1) };
   });
   check('a standing body still hangs its arm', arm.stand.held < 0.13, arm);
   check('a walking body still hangs its arm', arm.walk.held < 0.20, arm);
@@ -5701,17 +5766,29 @@ What was measured before any of this was fixed, over 180 frames of walking
     };
     const frog = circle('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 },
       () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }));
+    /* The body and the animal are one animal, and this says so in the one way
+       that cannot rot: it asks the game which record a worn body's motion comes
+       from, and the answer is the animal's own row. There is no second row to
+       compare numbers with -- the fruit's form record carries no speed, no
+       launch, no turn, no swim and no hop -- and `reach.js` fails the build if a
+       field is added to a record and nothing reads it, while the checks below
+       fail if one of those five comes back to a form record: the pair of records
+       that used to disagree about one frog cannot be put back by accident. */
+    const wornRow = p.moveDef === N.CREATURE_BY_ID.frog;
+    p.form = null;
+    const bareRow = p.moveDef === N.HUMAN_FORM;
+    const one = { wornRow, bareRow,
+      formFields: ['speed', 'jump', 'hop', 'swim', 'turn']
+        .filter(k => N.FRUIT_BY_ID.frogpear.form[k] !== undefined) };
     Object.assign(p, was);
-    return { frog,
-      wild: { swim: N.CREATURE_BY_ID.frog.swimSpeed },
-      turn: { frog: N.FRUIT_BY_ID.frogpear.form.turn === N.CREATURE_BY_ID.frog.turn } };
+    return { frog, one, wild: { swim: N.CREATURE_BY_ID.frog.swimSpeed } };
   });
   check('a worn frog body swims at the speed the wild frogs swim at',
     !pace.error && Math.abs(pace.frog.mean / pace.wild.swim - 1) < 0.05, pace);
   check('and it holds that speed while it carves, so the number is a cruise and not a peak',
     !pace.error && pace.frog.dev < 0.3, pace);
-  check('the body and the animal turn at one rate: one animal, one number',
-    !!pace.turn && pace.turn.frog, pace);
+  check('the body you wear asks its motion of the animal it was worn from: one animal, one record',
+    !!pace.one && pace.one.wornRow && pace.one.bareRow && pace.one.formFields.length === 0, pace);
 
   /* 11b. The course bends. `turn` is the most radians a second the body may add
      to its heading at its own cruising speed, and it is a limit the body
@@ -5750,7 +5827,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       const chord = Math.hypot(rec[rec.length - 1].x - base.x, rec[rec.length - 1].z - base.z);
       return { peak: +peak.toFixed(2), to45: t45 < 0 ? null : +t45.toFixed(2),
         arc: +path.toFixed(2), chord: +chord.toFixed(2), bank: +bank.toFixed(3),
-        limit: p.formDef.turn };
+        limit: p.moveDef.turn };
     };
     const frog = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 }, 1,
       () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 135);
@@ -7525,7 +7602,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      -- and a body bobbing across its own surface answered that a different way
      every frame: at (56.5,14.9,94.5) a frog pushed up by its own push key changed
      its mind 42 times in 240 frames, and with it the whole water branch of its
-     movement, its cruising speed of 4.65 or 4.23, and the stroke of its legs,
+     movement, one cruising speed and then another, and the stroke of its legs,
      which snapped 0.19 m out and back again every few frames. The surface of the
      column is a property of the place, not of where the body happens to sit in
      it, which is the same reason `heldUp` reads the column and not the body. */
@@ -8740,7 +8817,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      the body simply walks: it was on the ground in **89%** of the frames of a
      shorter run, swinging the same 0.124 m, and it is on the ground in every
      one of them now with a swing of 0. A hopping body is not measured for
-     standing: a frog at the same bank is off the ground in 77% of frames
+     standing: a frog at the same bank is off the ground in 40% of frames
      because hopping is what its own record says it does on land, and what is
      asked of it is that its feet come back down, which they do. */
   const wall = await step('aBodyWalkedIntoABankStandsOnItsFeet', () => {
@@ -8749,8 +8826,8 @@ What was measured before any of this was fixed, over 180 frames of walking
        the same height for every body and every run. What is hunted is the shelf
        it is built on, and two things are asked of it, both read over the ground
        a body can reach in this step rather than over a shape invented for the
-       search: level -- the longest run here walks 1.5 s at a top speed of 5 m/s,
-       which is 13 cells towards the bank and 7 across it -- and clear of
+       search: level -- the longest run here walks 1.5 s at the human record's
+       4.7 m/s, over a shelf 13 cells towards the bank and 7 across it -- and clear of
        everything solid along the way it walks. A crown is not a wall the
        movement code refuses, but a body set down inside one, or walked into one,
        is a body whose box overlaps a block it cannot pass, and the widest body
