@@ -7,293 +7,46 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: round 29 follow, tree `0835510` (the
-watch of the round 29 tree went red on its eighth run, on a flake the
-round's own pace draw had planted in the lean: the turning step asks
-the peak a body banks through a quarter turn, the peak is built on the
-speed, and the speed is the body's own pace (0.85-1.25 of the cruise),
-so the peak runs 0.13-0.20 rad over the band and the 0.15 bound the
-step kept sat inside the band; the bound now sits at 0.12, under the
-worst measured peak, and the chapter's measured peak is the band the
-current bodies leave instead. The two gate runs on the nose tree then
-surfaced the two flakes the round's other draws had planted. The first
-was in the dip window: the window pins the frog's target to the column
-it asks the water of, and the ring the round put on the same frog
-overwrote that pin on the first frame of every one -- the errand is
-reached the moment the body is on it, and the body is always on it --
-so the frog lapped the shallows round the isle's edge for the whole
-window and the level the column answers (12.9) came back as 14.0; the
-ring is set aside for the window and restored on the way out, and the
-ring is asked by the step that keeps it. The second was in the flock:
-the forty-second window keeps one slice of each body's dip cycle, and
-the cycle is between forty seconds and two minutes long, so a slice
-can catch all five in the deep half of the water, where the widest
-instant of the window's spread measures 1.6-1.8 m against 3.9 m at the
-widest of the ordinary runs, and the 2 m bound the instant carried sat
-inside the hang the draw leaves there; the spread is now asked of the
-window, not of the instant -- the flock spans 1.9-3.6 m of the lake's
-depth from its fifth to its ninety-fifth percentile sample and holds
-four to eight of the lake's half-metre layers, run after run over sixty
-flocks, 1.9 at the narrowest where the bodies were born with the
-shallow hangs of the draw -- the bound sits at 1.5, under that band,
-where the formation the law replaced answers 0, and the instant is kept
-only as the witness that at no frame of the window are the five within
-20 cm of one depth, the measure the paragraph below still carries at
-the middle instant and the window has now stopped making. And the
-round owed one more finding the gates had not owed: the nose the step
-gate of a body that lives in the water asks was read off the body's
-own model line, and a body is worn as nothing -- the model line is a
-record the player alone has -- so every wild body's nose was 0 and the
-brick the snout stood in, 0.31 m ahead of the frog's centre at the
-scale the frog draws at, was asked nothing at all; the rig that wears
-a line pins the body's x and z and so never asked the ground the snout
-enters, and no creature's row names the water body today, but the
-machinery stayed measured and tested for the next animal the valley
-puts in that water, and the model is read off the species's own line
-now, the one that already gives the reach its scale. Every tree of the
-chain was gated twice with the suite whole and the play log clean
-(10/10, 0 CHECK FAILED) before it was pushed to both remotes: `2ab1fbd`
-the round's record, then `ec4f764` the lean bound, `a1ef6c5` the two
-window fixes, and `0835510` the nose; the standing watch on this tree
-follows once this record is on both remotes), on the tree of
-`10a4c35` (the user's frog
-word landed in three stages, the first two already pushed: the frog
-pear demoted from rare to common, and the fish cut out of the valley
-with the machinery that had been measuring them. The stage that
-landed this round puts the water frogs of Mirrorlake on the ring
-round the keep: the isle at the centre of the lake is the landmark
-their record names, and a frog in the water has one errand, the next
-arc of a ring of its own round that isle -- a lane of its own between
-25 and 30 m out, run the same way round as every other frog, at a
-pace of its own (0.85-1.25 of the cruise its row gives) -- and the
-valley drives five of them now instead of eight. On the bank a frog
-wanders round the place it was born on as before, and the pull of the
-herd is a law of the ground: it asks the water first, so the ring is
-not dragged to a middle that sits in the middle of the water the
-body does not swim. The ring was surveyed before it was asked: the
-water answers wet at every point of a ring of 22-31 m out, 3-4 m
-deep at the shallowest, and neither the brick of the sunken tower
-nor the huts of the frog's place rises above the film. The landing
-owed two findings. The first was a pin the world could not see: the
-step that watches the keep's door found a frog cornered between its
-moat and the tower's stone walking a centimetre at a time for the
-whole 2400-frame window of the step, and no law found it had stopped
-because it had not; a progress backstop (a 120-own-frame sliding
-window over the body's own position, fired on under 0.5 m of ground
-with more than 0.8 m to go) retires the target the way the contour
-already retires it against a wall, and the ring's next arc runs the
-body out of the corner -- every pin episode bounded at under ten
-seconds, the body going round by the door, the hollow shaft and the
-bank of the tower, and never inside the world. A line-of-sight
-errand ask (skip the arcs whose straight line crosses solid) is a
-possible follow-up and is not done: the backstop bounds the cost of
-the corner, and the step keeps its one law. The second finding was a
-latent flake the pace draw introduced: the step that measures the
-frog crossing the lake at the rate its row names kept a band written
-before the pace existed, and the band was exceeded by a pace the
-draw was about to give (about two percent of runs); the band now
-covers the whole pace band (1.64-2.42 m over the second the run
-walks) with a hand's width of margin at each end. The docs and the
-READMEs carry the count and the ring with the measured numbers, run
-after run: 99-100% of the frames on the errand, 1.6-2.4 m/s, 1.9-3.5
-rad round the isle, the paces the frogs were born with differing by
-0.15-0.38 of the cruise, and the flock over its forty seconds at no
-instant within 20 cm of one depth, the middle instant spread over
-1.2-3.2 m, three to five half-metre layers, and the depth the dive
-gives the body never within a metre of the film), on the tree of
-`dd16d24` (the sky's cloud
-deck cut at the user's word -- the `sky()` generator that laid
-sixteen puffs of block 16 at y38-43 above the canopy and the law
-10q that read a cloud against the sky are gone; block 16 stays
-where the Grey Veil pillars are built out of it, so no renumbering
-and no save migration, and the twinkle step no longer takes the
-deck down for its sky grabs; the soft table keeps the underside
-law that reads a crown and a roof against the sky. The round also
-answered a question: the user noticed the lakebed seen from the
-surface or the bank reads clearer than a forward view from inside
-the water, and four lenses at noon measured it -- straight down on
-a 2 m bed, spread 58 (legible sand); across from the bank, 35;
-0.5 m under the surface looking forward, 3.3; on the bed itself,
-2.6; the same underwater frames with every effect of the water
-taken away read 167-172 of mean with 17-19 of spread. That is the
-per-metre absorption the lake was tuned to (0.4 a metre for the
-green the eye reads brightest, visibility near 2.5 m), not a bug;
-nothing was changed), on the tree of `a0f12f9` (the hop gate's ask
-of the cells the body's box reaches into at push-off, landed after the
-standing watch reds on the tree of `9433859` -- the red is recorded at
-the end of this paragraph), on the tree of `9433859` (the crossing
-read's settle window, landed after the standing watch reds on the
-cut's tree, its red recorded there as well), on the tree of `cc08b55`
-(the quest skin and the
-buff mushrooms cut, pushed to both remotes with the gates green twice on
-its own tree). The round's driving change was the user's: the valley's
-three quests keep what they give and lose what they say -- they become the
-three deeds the valley keeps for itself (cellar, lake, greenhouse: a deed
-carries no text the player reads, no checklist and no hint; the only
-consequences are the storage it hands over, which still arrives with the
-plain upgrade line it always had, and the name it starts to use for you,
-the epithet) -- and the four buff mushrooms and the buff system they fed
-(the stealth, the jump, the guard and the glow the player wore for a
-while) go out of the game, the glowseed with them, so the plants the
-valley grows are the one that was always the valley's own: the cellarseed,
-block 60, now the only self-lit plant standing in the world (the glowcap's
-ring, block 76, keeps its place in Glowglade as the scenery the world
-always had). The cut also lands issue 11's stage B: the bear, its fruit
-and form, the mountains' cold and the raids go with the owl the stage
-before took, and the valley keeps three bodies and no flight. The stage C
-demotion of the frog pear to common did not land with it: the valley grows
-one fruit and it is rare (docs/04 says so and the data agrees), the
-five-rung ladder stays, and the demotion stands as the user's open design
-call. The landing owed three findings. The first was a bug of the game's
-own: the journal panel was still concatenating the section it had lost
-(ui.js renderJournal said `me + q + b + c` with `q` gone, a
-`ReferenceError` that opening the journal in a browser would have
-thrown); it now says `me + b + c`, and the language test that renders the
-panel in both languages reads it back. The second was the world moving
-under the laws: the cut takes content out of the worldgen's seeded draw,
-so the placements the scatter's scan hunts for stand in new columns, and
-the spark law's wall scan owed the air-birth premise its crown scan
-already carried -- the burst is let go at the terrain row plus a lift of
-a random metre, so the cells it can be born in must be air, or the
-question asked is no longer "does the air keep it"; the scan now asks that
-of the cells it can be born in, on the wall and the crown alike. The
-third was the standing count of the valley's rebuild: the cut takes the
-micro and emissive bucket meshes the scatter content held, so the meshes
-the valley stands on move from 269 to 185, the mesh-count law's lower
-bound now asks for over 100, and the docs say 185. A save written before
-the cut still lands on the right deeds: the three that remain keep their
-ids (the loader maps the old ids q1, q4 and q6 onto cellar, lake and
-greenhouse), and the flags the quests the owl and the bear took with them
-carried land on nothing and are lost, the way they were meant to; the
-round-trip law puts the whole valley back off the save and reads the deeds
-off it the way it read the quests. The watch loop 14 finished its
-twenty-four green on the tree of `aa84552`; the trees that followed it --
-`1dadbf4` (the docs' one language, gates 1-4 on the flat tree, its
-gate-5 double run on the final tree of the stage), `a8ae110` (flight and
-the owl, the full contract twice on its own tree) and `cc08b55` (this cut,
-the full contract twice on its own tree) -- came back green on the gates
-they owed. The standing watch on this tree is loop 15. The re-read pass of
-the round, run while the watch does its work, found three more lines of
-drift against the code, all fixed to what the code does and landed as
-`803d71e`: the technical chapter's particle line still named the glowing
-seeds the round had just cut and the splashes that never existed (the
-spawner makes fireflies by night, bubbles under water, and the sparks a
-transformation lets go); the README's cut list pointed "the first four" the
-docs-sync check guards at the wrong four (the check reads mixed form /
-mixed stomach / magic stomach / beast residue, and the list's fourth was
-the twelve side quests, a thing the check does not guard); and the
-worldview chapter's banned-word list still banned the word the storage
-mechanics now own (a handover is an `upgrades` entry in the data, and the
-log line that announces it says so). A fourth line came out of the round's
-own cut: removing the word for the buff system from the technical chapter's
-save-line in `cc08b55` doubled the word it sat inside (`all come backar all
-come back`), and the re-read un-mangled it to what the save round trip
-actually returns (`ebf6a22`). Three more lines of the round's own old
-ids stood in the storage chapter's upgrade line, the map chapter's
-gating diagram and the technical chapter's test table: the cut keyed the
-upgrades to the deeds the valley keeps (cellar, lake, greenhouse), and
-the loader keeps the old ids only for the saves that carry them, so the
-lines now name the deeds the way the grant and the test do, fixed beside
-this record. One more line of the re-read's: the fruit chapter's
-interaction table quoted the crosshair prompt with the rarity and slot
-cost the prompt does not carry -- the prompt is 'E — pick' plus the
-fruit's name, and the rarity and the slots are the log line the pick
-announces -- fixed beside this record. The standing watch on the cut's tree,
-loop 15, did its work and found the one thing the round's own cut owed:
-green on its first six runs and red on the seventh, on the crossing law
-(a wild frog crossing the lake kicks the same way, feet behind it). The
-rig places a body of the crowd at the centre of the lake and points it at
-an errand in the deep water sixteen metres off, drives the fixed two
-seconds, and reads the stroke off the frame the draw uploads; the red
-run's read came back with the water holding the body, moving at its own
-cruise and inside the body it should be inside, and the stroke swept
-0.144 of a metre fore and aft against the law's 0.15, while the rest of
-the payload sat on its own records: the same model at the same place with
-nothing moving sweeps 0.079, and the settled read of the same leg
-measured off the model's own table reads 0.181. The gap between the two
-is the turn. The round's cut took the frog's turn from 1.9 to 0.9 rad/s
--- the models' table carries the reason beside the number: 0.9 is the
-tightest arc a body with a kick holds, and the record held 1.9 for a
-while -- and the rig's fixed two-second read is a read of the middle of a
-swing. Before the cut the widest course error a placement could leave
-settled at 1.9 rad/s before the read finished, so the read never met the
-swing; at 0.9 a frog placed more than two-fifths of a turn from its
-errand still holds most of the rate at the read, and the inside leg --
-the one the rig reads -- sweeps less the harder the body turns. That is
-the one thing that moves the read across the bound with nothing in the
-game changed, and it is why the red came where it came: the placement
-takes the body's heading out of the running game at random, and the read
-meets the swing in about one run of six. The read was the wrong read, not
-the game wrong: the law is about a frog that is crossing, and a frog
-still swinging onto its errand is turning, not crossing, and the turn it
-is making is asked by its own law (the outside leg of a turn). The answer
-is the rig's premise, test-only with the check line byte-identical: the
-read waits for the heading to settle onto the errand, and the wait is kept
-beside the reading rather than hidden in it -- the payload gains the
-length of the wait and the turn it read at. With the herd's errand
-cleared the way the rig clears it (a target set in the rig is outranked
-by the herd's own, and the rig clears it before it places the body) and
-the errand fixed for the leg, the widest course error settles before
-3.2 s of the 0.9 rate, and the live game with the keep-apart of the other
-frogs weaving the way settles the widest placement 112 frames after the
-two-second send, while every placement inside 1.88 rad of the errand had
-already settled by the end of the send, measured in the rig's own
-premises (the herd centres cleared, the lens parked on the bank, the
-errand fixed); the wait is set at 300 frames, twice the measured worst
-case, and a body still turning hard after five more seconds is a body the
-law should see. On the fixed tree the suite came back green end to end
-and the gate's double run came back green twice (`9433859`), and the
-standing watch on it is loop 16. The standing watch on that tree, loop
-16, came back green on its first seven runs and red on the eighth, on
-the cavity line of the frog's own ceiling (a body on foot does not push
-off into a ceiling it cannot reach through, and its body never passes
-through the ceiling of the place it is in). The rig places a frog in the
-pocket of a ledge at (119, 10) -- floor 26, ceiling 27, a metre of air,
-the trunk standing in the column across the mouth at (118, 9) -- and
-reads the hop the way the game asks it. The red run's frog walked under
-the roof the whole time the gate could see it: its own column read the
-pocket's ceiling, the room was a metre against the 1.21 the arc needs,
-and the gate held it to walking. At frame 51 the centre crossed the
-mouth a hand's width in -- 5 mm over the edge -- and the overdue hop
-was due: the gate asked its own column and the span of the arc, and the
-span's integer rounding at the frog's heading asked the column next
-door and skipped the trunk's, so both of the cells it asked read open
-and the launch was let through. The arc was no straight drift: the frog
-kept steering at the herd's errand over the top of it (the rig does not
-clear the herd centres, and the wander state walks at the herd's own
-centre, 73.73, 99.36), and the step into the trunk's column was refused
-at the feet, so the body spent the apex back across the edge it had
-left: at frame 65 the centre was in the pocket's own column again with
-the top of its head 0.16 m through the ceiling for one frame. The reads
-beside it all sat on their own records -- both launches legal on every
-read the rig carries, the second of them clean -- so the red is the one
-the game owes: the gate asked the column the centre stands in and the
-span the arc crosses, and it did not ask the cells the body's box
-reaches into at push-off, the cells that say the body is still under
-the roof it thinks it has left. The fix is the gate's own ask extended
-to those cells (`game/src/entities.js`, the hop gate, `a0f12f9`): the
-roof is now also the lowest of the cells the body's box covers while it
-pushes off -- the trunk rectangle the body's own hw, hl, ox, oz give
-it, taken the way the body's clash takes them -- min'd with the reads
-it already made. A body that cannot clear the roof it is still under
-walks out instead, and its legs do not load for the hop they are not
-going to make; the wind is held to the same answer. The rig's recompute
-of the gate mirrors it, box cells and all, with its check lines
-byte-identical to before. Measured on the fixed tree: the red run's own
-placement holds 139 frames with the box under the low cell while the
-gate keeps its answer, and the frog launches only once the box clears
-the mouth; the same frog 2.5 m out of the pocket hops at frame 12 on
-schedule -- the extension blocks the shape without blocking the hop.
-One more line of the round's re-read landed beside the fix (comment
-only): the comment on the ambient pass named the embers and the
-splashes the pass never lets go, and it now names the fireflies at
-night and the bubbles under water, the way the pass lets them go. On
-the fixed tree the suite came back green end to end and the gate's
-double run came back green twice (`a0f12f9`), and the standing watch on
-it is loop 17. The issues 1-8 of round 26 stand
-closed as recorded; 2f (the walking soak) and 2g (the flock crown) stand
-recorded and watched with the loop.
+State at time of writing: the round's code ends at `49236cc`, pushed to both
+remotes, and this record is the docs-only commit that follows it on the same
+tree. The full suite ran twice on that tree, both runs 10/10 with
+`0 CHECK FAILED` in `/tmp/frutaria-play.log`; the doc gates are clean on it too
+(`tools/extract-comments.js` -> `[]` and `occurrences: 0, unique: 0`;
+`docs-sync` ending all-consistent; `docs-drift` catching every drift it plants).
 
+Two things landed since the record kept under the history heading further down,
+and they belong to one another.
+
+- `69bac02` **the lens films the body at the size the body is**. The
+  third-person distance was `1.5 + 2.25 * height`, whose comment claimed the
+  subject "holds roughly the same frame share"; counted off the pixels of a
+  1280x720 frame a person's body owned 5236 px of it and a frog-shaped body
+  2020 px -- 0.46 of the person's share. The law is now the share itself
+  (`N.CAM` in game/src/game.js), calibrated on the shot every frame measurement
+  in docs/07 is written against (a person 1.8 m tall at 5.55 m in a frame 84
+  degrees tall), so a person's numbers do not move by a pixel while the animal
+  goes from 45 px tall and 2020 px of frame to 108 px and 10110 px, with 1651
+  colour edges inside the body where the old shot held 684. `game/test/play.js`
+  counts the same things out of a drawn frame on every run.
+- `49236cc` **a strip films one action, in phases**: `node game/test/shots.js
+  strip [hop|stroke|turn|wild]`. The page's clock is stopped, the world is
+  stepped by hand at 1/60 with the same keys held throughout, and every frame
+  says where the body landed in the frame and whether it is in it (projected off
+  the engine's own basis; the four strips report `offFrame: 0`). Two lenses per
+  action: the one a player owns, and a tripod stood once at the middle of the
+  path that turns on its head but does not move. It is a desk instrument -- not
+  in all.sh, PNGs in the .gitignore'd `.shots/`.
+
+What the first films measured is now issues 12 and 13. Both were deliberately
+left alone: they are design calls, not bugs a tool can settle, and each is
+written down with the numbers someone would argue with. Issue 14 is the ground
+the frame work turned up. And the facts block at the bottom corrects itself: the
+frogpear row it quoted is the *species*, not the *form*, and the two are
+different records with different numbers -- which is exactly the pair issue 12 is
+about.
+
+Read the standing contract below first: it decides whether any of this counts as
+finished.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -1539,15 +1292,418 @@ Status: stage A landed as `a8ae110` (the full contract twice on its own
 tree, pushed to both remotes). Stage B (the bear, its fruit and form, the
 mountains' cold and the raids) landed with the round 27 cut, `cc08b55` (the
 full contract twice on its own tree, pushed to both remotes). The stage C
-demotion of the frog pear to common did not land: the valley grows one
-fruit and it is rare (docs/04 and the data agree, the five-rung ladder
-stays), so it stands as the user's open design call, recorded here so the
-stage is not read as done. The standing watch on `cc08b55` was loop 15,
-which came back green on its first six runs and red on the seventh (the
-crossing read's swing, recorded at the head of this file); the watch on
-the fixed tree was loop 16, green on its first seven runs and red on
-the eighth (the cavity line of the hop gate, recorded at the head of
-this file); the watch on that fixed tree is loop 17.
+demotion landed later, as `edc6ccc`: the frog pear is `rarity: 'common'` in
+the data, and docs 00/04/05, both READMEs and the storage probe were
+re-derived from that rung in the same commit -- 24 pears fill the 24-slot
+pack, so time and distance are the constraint and storage is not. The
+user's design call about the demotion is therefore closed, and this issue
+stands closed with it: the valley grows one fruit on one rung, the
+five-rung ladder stays as a rule of storage, and what is left of the
+valley's narrowing is the work issues 12-14 are about, not the tables. The
+standing watch on `cc08b55` was loop 15, which came back green on its first
+six runs and red on the seventh (the crossing read's swing, recorded under
+the history heading); the watch on the fixed tree was loop 16, green on its
+first seven runs and red on the eighth (the cavity line of the hop gate,
+recorded there too); the watch on that fixed tree was loop 17.
+
+## 12. The body you wear hops further than the animal you wear it is (found by the gait strip)
+
+**Open. A question of which of two records is right, not a bug in either.**
+
+The two records are both in the data and they do not agree about the same animal.
+
+- the species (`game/data/creatures.js`, `frog`): `speed 1.8`, `turn 0.9`,
+  `swimSpeed 4.6`, `hop { up: 6.0, period: 0.9 }` -- and entities.js states the
+  arc that launch gives: "0.78 m for a launch of 6 m/s under this world's
+  gravity, over a body that stands 0.43 m tall".
+- the form (`game/data/fruits.js`, `frogpear.form`): `speed 0.9` -- a multiplier
+  on the human body's 4.7 m/s cruise, so 4.23 -- `jump 1.3`, `swim 1.1`,
+  `hop { up: 0.72, kick: 1.25, period: 0.22 }`, where the data's own comment
+  says `up` is a fraction of the body's own jump. `Player.update` launches an
+  auto-hop with `this.vy = 8.3 * (f.jump || 1) * hop.up` = 7.77 m/s, which is
+  1.31 m by the same arc law (`up*up/2g`, GRAVITY 23).
+
+Measured, not derived: `strip hop` at the clearing the frame check uses (122.5,
+23, 82.5), the same keys held, the world stepped at 1/60, the numbers taken from
+the positions and not from the code's own fields -- **1.38 m** from the floor of
+the gait to the top of the arc, **4.35 m/s** along the ground (the `kick` on top
+of the cruise), and **47%** of the frames of the window above that floor. The
+worn body therefore leaves the ground at 7.77 m/s where the frog it is wearing
+leaves at 6.0 -- 1.7 times the height -- and travels along at 2.4 times that
+animal's own cruise.
+
+Why that belongs to the standing contract and not to tuning: the arc is what the
+pose has to hold. The flight frames of the hop film are exactly the frames where
+the limbs read as boxes against a sky with nothing joining them to the trunk
+(`.shots/strip-hop-side-01.png`, `-03`); the gait code's claim is that the pose
+and the displacement come out of one physics, and a launch that is not the
+animal's is a displacement the pose was not written for.
+
+The data documents one of the three pairs as matched and two as not. `swim: 1.1`
+says it out loud: "1.1 on the frog body puts it at 4.65 m/s -- the wild frog's
+own `swimSpeed` -- because the body you wear and the animal you wear are one
+animal". The land speed is documented the other way, deliberately: "a worn body
+travels at the human body's speed in the shape of something else, and so carries
+its own number" (entities.js, on why `walkMove` carries its own constant). The
+hop's launch is documented nowhere -- no chapter, no comment says why wearing the
+frog throws you 1.31 m when the frog throws itself 0.78.
+
+Left alone. There are at least three defensible answers and picking one is the
+user's call: bring the form's launch to the species' 6.0; keep the height and
+shorten `period` so the same arc is reached at a rate the pose can carry; or
+leave the physics alone and give the pose something to do with the flight it is
+given. The gait steps in play.js pin the launch and the speed where they are, so
+whichever is chosen will show in the diff before it lands.
+
+One thing the films did NOT measure, so it is not claimed: the wild strip's
+animal spent its window walking (`airPct 3.3%`), so there is no measured arc for
+a wild frog on file -- only the 0.78 the code states. A `wild` strip aimed at a
+hopping animal, or a longer window, is what would close that.
+
+## 13. A second of stroking moves the body 4.6 m and not at all up (found by the gait strip)
+
+**Open. The film shows it; nothing has been decided about it.**
+
+`strip stroke` puts the worn body in a lane of Mirrorlake four blocks deep, holds
+`fwd` for a second and measures **4.6 m/s** along with **0.02 m** from the bottom
+of the stroke to its top. The legs fold and run out and the body's attitude does
+change (`.shots/strip-stroke-side-00.png` onwards), so nothing here says the
+animation is missing: it says a body travelling through water at the speed its own
+data matches to the animal's never once changes the depth it swims at, for a whole
+second, while the same body on land rises 1.38 m. It reads as a body on a rail.
+
+Not compared against the animal, and that gap is stated rather than papered over:
+every strip that films one of the valley's own is on land, so there is no
+measured number for what the animal's own stroke does to its depth. The first
+thing to add is a wild strip in the same lane -- `placeFor` already finds deep
+water -- and then the two can be argued about.
+
+Left alone because the answer is a design question (how much a stroke should carry
+a body up through the surface) and because the water steps in play.js pin depth
+behaviour that a rise would change. What is not left implicit is the measure: the
+same one the hop uses -- the distance from the floor of the gait to the top of it,
+here the depth the body holds against the highest it rises.
+
+## 14. The frame check reports the world behind the body and bounds nothing about it (found by the camera work)
+
+**Open. Content and palette, not a broken mechanism.**
+
+The frame step `69bac02` added reports, beside the pixels it bounds, two numbers
+it does not bound: `readsPct`, the share of the body's own pixels whose luminance
+differs from what was behind them by twelve or more (bounded at 60, and the
+clearing answers 72.3 for a person and 78.0 for the animal), and `contrast`, the
+signed mean of that same difference -- **−13.6** and **−7.2** at that spot: the
+body is darker than its surroundings by less than eight levels of two hundred and
+fifty-five. Both pass every check. The second number is the one a player meets: a
+body the right size, holding its joints, inside a frame whose every pixel is the
+same colour family as the body.
+
+The same flatness is not only grass. At the default hour the first metres of
+Mirrorlake are a single blue gradient with no bed, no plants and no light in the
+frame -- issue 5 is the lake's surface story, this is what is under it.
+
+Left open on purpose. The bounds that exist are on the body -- its pixels, its
+share of the frame, the edges inside it, the share of it that reads against the
+world -- and those are the bounds this round was asked for; the separation from
+the world is a claim about the valley's content, and a bound on it would be an
+art direction nobody has chosen yet. What would belong here next is not a repaint
+but the same rig naming a ground the gait films are worth reading against, and
+putting that ground where the strips film.
+
+## The record of the last rounds (kept as history)
+
+> Superseded by the commit log, which is where this file says round-by-round history
+> lives. Kept because these paragraphs name the measurements behind issues 1-11;
+> the state they describe is not the current tree, and the block at the top of
+> this file is.
+
+
+State at time of writing: round 29 follow, tree `0835510` (the
+watch of the round 29 tree went red on its eighth run, on a flake the
+round's own pace draw had planted in the lean: the turning step asks
+the peak a body banks through a quarter turn, the peak is built on the
+speed, and the speed is the body's own pace (0.85-1.25 of the cruise),
+so the peak runs 0.13-0.20 rad over the band and the 0.15 bound the
+step kept sat inside the band; the bound now sits at 0.12, under the
+worst measured peak, and the chapter's measured peak is the band the
+current bodies leave instead. The two gate runs on the nose tree then
+surfaced the two flakes the round's other draws had planted. The first
+was in the dip window: the window pins the frog's target to the column
+it asks the water of, and the ring the round put on the same frog
+overwrote that pin on the first frame of every one -- the errand is
+reached the moment the body is on it, and the body is always on it --
+so the frog lapped the shallows round the isle's edge for the whole
+window and the level the column answers (12.9) came back as 14.0; the
+ring is set aside for the window and restored on the way out, and the
+ring is asked by the step that keeps it. The second was in the flock:
+the forty-second window keeps one slice of each body's dip cycle, and
+the cycle is between forty seconds and two minutes long, so a slice
+can catch all five in the deep half of the water, where the widest
+instant of the window's spread measures 1.6-1.8 m against 3.9 m at the
+widest of the ordinary runs, and the 2 m bound the instant carried sat
+inside the hang the draw leaves there; the spread is now asked of the
+window, not of the instant -- the flock spans 1.9-3.6 m of the lake's
+depth from its fifth to its ninety-fifth percentile sample and holds
+four to eight of the lake's half-metre layers, run after run over sixty
+flocks, 1.9 at the narrowest where the bodies were born with the
+shallow hangs of the draw -- the bound sits at 1.5, under that band,
+where the formation the law replaced answers 0, and the instant is kept
+only as the witness that at no frame of the window are the five within
+20 cm of one depth, the measure the paragraph below still carries at
+the middle instant and the window has now stopped making. And the
+round owed one more finding the gates had not owed: the nose the step
+gate of a body that lives in the water asks was read off the body's
+own model line, and a body is worn as nothing -- the model line is a
+record the player alone has -- so every wild body's nose was 0 and the
+brick the snout stood in, 0.31 m ahead of the frog's centre at the
+scale the frog draws at, was asked nothing at all; the rig that wears
+a line pins the body's x and z and so never asked the ground the snout
+enters, and no creature's row names the water body today, but the
+machinery stayed measured and tested for the next animal the valley
+puts in that water, and the model is read off the species's own line
+now, the one that already gives the reach its scale. Every tree of the
+chain was gated twice with the suite whole and the play log clean
+(10/10, 0 CHECK FAILED) before it was pushed to both remotes: `2ab1fbd`
+the round's record, then `ec4f764` the lean bound, `a1ef6c5` the two
+window fixes, and `0835510` the nose; the standing watch on this tree
+follows once this record is on both remotes), on the tree of
+`10a4c35` (the user's frog
+word landed in three stages, the first two already pushed: the frog
+pear demoted from rare to common, and the fish cut out of the valley
+with the machinery that had been measuring them. The stage that
+landed this round puts the water frogs of Mirrorlake on the ring
+round the keep: the isle at the centre of the lake is the landmark
+their record names, and a frog in the water has one errand, the next
+arc of a ring of its own round that isle -- a lane of its own between
+25 and 30 m out, run the same way round as every other frog, at a
+pace of its own (0.85-1.25 of the cruise its row gives) -- and the
+valley drives five of them now instead of eight. On the bank a frog
+wanders round the place it was born on as before, and the pull of the
+herd is a law of the ground: it asks the water first, so the ring is
+not dragged to a middle that sits in the middle of the water the
+body does not swim. The ring was surveyed before it was asked: the
+water answers wet at every point of a ring of 22-31 m out, 3-4 m
+deep at the shallowest, and neither the brick of the sunken tower
+nor the huts of the frog's place rises above the film. The landing
+owed two findings. The first was a pin the world could not see: the
+step that watches the keep's door found a frog cornered between its
+moat and the tower's stone walking a centimetre at a time for the
+whole 2400-frame window of the step, and no law found it had stopped
+because it had not; a progress backstop (a 120-own-frame sliding
+window over the body's own position, fired on under 0.5 m of ground
+with more than 0.8 m to go) retires the target the way the contour
+already retires it against a wall, and the ring's next arc runs the
+body out of the corner -- every pin episode bounded at under ten
+seconds, the body going round by the door, the hollow shaft and the
+bank of the tower, and never inside the world. A line-of-sight
+errand ask (skip the arcs whose straight line crosses solid) is a
+possible follow-up and is not done: the backstop bounds the cost of
+the corner, and the step keeps its one law. The second finding was a
+latent flake the pace draw introduced: the step that measures the
+frog crossing the lake at the rate its row names kept a band written
+before the pace existed, and the band was exceeded by a pace the
+draw was about to give (about two percent of runs); the band now
+covers the whole pace band (1.64-2.42 m over the second the run
+walks) with a hand's width of margin at each end. The docs and the
+READMEs carry the count and the ring with the measured numbers, run
+after run: 99-100% of the frames on the errand, 1.6-2.4 m/s, 1.9-3.5
+rad round the isle, the paces the frogs were born with differing by
+0.15-0.38 of the cruise, and the flock over its forty seconds at no
+instant within 20 cm of one depth, the middle instant spread over
+1.2-3.2 m, three to five half-metre layers, and the depth the dive
+gives the body never within a metre of the film), on the tree of
+`dd16d24` (the sky's cloud
+deck cut at the user's word -- the `sky()` generator that laid
+sixteen puffs of block 16 at y38-43 above the canopy and the law
+10q that read a cloud against the sky are gone; block 16 stays
+where the Grey Veil pillars are built out of it, so no renumbering
+and no save migration, and the twinkle step no longer takes the
+deck down for its sky grabs; the soft table keeps the underside
+law that reads a crown and a roof against the sky. The round also
+answered a question: the user noticed the lakebed seen from the
+surface or the bank reads clearer than a forward view from inside
+the water, and four lenses at noon measured it -- straight down on
+a 2 m bed, spread 58 (legible sand); across from the bank, 35;
+0.5 m under the surface looking forward, 3.3; on the bed itself,
+2.6; the same underwater frames with every effect of the water
+taken away read 167-172 of mean with 17-19 of spread. That is the
+per-metre absorption the lake was tuned to (0.4 a metre for the
+green the eye reads brightest, visibility near 2.5 m), not a bug;
+nothing was changed), on the tree of `a0f12f9` (the hop gate's ask
+of the cells the body's box reaches into at push-off, landed after the
+standing watch reds on the tree of `9433859` -- the red is recorded at
+the end of this paragraph), on the tree of `9433859` (the crossing
+read's settle window, landed after the standing watch reds on the
+cut's tree, its red recorded there as well), on the tree of `cc08b55`
+(the quest skin and the
+buff mushrooms cut, pushed to both remotes with the gates green twice on
+its own tree). The round's driving change was the user's: the valley's
+three quests keep what they give and lose what they say -- they become the
+three deeds the valley keeps for itself (cellar, lake, greenhouse: a deed
+carries no text the player reads, no checklist and no hint; the only
+consequences are the storage it hands over, which still arrives with the
+plain upgrade line it always had, and the name it starts to use for you,
+the epithet) -- and the four buff mushrooms and the buff system they fed
+(the stealth, the jump, the guard and the glow the player wore for a
+while) go out of the game, the glowseed with them, so the plants the
+valley grows are the one that was always the valley's own: the cellarseed,
+block 60, now the only self-lit plant standing in the world (the glowcap's
+ring, block 76, keeps its place in Glowglade as the scenery the world
+always had). The cut also lands issue 11's stage B: the bear, its fruit
+and form, the mountains' cold and the raids go with the owl the stage
+before took, and the valley keeps three bodies and no flight. The stage C
+demotion of the frog pear to common did not land with it: the valley grows
+one fruit and it is rare (docs/04 says so and the data agrees), the
+five-rung ladder stays, and the demotion stands as the user's open design
+call. The landing owed three findings. The first was a bug of the game's
+own: the journal panel was still concatenating the section it had lost
+(ui.js renderJournal said `me + q + b + c` with `q` gone, a
+`ReferenceError` that opening the journal in a browser would have
+thrown); it now says `me + b + c`, and the language test that renders the
+panel in both languages reads it back. The second was the world moving
+under the laws: the cut takes content out of the worldgen's seeded draw,
+so the placements the scatter's scan hunts for stand in new columns, and
+the spark law's wall scan owed the air-birth premise its crown scan
+already carried -- the burst is let go at the terrain row plus a lift of
+a random metre, so the cells it can be born in must be air, or the
+question asked is no longer "does the air keep it"; the scan now asks that
+of the cells it can be born in, on the wall and the crown alike. The
+third was the standing count of the valley's rebuild: the cut takes the
+micro and emissive bucket meshes the scatter content held, so the meshes
+the valley stands on move from 269 to 185, the mesh-count law's lower
+bound now asks for over 100, and the docs say 185. A save written before
+the cut still lands on the right deeds: the three that remain keep their
+ids (the loader maps the old ids q1, q4 and q6 onto cellar, lake and
+greenhouse), and the flags the quests the owl and the bear took with them
+carried land on nothing and are lost, the way they were meant to; the
+round-trip law puts the whole valley back off the save and reads the deeds
+off it the way it read the quests. The watch loop 14 finished its
+twenty-four green on the tree of `aa84552`; the trees that followed it --
+`1dadbf4` (the docs' one language, gates 1-4 on the flat tree, its
+gate-5 double run on the final tree of the stage), `a8ae110` (flight and
+the owl, the full contract twice on its own tree) and `cc08b55` (this cut,
+the full contract twice on its own tree) -- came back green on the gates
+they owed. The standing watch on this tree is loop 15. The re-read pass of
+the round, run while the watch does its work, found three more lines of
+drift against the code, all fixed to what the code does and landed as
+`803d71e`: the technical chapter's particle line still named the glowing
+seeds the round had just cut and the splashes that never existed (the
+spawner makes fireflies by night, bubbles under water, and the sparks a
+transformation lets go); the README's cut list pointed "the first four" the
+docs-sync check guards at the wrong four (the check reads mixed form /
+mixed stomach / magic stomach / beast residue, and the list's fourth was
+the twelve side quests, a thing the check does not guard); and the
+worldview chapter's banned-word list still banned the word the storage
+mechanics now own (a handover is an `upgrades` entry in the data, and the
+log line that announces it says so). A fourth line came out of the round's
+own cut: removing the word for the buff system from the technical chapter's
+save-line in `cc08b55` doubled the word it sat inside (`all come backar all
+come back`), and the re-read un-mangled it to what the save round trip
+actually returns (`ebf6a22`). Three more lines of the round's own old
+ids stood in the storage chapter's upgrade line, the map chapter's
+gating diagram and the technical chapter's test table: the cut keyed the
+upgrades to the deeds the valley keeps (cellar, lake, greenhouse), and
+the loader keeps the old ids only for the saves that carry them, so the
+lines now name the deeds the way the grant and the test do, fixed beside
+this record. One more line of the re-read's: the fruit chapter's
+interaction table quoted the crosshair prompt with the rarity and slot
+cost the prompt does not carry -- the prompt is 'E — pick' plus the
+fruit's name, and the rarity and the slots are the log line the pick
+announces -- fixed beside this record. The standing watch on the cut's tree,
+loop 15, did its work and found the one thing the round's own cut owed:
+green on its first six runs and red on the seventh, on the crossing law
+(a wild frog crossing the lake kicks the same way, feet behind it). The
+rig places a body of the crowd at the centre of the lake and points it at
+an errand in the deep water sixteen metres off, drives the fixed two
+seconds, and reads the stroke off the frame the draw uploads; the red
+run's read came back with the water holding the body, moving at its own
+cruise and inside the body it should be inside, and the stroke swept
+0.144 of a metre fore and aft against the law's 0.15, while the rest of
+the payload sat on its own records: the same model at the same place with
+nothing moving sweeps 0.079, and the settled read of the same leg
+measured off the model's own table reads 0.181. The gap between the two
+is the turn. The round's cut took the frog's turn from 1.9 to 0.9 rad/s
+-- the models' table carries the reason beside the number: 0.9 is the
+tightest arc a body with a kick holds, and the record held 1.9 for a
+while -- and the rig's fixed two-second read is a read of the middle of a
+swing. Before the cut the widest course error a placement could leave
+settled at 1.9 rad/s before the read finished, so the read never met the
+swing; at 0.9 a frog placed more than two-fifths of a turn from its
+errand still holds most of the rate at the read, and the inside leg --
+the one the rig reads -- sweeps less the harder the body turns. That is
+the one thing that moves the read across the bound with nothing in the
+game changed, and it is why the red came where it came: the placement
+takes the body's heading out of the running game at random, and the read
+meets the swing in about one run of six. The read was the wrong read, not
+the game wrong: the law is about a frog that is crossing, and a frog
+still swinging onto its errand is turning, not crossing, and the turn it
+is making is asked by its own law (the outside leg of a turn). The answer
+is the rig's premise, test-only with the check line byte-identical: the
+read waits for the heading to settle onto the errand, and the wait is kept
+beside the reading rather than hidden in it -- the payload gains the
+length of the wait and the turn it read at. With the herd's errand
+cleared the way the rig clears it (a target set in the rig is outranked
+by the herd's own, and the rig clears it before it places the body) and
+the errand fixed for the leg, the widest course error settles before
+3.2 s of the 0.9 rate, and the live game with the keep-apart of the other
+frogs weaving the way settles the widest placement 112 frames after the
+two-second send, while every placement inside 1.88 rad of the errand had
+already settled by the end of the send, measured in the rig's own
+premises (the herd centres cleared, the lens parked on the bank, the
+errand fixed); the wait is set at 300 frames, twice the measured worst
+case, and a body still turning hard after five more seconds is a body the
+law should see. On the fixed tree the suite came back green end to end
+and the gate's double run came back green twice (`9433859`), and the
+standing watch on it is loop 16. The standing watch on that tree, loop
+16, came back green on its first seven runs and red on the eighth, on
+the cavity line of the frog's own ceiling (a body on foot does not push
+off into a ceiling it cannot reach through, and its body never passes
+through the ceiling of the place it is in). The rig places a frog in the
+pocket of a ledge at (119, 10) -- floor 26, ceiling 27, a metre of air,
+the trunk standing in the column across the mouth at (118, 9) -- and
+reads the hop the way the game asks it. The red run's frog walked under
+the roof the whole time the gate could see it: its own column read the
+pocket's ceiling, the room was a metre against the 1.21 the arc needs,
+and the gate held it to walking. At frame 51 the centre crossed the
+mouth a hand's width in -- 5 mm over the edge -- and the overdue hop
+was due: the gate asked its own column and the span of the arc, and the
+span's integer rounding at the frog's heading asked the column next
+door and skipped the trunk's, so both of the cells it asked read open
+and the launch was let through. The arc was no straight drift: the frog
+kept steering at the herd's errand over the top of it (the rig does not
+clear the herd centres, and the wander state walks at the herd's own
+centre, 73.73, 99.36), and the step into the trunk's column was refused
+at the feet, so the body spent the apex back across the edge it had
+left: at frame 65 the centre was in the pocket's own column again with
+the top of its head 0.16 m through the ceiling for one frame. The reads
+beside it all sat on their own records -- both launches legal on every
+read the rig carries, the second of them clean -- so the red is the one
+the game owes: the gate asked the column the centre stands in and the
+span the arc crosses, and it did not ask the cells the body's box
+reaches into at push-off, the cells that say the body is still under
+the roof it thinks it has left. The fix is the gate's own ask extended
+to those cells (`game/src/entities.js`, the hop gate, `a0f12f9`): the
+roof is now also the lowest of the cells the body's box covers while it
+pushes off -- the trunk rectangle the body's own hw, hl, ox, oz give
+it, taken the way the body's clash takes them -- min'd with the reads
+it already made. A body that cannot clear the roof it is still under
+walks out instead, and its legs do not load for the hop they are not
+going to make; the wind is held to the same answer. The rig's recompute
+of the gate mirrors it, box cells and all, with its check lines
+byte-identical to before. Measured on the fixed tree: the red run's own
+placement holds 139 frames with the box under the low cell while the
+gate keeps its answer, and the frog launches only once the box clears
+the mouth; the same frog 2.5 m out of the pocket hops at frame 12 on
+schedule -- the extension blocks the shape without blocking the hop.
+One more line of the round's re-read landed beside the fix (comment
+only): the comment on the ambient pass named the embers and the
+splashes the pass never lets go, and it now names the fireflies at
+night and the bubbles under water, the way the pass lets them go. On
+the fixed tree the suite came back green end to end and the gate's
+double run came back green twice (`a0f12f9`), and the standing watch on
+it is loop 17. The issues 1-8 of round 26 stand
+closed as recorded; 2f (the walking soak) and 2g (the flock crown) stand
+recorded and watched with the loop.
 
 ## Standing contract (every session, in order)
 
@@ -1597,10 +1753,23 @@ only (CJK inside string/regex literals is fine).
   22 bone, 24 mountain rock, 27 dark leaf, 28 willow, 41 (non-solid, in the
   sunken tower). `FOLIAGE = {7,8,9,27,28}`;
   `TREE_BLOCK = {6,7,8,9,22,27,28}`.
-- Physics: `GRAVITY 23`, `MAX_FALL 42`. Frogpear: `speed 1.8`,
-  `hop {up 6.0, period 0.9}`, `tall 0.43`, `swimSpeed 4.6`, `turn 1.9`.
-  Wander speed = `cruise * 0.42` = 0.756 m/s. Hop apex = `up^2/2g` = 0.7826 m
-  over the feet; gate threshold = apex + tall = 1.2126.
+- Physics: `GRAVITY 23`, `MAX_FALL 42`. The frog is **two records**, and the
+  standing difference between them is issue 12 -- do not quote one as the other:
+  - the species (`game/data/creatures.js`, `frog`, `scale 0.13`): `speed 1.8`,
+    `swimSpeed 4.6`, `turn 0.9`, `hop { up: 6.0, period: 0.9 }`, `alert 12`,
+    `herd 8`; `tall = MODEL_H * 0.13 = 0.43`. The arc that launch gives is
+    `6.0^2 / (2*23) = 0.78 m` over the feet, which is the number entities.js
+    states for the hop gate. The gate asks for `up^2/2g + tall` of room over the
+    body (0.78 + 0.43 = 1.21 m) before it lets the legs load. Wander speed =
+    `cruise * 0.42` = 0.756 m/s.
+  - the form (`game/data/fruits.js`, `frogpear.form`): `size [0.5,0.5]`,
+    `speed 0.9` (a multiplier on the human cruise `4.7`, so 4.23 m/s),
+    `jump 1.3`, `hop { up: 0.72, kick: 1.25, period: 0.22 }` where `up` is a
+    fraction of the body's own jump, `swim 1.1` (4.65 m/s, deliberately the
+    species' own `swimSpeed`), `turn 0.9`, `fov 100`, `step 0.3`, `dryTimer 90`,
+    `breatheAir false`. The auto-hop launches at
+    `8.3 * jump * hop.up = 7.77 m/s` -> 1.31 m by the same arc law; measured
+    1.38 m from the floor of its own gait (issue 12).
 - Frame order inside `Creature.update` (entities.js): steering + horizontal
   step (~1408-1798) -> altitude (~1830-2170) -> hop gate (~2099-2141) ->
   vertical fall/climb -> solid-exit correction (~2200-2220) -> shove
@@ -1638,7 +1807,36 @@ only (CJK inside string/regex literals is fine).
   `--no-sandbox --disable-gpu --enable-unsafe-swiftshader --use-gl=angle
   --use-angle=swiftshader`; `npm ci` was run (node_modules present).
   The `play` step timeout in `all.sh` is 900 s.
+- The third-person lens is one rule: `N.CAM` in `game/src/game.js`
+  (`share = 0.2192`, `fovBump = 8`, `shotFor(height, fov) -> {fov, d}`). The
+  field of view is vertical (`M4.persp(fovy, aspect)`), and the frame's field is
+  the worn body's own eye plus `fovBump`: a person 84 degrees -> 5.56 m, the
+  frog pear's 0.5 m body 108 -> 1.19 m. Nothing may restate `d = f(height)`:
+  eight copies of it drifted, one of them into NaN (`69bac02`).
+- Counting a body's pixels out of a drawn frame (the frame check in play.js, and
+  `tools/cam-frame-probe.js`): the suite's render wrapper draws every frame from
+  a cull point far outside the world unless a `gl.readPixels` forces the real
+  one, so a `R.drawMesh` patch has to stay installed **across the read**, not
+  only across `g.render()`, and the counters are zeroed immediately before each
+  read. A rig that patches the draws and then reads gets a frame of nothing and
+  reports 0 pixels without saying so.
+- The gait films: `node game/test/shots.js strip [hop|stroke|turn|wild]` -- the
+  page's clock stopped, the world stepped by hand at 1/60 with the same keys
+  held, two lenses per action (the one a player owns, and a tripod stood at the
+  middle of the path that pans but does not move), and every frame reporting
+  where the body landed in the frame and whether it is in it. Not in all.sh, and
+  the PNGs are in the .gitignore'd `.shots/`. The standing set of stills is
+  `node game/test/shots.js [tag]`.
+- `all.sh` writes one log per suite to `/tmp/frutaria-<name>.log`; the play
+  suite's is `/tmp/frutaria-play.log`, and `grep -c "CHECK FAILED"` there
+  printing `0` (grep exits 1) is the green the contract asks for. `play.js`
+  prints its whole log only when the run ends, so reading that log mid-run shows
+  nothing at all.
 - Untracked local files: `TODO.md` (gitignored notes; keep it in sync with
-  this file's state), `/tmp/m26flake/*` (loops, logs, parser),
+  this file's state), `tools/*probe*.js` (desk instruments for one question --
+  kept out of the tree on purpose, `.gitignore` names the two patterns; what a
+  probe measured goes into docs/ as a number and into game/test/ as a check,
+  which is what `06c299f` did for the twenty-four that had piled up),
+  `/tmp/m26flake/*` (loops, logs, parser),
   `/tmp/m26*.js` (headless probes: dust guard replica, cavity map, tower map,
   frog repros, yaw sweep, targeted shove, spawn census).
