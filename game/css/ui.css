@@ -122,8 +122,6 @@ button.ghost { background: transparent; }
 .items .item { cursor: pointer; }
 .items .item:hover { outline: 1px solid rgba(255,230,168,.6); }
 
-.q { padding: 6px 0; border-bottom: 1px dashed rgba(240,220,174,.12); font-size: 13px; }
-.q.done { color: var(--good); }
 .dex { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
 .card { border: 1px solid rgba(240,220,174,.16); border-left: 3px solid var(--ring, #666); padding: 8px 10px; background: rgba(0,0,0,.28); }
 .card.unk { opacity: .45; }

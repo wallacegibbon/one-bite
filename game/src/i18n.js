@@ -103,7 +103,6 @@
   N.locale = () => I18N.locale;
   N.t = (k, v) => I18N.t(k, v);
   N.disp = o => I18N.disp(o);
-  N.tlist = (a, s) => I18N.list(a, s);
   N.loreOf = o => I18N.field(o, 'lore');
   N.dexOf = o => I18N.field(o, 'dex');
   N.descOf = o => I18N.field(o, 'desc');

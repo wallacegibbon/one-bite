@@ -159,7 +159,6 @@
       // the speed the body is trying to travel at this frame, m/s (the draw
       // sizes a swim stroke against it)
       this.cruise = 0;
-      this.bob = 0;
       /* what the body's own motion tells the animation, in 0..1: how far off the
          ground it is, how loaded its legs are before a hop, and how much it
          flattened on the landing. Nothing here is a mood -- all three are read
@@ -722,7 +721,6 @@
         moved += (Math.abs(this.vx) + Math.abs(this.vz)) * sdt;
       }
       this.moveAmt = moved;
-      this.bob += moved * 1.6;
       /* Feet that are on a surface are standing on it.
          `axis` reports contact only for a move it had to stop, and a body is
          parked 0.0005 m off the face it last hit, and the cell below is only

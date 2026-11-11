@@ -7905,7 +7905,7 @@ What was measured before any of this was fixed, over 180 frames of walking
          cannot go quiet by accident: a field nobody has is a field nobody is
          checking. */
       const NUMS = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'speed', 'yaw', 'pitch', 'tilt', 'bank',
-        'phase', 'held', 'airAmt', 'crouch', 'squash', 'hopT', 'wind', 'bob', 't',
+        'phase', 'held', 'airAmt', 'crouch', 'squash', 'hopT', 'wind', 't',
         'diveTo', 'diveRate', 'climbTo', 'climbRate', 'homeX', 'homeZ',
         'tx', 'tz', 'ox', 'oz', 'hw', 'hl', 'tall', 'alarm', 'pause', 'air', 'dry', 'vital',
         'fright', 'faceYaw', 'formT', 'formMax', 'cruise', 'moveAmt', 'wSurf'];
