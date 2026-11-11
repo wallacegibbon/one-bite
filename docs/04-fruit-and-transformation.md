@@ -53,7 +53,7 @@ A fruit starts counting down the moment it is picked.
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, jump 1.3, hop, swim 1.1, night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; too small: cannot reach high fruit, cannot push a door open |
+| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, and the animal's own motion — **1.8 m/s** on land, a **0.73 m** hop about every **0.9 s**, **4.6 m/s** through water — every one of those read from the frog's own row, not from this record (§4), night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; **slow where the animal is slow: 1.8 m/s on land, and this body has no sprint at all** — the lake is where it is quick; too small: cannot reach high fruit, cannot push a door open |
 
 **Which of those costs the prototype enforces**: the frog's skin and the dark. `dryTimer` drains vitality 90 s after a frog body leaves the water; `nightVision` brightens the dark for the body that has it and washes that same body's daylight out. What is still only written down: a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body). Every ability in the Key abilities column is read by the code — see §4.
 
@@ -68,11 +68,6 @@ sit here looking implemented while nothing reads it.
 | Field | Meaning | What the player feels | Prototype |
 |---|---|---|---|
 | `size[w,h]` | collision box in metres | how low a hole you can enter; decides whether a 1×1 passage fits | live |
-| `speed` | land movement multiplier | human 1 / frog 0.9 | live |
-| `turn` | the most radians a second this body may add to its heading, at its own cruising speed | every body has one: human 1.6 / frog 0.9 — the same number the animal itself carries, because the animal and the body worn from it are one body | live |
-| `jump` | jump force multiplier | human 1 / frog 1.3 | live |
-| `hop {up,kick,period}` | the body does not walk on land, it hops: the auto-hop's fraction of its own jump, the fraction of land speed the launch throws it at, and the seconds its feet stay down between hops | only the frog: a 1.4 m arc about every second, and the same ground speed a human gets | live |
-| `swim` | underwater movement multiplier; a body with no such field gets 0.62 | frog 1.1 — a frog body is barely quicker in the lake than on the shore, because it is a small body and the water is thick; a human body moves at 0.62 of its land speed there | live |
 | `breatheAir:false` | breathe underwater | only the frog | live |
 | `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 | live |
 | `nightVision` | brightening in the dark, 0–1, and the same eye overwhelmed by daylight | frog 0.3 | live |
@@ -85,11 +80,38 @@ frog's niche is swimming and breathing water, and a second way of reaching
 things would have made the size gate — the gap only the frog's 0.5×0.5 box fits through —
 one door among several instead of the only one.
 
-All twelve fields on the frog form are read by the code. `game/test/reach.js`
-re-asks that question on every run -- fourteen keys on the form record in all,
-the twelve plus the form's own display name in each language -- and fails if a
+**A form carries no motion, and used to.** `speed`, `jump`, `hop`, `swim` and
+`turn` sat on the table above as multipliers on the body you start in: the frog
+read `speed 0.9 / jump 1.3 / swim 1.1 / hop {up: 0.72, kick: 1.25}`, which made a
+worn frog cross ground at **4.23 m/s** and throw itself **1.31 m** — a half-metre
+animal at a person's speed, in the shape of a frog. Every one of them is gone.
+How a body moves is written once, in the animal's own row in
+`game/data/creatures.js` (03 §3), and `Player.moveDef` in `src/entities.js` reads
+that row for the animal the fruit names. So what the frog's row says is what the
+body you wear does: **1.8 m/s** on land, a launch of **6.0 m/s** that reaches
+**0.73 m** over the feet about every **0.9 s**, **4.6 m/s** through water, a turn
+of **0.9** rad/s. Measured, not asserted: `test/play.js` puts the body worn from a
+frog and one of the valley's own frogs through the same actions and reads both
+against the row — the rate they leave the ground with **5.617 m/s** for both (the
+row's 6.0 less the one frame that spends gravity), the apex **0.73 m** for both,
+**36%** of the frames of a straight crossing spent off the ground for both, and
+**1.80 m/s** and **4.58 m/s** across ground and through water against the row's 1.8
+and 4.6. The body you start in is a record of the same shape —
+`game/data/player.js`, 4.7 m/s, a launch of 8.3 m/s, a turn of 1.6 — and it is
+measured against its own numbers the same way, so making the animal honest moved
+nobody: a person still crosses at 4.7 m/s. `game/test/shots.js` films the same
+claim: the `hop` strip and the `animal` strip run one window of 2.2 s over the same
+corridor, one through a body worn from a frog and one through the animal itself,
+and both films come back with an arc of 0.73 m and a launch of 5.617 m/s.
+
+All seven fields on the frog form are read by the code. `game/test/reach.js`
+re-asks that question on every run -- nine keys on the form record in all, the
+seven plus the form's own display name in each language -- and fails if a
 field is added to the data and nothing in `game/src/` reads it, so this column
-cannot quietly rot back into advertising.
+cannot quietly rot back into advertising. It also prints the two records of the
+body you can be in -- the form record and the human one -- and the motion fields
+are read from `data/creatures.js`, not from here, which is why this table has no
+speed on it at all.
 
 **Note that `size` is a hard gate**: a frog at 0.5×0.5 fits a 1×1 root hole and the gaps between reeds; a human at 1.8 m tall does not fit the hole — that is the physical implementation of "this body will not fit that door", not just flavour text.
 
