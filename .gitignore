@@ -14,3 +14,11 @@ TODO.md
 # an editor's temp copy of it: `git add -A` once put 1240 lines of private
 # notes into the repo under this name
 TODO.md.*
+
+# measurement probes: one-off instruments aimed at one question, run at the desk
+# and never again. What they measured is recorded in docs/ and asked again by
+# game/test/, so keeping the instrument keeps only the rot -- a probe that asks
+# an API the project no longer has either throws or, worse, runs and reports
+# zeros. Written freely, never committed.
+tools/*probe*.js
+tools/*-scan.js
