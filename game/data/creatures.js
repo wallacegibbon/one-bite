@@ -32,7 +32,19 @@
       /* niche: the shallows -- jumping, and breathing through the skin */
       id: 'frog', cn: '雨蛙', en: 'Mirrorlake Frog', model: 'frog', scale: 0.13,
       habitat: ['mirrorlake', 'glowglade', 'starfall'], active: 'both',
-      locomotion: 'amphibian', speed: 1.8, swimSpeed: 4.6, turn: 0.9, hop: { up: 6.0, period: 0.9 }, alert: 12, herd: 8,
+      /* `hop` is two launches of one pair of legs, and the second is only ever
+         asked for when the ground in front is higher than the ground under the
+         feet. `up` 6.0 is the hop it gives without a reason: 0.73 m off the
+         ground as either body, measured on the film, at a cycle of `period`
+         seconds -- 36% of the stride off the ground, which is this animal's
+         gait. `max` 7.4 is the same legs fully extended: 1.13 m, and that is
+         the whole of what it can reach, which is why the valley's one-metre
+         terraces and Mirrorlake's one-block shore are steps this animal climbs
+         and a bank of 1.2 m is a wall it goes round. Neither number is a second
+         kind of jump: the arc is gravity's either way (src/entities.js,
+         `hopLaunchNow`), and the body worn from this animal's fruit is launched
+         by these two numbers and no others. */
+      locomotion: 'amphibian', speed: 1.8, swimSpeed: 4.6, turn: 0.9, hop: { up: 6.0, max: 7.4, period: 0.9 }, alert: 12, herd: 8,
       /* the ring the water keeps a frog of this species in: while the body is in
          the water its errands run round the landmark its habitat's zone names
          (`at`), at a lane of its own between `r0` and `r1` metres out, each

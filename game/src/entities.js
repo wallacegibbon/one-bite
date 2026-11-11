@@ -100,6 +100,89 @@
      caller does not ask it. */
   function launchOf(L) { return L.jump !== undefined ? L.jump : (L.hop ? L.hop.up : 0); }
 
+  /* The top a launch reaches, in metres over the feet, and the same law read
+     backwards. This is the analytic arc -- the one a launch of `up` reaches with
+     nothing taken off for the frame it is spent in -- which is 5 cm over what
+     either body of this valley actually gets, and deliberately asked that way:
+     a roof or a step that passes it is one the arc clears, never one it hits.
+     What the step of the one body in the valley that hops looks like from the
+     other end -- how hard the legs have to push to land on a step -- is only
+     ever asked with this read backwards, so the two directions of the same law
+     are written next to each other. */
+  function arcOf(up) { return up * up / (2 * GRAVITY); }
+  function launchForArc(arc) { return Math.sqrt(2 * GRAVITY * arc); }
+
+  /* A step is climbed with the legs a body has, and a body that hops has one
+     kind of leg: it either leaves the ground or it does not. For a body that
+     walks on two feet there is a middle answer -- the feet lift the body onto a
+     low surface without a jump, which is `step` on its record and is what the
+     player's own body does and the person you start as does up to half a metre.
+     A hopper has no such thing, so the step in front of it is a question about
+     its launch instead: how hard do the legs push to land on that surface?
+     `hop.up` is the everyday launch, the one an animal gives a hop it has no
+     reason to size; `hop.max`, where a row states one, is the fullest extension
+     of the same legs, asked only when the ground the body wants to stand on is
+     above the ground it is standing on. Neither number is a second kind of jump:
+     the arc is the same arc, and the row of one animal says both, because the
+     body worn from that animal's fruit climbs with the same legs.
+     STEP_CLEAR is why a launch is asked for a little more arc than the step
+     needs: the half-frame a launch spends falling before it is integrated is
+     `v*dt/2` of arc it does not reach (5 cm at this animal's everyday launch,
+     6 at its fullest), and a body that arrives at a step top exactly level with
+     its own feet is a body standing on nothing. A riser above the fullest
+     extension less that is not a step at all: it is a wall, and both bodies of
+     an animal that hops are stopped by it in the same way. */
+  const STEP_CLEAR = 0.10;
+  function hopReach(hop) { return hop && hop.max ? arcOf(hop.max) - STEP_CLEAR : 0; }
+  /* 0 for "the everyday launch, or no launch at all -- this is not a step the
+     legs can take": the caller already has `hop.up` and asks for the difference. */
+  function hopLaunch(hop, rise) {
+    if (!hop) return 0;
+    if (rise <= arcOf(hop.up) - STEP_CLEAR) return hop.up;
+    return rise <= hopReach(hop) ? launchForArc(rise + STEP_CLEAR) : 0;
+  }
+  /* How far a leap carries a body along the ground: the seconds it is off the
+     ground at that launch, at the speed it is travelling through the air. A step
+     is only taken if the leap that takes it lands on the far side of the face,
+     which is what bounds the look-ahead below -- a frog does not throw itself at
+     a bank three metres away, and at that distance the answer is to hop closer
+     first, which is what it is doing anyway. */
+  function leapTravel(up, speed) { return speed > 0 ? speed * (2 * up / GRAVITY) : 0; }
+  /* The crown of the rock in a column, within `up` metres above the feet, or -1
+     where the column holds no rock up there. Wood and leaves are not in this:
+     a body on foot walks through a bush with its shoulders in it and walks under
+     a crown (docs/03 s5), and neither is ground to be pushed off or a step to be
+     climbed (see `rockAt` in the step gate, which asks the same question). */
+  function rockTop(w, bx, bz, feet, up) {
+    for (let cy = Math.floor(feet + up); cy >= Math.floor(feet); cy--)
+      if (w.solidAt(bx, cy, bz) && !N.TREE_BLOCK[w.get(bx, cy, bz)]) return cy + 1;
+    return -1;
+  }
+  /* The step in front of a body: the first face of ground above its own feet
+     along the way it is heading, and how far off that face is. Read from the
+     feet it has, so a body in the middle of an arc reads the same ground as the
+     one it pushed off. */
+  function riseAhead(w, x, z, y, ux, uz, reach, up) {
+    for (let d = 0.1; d <= reach + 1e-6; d += 0.1) {
+      const t = rockTop(w, Math.floor(x + ux * d), Math.floor(z + uz * d), y, up);
+      if (t > y + 0.05) return { rise: t - y, d: d };
+    }
+    return null;
+  }
+  /* The launch the legs give right now: the everyday one, or the fuller one when
+     the step in front is within them and the leap would land on it. 0 says the
+     step is beyond the legs -- a wall, and the caller's law for a wall. */
+  function hopLaunchNow(hop, w, x, y, z, ux, uz, half, speed) {
+    if (!hop) return 0;
+    const full = Math.max(hop.up, hop.max || hop.up);
+    const face = riseAhead(w, x, z, y, ux, uz, leapTravel(full, speed), full);
+    if (!face) return hop.up;
+    const up = hopLaunch(hop, face.rise);
+    if (!up) return 0;
+    if (face.d + half > leapTravel(up, speed)) return hop.up;
+    return up;
+  }
+
   /* ============================ player ============================ */
   /* The walk clock. A body's gait is where it is in its own stride, and it is
      advanced by the ground the body covered and not by the clock: one cycle of
@@ -671,6 +754,24 @@
            and is 5 cm over the arc either body actually reaches: a roof that
            passes the gate is a roof the arc clears, never one it hits. */
         const pushOff = (v) => { this.vy = v - GRAVITY * dt; this.grounded = false; };
+        /* The launch the legs give this frame, which for a body that hops is
+           not one number. On flat ground and at a roof it is `hop.up`, the
+           everyday launch, and every measurement of the stride stands as it was
+           measured. In front of a step it is the fuller extension the row states
+           (`hop.max`), sized to land on that step and no more -- and it is asked
+           of the same law the animal's own body asks a few hundred lines below,
+           from the same row, so the frog you wear climbs a bank the way the frog
+           on the bank does. A riser above that extension is not sized at all: it
+           is a wall, and the body stops at it, which is what it has always done.
+           Nothing here is asked of a body that is off the ground or in the
+           water's hold: a step is taken with feet. */
+        const legsFor = (hop) => {
+          if (!hop || !this.grounded || this.inWater) return launchOf(L);
+          const ux = len > 0 ? dx : Math.sin(this.faceYaw);
+          const uz = len > 0 ? dz : -Math.cos(this.faceYaw);
+          return hopLaunchNow(hop, W, this.x, this.y, this.z, ux, uz,
+            this.size()[0] / 2, speed) || launchOf(L);
+        };
         if (inp.jump && this.grounded) {
           /* The push key asks for this body's own launch -- 8.3 m/s for the body
              you start in, 6.0 for the frog you are wearing -- and for a body
@@ -680,8 +781,12 @@
              worn body used to launch at `8.3 x 1.3` -- 1.31 m by the arc law,
              1.38 m measured on the film -- against the 0.78 m the animal's own
              launch asks for: a 0.5 m animal thrown higher than the animal is
-             long. There is no second number to reconcile any more. */
-          pushOff(launchOf(L));
+             long. There is no second number to reconcile any more.
+             A body with one pair of legs has one answer to the push key and to
+             its own hop, and that includes what the legs are asked to reach: the
+             key at the foot of a step is the step the animal would take, so both
+             go through `legsFor`. */
+          pushOff(legsFor(L.hop));
           if (hop) this.hopT = hop.period;
         } else if (hop && this.grounded) {
           /* A body whose data says `hop` does not walk on land: it hops. The
@@ -702,7 +807,10 @@
             this.hopT -= dt;
             this.wind = Math.min(1, this.wind + dt / 0.16);
             if (this.hopT <= 0) {
-              pushOff(hop.up);
+              /* The everyday launch on level ground, the fuller one for the step
+                 in front -- see `legsFor` above, which is the same ask the
+                 animal's own body makes of its row. */
+              pushOff(legsFor(hop));
               const k = speed;
               this.vx += (dx * k - this.vx) * 0.6;
               this.vz += (dz * k - this.vz) * 0.6;
@@ -1754,6 +1862,22 @@
              own ground by then, which is what the second test would otherwise
              mistake for being in the air. */
           const rockAt = (x, y, z) => world.solidAt(x, y, z) && !N.TREE_BLOCK[world.get(x, y, z)];
+          /* A body whose only way up is a jump has no lift, and the lift is what
+             the rest of this gate does: it raises the feet onto a surface at a
+             rate while the body stands in front of it, which is a body sliding up
+             a bank on straight legs. A hopper climbs with its legs, which means
+             an arc the row sizes, so for one of these bodies a riser is asked a
+             different question -- not "how high can I be lifted" but "how far can
+             I land on it" -- and the answer is the reach of its own fullest
+             extension (`hopReach`). Inside that the step is taken by the hop
+             below, which is what the launch is sized for; outside it the riser is
+             a wall, and the body goes round a wall the way it goes round any
+             other. Only on foot: a body the water is holding up comes out of the
+             water by swimming up onto the shelf it stands on, which is the law
+             the altitude block below already keeps for the lake's shore. */
+          const hopRow = this.isAmphibian() ? sp.hop : null;
+          const legs = hopRow && !inWater;
+
           /* A body is on its feet unless something is carrying it down. Reading
              it off the height instead -- "the body is above the surface of its own
              column, so it is in the air" -- is wrong twice over: a body that has
@@ -1784,6 +1908,12 @@
                in a single frame, because the step read as ground and the body was
                eased onto it. */
             if (!onFoot || r - this.y > 1.6) return null;
+            /* The 1.6 above is how far a body that can lift itself onto a step
+               reaches. For a body whose legs are the only way up, the question is
+               asked of its own legs instead -- see `legs` above -- so a step of
+               1.3 m, which a lifted body climbs, is a wall to a frog and the
+               contour below takes it round. */
+            if (legs && r - this.y > hopReach(hopRow)) return null;
             if (rockAt(Math.floor(this.x), Math.floor(r + 0.05), Math.floor(this.z))) return null;
             return r;
           };
@@ -1826,12 +1956,23 @@
                back into it. */
             const sa = onFoot && this.y - standY(world, Math.floor(this.x), Math.floor(this.z), this.y) <= 1.6
               ? stepAhead() : null;
-            if (sa && worth(sa.s)) {
+            if (sa && worth(sa.s) && !legs) {
               this.climbTo = sa.s;
               this.climbRate = Math.max(0.4, Math.min(3, (sa.s - this.y) / sa.d * spd));
             } else if (!worth(this.climbTo)) { this.climbTo = null; this.climbRate = 0; }
           }
-          else if (go !== null) { this.climbTo = go; this.climbRate = 3; }
+          else if (go !== null) {
+            /* The step is in front of the body and inside what its body can
+               reach. A body that lifts its feet onto a step does that here, at a
+               rate, standing in front of it. A body that hops does not: it takes
+               the step with an arc the row sizes, which the hop gate below
+               launches, and until that arc has carried it over the edge the body
+               stands at the face with its feet under it and its heading held --
+               not going round, not being raised. What it looks like from outside
+               is a frog coiled at the foot of a bank, and then on top of it. */
+            if (legs) { this.climbTo = null; this.climbRate = 0; }
+            else { this.climbTo = go; this.climbRate = 3; }
+          }
           else {
             /* The way is a wall. An animal does not sit down in front of one and
                wait to be somewhere else: it goes round. Of the four steps it can
@@ -1850,7 +1991,10 @@
               const nx = edge(this.x + ox * spd * dt, world.w);
               const nz = edge(this.z + oz * spd * dt, world.d);
               const c = can(nx, nz);
-              if (c === null) continue;
+              /* A wall is not a way round, and for a body that climbs with a hop
+                 a step is neither: the way round a bank is the flat ground beside
+                 it, and the step it wants is the one it is already facing. */
+              if (c === null || (legs && c)) continue;
               /* going round a step costs less than climbing it, so a step is
                  climbed only when nothing walkable points the way at all */
               const dot = (ox * bx + oz * bz) / bl - (c ? 0.35 : 0);
@@ -2119,7 +2263,17 @@
             const cx = Math.floor(this.x), cz = Math.floor(this.z);
             const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
             const over = Math.floor(this.y) + 1;
-            const span = Math.max(1, Math.ceil((this.speed || 0) * hop.up / GRAVITY));
+            /* The step in front of the feet, and the launch the legs give for it.
+               On level ground this is `hop.up` exactly as it was, and the animal's
+               stride, its cadence and the films of it are unchanged; in front of a
+               bank it is the fuller extension the row states, sized so the arc
+               lands on the far side of the face. The body the player wears from
+               this animal's fruit asks the same helper from the same row a few
+               hundred lines above, which is what "one animal, one record" means
+               for a step as much as for a speed. */
+            const up = hopLaunchNow(hop, world, this.x, this.y, this.z, fx, fz,
+              this.hl, this.speed || 0) || hop.up;
+            const span = Math.max(1, Math.ceil((this.speed || 0) * up / GRAVITY));
             let roof = roofY(world, cx, cz, over, world.h, N.FOLIAGE);
             for (let k = 1; k <= span; k++)
               roof = Math.min(roof, roofY(world, cx + Math.round(fx * k), cz + Math.round(fz * k),
@@ -2148,10 +2302,10 @@
             for (let bx = Math.floor(bcx - hxx); bx <= Math.floor(bcx + hxx); bx++)
               for (let bz = Math.floor(bcz - hzz); bz <= Math.floor(bcz + hzz); bz++)
                 roof = Math.min(roof, roofY(world, bx, bz, over, world.h, N.FOLIAGE));
-            const room = roof - this.y >= hop.up * hop.up / (2 * GRAVITY) + this.tall;
+            const room = roof - this.y >= arcOf(up) + this.tall;
             this.wind = room ? Math.min(1, this.wind + dt / 0.18) : 0;
             if (this.hopT <= 0 && room && this.y <= gyH + 0.02) {
-              this.vy = hop.up;
+              this.vy = up;
               this.hopT = hop.period * (0.75 + Math.random() * 0.55);
               this.wind = 0;
             }
