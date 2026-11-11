@@ -2564,7 +2564,7 @@ const { sim } = require('./simwait');
       TOP: +TOP.toFixed(3), HIP: +HIP.toFixed(3), MID: +MID.toFixed(3), holdMin: +hold.toFixed(2) };
     out.float = run(lake, lake.top - 1.2, [[4, {}]]);
     out.swim = run(lake, lake.top - 1.2, [[2, { fwd: true }]], 'fast');
-    out.dug = run(lake, lake.top - 1.2, [[6, { sneak: true }]]);
+    out.dug = run(lake, lake.top - 1.2, [[6, { down: true }]]);
     out.land = run(dry, dry.y + 0.01, [[3, {}]]);
     out.hop = run(dry, dry.y + 0.01, [[0.5, { jump: true }], [0.35, {}]], 'high');
     /* and a wild body crossing the lake: the one a person watches. Its phase is
@@ -3228,8 +3228,8 @@ What was measured before any of this was fixed, over 180 frames of walking
       out[label] = { frames, bad, worst: +worst.toFixed(3), mean: +(sum / Math.max(bad, 1)).toFixed(3),
         gap: +gap.toFixed(3), gapWho, who, at };
     };
-    const go = { fwd: true, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
-    const still = { fwd: false, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
+    const go = { fwd: true, back: false, left: false, right: false, jump: false, down: false, sprint: false };
+    const still = { fwd: false, back: false, left: false, right: false, jump: false, down: false, sprint: false };
     for (const f of ['frogpear', null]) {
       const nm = f === null ? 'human' : f;
       run('walk-' + nm, f, go, 180);
@@ -3412,8 +3412,8 @@ What was measured before any of this was fixed, over 180 frames of walking
         ratio: +(slip / Math.max(body, 1e-9)).toFixed(3),
         worst: +worst.toFixed(4), who };
     };
-    const go = { fwd: true, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
-    const still = { fwd: false, back: false, left: false, right: false, jump: false, sneak: false, sprint: false };
+    const go = { fwd: true, back: false, left: false, right: false, jump: false, down: false, sprint: false };
+    const still = { fwd: false, back: false, left: false, right: false, jump: false, down: false, sprint: false };
     run('walk-human', null, go, 180);
     run('stand-human', null, still, 120);
     R.drawMesh = realDraw;
@@ -5765,7 +5765,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         radius: +(path / (2 * Math.PI)).toFixed(2) };
     };
     const frog = circle('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 },
-      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }));
+      () => ({ fwd: true, up: p.y < lake.top - 1.2, down: false, sprint: false }));
     /* The body and the animal are one animal, and this says so in the one way
        that cannot rot: it asks the game which record a worn body's motion comes
        from, and the answer is the animal's own row. There is no second row to
@@ -5830,9 +5830,9 @@ What was measured before any of this was fixed, over 180 frames of walking
         limit: p.moveDef.turn };
     };
     const frog = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 }, 1,
-      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 135);
+      () => ({ fwd: true, up: p.y < lake.top - 1.2, down: false, sprint: false }), 135);
     const frogStraight = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.0 }, 0,
-      () => ({ fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false }), 135);
+      () => ({ fwd: true, up: p.y < lake.top - 1.2, down: false, sprint: false }), 135);
     Object.assign(p, was);
     return { frog, frogStraight };
   });
@@ -5873,7 +5873,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     for (let i = 0; i < 105; i++) {
       const dt = 1 / 60; t += dt;
       p.yaw = Math.sin(t * 6.283 * 3) * 0.3;                 // 3 Hz, +-0.3 rad
-      g.input = { fwd: true, jump: p.y < lake.top - 1.2, sneak: false, sprint: false };
+      g.input = { fwd: true, up: p.y < lake.top - 1.2, down: false, sprint: false };
       g.particles.n = 0; g.hover = null;
       p.update(dt, g.input, g);
       spd = Math.hypot(p.vx, p.vz);
@@ -5940,9 +5940,9 @@ What was measured before any of this was fixed, over 180 frames of walking
        is on the bottom: the leg is asking the body to go down, and a body on the
        bottom that is still swimming forward walks off the place it reached. */
     const sink = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.5 },
-      p => ({ fwd: !p.grounded, jump: false, sneak: true, sprint: false }), 2.5, true);
+      p => ({ fwd: !p.grounded, up: false, down: true, sprint: false }), 2.5, true);
     const rise = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 3.0 },
-      () => ({ fwd: true, jump: true, sneak: false, sprint: false }), 1.2);
+      () => ({ fwd: true, up: true, down: false, sprint: false }), 1.2);
     // a dry flat stretch to walk: eight columns ahead, the same height, no water
     const dry = (x, z) => {
       let gy = 0;
@@ -5959,7 +5959,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       for (let k = 1; k <= 8 && ok; k++) if (dry(x, z - k) !== gy) ok = false;
       if (ok) field = { x: x + 0.5, z: z + 0.5, y: gy + 0.01 };
     }
-    const walk = field ? run(null, field, () => ({ fwd: true, jump: false, sneak: false, sprint: false }), 2.0)
+    const walk = field ? run(null, field, () => ({ fwd: true, jump: false, down: false, sprint: false }), 2.0)
                        : { error: 'no dry flat stretch' };
     Object.assign(p, was);
 
@@ -6043,7 +6043,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       const settled = { y: +p.y.toFixed(3), g: p.grounded ? 1 : 0, w: p.inWater ? 1 : 0 };
       let maxY = p.y, gotOut = false;
       for (let i = 0; i < 300; i++) {
-        g.input = { fwd: true, jump: true, sneak: false, sprint: false };
+        g.input = { fwd: true, jump: true, down: false, sprint: false };
         g.particles.n = 0; g.hover = null;
         p.update(1 / 60, g.input, g);
         maxY = Math.max(maxY, p.y);
@@ -7463,9 +7463,9 @@ What was measured before any of this was fixed, over 180 frames of walking
     place('frogpear', wt + 0.6, lake); out.surf = glide(10, {});        // let go of at the surface
     place('frogpear', bed + 0.0001, lake); out.fromBed = glide(12, {}); // put on the bottom, left
     place('frogpear', bed + 3, lake);
-    out.dive = glide(4, { sneak: true });                               // dived to the bottom...
+    out.dive = glide(4, { down: true });                               // dived to the bottom...
     out.diveLet = glide(8, {});                                         // ...and the key came off
-    place('frogpear', bed + 3, lake); out.up = glide(4, { jump: true });
+    place('frogpear', bed + 3, lake); out.up = glide(4, { up: true });
     place(null, bed + 3, lake); out.human = glide(10, {});
     /* the same body let go of at the surface has to be given the time its own
        column asks for: a body that breathes air comes down at 0.82 m/s here, and
@@ -7568,7 +7568,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      holding cannot kick itself out of the middle of a lake. It leaves the way a
      body leaves water -- into the shallows where the bottom is, and up off its own
      feet from there, which is the route the branch in entities.js already
-     documents. Without a ceiling a frog holding the climb key at the surface of
+     documents. Without a ceiling a frog holding the up key at the surface of
      (56.5,94.5) crossed that surface 45 times in 240 frames, and every crossing
      took the stroke off its legs and put it back on again: seen from the bank, its
      feet flickered.
@@ -7576,7 +7576,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      the level the water holds a resting body at. Those two were one number only
      because that level was measured to the feet and happened to land just under
      the surface; now a body hangs its own height down, and a ceiling taken from
-     the level would mean a frog holding the climb key could never bring its head
+     the level would mean a frog holding the up key could never bring its head
      to the top of the water at all. So the level is where a body that stops moving
      comes to rest, the ceiling is how high a body that keeps asking can get, and
      between the two a body swims: the key held for 4 s over a column 7 m deep
@@ -7592,7 +7592,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      body stands: with the old test, which asked where the body stood, the surface
      of (64.5,92.5) was crossed twice in 240 frames with the key held, and every
      crossing took the body out of the water branch and put it back in. */
-  check('the climb key brings the head out of the water, and the water stops the body ' +
+  check('the up key brings the head out of the water, and the water stops the body ' +
         'half of itself under the surface: it cannot stand on the middle of a lake',
     !buoy.error && buoy.up.headW === 0 && buoy.up.g === 0 && buoy.up.eye > 0.1 &&
     Math.abs(buoy.up.y - (buoy.wt + 1 - buoy.tall * 0.5)) < 0.05 &&
@@ -7600,7 +7600,7 @@ What was measured before any of this was fixed, over 180 frames of walking
   /* and the flag the draw hangs off does not relay. `inWater` used to be put to
      the cells -- is the cell at the body's feet liquid, is the one at its middle
      -- and a body bobbing across its own surface answered that a different way
-     every frame: at (56.5,14.9,94.5) a frog pushed up by its own push key changed
+     every frame: at (56.5,14.9,94.5) a frog pushed up by its own up key changed
      its mind 42 times in 240 frames, and with it the whole water branch of its
      movement, one cruising speed and then another, and the stroke of its legs,
      which snapped 0.19 m out and back again every few frames. The surface of the

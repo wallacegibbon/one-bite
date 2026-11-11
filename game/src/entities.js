@@ -62,7 +62,7 @@
      under it, and a body that has worked its way up until only half of it is in
      the water is not being held up by water any more -- it is standing on the
      lake, on a surface that is not there. Measured off the body worn from the
-     frog, with the climb key held for 5 s over a column 7 m deep, the old
+     frog, with the up key held for 5 s over a column 7 m deep, the old
      ceiling -- the surface less a hair -- let the feet come to **14.98** against
      a surface of **15**, which for a body **0.5 m** tall is **96%** of it over
      the water: a frog standing on the middle of a lake. Against this ceiling the
@@ -355,7 +355,7 @@
          is in is above its feet. The question used to be put to the cells -- is
          the cell at the body's feet, or the one at its middle, liquid -- and
          that flips for a body straddling the surface. Measured at (56.5,14.9,
-         94.5) with a frog pushed up to the surface by its own push key: the cell
+         94.5) with a frog pushed up to the surface by its own up key: the cell
          under its feet is water while its origin is under 14.903 and air above
          it, the body bobs across that line, and `inWater` went on and off 42
          times in 240 frames -- and with it the whole water branch of its
@@ -552,6 +552,13 @@
            that swims at 4.7 m/s comes up at about a metre a second, and a human
            who swims at 2.9 does not surface much faster than it sinks. The
            water takes it back at the rate it takes the forward speed back.
+           The two asks are keys of their own -- J down, K up, held rather than
+           clicked -- and that is not a convenience: this branch used to read the
+           forward-push key and a Ctrl for them, so a body swimming down was
+           pushing off the ground, and holding Ctrl to get to the bottom with the
+           other hand on WASD is a chord the browser answers to (Ctrl+W closes
+           the tab, and W is forward). A body that is *pushing off a bottom it is
+           standing on* still uses the push key, and that is the branch below.
            What was missing is the water's own answer. Every body in this branch
            carried the same fixed downward pull whatever it was made of, so a
            frog let go of in mid-water sank at a terminal 0.89 m/s, landed on the
@@ -585,10 +592,10 @@
            body's own hang depth has no such level -- there the ground is a ground
            to stand on, feet and dry pose and all, which is the answer the herd's
            bodies take in that same water. */
-        if (heldUp && !inp.sneak) this.vy += (fl - this.y) * 2.2 * dt;
+        if (heldUp && !inp.down) this.vy += (fl - this.y) * 2.2 * dt;
         else this.vy -= 5.2 * dt * 0.55;
-        this.vy += (inp.jump ? push : 0) * dt;
-        if (inp.sneak) this.vy -= push * 0.6 * dt;
+        if (inp.up) this.vy += push * dt;
+        if (inp.down) this.vy -= push * 0.6 * dt;
         this.vy -= this.vy * Math.min(0.9, 3.2 * dt);
         this.vy = Math.max(-4.5, Math.min(4.6, this.vy));
         /* The surface is the ceiling of the water's hold: a body the water is
@@ -598,7 +605,7 @@
            documents, and which is why the ceiling belongs to `heldUp` and not to
            the water: a body standing on a bottom it can reach keeps the push-off
            it has always had. Without it a body pushed at the surface by its own
-           push key crosses the surface, loses the water, falls back and crosses
+           up key crosses the surface, loses the water, falls back and crosses
            it again: at (56.5,14.9,94.5) a frog with the key held went over that
            line 45 times in 240 frames, and every crossing took the stroke off
            its legs and put it back on again.
@@ -607,7 +614,7 @@
            were one number only because the level the water holds a resting body
            at used to be measured to the feet and happened to land just under the
            surface; now a body hangs its own height down, and a ceiling taken from
-           that level would mean a frog holding the climb key could never bring
+           that level would mean a frog holding the up key could never bring
            its head to the top of the water at all. So: the level is where a body
            that stops moving comes to rest, the ceiling is how high a body that
            keeps asking can get, and between the two a body swims. A frog at rest

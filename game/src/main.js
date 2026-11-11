@@ -33,18 +33,26 @@
     inp.right = !!(keys['d'] || keys['arrowright']);
     inp.jump = !!keys[' '];
     inp.sprint = !!(keys['shift']);
-    inp.sneak = !!(keys['control'] || keys['c']);
+    /* The body's own up and down are keys of their own: J is down, K is up.
+       They used to be Space and Ctrl, and that binding cost the player two
+       things the body does not deserve to pay for: Ctrl under WASD is the chord
+       the browser takes for itself (Ctrl+W closes the tab, and W is forward),
+       and a body swimming down was sharing a key with a body pushing off the
+       ground. There is no crouch in the valley, so the field that used to be
+       called `sneak` was never anything but the dive. */
+    inp.up = !!keys['k'];
+    inp.down = !!keys['j'];
   }
   document.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     /* Ctrl+S (Cmd+S on a Mac) is the save key the page can always answer to.
        It has to be taken out of the movement keys before it is read: 's' is
        also the key that walks the body backwards, and a player saving the
-       valley should not take a step. Every other chord is left alone --
-       sneaking is Ctrl held down with WASD on top of it. */
+       valley should not take a step. It is the only place a Ctrl chord is read,
+       because a Ctrl held down *as a body key* is a chord the browser answers
+       to -- see the water keys in `setKeys`. */
     const saveChord = (k === 's' && (e.ctrlKey || e.metaKey));
     if (!saveChord) keys[k] = true;
-    if (k === 'control') keys['control'] = true;
     setKeys();
     if (!started) return;
     if (saveChord) { e.preventDefault(); game.save(); return; }
@@ -52,8 +60,11 @@
     if (k === 'f' && game.mode === 'play') game.useSelected();
     if (k === 'r' && game.mode === 'play' && game.player.form) game.revert(N.t('log.revertManual'));
     if (k === 'v') game.thirdPerson = !game.thirdPerson;
-    if (k === 'j') { game.mode = game.mode === 'journal' ? 'play' : 'journal'; ui.showJournal(game.mode === 'journal'); }
-    if (k === 'h') { game.mode = game.mode === 'help' ? 'play' : 'help'; ui.showHelp(game.mode === 'help'); }
+    /* The panels are opened by clicking their buttons and closed by Esc or by
+       their own close button. They used to have keys of their own -- J and H --
+       and that was a key spent on a thing the mouse reaches in one click, on a
+       screen where the buttons are already in the corner. J is the body's down
+       key now, which is a thing only a key can do: it is held, not clicked. */
     if (k === 'l') setLocale(N.i18n.next().id);   // LOCALE_KEY; docs-sync asserts this binding exists
     if (k === 'n' && game.mode === 'play') {   // IDENTITY.nameKey; docs-sync asserts this binding exists
       const v = window.prompt(N.t('log.nameAsk'), game.name);
@@ -74,7 +85,7 @@
       if (k === 'arrowdown') { game.stashSel = Math.min((game.openStash.items || []).length - 1, game.stashSel + 1); ui.renderCellar(); }
     }
   });
-  document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; keys['control'] = e.key === 'Control' ? false : keys['control']; setKeys(); });
+  document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; setKeys(); });
   window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
   /* ---------------- leaving the page ----------------
@@ -185,7 +196,7 @@
     last = t;
     if (!started) { game.updateEnv(); game.render(); ui.update(); return; }
     if (QS.has('freeze')) { game.updateEnv(); game.render(); ui.update(); return; }
-    if (game.mode === 'play') setKeys(); else { inp.fwd = inp.back = inp.left = inp.right = inp.jump = inp.sprint = inp.sneak = false; }
+    if (game.mode === 'play') setKeys(); else { inp.fwd = inp.back = inp.left = inp.right = inp.jump = inp.sprint = inp.up = inp.down = false; }
     game.update(dt);
     game.render();
     ui.update();

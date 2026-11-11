@@ -118,6 +118,119 @@ const { sim } = require('./simwait');
   check('the body does not snap to the aim', face.inFrame < face.whip * 0.5, face);
   check('the body finishes the turn', face.rest < 0.05, face);
 
+  /* ---- the keys a body owns ----
+     The user's rule, translated: the water's up and down are bound to Space and
+     Ctrl and that is very unwanted -- above all because Ctrl plus W closes the
+     page -- so use J for down and K for up, let the user click the codex and the
+     help instead of spending a key on them, and do not waste the hotkeys. What is
+     asked here is the binding itself:
+     the body really goes up on K and down on J, Space asks nothing of a body that is
+     swimming (it is the push key, and a swimming body has no ground to push from),
+     Ctrl is not a body key at all -- and Ctrl+W is the chord that closes the tab on
+     the player's own hand -- and J and H open no panel, while the buttons do. */
+  const lakeAt = await page.evaluate(() => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    /* The lake's own landmark is the centre of the water -- and the centre of the
+       water is the isle the academy stands on, which is dry. So the deep part is
+       searched for, in the ring of open water the lake's record keeps round it. */
+    let found = null;
+    for (let z = 72; z < 140 && !found; z++) {
+      for (let x = 42; x < 116 && !found; x++) {
+        const wt = N.waterTop(W, x, z, W.h - 1);
+        if (wt < 0) continue;
+        const bed = N.groundY(W, x, z, wt);
+        if (wt - bed < 6) continue;
+        if (Math.hypot(x - 66, z - 118) < 8) continue;      // the sunken tower's brick
+        found = { x: x + 0.5, z: z + 0.5, wt, bed, depth: wt - bed };
+      }
+    }
+    if (!found) return { error: 'no deep water in the lake' };
+    g.mode = 'play';
+    p.form = 'frogpear'; p.formT = 9999; p.formMax = 9999;
+    p.vital = 10; p.air = 9999; p.dry = 0; p.fright = 0;
+    p.x = found.x; p.z = found.z; p.y = found.wt - 1.0; p.vx = p.vy = p.vz = 0;
+    window.__lake = found;
+    return found;
+  });
+  if (lakeAt.error) { bad.push('CHECK FAILED: no deep water to test the water keys in ' + JSON.stringify(lakeAt)); }
+  const inWater = async () => {
+    await page.evaluate(() => {
+      const p = window.game.player, l = window.__lake;
+      p.x = l.x; p.z = l.z; p.y = l.wt - 1.0; p.vx = p.vy = p.vz = 0;
+    });
+    await sim(page, 2.0);                 // let the water hold it at the level it holds a body at
+    return page.evaluate(() => +window.game.player.y.toFixed(2));
+  };
+  const hold = async (key, secs) => {
+    await page.keyboard.down(key);
+    await sim(page, secs);
+    const r = await page.evaluate(() => ({
+      y: +window.game.player.y.toFixed(2), fwd: !!window.game.input.fwd,
+      up: !!window.game.input.up, down: !!window.game.input.down,
+      jump: !!window.game.input.jump, sprint: !!window.game.input.sprint,
+      sneak: 'sneak' in window.game.input,
+    }));
+    await page.keyboard.up(key);
+    return r;
+  };
+  const rest = await inWater();
+  const tryKey = async (key, secs) => { await inWater(); return hold(key, secs); };
+  const roseK = await tryKey('k', 3.0);
+  const sankJ = await tryKey('j', 4.0);
+  const heldSpace = await tryKey(' ', 3.0);
+  const heldCtrl = await tryKey('Control', 2.0);
+  const movedW = await tryKey('w', 0.4);
+  const keys = { rest, roseK: roseK.y, sankJ: sankJ.y, heldSpace: heldSpace.y,
+    heldCtrl: heldCtrl.y, lake: lakeAt,
+    held: { k: roseK, j: sankJ, space: heldSpace, control: heldCtrl, w: movedW },
+    rise: +(roseK.y - rest).toFixed(2), sink: +(rest - sankJ.y).toFixed(2),
+    spaceDrift: +(heldSpace.y - rest).toFixed(2),
+    /* where the water's own laws say a body ends up: the level it holds a body
+       that stops asking at, the ceiling a body that keeps asking up to climbs to,
+       and the floor a body that keeps asking down to reaches */
+    hold: +(lakeAt.wt + 1 - 0.5 - 1.6).toFixed(2),
+    ceiling: +(lakeAt.wt + 1 - 0.25).toFixed(2),
+    floor: +(lakeAt.bed + 0.25).toFixed(2),
+    shortOfCeiling: +(lakeAt.wt + 1 - 0.25 - roseK.y).toFixed(2),
+    offTheFloor: +(sankJ.y - (lakeAt.bed + 0.25)).toFixed(2),
+    spaceOffHold: +(heldSpace.y - (lakeAt.wt + 1 - 0.5 - 1.6)).toFixed(2) };
+  out.push('keys ' + JSON.stringify(keys));
+  check('K lifts a body through the water to the top the water allows it',
+    keys.rise > 0.8 && keys.held.k.up && !keys.held.k.down && keys.shortOfCeiling < 0.2, keys);
+  check('J takes it down to the floor the water allows it',
+    keys.sink > 0.5 && keys.held.j.down && !keys.held.j.up && Math.abs(keys.offTheFloor) < 0.3, keys);
+  check('Space asks nothing of a body that is swimming: it is the push key',
+    Math.abs(keys.spaceOffHold) < 0.15 && !keys.held.space.up && !keys.held.space.down, keys);
+  check('and Ctrl is not a body key at all',
+    !keys.held.control.up && !keys.held.control.down && !keys.held.control.jump &&
+    !keys.held.control.sneak, keys);
+  check('W is still the key that walks the body forward, and no other ask comes with it',
+    keys.held.w.fwd && !keys.held.w.up && !keys.held.w.down, keys);
+
+  const panels = await page.evaluate(async () => {
+    const seen = [];
+    const vis = id => !document.getElementById(id).classList.contains('hidden');
+    const tap = k => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+    tap('j'); tap('h');
+    seen.push({ tapped: 'j+h', journal: vis('journal'), help: vis('help'), mode: window.game.mode });
+    document.getElementById('btnJournal').click();
+    seen.push({ tapped: 'btnJournal', journal: vis('journal'), mode: window.game.mode });
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    seen.push({ tapped: 'escape', journal: vis('journal'), mode: window.game.mode });
+    document.getElementById('btnHelp').click();
+    seen.push({ tapped: 'btnHelp', help: vis('help'), mode: window.game.mode });
+    document.getElementById('btnCloseHelp').click();
+    seen.push({ tapped: 'btnCloseHelp', help: vis('help'), mode: window.game.mode });
+    return seen;
+  });
+  out.push('panels ' + JSON.stringify(panels));
+  check('J and H open no panel: the panels are clicked, not keyed',
+    panels[0].journal === false && panels[0].help === false && panels[0].mode === 'play', panels);
+  check('the codex button opens it, and Esc closes it',
+    panels[1].journal === true && panels[2].journal === false, panels);
+  check('the help button opens it, and its own button closes it',
+    panels[3].help === true && panels[4].help === false, panels);
+
   console.log(out.join('\n'));
   console.log(errs.length ? 'ERRORS: ' + errs.slice(0, 5).join(' | ') : 'no errors');
   if (bad.length) console.log(bad.join('\n'));
