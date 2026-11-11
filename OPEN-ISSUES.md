@@ -7,43 +7,59 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: the round's code ends at `49236cc`, pushed to both
-remotes, and this record is the docs-only commit that follows it on the same
-tree. The full suite ran twice on that tree, both runs 10/10 with
-`0 CHECK FAILED` in `/tmp/frutaria-play.log`; the doc gates are clean on it too
+State at time of writing: this round is three commits -- `9ad3323` the change,
+`80c9da4` the measurements that follow it, `7d8e668` the docs written against the
+new numbers -- and this record is the docs-only commit that follows them on the
+same tree. All of them are pushed to both remotes. The full suite ran twice on
+that tree, both runs 10/10 with `0 CHECK FAILED` and `0 ERROR` in
+`/tmp/frutaria-play.log`; the doc gates are clean on it too
 (`tools/extract-comments.js` -> `[]` and `occurrences: 0, unique: 0`;
-`docs-sync` ending all-consistent; `docs-drift` catching every drift it plants).
+`docs-sync` ending all-consistent; `docs-drift` catching every drift it plants;
+`reach` finding every field of every record read by the code that names it).
 
-Two things landed since the record kept under the history heading further down,
-and they belong to one another.
+One sentence drove the round, and it was about the game, not the code: becoming
+an animal has to be like becoming that animal in every way, including how fast it
+goes. Wearing a frog while travelling at the person's speed was issue 12, and
+issue 12 is now closed: an animal's row in `game/data/creatures.js` is the only
+place that animal's motion is written, and `Player.moveDef` asks that row whether
+the body you wear is walking, swimming, jumping or turning. A form record is
+shape and senses only -- the five motion fields it used to hold (`speed`, `jump`,
+`swim`, `hop`, `turn`) are deleted, and the run fails if any of them comes back.
+What was a constant (`WALK_TOP`, "on foot a body goes 5 m/s whatever it was worn
+from") and what were multipliers (a frog's `0.9` of a person's walk, `1.3` of a
+person's jump) are gone rather than re-tuned. The human row moved into
+`N.HUMAN_FORM` and states its own motion in the same absolute units, so neither
+kind of body is defined as a multiple of the other.
 
-- `69bac02` **the lens films the body at the size the body is**. The
-  third-person distance was `1.5 + 2.25 * height`, whose comment claimed the
-  subject "holds roughly the same frame share"; counted off the pixels of a
-  1280x720 frame a person's body owned 5236 px of it and a frog-shaped body
-  2020 px -- 0.46 of the person's share. The law is now the share itself
-  (`N.CAM` in game/src/game.js), calibrated on the shot every frame measurement
-  in docs/07 is written against (a person 1.8 m tall at 5.55 m in a frame 84
-  degrees tall), so a person's numbers do not move by a pixel while the animal
-  goes from 45 px tall and 2020 px of frame to 108 px and 10110 px, with 1651
-  colour edges inside the body where the old shot held 684. `game/test/play.js`
-  counts the same things out of a drawn frame on every run.
-- `49236cc` **a strip films one action, in phases**: `node game/test/shots.js
-  strip [hop|stroke|turn|wild]`. The page's clock is stopped, the world is
-  stepped by hand at 1/60 with the same keys held throughout, and every frame
-  says where the body landed in the frame and whether it is in it (projected off
-  the engine's own basis; the four strips report `offFrame: 0`). Two lenses per
-  action: the one a player owns, and a tripod stood once at the middle of the
-  path that turns on its head but does not move. It is a desk instrument -- not
-  in all.sh, PNGs in the .gitignore'd `.shots/`.
+- Measured through the same actions against that one row, the worn body and the
+  animal it was worn from give the same numbers: both leave the ground at
+  **5.617 m/s**, both rise **0.73 m** over their own feet, and both are off the
+  ground for about a third of a crossing (32% of the frames for the body, whose
+  window catches two arcs, 36% for the valley's frog, whose catches three -- the
+  share counts arcs, so the arc and the launch are the numbers that match). A
+  frog body walks the frog's 1.8 m/s, swims its 4.6, and hops
+  once every 0.9 s; a person's body still walks 4.7 and leaves the ground at
+  7.917. The costs of the trade are said in the game rather than left to be
+  noticed: a frog body is slow on land and has no sprint at all, and the fruit
+  says so in both languages.
+- `game/test/shots.js` gained a fifth film, `strip animal`, which stands one of
+  the valley's own frogs in the corridor the `hop` strip uses, and the two
+  montages were looked at side by side: the same crouch, push-off, nose-up
+  flight, landing. The `wild` film already in the tool could not make that
+  claim -- the animal it filmed spent the window walking, and the `push: 0` it
+  reported said exactly that.
+- The honest downside, also measured: a person's jump came down 0.14 m (1.57 ->
+  1.43 apex) because both bodies now spend the push-off frame the same way, and
+  the 2.62 m jump a frog body used to have is the other thing the change
+  removed.
 
-What the first films measured is now issues 12 and 13. Both were deliberately
-left alone: they are design calls, not bugs a tool can settle, and each is
-written down with the numbers someone would argue with. Issue 14 is the ground
-the frame work turned up. And the facts block at the bottom corrects itself: the
-frogpear row it quoted is the *species*, not the *form*, and the two are
-different records with different numbers -- which is exactly the pair issue 12 is
-about.
+The lens and the strip tool this round used are the previous round's
+(`69bac02`, `49236cc`, recorded under the history heading further down), and
+what the first films measured is still open as issues 13 and 14: the swim has no
+vertical component, and the frame's contrast and content bounds are only
+lower-bounded. Issue 15 is opened by this round and is *unmeasured*: a body worn
+from a frog hops through a roof the frog itself walks under, because the wild
+body has a ceiling gate and the worn one does not.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -1308,9 +1324,10 @@ recorded there too); the watch on that fixed tree was loop 17.
 
 ## 12. The body you wear hops further than the animal you wear it is (found by the gait strip)
 
-**Open. A question of which of two records is right, not a bug in either.**
+**Closed. One animal, one record: the form keeps its shape and its senses, the
+animal's row keeps its motion, and `Player.moveDef` reads that row.**
 
-The two records are both in the data and they do not agree about the same animal.
+The two records were both in the data and they did not agree about the same animal.
 
 - the species (`game/data/creatures.js`, `frog`): `speed 1.8`, `turn 0.9`,
   `swimSpeed 4.6`, `hop { up: 6.0, period: 0.9 }` -- and entities.js states the
@@ -1319,46 +1336,81 @@ The two records are both in the data and they do not agree about the same animal
 - the form (`game/data/fruits.js`, `frogpear.form`): `speed 0.9` -- a multiplier
   on the human body's 4.7 m/s cruise, so 4.23 -- `jump 1.3`, `swim 1.1`,
   `hop { up: 0.72, kick: 1.25, period: 0.22 }`, where the data's own comment
-  says `up` is a fraction of the body's own jump. `Player.update` launches an
+  said `up` is a fraction of the body's own jump. `Player.update` launched an
   auto-hop with `this.vy = 8.3 * (f.jump || 1) * hop.up` = 7.77 m/s, which is
   1.31 m by the same arc law (`up*up/2g`, GRAVITY 23).
 
-Measured, not derived: `strip hop` at the clearing the frame check uses (122.5,
-23, 82.5), the same keys held, the world stepped at 1/60, the numbers taken from
-the positions and not from the code's own fields -- **1.38 m** from the floor of
-the gait to the top of the arc, **4.35 m/s** along the ground (the `kick` on top
-of the cruise), and **47%** of the frames of the window above that floor. The
-worn body therefore leaves the ground at 7.77 m/s where the frog it is wearing
-leaves at 6.0 -- 1.7 times the height -- and travels along at 2.4 times that
-animal's own cruise.
+The user settled it in one sentence, and it is the sentence the design line failed:
+*"你变成了青蛙，不就应该以青蛙的速度移动吗?"* -- put on a frog, you move at the
+frog's speed. The line that was in the code ("a worn body travels at the human
+body's speed in the shape of something else, and so carries its own number") was
+not a gameplay rule at all: it was the justification for a constant, `WALK_TOP =
+5`, whose only job was to be the top the stride law was calibrated against. No
+record anywhere stated how fast the body you wear crosses ground, so the law was
+handed one.
 
-Why that belongs to the standing contract and not to tuning: the arc is what the
-pose has to hold. The flight frames of the hop film are exactly the frames where
-the limbs read as boxes against a sky with nothing joining them to the trunk
-(`.shots/strip-hop-side-01.png`, `-03`); the gait code's claim is that the pose
-and the displacement come out of one physics, and a launch that is not the
-animal's is a displacement the pose was not written for.
+What the change is, and it is a deletion rather than a mechanism:
 
-The data documents one of the three pairs as matched and two as not. `swim: 1.1`
-says it out loud: "1.1 on the frog body puts it at 4.65 m/s -- the wild frog's
-own `swimSpeed` -- because the body you wear and the animal you wear are one
-animal". The land speed is documented the other way, deliberately: "a worn body
-travels at the human body's speed in the shape of something else, and so carries
-its own number" (entities.js, on why `walkMove` carries its own constant). The
-hop's launch is documented nowhere -- no chapter, no comment says why wearing the
-frog throws you 1.31 m when the frog throws itself 0.78.
+- the form record carries `size`, `breatheAir`, `dryTimer`, `nightVision`,
+  `stealth`, `step`, `fov` and the form's two display names, and no motion. The
+  five motion fields -- `speed`, `jump`, `swim`, `hop`, `turn` -- are gone.
+- `Player.moveDef` is one line: the creature record the fruit names, or
+  `HUMAN_FORM` for the body you start in. `HUMAN_FORM` (new in
+  `game/data/player.js`) states its own motion in absolute units -- 4.7 m/s,
+  `sprint 1.45`, `swimSpeed 2.9`, a launch of 8.3 m/s, `turn 1.6` -- in the same
+  field names a creature row uses, so there is one code path and no mapping layer.
+- `WALK_TOP` is gone, and so is the hop's `kick`: a body is thrown by its launch
+  and keeps its ground speed through the arc, which is the same thing the wild
+  body's momentum does. The auto-hop's period is the animal's 0.9 s, not the
+  form's 0.22.
+- the stride law is calibrated at the body's own record instead of at a constant:
+  `walkMove(speed, row.speed)`. At the person's own cruise that is 1.97 m of
+  stride at 2.38 steps a second (it was 1.85 m at 2.33 at 0.94 of `WALK_TOP`).
+  `step` stays on the form on purpose -- it is how far that collision box is
+  lifted without a jump, and the box is the form's.
+- both push-offs now spend that frame's gravity the same way (`pushOff`), which
+  closed a second and smaller discrepancy on its own: the worn body came 0.83 m
+  off the ground where the animal came 0.73. The analytic gate asks 0.783, which
+  is 5 cm over the arc either body actually reaches -- so a roof that passes the
+  gate is never one it then hits, and docs/03 says so.
 
-Left alone. There are at least three defensible answers and picking one is the
-user's call: bring the form's launch to the species' 6.0; keep the height and
-shorten `period` so the same arc is reached at a rate the pose can carry; or
-leave the physics alone and give the pose something to do with the flight it is
-given. The gait steps in play.js pin the launch and the speed where they are, so
-whichever is chosen will show in the diff before it lands.
+Measured on the tree, both bodies, same actions, read against the record they came
+from (`test/play.js`, step `gait`): the body worn from a frog and one of the
+valley's own frogs leave the ground at **5.617 m/s** each (the row's 6.0 less the
+frame that spends gravity), reach **0.73 m** over the feet each (the gate's own
+formula says 0.783), and spend a third of the frames of a straight crossing in the
+air -- **32%** for the body, whose window catches two arcs, **36%** for the
+animal, whose catches three: the share counts arcs, so the launch and the arc are
+the numbers that match and the share is not; the crossed body covers ground at **1.80 m/s**, and a body in the lake at
+**4.58** where the wild frog swims at **4.6** -- the row says 1.8 and 4.6.
+and the person, measured against their own row rather than against an animal's:
+4.70 m/s over three seconds (unchanged), thrown at 7.917 against the row's 8.3,
+apex 1.43 where it was 1.57 -- the half-frame of launch gravity, now spent the
+same way by every body. `moveDef` is identity-tested: the worn frog's row *is*
+`CREATURE_BY_ID.frog`, and a form record carrying any of the five motion fields
+fails the run.
 
-One thing the films did NOT measure, so it is not claimed: the wild strip's
-animal spent its window walking (`airPct 3.3%`), so there is no measured arc for
-a wild frog on file -- only the 0.78 the code states. A `wild` strip aimed at a
-hopping animal, or a longer window, is what would close that.
+The gap the films left last round is closed too. `strip animal` stands one of the
+valley's own frogs in the same corridor the `hop` strip stands the worn body in,
+at the same 2.2 s window -- the shared ground issue 14 was asking for, a place the
+two films are worth reading against rather than two accidents -- and it comes back
+with `arc 0.73, push 5.617, airPct 44.7` where the worn body reports `0.73 /
+5.617 / 36.4`. Looking at the two
+strips frame by frame is what this was for: crouch, push, flight with the legs
+folded under a nose-up trunk, landing -- the same gestures in the same order.
+What the pair does *not* match on, and honestly so: the animal covered 1.56 m in
+that window and the body 3.96 m. A wandering animal walks at **0.42** of its
+cruise (`entities.js`, the state multipliers -- flee is 1.7), because an animal
+strolling is not an animal asked somewhere; the body you wear goes at the cruise
+because you are holding the key. Capability is in the row, behaviour is not, and
+the films show both.
+
+The costs, told as costs: a frog body is genuinely slow on land (1.8 m/s against
+a person's 4.7) and has no sprint, which is now a line in the fruit's own `cost`
+list and in docs/04; the lake is where it is quick. A sprint above a record's
+cruise buys step *rate* and not step length (models.js says why: the stance blend
+has no third point above a run). And a person's jump came down 0.14 m because
+every body now spends the push-off frame the same way.
 
 ## 13. A second of stroking moves the body 4.6 m and not at all up (found by the gait strip)
 
@@ -1370,7 +1422,7 @@ of the stroke to its top. The legs fold and run out and the body's attitude does
 change (`.shots/strip-stroke-side-00.png` onwards), so nothing here says the
 animation is missing: it says a body travelling through water at the speed its own
 data matches to the animal's never once changes the depth it swims at, for a whole
-second, while the same body on land rises 1.38 m. It reads as a body on a rail.
+second, while the same body on land rises 0.73 m. It reads as a body on a rail.
 
 Not compared against the animal, and that gap is stated rather than papered over:
 every strip that films one of the valley's own is on land, so there is no
@@ -1409,6 +1461,35 @@ the world is a claim about the valley's content, and a bound on it would be an
 art direction nobody has chosen yet. What would belong here next is not a repaint
 but the same rig naming a ground the gait films are worth reading against, and
 putting that ground where the strips film.
+
+## 15. A body worn from a frog hops through a roof the frog itself walks under (found while closing 12)
+
+**Open. An asymmetry between the two bodies of one animal, read off the code and
+not yet measured.**
+
+Issue 12 made the two bodies read one record for how they move, and one line of
+that mechanism is still in two places. A wild body asks the roof before its legs
+load -- `play.js` step `frogDoesNotHopThroughItsOwnCeiling`, issue 2b: under a
+trunk whose beam is one cell over the floor it stands on it launches **0** arcs
+and walks instead, and its legs do not load for an arc that would not fit. The
+body the player wears asks nothing: `Player.update` counts `hop.period` down and
+pushes off whenever it is standing, under anything.
+
+Both bodies are now thrown at the row's 6.0 m/s and both reach 0.73 m, so the arc
+that used to bite -- 1.31 m, through a metre of the sunken tower's glass -- is
+gone; what is left is that a worn frog hops into wood a wild frog would not
+attempt, and spends frames with its head inside it.
+
+Not measured, and that is stated rather than hidden: no rig runs a worn body under
+a beam. What would close it is the 2b rig a second time with the player in the
+frog form instead of one of the valley's -- the same built block at the same two
+heights, the same counting of airborne frames inside the column -- and then the
+same answer in the player's branch: no arc loaded under a roof it would not clear,
+which is what a frog under a low roof does.
+
+Left open because the arc coming down to 0.73 m makes the case rare now, and
+because the honest thing to do with an unmeasured asymmetry is to write it down
+rather than fix it on the way past.
 
 ## The record of the last rounds (kept as history)
 
@@ -1753,23 +1834,39 @@ only (CJK inside string/regex literals is fine).
   22 bone, 24 mountain rock, 27 dark leaf, 28 willow, 41 (non-solid, in the
   sunken tower). `FOLIAGE = {7,8,9,27,28}`;
   `TREE_BLOCK = {6,7,8,9,22,27,28}`.
-- Physics: `GRAVITY 23`, `MAX_FALL 42`. The frog is **two records**, and the
-  standing difference between them is issue 12 -- do not quote one as the other:
-  - the species (`game/data/creatures.js`, `frog`, `scale 0.13`): `speed 1.8`,
+- Physics: `GRAVITY 23`, `MAX_FALL 42`. A body's motion lives in **one record
+  per body**, and the two kinds of record have the same field names so one code
+  path reads them (`Player.moveDef` in entities.js picks the row; issue 12 is
+  closed and must not be reopened by a second copy of a number):
+  - the animal (`game/data/creatures.js`, `frog`, `scale 0.13`): `speed 1.8`,
     `swimSpeed 4.6`, `turn 0.9`, `hop { up: 6.0, period: 0.9 }`, `alert 12`,
-    `herd 8`; `tall = MODEL_H * 0.13 = 0.43`. The arc that launch gives is
-    `6.0^2 / (2*23) = 0.78 m` over the feet, which is the number entities.js
-    states for the hop gate. The gate asks for `up^2/2g + tall` of room over the
-    body (0.78 + 0.43 = 1.21 m) before it lets the legs load. Wander speed =
-    `cruise * 0.42` = 0.756 m/s.
+    `herd 8`; `tall = MODEL_H * 0.13 = 0.43`. This row also moves the body the
+    player wears when a fruit names that animal -- launch, arc, cadence, cruise
+    and turn all come from here, and nothing else. The hop gate asks
+    `up^2/2g + tall` of room over the body (0.78 + 0.43 = 1.21 m) before the
+    legs load; the arc a body actually reaches is `up^2/2g - up*dt/2` = **0.73 m**
+    for that launch, because the frame that pushes off spends the first sliver of
+    the fall (`pushOff` in Player.update; the creature step integrates the same
+    way). Wander speed = `cruise * 0.42`, flee/chase `cruise * 1.7`, and the
+    body a player drives goes at the cruise because they are holding the key.
+  - the body you start in (`game/data/player.js`, `HUMAN_FORM`): `size
+    [0.62,1.8]`, `scale 0.18`, `speed 4.7`, `sprint 1.45`, `swimSpeed 2.9`,
+    `jump 8.3` (a launch in m/s, not a multiplier), `turn 1.6`, `fov 76`,
+    `step 0.55`. Measured against its own row: 4.70 m/s over three seconds,
+    thrown at 7.917 off the ground, apex 1.43 m.
   - the form (`game/data/fruits.js`, `frogpear.form`): `size [0.5,0.5]`,
-    `speed 0.9` (a multiplier on the human cruise `4.7`, so 4.23 m/s),
-    `jump 1.3`, `hop { up: 0.72, kick: 1.25, period: 0.22 }` where `up` is a
-    fraction of the body's own jump, `swim 1.1` (4.65 m/s, deliberately the
-    species' own `swimSpeed`), `turn 0.9`, `fov 100`, `step 0.3`, `dryTimer 90`,
-    `breatheAir false`. The auto-hop launches at
-    `8.3 * jump * hop.up = 7.77 m/s` -> 1.31 m by the same arc law; measured
-    1.38 m from the floor of its own gait (issue 12).
+    `breatheAir false`, `dryTimer 90`, `nightVision 0.3`, `stealth 0.5`,
+    `fov 100`, `step 0.3` and the two display names. **No motion at all** -- no
+    `speed`, `jump`, `swim`, `hop`, `turn`; a form record carrying any of those
+    fails `play.js`. `step` is the form's on purpose: it is how far that
+    collision box lifts without a jump.
+  - measured pair, same actions (`play.js` step `gait`, and `shots.js` strips
+    `hop` / `animal`): worn body and wild animal both leave the ground at
+    **5.617 m/s** and both reach **0.73 m**; the airborne share is not one of the
+    matching numbers (32% of a crossing's frames for the body, 36% for the animal,
+    36.4% and 44.7% for the two films -- the share counts the arcs a window
+    happens to catch). The worn body crosses ground at **1.80 m/s** and water at
+    **4.58**, the wild animal swims at **4.6**.
 - Frame order inside `Creature.update` (entities.js): steering + horizontal
   step (~1408-1798) -> altitude (~1830-2170) -> hop gate (~2099-2141) ->
   vertical fall/climb -> solid-exit correction (~2200-2220) -> shove
@@ -1820,13 +1917,33 @@ only (CJK inside string/regex literals is fine).
   only across `g.render()`, and the counters are zeroed immediately before each
   read. A rig that patches the draws and then reads gets a frame of nothing and
   reports 0 pixels without saying so.
-- The gait films: `node game/test/shots.js strip [hop|stroke|turn|wild]` -- the
-  page's clock stopped, the world stepped by hand at 1/60 with the same keys
-  held, two lenses per action (the one a player owns, and a tripod stood at the
+- The gait films: `node game/test/shots.js strip [hop|stroke|turn|wild|animal]`
+  -- the page's clock stopped, the world stepped by hand at 1/60 with the same
+  keys held, two lenses per action (the one a player owns, and a tripod stood at the
   middle of the path that pans but does not move), and every frame reporting
   where the body landed in the frame and whether it is in it. Not in all.sh, and
   the PNGs are in the .gitignore'd `.shots/`. The standing set of stills is
-  `node game/test/shots.js [tag]`.
+  `node game/test/shots.js [tag]`. `animal` is the one to reach for when a claim
+  is about an animal's gait rather than a worn body's: it stands one of the
+  valley's own frogs in the same cleared corridor the `hop` strip stands the worn
+  body in, at the same window length (12 frames x 11/60 s = 2.2 s), which is what
+  closed the "no measured arc for a wild frog" gap issue 12 left. A strip's `=`
+  line reports `travelled / arc / push / airPct / per / offFrame`; `push` is the
+  rate the body left the ground with, and `push: 0` is the tell that the animal
+  spent the window walking and the film proves nothing about its arc. `subject` on
+  a strip config says whose body the lens and the stepping follow -- never infer
+  it from `where`, because an animal stood in the same corridor as the body you
+  wear is still an animal.
+- The stride law is calibrated at the body's own record: `walkMove(spd, row.speed)`
+  -- `move` is the share of the speed the record names, so 1 is a person at their
+  4.7 m/s and a frog at its 1.8 m/s, and a `sprint` above that cruise buys step
+  *rate* only (3.45 steps a second of the same 1.97 m stride at 6.8 m/s). At the
+  person's cruise the model's legs are worth **1.97 m** at **2.38** a second, the
+  heave on the hips is **0.072 m** across a stride at a stance of 0.30; a walk at
+  1 m/s is 0.43 m at 2.3, the heave 0.015 m at a stance of 0.55. A frog's legs
+  take no part of a stride (`gaitStride('frog', ...) = 0`) -- it hops, and its
+  pose comes from `air`/`crouch`/`squash`. The old constant `WALK_TOP = 5` is
+  gone; anything that quotes a `move` ratio is quoting a share of a record.
 - `all.sh` writes one log per suite to `/tmp/frutaria-<name>.log`; the play
   suite's is `/tmp/frutaria-play.log`, and `grep -c "CHECK FAILED"` there
   printing `0` (grep exits 1) is the green the contract asks for. `play.js`

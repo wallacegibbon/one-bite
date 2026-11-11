@@ -94,9 +94,11 @@ of **0.9** rad/s. Measured, not asserted: `test/play.js` puts the body worn from
 frog and one of the valley's own frogs through the same actions and reads both
 against the row — the rate they leave the ground with **5.617 m/s** for both (the
 row's 6.0 less the one frame that spends gravity), the apex **0.73 m** for both,
-**36%** of the frames of a straight crossing spent off the ground for both, and
-**1.80 m/s** and **4.58 m/s** across ground and through water against the row's 1.8
-and 4.6. The body you start in is a record of the same shape —
+and **1.80 m/s** and **4.58 m/s** across ground and through water against the row's 1.8
+and 4.6. The share of a crossing spent off the ground is **not** one of the
+matching numbers — 32% of the frames for the body, 36% for the animal — because
+that share counts the arcs a measuring window happens to catch, and one window
+caught two and the other three. The body you start in is a record of the same shape —
 `game/data/player.js`, 4.7 m/s, a launch of 8.3 m/s, a turn of 1.6 — and it is
 measured against its own numbers the same way, so making the animal honest moved
 nobody: a person still crosses at 4.7 m/s. `game/test/shots.js` films the same

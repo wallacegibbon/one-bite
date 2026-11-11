@@ -72,8 +72,11 @@ valley contained two records of one frog that disagreed by four and a half times
 on the ground and by nearly two on a hop. What one row gives now, measured by
 `test/play.js` against the row it came from: a body worn from a frog and one of
 the valley's own frogs leave the ground at **5.617 m/s** (the row's 6.0 less the
-one frame that spends gravity), reach **0.73 m** over the feet, and spend **36%**
-of the frames of a straight crossing in the air; the crossed body covers ground at
+one frame that spends gravity), reach **0.73 m** over the feet, and are off the
+ground for about a third of a straight crossing — **32%** of the frames for the
+body, whose window catches two arcs, **36%** for the animal, whose catches three
+(the share counts arcs, so the launch and the arc are the numbers that match, and
+the share is not); the crossed body covers ground at
 **1.80 m/s** on land and **4.58 m/s** through water against the row's **1.8** and
 **4.6**; and the person is unchanged at **4.70 m/s**, thrown at **7.917 m/s**
 against their own row's 8.3 — a launch measured against the record it belongs to,
