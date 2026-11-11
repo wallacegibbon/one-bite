@@ -81,7 +81,7 @@ const SHOTS = [
    or one of the valley's. It is not guessed from `where`: an animal stood in the
    same corridor as the body you wear is still an animal.
 
-   Usage: node test/shots.js strip [hop|stroke|turn|wild|animal]           */
+   Usage: node test/shots.js strip [hop|stroke|turn|wild|animal|climb|climbwild]  */
 const STRIPS = [
   // a frog-shaped body asked to go: the crouch, the push, the flight, the
   // landing, and what the legs do while the body is off the ground. The window
@@ -114,7 +114,19 @@ const STRIPS = [
   // and its `push` of 0 said exactly that. Same window as both, and the pair is
   // read for the arc, the launch and the air share.
   { name: 'animal', where: 'corridor', subject: 'animal', form: null, animal: 'frog',
-    keys: '', settle: 240, shots: 12, every: 11, views: 'side' }
+    keys: '', settle: 240, shots: 12, every: 11, views: 'side' },
+  // A step of ground, and a body asked over it. The valley's terraces are one
+  // block, so this is the step its animals actually meet: the question is
+  // whether a body whose only way up is a jump climbs it with its legs, is
+  // lifted up it on straight legs, or does neither and stands at the face. The
+  // two films are the two bodies of one animal at the same built bank, and each
+  // is given the settle its own body needs to arrive at the foot of it -- the
+  // row's 1.8 m/s against the 4.7 of the worn body, and a wandering animal
+  // spends 0.42 of its cruise -- so that the climb is inside the window in both.
+  { name: 'climb', where: 'bank', subject: 'self', form: 'frogpear', keys: 'fwd',
+    settle: 20, shots: 10, every: 8, views: 'own side' },
+  { name: 'climbwild', where: 'bank', subject: 'animal', form: null, animal: 'frog',
+    keys: '', settle: 95, shots: 10, every: 12, views: 'side' }
 ];
 
 const boot = async () => {
@@ -242,6 +254,68 @@ const placeFor = (page, s) => page.evaluate(s => {
     }
     return null;
   };
+  /* A bank built across a corridor: the one place rig that changes the valley,
+     because the question it asks -- does a body that hops climb a step with its
+     legs -- is not a question the valley happens to be asking anywhere, and a
+     search for a terrace would answer it of a shape chosen by the search. One
+     block tall, five cells wide, three cells in front of where the body is
+     stood, built out of the block the ground there is made of. The cells it
+     covers are remembered, and every place rig puts them back before it starts:
+     the other films are filmed on the ground the game made. */
+  if (window.__built) {
+    for (const [x, y, z, b] of window.__built) W.set(x, y, z, b);
+    window.__built = null;
+  }
+  if (s.where === 'bank') {
+    const c = clearCorridor();
+    if (!c) return { error: 'no flat ground with room to travel' };
+    const cx = Math.floor(c.x), cz = Math.floor(c.z);
+    const block = W.get(cx, c.gy, cz);              // the ground's own block
+    const bz = cz - 3;
+    /* Five cells of step, across the whole of the path's row and away from the
+       lens rather than centred on it. The tripod is stood off the path on the
+       +x side, so built on this side the face of the step is behind the body
+       from the first frame to the last, the climb is read against the face it is
+       climbed, and nothing of the step is between the lens and the body. Built
+       centred on the path instead -- the first thing to try -- its near cells
+       hid the body through the whole of the climb. */
+    for (let x = cx - 4; x <= cx; x++) W.set(x, c.gy + 1, bz, block);
+    window.__built = [];
+    for (let x = cx - 4; x <= cx; x++) window.__built.push([x, c.gy + 1, bz, 0]);
+    const at = (b) => { b.x = c.x; b.z = c.z - 1.1; b.y = c.gy + 1; b.vx = 0; b.vy = 0; };
+    if (s.subject === 'animal') {
+      const a = g.creatures.find(k => !k.dead && k.sp.id === s.animal) ||
+                g.creatures.find(k => !k.dead);
+      if (!a) return { error: 'the valley is driving no animals on this page' };
+      p.x = c.x; p.z = c.z + 26; p.y = c.gy + 1;   // out of sight: a frog runs from a person
+      /* and no herd to walk back to: a body of a herding kind more than a throw
+         from the middle of its kind walks to that middle, and the middle of this
+         one is at the lake, a dozen metres off. The bank is the only errand this
+         film is about, so this body is given one: a copy of its own row with the
+         herd field set to one, carried by the body and never written to the row.
+         (Measured without it, the body spent the whole window walking away from
+         the bank it had been stood in front of.) */
+      a.sp = Object.assign({}, a.sp, { herd: 1 });
+      at(a); a.state = 'wander'; a.pause = 99; a.orbit = null; a.alarm = 0;
+      a.tx = c.x; a.tz = bz - 4; a.yaw = 0;
+      window.__strip = a;
+      return { at: [+a.x.toFixed(2), +a.y.toFixed(2), +a.z.toFixed(2)], of: a.sp.id,
+        ground: c.gy, bankAt: bz, bankTop: c.gy + 2, rise: 1, clear: 1.2,
+        aimedAt: [c.x, bz - 4] };
+    }
+    at(p); p.pitch = 0; p.faceYaw = 0; p.yaw = 0;
+    /* The hop countdown is given a starting state rather than left in whatever
+       the walk that brought the body here left behind: it is set to run out a
+       hand's width after the window opens, so the approach to the step is walked
+       and the first hop of the film is the climb. Left cold it fires on the very
+       first frame the body has feet and an ask, and the climb happens in the
+       settle, off camera; left as it came it may fire on the approach, short of
+       the face -- which is the right answer, a hop closer first, and the one this
+       film was showing: one of the two views caught an ordinary hop into the
+       face and then 0.8 s of standing, and the climb fell outside the window. */
+    p.hopT = s.settle / 60 + 0.15;
+    return { at: [p.x, p.y, p.z], ground: c.gy, bankAt: bz, bankTop: c.gy + 2, rise: 1, clear: 1.2 };
+  }
   if (s.where === 'ground') {
     const c = clearCorridor();
     if (!c) return { error: 'no flat ground with room to travel' };
@@ -350,7 +424,7 @@ const placeFor = (page, s) => page.evaluate(s => {
    `own`: nobody owns that lens. The tripod asks the share of the height that
    animal's own model stands at, at the field of view a body with no eye of its
    own is filmed at -- the person's 84. */
-const planTripod = (page, animal, frames) => page.evaluate(a => {
+const planTripod = (page, animal, frames, rise, clear) => page.evaluate(a => {
   const g = window.game, N = window.FRUTARIA;
   const b = a.animal ? window.__strip : g.player;
   if (!b) return { error: 'no body to film' };
@@ -374,26 +448,53 @@ const planTripod = (page, animal, frames) => page.evaluate(a => {
      above that eye line. 1.3 is the same margin the law itself carries: a body
      pressed to the edge of a frame cannot be looked at. */
   const m = window.__measured;
+  /* A strip at a built step is framed for the step too. The settle is over
+     before the body is over it, so `m.arc` on its own is the height of the gait
+     on the low ground, and a frame sized for that cuts off everything above the
+     edge the climb ends on. The lens for one of those is stood at the middle of
+     the two ground levels, and the frame then has to reach from the lower of
+     them to the top of the arc above the higher. */
+  const rise = a.rise || 0;
   const travel = m.v * (a.frames / 60);
   const tanY = Math.tan(fov * Math.PI / 360), tanX = tanY * g.R.aspect;
+  const lensY = m.low + rise / 2 + tall * 0.68;
+  // the highest the body goes in the window being filmed: the arc the settle
+  // measured, above the higher of the two ground levels -- and the settle of a
+  // climb strip stops at the foot of the step, so that is where the arc is added
+  const top = m.high + (m.high >= m.low + rise - 0.02 ? 0 : rise);
   const fitPath = (travel * 1.3 + along) / (2 * tanX);
-  const fitArc = (m.arc * 1.3 + tall * 0.32) / tanY;
-  const d = Math.max(N.CAM.shotFor(tall, fov).d, fitPath, fitArc);
+  const fitArc = Math.max(lensY - m.low, top + tall * 0.32 - lensY) * 1.3 / tanY;
+  /* and clear of the step: its face is half a metre off the path on the side
+     the lens is stood on, and a lens nearer than that is in the step. */
+  const d = Math.max(N.CAM.shotFor(tall, fov).d, fitPath, fitArc, a.clear || 0);
   const yaw = b.yaw - Math.PI / 2;                 // square off the path, looking at it
   /* stood off the middle of the path the strip is about to travel -- the body
      crosses in at one side of the frame and out at the other, instead of walking
      out of the shot half way through. The heading is (sin yaw, -cos yaw), the
-     same vector the engine calls R.fwd */
-  const midX = b.x + Math.sin(b.yaw) * travel / 2, midZ = b.z - Math.cos(b.yaw) * travel / 2;
+     same vector the engine calls R.fwd.
+     A strip at a built step is stood off the foot of it instead -- where the
+     body is when the plan is made -- and drawn back from the face by more than
+     the body's own length. The middle of that path is inside the step, and a
+     lens off the middle of it filmed half of the climb through the step it was
+     climbing: measured, the body disappeared behind the bank for four frames of
+     ten. Off the foot and back from the face, the sight line passes in front of
+     the face, the face is the thing the climb is read against, and the lens
+     pivots where it stands as the body comes over and on. */
+  const back = rise ? -0.6 : travel / 2;
+  const midX = b.x + Math.sin(b.yaw) * back;
+  const midZ = b.z - Math.cos(b.yaw) * back;
   // the height of a body standing at the bottom of its own gait: that is where
   // the ground this arc is measured against is, and it comes from the physics
   // rather than from a number copied here
-  const y = m.low + tall * 0.68;
-  window.__tripod = { x: midX + Math.cos(b.yaw) * d, y, z: midZ + Math.sin(b.yaw) * d,
+  // the height of a body standing at the bottom of its own gait, lifted to the
+  // middle of the two ground levels where there is a step between them: that is
+  // where the ground this arc is measured against is, and it comes from the
+  // physics rather than from a number copied here
+  window.__tripod = { x: midX + Math.cos(b.yaw) * d, y: lensY, z: midZ + Math.sin(b.yaw) * d,
     yaw, pitch: 0, fov, d };
   return { d: +d.toFixed(2), fov, aspect: +g.R.aspect.toFixed(2), travel: +travel.toFixed(2),
-    arc: m.arc, y: +y.toFixed(2), shareRule: +N.CAM.shotFor(tall, fov).d.toFixed(2) };
-}, { animal, frames });
+    arc: m.arc, rise, y: +lensY.toFixed(2), shareRule: +N.CAM.shotFor(tall, fov).d.toFixed(2) };
+}, { animal, frames, rise, clear });
 
 const stripFrame = (page, q) => page.evaluate(q => {
   const g = window.game, p = g.player;
@@ -484,7 +585,9 @@ const stepWorld = (page, s, frames) => page.evaluate(a => {
      the body happened to be standing on, so it is only comparable where both
      bodies stood on ground of the same kind: in open sky both come out at
      0.73 m, and a wild body under a crown it will not hop through comes out
-     lower and says so in `airPct` as well. */
+     lower and says so in `airPct` as well. At a built step the arc is the step
+     and the gait together -- which is the whole of what a climb film is looking
+     at -- and the plan line names the height of the step with it. */
   const air = ys.filter(y => y > low + 0.03).length;
   const m = { travel: +travel.toFixed(2), v: +(travel / a.frames * 60).toFixed(2),
     low: +low.toFixed(2), high: +high.toFixed(2), arc: +(high - low).toFixed(2),
@@ -517,9 +620,11 @@ const stepWorld = (page, s, frames) => page.evaluate(a => {
         const settle = await stepWorld(page, s, s.settle);
         const plan = { strip: s.name, view, at: placed.at, of: placed.of, ground: placed.ground,
           top: placed.top, deep: placed.deep, aimedAt: placed.aimedAt, away: placed.away,
+          bankAt: placed.bankAt, bankTop: placed.bankTop, rise: placed.rise,
           keys: s.keys || '(none)',
           settle, frames: s.shots + ' x ' + s.every + '/60 s = ' + (s.shots * s.every / 60).toFixed(2) + ' s' };
-        if (view !== 'own') plan.tripod = await planTripod(page, s.subject === 'animal', s.shots * s.every);
+        if (view !== 'own') plan.tripod = await planTripod(page, s.subject === 'animal',
+          s.shots * s.every, placed.rise, placed.clear);
         console.log((s.name + '-' + view).padEnd(13), JSON.stringify(plan));
         let low = Infinity, high = -Infinity, travel = 0, air = 0, stepped = 0, off = 0, push = 0;
         for (let i = 0; i < s.shots; i++) {

@@ -8819,9 +8819,38 @@ What was measured before any of this was fixed, over 180 frames of walking
      one of them now with a swing of 0. A hopping body is not measured for
      standing: a frog at the same bank is off the ground in 40% of frames
      because hopping is what its own record says it does on land, and what is
-     asked of it is that its feet come back down, which they do. */
+     asked of it is that its feet come back down, which they do.
+     A body whose only way up is its legs climbs a step with them, and the bank
+     is asked of both bodies of one animal. A hopper used to be lifted like a
+     walker: the wild frog went up a bank of two metres in two lifts of a metre
+     each with its legs straight, and the body worn from its fruit, which has no
+     lift, did not go up a bank of one at all -- it stood at the face and hopped
+     against it. Now the step in front of a body that hops is asked of its own
+     row: the everyday launch where there is no step, and the fullest extension
+     of the same legs only where the ground it wants to stand on is above the
+     ground it is standing on, sized to land on that step and no higher.
+     Measured on one shelf with one bank built in it, the same bank for every
+     body and every run: with nothing built, or at a bank of two metres, every
+     arc of either body leaves the ground at **5.62 m/s** -- the row's everyday
+     launch less the frame it is spent in -- and the ground under its feet never
+     changes. At a bank of one metre each body takes exactly one sized arc,
+     **6.73 m/s**, and the ground under its feet goes from the shelf to the top
+     of the bank; the sized launch of the two bodies agrees to **0.002**, and
+     neither asks more than the fullest extension the row states. The wild body
+     is never lifted: `climbTo` is set in **0** of the 420 frames of that
+     window, at the bank it climbs and at the bank it does not. What is also
+     recorded, and not asked here: the rectangle that wild body is drawn with
+     stands inside the face it is stopped by in **222** of those frames. An
+     animal is moved as a point with probes and not as a box -- the body you wear
+     is the one body in the valley whose box the movement code honours -- so a
+     pressed animal has its nose in the wall, and one on its way over an edge has
+     its nose in the bank while its feet are still on the ground in front
+     (**37** frames of that climb). That belongs to its own question. */
   const wall = await step('aBodyWalkedIntoABankStandsOnItsFeet', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    /* the row of the animal this step is about, and the two launches its legs
+       state: the asks below are made of those numbers, not of a copy of them */
+    const ROW = N.CREATURE_BY_ID.frog;
     /* The bank is built, not hunted: one shelf, one riser, the same place and
        the same height for every body and every run. What is hunted is the shelf
        it is built on, and two things are asked of it, both read over the ground
@@ -8888,12 +8917,23 @@ What was measured before any of this was fixed, over 180 frames of walking
       const y0 = p.y;
       let gnd = 0, n = 0, boxIn = 0, hi = y0;
       const ys = [];
+      /* The launch of every arc the body gave, and the highest ground that ever
+         came under its feet. A launch is read at the frame it is given -- the
+         row's own number less what that frame already takes off -- and the
+         ground under the feet is the question "did it get up on the bank", which
+         neither the height it reached nor the gap under it answers: a body that
+         hopped against a wall reaches a height and never gets the ground. */
+      const arcs = [];
+      let under = -9, prevVy = 0;
       for (let i = 0; i < Math.round(secs * 60); i++) {
         g.input = { fwd: 1 };
         p.update(1 / 60, g.input, g); g.time += 1 / 60; n++;
         if (p.grounded) gnd++;
         if (p.hits(p.x, p.y, p.z)) boxIn++;
         if (p.y > hi) hi = p.y;
+        if (p.vy > 0.5 && prevVy <= 0.05) arcs.push(+p.vy.toFixed(3));
+        prevVy = p.vy;
+        under = Math.max(under, N.standY(W, Math.floor(p.x), Math.floor(p.z), p.y) - y0);
         ys.push(p.y);
       }
       g.input = {};
@@ -8910,9 +8950,95 @@ What was measured before any of this was fixed, over 180 frames of walking
       return { step: p.formDef.step || 0, gndPct: Math.round(gnd / n * 100),
         span: +(Math.max.apply(null, last) - Math.min.apply(null, last)).toFixed(4),
         gapMin: +gapMin.toFixed(4), gapMax: +gapMax.toFixed(4),
-        gained: +(hi - y0).toFixed(3), boxIn };
+        gained: +(hi - y0).toFixed(3), boxIn, arcs,
+        groundTop: +under.toFixed(3) };
     };
-    const res = { spot };
+    /* The same bank, asked of the animal the row belongs to, in its own body.
+       It is not driven: it is stood on the shelf with an errand on the far side
+       of the bank and left about its business, and what is read is whether the
+       ground it stands on ever changes and what its legs gave to get there. Three
+       things are settled before the window opens, because a wild body is not a
+       rig: the person is put away for it (a frog with a body it fears 12 m away
+       runs, and leaves the bank it was asked to climb); the other animals of the
+       valley are taken out of the list and the herd centre is stood on the body
+       itself (a herd more than a throw away is a second errand, and it becomes
+       the nearer one the moment the face stops it); and the draw is seeded (a
+       frog at a wall gives up its errand and picks a new one half a second
+       later, and which errand it picks is a draw -- the arcs and the ground
+       under the feet do not turn on it, measured the same over four seeds, but
+       where the body happens to be standing when the window closes does).
+       The window is seven seconds for this body and three for the one wearing
+       its fruit, because the two are not the same speed: the row's own is 1.8
+       m/s against the 4.7 of the worn body, and the animal needs the longer of
+       the two to reach the face at all. On ground with nothing built the longer
+       window only buys more arcs to read, which is what the ask at that bank
+       wants. */
+    const runWild = (secs) => {
+      const c = new N.Creature(ROW, spot.x, spot.gy + 0.0005, spot.z + 1.2);
+      c.state = 'wander'; c.pause = 9999; c.orbit = null; c.pace = 1; c.sleeping = false;
+      c.tx = spot.bx + 0.5; c.tz = spot.bz - 4.5;      // straight through the bank
+      c.yaw = Math.atan2(c.tx - c.x, -(c.tz - c.z));
+      c.homeX = c.x; c.homeZ = c.z; c.hovering = false; c.buoy = 0; c.hopT = 0;
+      c.wind = 0; c.speed = 0; c.t = 0; c.diveTo = 1.6; c.diveRate = 0.1; c.phase = 0;
+      c.alarm = 0; c.bank = 0; c.bend = 0; c.tilt = 0; c.held = 0; c.airAmt = 0;
+      c.crouch = 0; c.squash = 0; c.climbTo = null; c.climbRate = 0; c.gait = null;
+      c.watchX = null; c.watchZ = null; c.watchF = 0;
+      /* the body's own rectangle, in the bank. "Left inside the bank" is the
+         question the ask below makes; a crown the body walks into with its
+         shoulders is not that question (docs/03 s5), and a body the bank has
+         stopped picks a fresh errand and walks off, which is what it does. So
+         the four corners of the rectangle this body actually has, at the heading
+         it is holding, are asked of the cells the bank was built out of. */
+      /* "Left inside the bank", asked of the place this body stands: an animal
+         is moved as a point with probes, not as a box (the player's body is the
+         one body in the valley with a box the movement code honours), so the
+         point its feet stand on is what "left inside" means for it. The
+         rectangle it is drawn with is counted separately, and not asked: a body
+         stopped by a face has its nose in it, which every animal does at every
+         wall, and a body on its way over an edge has its nose in the bank while
+         its feet are still on the ground in front -- both are recorded below and
+         belong to their own question. */
+      const bankCell = (x, z, y) => {
+        const bx = Math.floor(x), bz = Math.floor(z), by = Math.floor(y);
+        return cells.some(([cx, cy, cz]) => cx === bx && cy === by && cz === bz) &&
+          W.solidAt(bx, by, bz);
+      };
+      const trunkIn = () => {
+        const fx = Math.sin(c.yaw), fz = -Math.cos(c.yaw);
+        const rx = Math.cos(c.yaw), rz = Math.sin(c.yaw);
+        for (const s of [c.hl, -c.hl]) for (const t of [c.hw, -c.hw])
+          if (bankCell(c.x + fx * s + rx * t, c.z + fz * s + rz * t, c.y + 0.05)) return 1;
+        return 0;
+      };
+      const crowdWas = g.creatures, herdWas = g.herdCentres && g.herdCentres.frog;
+      const pp = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz };
+      g.creatures = [c];
+      if (g.herdCentres) g.herdCentres.frog = { x: c.x, z: c.z, n: 1 };
+      p.x = 4; p.z = 4; p.y = W.h - 2; p.vx = p.vy = p.vz = 0;
+      const rnd = Math.random;
+      let sd = 20240921;
+      Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+      const y0 = c.y, hi = { y: y0 };
+      let boxIn = 0, trunkFrames = 0, climbFrames = 0, under = -9, prevVy = 0;
+      const arcs = [];
+      for (let i = 0; i < Math.round(secs * 60); i++) {
+        c.update(1 / 60, p, W, g); g.time += 1 / 60;
+        if (bankCell(c.x, c.z, c.y + 0.05)) boxIn++;
+        if (trunkIn()) trunkFrames++;
+        if (c.climbTo !== null) climbFrames++;
+        if (c.y > hi.y) hi.y = c.y;
+        if (c.vy > 0.5 && prevVy <= 0.05) arcs.push(+c.vy.toFixed(3));
+        prevVy = c.vy;
+        under = Math.max(under, N.standY(W, Math.floor(c.x), Math.floor(c.z), c.y) - y0);
+      }
+      Math.random = rnd;
+      g.creatures = crowdWas;
+      if (g.herdCentres) g.herdCentres.frog = herdWas;
+      Object.assign(p, pp);
+      return { gained: +(hi.y - y0).toFixed(3), boxIn, trunkFrames, climbFrames, arcs,
+        groundTop: +under.toFixed(3) };
+    };
+    const res = { spot, row: { up: ROW.hop.up, max: ROW.hop.max } };
     /* the third one has nothing built: the same body on the same shelf with
        nothing in front of it, which is the control that says the rule above did
        not stop a body walking */
@@ -8921,6 +9047,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       const per = {};
       for (const form of [null, 'frogpear'])
         per[form || 'human'] = run(form, secs);
+      per.frog = runWild(7);
       res['bank' + h] = per;
     }
     cells.forEach((c, i) => W.set(c[0], c[1], c[2], was[i]));
@@ -8939,9 +9066,36 @@ What was measured before any of this was fixed, over 180 frames of walking
       .every(k => wall.bank2[k].gapMin <= 0.02), wall);
   check('a step taller than its own legs is not climbed',
     !!wall.bank1 && !!wall.bank2 && wall.bank1.human.gained <= 0.05 &&
-    wall.bank2.human.gained <= 0.05, wall);
+    wall.bank2.human.gained <= 0.05 && wall.bank2.frog.groundTop <= 0.05, wall);
+  check('and a body whose legs are its only way up is not lifted at it either',
+    !!wall.bank2 && wall.bank2.frog.climbFrames === 0, wall);
   check('with nothing built in front of it the same body just walks',
     !!wall.bank0 && wall.bank0.human.gndPct >= 90 && wall.bank0.human.span <= 0.02, wall);
+  /* The two launches of one pair of legs, read from the frame they are given in.
+     The launch a frame records is the row's number less what that frame already
+     takes off -- gravity times one frame -- so the ask below never restates
+     gravity: it asks that the launch be the same everywhere there is no step
+     within the legs, that the one launch which is not that be between the two
+     numbers the row states, that the two bodies of one animal agree to the
+     centimetre, and that the step be the whole of the extra height. */
+  const at = (bank, k) => (wall[bank] && wall[bank][k] && wall[bank][k].arcs) || [];
+  const everyday = Math.max.apply(null,
+    at('bank0', 'frog').concat(at('bank0', 'frogpear')));
+  const sized = (bank, k) => at(bank, k).filter(v => v > everyday + 0.5);
+  const peak = (a) => Math.max.apply(null, a);
+  check('a step within its legs is climbed with those legs, by either body of the animal that owns them',
+    !!wall.bank1 && wall.bank1.frog.groundTop >= 0.95 &&
+    wall.bank1.frogpear.groundTop >= 0.95 && wall.bank1.frog.climbFrames === 0, wall);
+  check('and the hop that takes it is sized by that step and no higher: one launch, inside the fullest extension the row states, the same from either body',
+    !!wall.row && ['frog', 'frogpear'].every(k => sized('bank1', k).length === 1 &&
+      peak(sized('bank1', k)) < wall.row.max) &&
+    Math.abs(peak(sized('bank1', 'frog')) - peak(sized('bank1', 'frogpear'))) <= 0.02, wall);
+  check('with no step within its legs nothing is sized: every arc of either body is the everyday launch, at a wall as on open ground',
+    ['bank0', 'bank2'].every(b => ['frog', 'frogpear'].every(k =>
+      at(b, k).length > 1 && at(b, k).every(v => Math.abs(v - everyday) <= 0.02))), wall);
+  check('and the step is the whole of the extra height: above it a body hops no higher than anywhere else',
+    ['frog', 'frogpear'].every(k => !!wall.bank1 && !!wall.bank0 &&
+      wall.bank1[k].gained <= 1 + wall.bank0[k].gained + 0.02), wall);
   check('and no body is left inside the bank, or the bank inside the world',
     wall.restored && ['bank2', 'bank1', 'bank0'].every(k =>
       Object.keys(wall[k]).every(f => wall[k][f] === null || wall[k][f].boxIn === 0)), wall);
