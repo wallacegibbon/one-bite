@@ -2218,7 +2218,7 @@ const { sim } = require('./simwait');
        bank and looking due east, read third person, so the camera sits CAMD
        behind it on the body's own level and the frame covers HALF degrees above
        and below the axis it looks along. */
-    const CAMD = 1.5 + 2.25 * 1.8, EYE = 0.68 * 1.8, HALF = 76 / 2;
+    const CAMD = N.CAM.shotFor(1.8, 76 + N.CAM.fovBump).d, EYE = 0.68 * 1.8, HALF = 76 / 2;
     const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1], [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]];
     const deepAt = (x, z) => { const d = depth(Math.floor(x), Math.floor(z)); return !!d && d.n >= 3; };
     /* and the leg has to be water this animal can swim in all the way along, not
@@ -2353,7 +2353,7 @@ const { sim } = require('./simwait');
     const capture = (pred) => {
       seen.length = 0;
       const tp = g.thirdPerson; g.thirdPerson = true;
-      g.cam.d = 1.5 + 2.25 * p.size()[1];
+      g.cam.d = N.CAM.shotFor(p.size()[1], p.fov() + N.CAM.fovBump).d;
       g.updateEnv();
       // the bodies the capture reads are the ones the draw uploads, and the
       // draw throws a body away the lens is not looking at: a cull frame would
@@ -2978,7 +2978,7 @@ const { sim } = require('./simwait');
       turned = N.angleDelta(0, Math.atan2(p.vx, -p.vz));
       seen.length = 0;
       const tp = g.thirdPerson; g.thirdPerson = true;
-      g.cam.d = 1.5 + 2.25 * p.size()[1];
+      g.cam.d = N.CAM.shotFor(p.size()[1], p.fov() + N.CAM.fovBump).d;
       g.updateEnv(); g._camFrame = g.shootCamera(p); g.render(); g._camFrame = null;
       g.thirdPerson = tp;
       const st = seen.length ? Object.assign({}, seen[0]) : null;
@@ -4409,9 +4409,17 @@ What was measured before any of this was fixed, over 180 frames of walking
       p.x = shallow.x; p.y = shallow.bed + 1; p.z = shallow.z;
       p.vx = p.vy = p.vz = 0;
       for (let i = 0; i < 3; i++) p.update(1 / 60, {}, g);
-      g.thirdPerson = true; g.cam.d = 1.5 + 2.25 * p.bodyScale()[1];
+      g.thirdPerson = true;
+      /* the lens this rig hands the draw. It used to be `1.5 + 2.25 *
+         p.bodyScale()[1]`, and bodyScale() is a single number, not a size, so
+         that expression was NaN: the rig was filming with a lens that had no
+         distance at all. Nothing in the render reads `d`, which is why it never
+         showed; the rule is asked for now so the rig cannot drift off the shot
+         the game takes. */
+      const shot = N.CAM.shotFor(p.size()[1], p.fov() + N.CAM.fovBump);
+      g.cam.d = shot.d;
       const lens = { x: shallow.x, y: shallow.top + 2.0, z: shallow.z, yaw: 0, pitch: -1.2,
-        fov: g.cam.fov, d: g.cam.d, inBody: false };
+        fov: shot.fov, d: shot.d, inBody: false };
       const seen = [];
       const drawWas = g.R.drawMesh;
       g.R.drawMesh = function (mesh, model, opts) {
@@ -9524,7 +9532,8 @@ What was measured before any of this was fixed, over 180 frames of walking
       // between the game's own lens and the body, and the counts below are
       // cut from the shot the game films with, not from the shot a hillside
       // happens to allow
-      const hMan = N.HUMAN_FORM.size[1], dWant = 1.5 + 2.25 * hMan, eyeY = gy + 1 + hMan * 0.68;
+      const hMan = N.HUMAN_FORM.size[1], eyeY = gy + 1 + hMan * 0.68;
+      const dWant = N.CAM.shotFor(hMan, N.HUMAN_FORM.fov + N.CAM.fovBump).d;
       let rays = true;
       for (const pitch of [0, -0.8]) {
         const cp = Math.cos(pitch);
@@ -9691,12 +9700,194 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the collar is worth the head it wraps',
     mr.humanCollar && mr.humanSkull && mr.humanCollar.px > mr.humanSkull.px * 0.3, marks);
   /* A pixel count only means something if the shot it was counted off is the shot
-     the game really films with: the person from 5.55 m at 84 degrees
-     (1.5 + 2.25 * 1.8, +8 for the third-person lens). If it drifts, every bound
-     below drifts with it. */
+     the game really films with: the person from 5.55 m at 84 degrees, which is
+     what `N.CAM.shotFor` gives a 1.8 m body at its own eye plus the 8 degrees
+     the third-person lens adds. If it drifts, every bound below drifts with it. */
   check('the rows were counted off the shot the game films that body with',
     mr.humanCollar && mr.humanCollar.fov === 84 && mr.humanCollar.d > 5.4 && mr.humanCollar.d < 5.7,
     mr.humanCollar);
+
+  /* Every other frame step here pins its own shot, and that is right for asking
+     a question about a marking or a joint. Nothing in the file asks the one
+     question that decides whether any of those measurements reach a player: what
+     the shot the game itself takes is worth. A body is counted by drawing the
+     frame and then drawing it again with every non-identity model matrix
+     skipped -- a body is the only thing in the frame drawn with one -- so the
+     pixels that moved are exactly the body, and the same pixels in the two
+     frames are the body and what was standing behind it.
+
+     Measured on the old law (`1.5 + 2.25 * height`, the frame widened by the
+     worn body's own eye), over a 1280x720 frame: a person filmed from 5.55 m in
+     an 84 degree frame stood 136 px tall and owned 5,236 px of body; a body
+     0.5 m tall was filmed from 2.63 m in the 108 degree frame its own wide eye
+     asks for, stood 45 px tall and owned 2,020 px -- 0.46 of the person's share
+     of the frame, where the rule claims 1. Held to the share instead, same size
+     of frame: 108 px tall and 10,110 px of body. The person's numbers did not
+     move by one pixel, because the share is calibrated on the person's own shot.
+
+     The bounds below are the same reading in this file's own 900x560 frame: a
+     person 2,188 px of body across 105 rows, 0.188 of the frame's height; the
+     animal 6,947 px of body across 91 rows, 0.163 of the height. The rest of
+     that gap is the drawn model standing shorter than the collision box the rule
+     is asked with, and it is left as what it is rather than hidden in a bound
+     of 1. */
+  const film = await step('theAnimalIsFilmedAtTheSizeTheBodyIs', () => {
+    const g = window.game, N = window.FRUTARIA, p = g.player, gl = g.R.gl, W = g.world;
+    const was = { tp: g.thirdPerson, hover: g.hover, mode: g.mode, time: g.time,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady, frame: g._camFrame,
+      lens: g._lens, list: g.creatures, drops: g.drops,
+      x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz,
+      yaw: p.yaw, pitch: p.pitch, form: p.form,
+      formT: p.formT, formMax: p.formMax, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt,
+      vital: p.vital, air: p.air, fright: p.fright };
+    g.creatures = []; g.drops = []; g.hover = null; g.mode = 'play'; g.thirdPerson = true; g.time = 210;
+    p.vx = p.vy = p.vz = 0; p.vital = 10; p.air = 18; p.fright = 0;
+    const Wd = gl.drawingBufferWidth, Hd = gl.drawingBufferHeight;
+    const lum = b => 0.2126 * b[0] + 0.7152 * b[1] + 0.0722 * b[2];
+    const floorAt = (x, z) => { for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)]) return y; return 0; };
+    /* a clearing with open air on every side, for the whole length of the lens
+       this body would use: the shot the game takes, not the one a hillside
+       happens to allow */
+    const clearing = (d, h) => {
+      for (let x = 30; x < 150; x += 2) for (let z = 30; z < 150; z += 2) {
+        const gy = floorAt(x, z); if (gy < 5) continue;
+        let open = true;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
+          for (let k = 1; k <= 10 && open; k++) {
+            const xx = x + dx * k, zz = z + dz * k;
+            if (!W.solidAt(xx, gy, zz) || W.solidAt(xx, gy + 1, zz) || W.solidAt(xx, gy + 3, zz) || W.liquidAt(xx, gy + 1, zz)) open = false;
+          }
+        if (!open) continue;
+        const eyeY = gy + 1 + h * 0.68;
+        let clear = true;
+        for (const pitch of [0, -0.25]) {
+          const cp = Math.cos(pitch);
+          for (const yaw of [0, 1.5708, 3.1416, 4.7124]) {
+            if (W.raycast(x + 0.5, eyeY, z + 0.5, -Math.sin(yaw) * cp, -Math.sin(pitch), Math.cos(yaw) * cp, d, true)) { clear = false; break; }
+          }
+          if (!clear) break;
+        }
+        if (clear) return { x: x + 0.5, y: gy + 1, z: z + 0.5 };
+      }
+      return null;
+    };
+    const grab = () => { const b = new Uint8Array(Wd * Hd * 4); gl.readPixels(0, 0, Wd, Hd, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+    const read = (form) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      if (form) g.ensureModel(N.FRUIT_BY_ID[form].creature);
+      const h = p.size()[1], shot = N.CAM.shotFor(h, p.fov() + N.CAM.fovBump);
+      const spot = clearing(shot.d, h);
+      if (!spot) return { error: 'no clearing for a body ' + h + ' m tall at ' + shot.d + ' m' };
+      p.x = spot.x; p.y = spot.y; p.z = spot.z;
+      for (let i = 0; i < 4; i++) p.update(1 / 60, {}, g);
+      p.x = spot.x; p.y = spot.y; p.z = spot.z; p.vx = p.vy = p.vz = 0;
+      p.pitch = 0; p.yaw = 0;
+      g.camReady = false;
+      const lens = g.shootCamera(p);                 // the lens the game settles on for this body
+      g.updateEnv();
+      /* Two guards ride on every frame, because a pixel count means nothing when
+         nothing was drawn: how many meshes the body really owns, whether the
+         matrices carrying them are finite (a NaN in one of those draws nothing at
+         all and says nothing), and how many triangles the frame that was read
+         holds -- which is what catches a frame with no world in it.
+
+         This file wraps `g.render` (see the top of the file): a render it is not
+         told to make whole is drawn from a lens 10,000 m away with the world
+         culled out of it, and it is `gl.readPixels` that forces the real frame.
+         So a patch of R.drawMesh has to be in place across the grab and not only
+         across the render call: restoring it first draws the very frame being
+         read with the bodies put back, and the two frames then agree to the
+         pixel -- which is how this step reported a body of 0 pixels for three
+         runs while the shot it printed was right. The counters are zeroed just
+         before a grab for the same reason: what is counted is the frame that was
+         read, not the cull frame that comes before it. */
+      let askedA = 0, bodyA = 0, nan = 0, askedB = 0, takenOut = 0;
+      const ident = m => m[0] === 1 && m[1] === 0 && m[12] === 0;
+      const finite = m => { for (let k = 0; k < 16; k++) if (!isFinite(m[k])) return false; return true; };
+      const base = g.R.drawMesh;
+      g.R.drawMesh = function (mesh, model) {
+        askedA++;
+        if (model && !ident(model)) { bodyA++; if (!finite(model)) nan++; }
+        return base.apply(this, arguments);
+      };
+      g._camFrame = lens; g._lens = lens; g.render();
+      askedA = bodyA = nan = 0;
+      const withBody = grab();
+      const frameA = { draws: g.R.stats.draws, tris: g.R.stats.tris };
+      g.R.drawMesh = base;
+      g.R.drawMesh = function (mesh, model) {
+        askedB++;
+        if (model && !ident(model)) { takenOut++; return; }
+        return base.apply(this, arguments);
+      };
+      g._camFrame = lens; g._lens = lens; g.render();
+      askedB = takenOut = 0;
+      const bare = grab();
+      const frameB = { draws: g.R.stats.draws, tris: g.R.stats.tris };
+      g.R.drawMesh = base;
+      let px = 0, rlo = 1e9, rhi = -1, sumBody = 0, sumBehind = 0, reads = 0;
+      const mask = new Uint8Array(Wd * Hd);
+      for (let y = 0; y < Hd; y++) for (let x = 0; x < Wd; x++) {
+        const i = (y * Wd + x) * 4;
+        if (Math.abs(withBody[i] - bare[i]) + Math.abs(withBody[i + 1] - bare[i + 1]) + Math.abs(withBody[i + 2] - bare[i + 2]) <= 12) continue;
+        px++; mask[y * Wd + x] = 1;
+        if (y < rlo) rlo = y; if (y > rhi) rhi = y;
+        const a = lum([withBody[i], withBody[i + 1], withBody[i + 2]]), b = lum([bare[i], bare[i + 1], bare[i + 2]]);
+        sumBody += a; sumBehind += b;
+        if (Math.abs(a - b) >= 12) reads++;
+      }
+      /* the body's own internal edges: how much of the model's colour difference
+         survives the distance. A joint a player cannot separate is not on screen. */
+      let edges = 0, inner = 0;
+      for (let y = 1; y < Hd - 1; y++) for (let x = 1; x < Wd - 1; x++) {
+        const m = y * Wd + x;
+        if (!mask[m]) continue;
+        inner++;
+        const i = m * 4, a = lum([withBody[i], withBody[i + 1], withBody[i + 2]]);
+        for (const n of [m + 1, m + Wd]) {
+          if (!mask[n]) continue;
+          const j = n * 4;
+          if (Math.abs(a - lum([withBody[j], withBody[j + 1], withBody[j + 2]])) >= 6) edges++;
+        }
+      }
+      return { h: h, d: +lens.d.toFixed(2), fov: +lens.fov.toFixed(1), inBody: lens.inBody === true,
+        at: [spot.x, +spot.y.toFixed(2), spot.z],
+        /* the guards, so the numbers below cannot be an empty frame: the body's
+           meshes really were asked for, the matrices carrying them are finite, the
+           second frame was asked to leave out that same number of meshes, and the
+           frame that was read holds a world rather than a sky. */
+        drawn: { meshes: askedA, body: bodyA, nan: nan, out: takenOut,
+          tris: frameA.tris, trisWithout: frameB.tris },
+        shareFov: +(2 * Math.atan(h / (2 * lens.d)) / (lens.fov * Math.PI / 180)).toFixed(3),
+        bodyPx: px, tall: rhi - rlo + 1, frameShare: +((rhi - rlo + 1) / Hd).toFixed(3),
+        readsPct: +(100 * reads / Math.max(1, px)).toFixed(1),
+        contrast: +((sumBody - sumBehind) / Math.max(1, px)).toFixed(1),
+        innerEdges: edges };
+    };
+    const human = read(null), frog = read('frogpear');
+    /* the page and the body go back exactly as they were found: this step runs in
+       the middle of a page that other steps then read */
+    for (const k of ['x', 'y', 'z', 'vx', 'vy', 'vz', 'yaw', 'pitch', 'form', 'formT', 'formMax',
+      'faceYaw', 'bank', 'tilt', 'vital', 'air', 'fright']) p[k] = was[k];
+    g.creatures = was.list; g.drops = was.drops; g.hover = was.hover;
+    g.mode = was.mode; g.time = was.time; g.thirdPerson = was.tp;
+    g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+    g._camFrame = was.frame; g._lens = was.lens;
+    return { frame: Wd + 'x' + Hd, lawShare: +N.CAM.share.toFixed(4), human, frog };
+  });
+  check('the lens the game holds for a person is the shot every frame number in the docs is counted off',
+    !film.human.error && film.human.fov === 84 && film.human.d > 5.4 && film.human.d < 5.7 &&
+    film.human.frameShare > 0.17, film);
+  check('the animal is filmed at the size its body is, not at a third of it: the pixels it owns are read off the frame',
+    !film.frog.error && film.frog.frameShare >= film.human.frameShare * 0.6 &&
+    film.frog.bodyPx >= film.human.bodyPx * 0.5, film);
+  check('and that frame is one worth measuring: the body owns enough pixels to hold a joint, and it reads against what stands behind it',
+    film.frog.bodyPx >= 3000 && film.frog.tall >= 60 && film.frog.innerEdges >= 400 &&
+    film.frog.readsPct >= 60 && film.human.readsPct >= 60, film);
+  check('the frame those pixels were read out of really was drawn: the body meshes asked for, their matrices finite, and a world standing behind the body',
+    !film.human.drawn.nan && !film.frog.drawn.nan && film.frog.drawn.body >= 6 &&
+    film.frog.drawn.out === film.frog.drawn.body && film.human.drawn.tris > 50000 &&
+    film.frog.drawn.tris > 50000, film);
 
   /* A body has to hide what stands behind it. What the inside-out winding cost
      here was not a missing triangle: it was the depth of the surface. The near

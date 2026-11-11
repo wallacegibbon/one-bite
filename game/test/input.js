@@ -81,7 +81,8 @@ const { sim } = require('./simwait');
     const before = +g.cam.d.toFixed(3);
     g.thirdPerson = true;
     const snap = +g.cam.d.toFixed(3);                 // the frame right after the key
-    return { before, snap, target: +(1.5 + 2.25 * g.player.size()[1]).toFixed(2) };
+    return { before, snap, target: +window.FRUTARIA.CAM.shotFor(g.player.size()[1],
+      g.player.fov() + window.FRUTARIA.CAM.fovBump).d.toFixed(2) };
   });
   const samples = [];
   for (let i = 0; i < 12; i++) {

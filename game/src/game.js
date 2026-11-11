@@ -14,6 +14,41 @@
   // the world, the frog pear at 40.
   const SAVE_KEY = 'frutaria.save.v3';
 
+  /* The lens that films the body when the game films it from outside has one
+     job: the body keeps the size on screen that the body is. So the rule is
+     stated as a share of the frame -- the body's own height fills this fraction
+     of the frame's vertical angular extent -- and the distance comes out of the
+     body's height and the field of view the frame is really using. The
+     calibration is the shot every frame measurement in docs/07 is written
+     against, a person (1.8 m) at 5.55 m in a frame 84 degrees tall: for that
+     body the distance is bit for bit what it was, so no number taken off a
+     person's frame moves.
+
+     It replaces `1.5 + 2.25 * height`, which held that share for nobody. A
+     constant term is nearly all of the distance for a small body: the old law
+     gave a person 5.55 m and a frog-shaped body (0.5 m tall) 2.63 m, and the
+     frame's field of view is the worn body's own eye plus 8 degrees -- 108 for
+     the frog's wide eye against the person's 84 -- which shrinks the subject
+     again. Counted off the pixels of a 1280x720 frame taken by this lens: the
+     person's body stood 136 px tall and owned 5236 px of it, the animal's 45 px
+     and 2020 px -- 0.46 of the person's share of the frame, where this rule
+     claims 1. Held to the share instead: 108 px and 10110 px, with 1651 colour
+     edges inside the body where the old shot held 684, and the person's numbers
+     unmoved by a single pixel. `game/test/play.js` reads the same thing out of a
+     frame every run, and holds the animal to the person's size rather than to a
+     third of it. The rule is exported because it had been copied eight times over:
+     six in the tests, one restated inside a test comment, one in docs/07 -- and a
+     copy of a rule is how a rule drifts while every copy of it still passes. One
+     of those copies, `1.5 + 2.25 * p.bodyScale()[1]`, was NaN, because
+     bodyScale() is one number and not a size, and that rig had been filming with
+     a lens that had no distance in it at all. */
+  const FRAME_SHARE = 2 * Math.atan(0.9 / 5.55) / (84 * Math.PI / 180);
+  N.CAM = {
+    share: FRAME_SHARE,
+    fovBump: 8,
+    shotFor: (h, fov) => ({ fov, d: h / (2 * Math.tan(FRAME_SHARE * fov * Math.PI / 360)) })
+  };
+
   /* A save is data the browser hands back forever, not data the game is holding
      in memory: it can be the shape some other build wrote, a value a browser put
      down wrong, or something a person typed into the console. Everything in it
@@ -981,8 +1016,8 @@
     shootCamera(p) {
       const dt = this.dt || 0.016;
       const cam = this.cam, sz = p.size(), h = sz[1], w = sz[0];
-      const dWant = this.thirdPerson ? 1.5 + 2.25 * h : 0;      // the subject holds roughly the same frame share
-      const fovWant = p.fov() + (this.thirdPerson ? 8 : 0);
+      const fovWant = p.fov() + (this.thirdPerson ? N.CAM.fovBump : 0);
+      const dWant = this.thirdPerson ? N.CAM.shotFor(h, fovWant).d : 0;
       if (!this.camReady) { cam.d = dWant; cam.fov = fovWant; this.camReady = true; }
       cam.d += (dWant - cam.d) * N.ease(5.5, dt);
       cam.fov += (fovWant - cam.fov) * N.ease(3.5, dt);
