@@ -53,7 +53,7 @@ A fruit starts counting down the moment it is picked.
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, and the animal's own motion — **1.8 m/s** on land, a **0.73 m** hop about every **0.9 s**, **4.6 m/s** through water — every one of those read from the frog's own row, not from this record (§4), night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; **slow where the animal is slow: 1.8 m/s on land, and this body has no sprint at all** — the lake is where it is quick; too small: cannot reach high fruit, cannot push a door open |
+| `frogpear` | Frog Pear | frog | 420 s | Mirrorlake reeds · rain pools | **breatheAir:false**, and the animal's own motion — **1.8 m/s** on land, a **0.73 m** hop about every **0.9 s** which it sizes to the ground in front of it, so a **1 m** terrace is climbed on those legs and a **1.2 m** riser is a wall (03 §3), **4.6 m/s** through water — every one of those read from the frog's own row, not from this record (§4), night vision 0.3, stealth 0.5, fov 100 | **The skin must stay wet: after 90 s out of water it dries and vitality drains**; **slow where the animal is slow: 1.8 m/s on land, and this body has no sprint at all** — the lake is where it is quick; too small: cannot reach high fruit, cannot push a door open |
 
 **Which of those costs the prototype enforces**: the frog's skin and the dark. `dryTimer` drains vitality 90 s after a frog body leaves the water; `nightVision` brightens the dark for the body that has it and washes that same body's daylight out. What is still only written down: a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body). Every ability in the Key abilities column is read by the code — see §4.
 
@@ -105,6 +105,16 @@ nobody: a person still crosses at 4.7 m/s. `game/test/shots.js` films the same
 claim: the `hop` strip and the `animal` strip run one window of 2.2 s over the same
 corridor, one through a body worn from a frog and one through the animal itself,
 and both films come back with an arc of 0.73 m and a launch of 5.617 m/s.
+That launch is what the legs spend on level ground, and one number cannot answer a
+step in front of the feet: the same row states the fullest extension of those same
+legs (`max: 7.4`) and spends it only at a step, sized to that step and no higher —
+the law, the reach it gives (**1.09 m**) and the measurements at a built bank are in
+03 §3, and the short form here is that at a one-metre riser either body of the frog
+gives exactly one launch that is not 5.617, **6.73** for both of them agreeing to
+**0.02**, and gets the ground under its feet a metre up with the animal *lifted* in
+**0** frames, while at a two-metre bank and with nothing built every launch of either
+body is 5.617. `test/shots.js strip climbwild` and `strip climb` film those two
+bodies at that bank.
 
 All seven fields on the frog form are read by the code. `game/test/reach.js`
 re-asks that question on every run -- nine keys on the form record in all, the

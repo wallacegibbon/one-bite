@@ -7,59 +7,64 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is three commits -- `9ad3323` the change,
-`80c9da4` the measurements that follow it, `7d8e668` the docs written against the
-new numbers -- and this record is the docs-only commit that follows them on the
-same tree. All of them are pushed to both remotes. The full suite ran twice on
-that tree, both runs 10/10 with `0 CHECK FAILED` and `0 ERROR` in
-`/tmp/frutaria-play.log`; the doc gates are clean on it too
-(`tools/extract-comments.js` -> `[]` and `occurrences: 0, unique: 0`;
-`docs-sync` ending all-consistent; `docs-drift` catching every drift it plants;
-`reach` finding every field of every record read by the code that names it).
+State at time of writing: this round is three commits -- `35e6191` the law and the
+row it is written in, `d26223c` the rigs and the films that ask it, `fb22b3c` a
+comment in the worn body's branch corrected to say what that branch does not ask
+-- and this record, which is the docs-only commit that follows them on the same
+tree. The
+full suite ran twice on that tree: both runs 10/10, with `0 CHECK FAILED` and no
+page errors in `/tmp/frutaria-play.log`; the doc gates are clean on it too
+(`extract-comments` -> `[]` and `occurrences: 0, unique: 0`; `docs-sync`
+all-consistent; `docs-drift` catching every drift it plants; `reach` finding
+every field of every record read by the code that names it). The strip films were
+run as a set on the same tree afterwards: `no errors`, every film `offFrame: 0`,
+and the two films that carry a pinned number (`hop`, `animal`) back at 5.617 m/s
+and 0.73 m as they were.
 
-One sentence drove the round, and it was about the game, not the code: becoming
-an animal has to be like becoming that animal in every way, including how fast it
-goes. Wearing a frog while travelling at the person's speed was issue 12, and
-issue 12 is now closed: an animal's row in `game/data/creatures.js` is the only
-place that animal's motion is written, and `Player.moveDef` asks that row whether
-the body you wear is walking, swimming, jumping or turning. A form record is
-shape and senses only -- the five motion fields it used to hold (`speed`, `jump`,
-`swim`, `hop`, `turn`) are deleted, and the run fails if any of them comes back.
-What was a constant (`WALK_TOP`, "on foot a body goes 5 m/s whatever it was worn
-from") and what were multipliers (a frog's `0.9` of a person's walk, `1.3` of a
-person's jump) are gone rather than re-tuned. The human row moved into
-`N.HUMAN_FORM` and states its own motion in the same absolute units, so neither
-kind of body is defined as a multiple of the other.
+The sentence that opened it was about the animal again, and it named the one place
+the last round left inconsistent: *a frog's hopping should at least get it up a
+step.* It was not getting it up. Measured before the change, a terrace one block
+high was climbed by the animal and not by the body worn from that animal -- not
+because the animal hops and the worn body does not, but because the animal was
+handed a lift for its collision box by the movement code while the worn body,
+whose form states a lift of 0.3 m, stopped at the face. That is the same defect as
+issue 12, in a different field: two records of one animal, disagreeing. And it was
+disagreeing in the direction that made the animal look better at its own body than
+the body is.
 
-- Measured through the same actions against that one row, the worn body and the
-  animal it was worn from give the same numbers: both leave the ground at
-  **5.617 m/s**, both rise **0.73 m** over their own feet, and both are off the
-  ground for about a third of a crossing (32% of the frames for the body, whose
-  window catches two arcs, 36% for the valley's frog, whose catches three -- the
-  share counts arcs, so the arc and the launch are the numbers that match). A
-  frog body walks the frog's 1.8 m/s, swims its 4.6, and hops
-  once every 0.9 s; a person's body still walks 4.7 and leaves the ground at
-  7.917. The costs of the trade are said in the game rather than left to be
-  noticed: a frog body is slow on land and has no sprint at all, and the fruit
-  says so in both languages.
-- `game/test/shots.js` gained a fifth film, `strip animal`, which stands one of
-  the valley's own frogs in the corridor the `hop` strip uses, and the two
-  montages were looked at side by side: the same crouch, push-off, nose-up
-  flight, landing. The `wild` film already in the tool could not make that
-  claim -- the animal it filmed spent the window walking, and the `push: 0` it
-  reported said exactly that.
-- The honest downside, also measured: a person's jump came down 0.14 m (1.57 ->
-  1.43 apex) because both bodies now spend the push-off frame the same way, and
-  the 2.62 m jump a frog body used to have is the other thing the change
-  removed.
+- The row now states one pair of legs twice: `hop: { up: 6.0, max: 7.4, period:
+  0.9 }`. `up` is untouched -- every film of the stride still measures **5.617**
+  and **0.73 m** -- and `max` is the fullest extension of the same legs, spent
+  only at a step and sized to that step (`launchForArc(rise + 0.10)`). What `max`
+  reaches at all, `arcOf(max) - 0.10` = **1.09 m**, is where a step stops being a
+  step and becomes a wall, and both bodies are stopped by a wall in the same way.
+  A wild body whose row says `hop` is never handed the box-lift.
+- Measured at a bank of built blocks -- `test/play.js` builds 0, 1 and 2 blocks of
+  riser on one level shelf it does search for, the same shelf for every body, and
+  puts the cells back -- the one-metre riser is climbed by either body of the frog
+  with exactly one launch that is not the everyday one (**6.73**, inside the
+  **7.4** the row states, the two bodies agreeing to **0.02**) and the ground under
+  their feet a metre up, the animal lifted in **0** frames; at two metres, and with
+  nothing built, every launch of either body is **5.617** and no ground ever rises
+  under their feet. The extra height is the step and nothing else, to **0.02 m**.
+- `test/shots.js` grew the one place rig that changes the valley -- a bank one
+  block tall and five wide across the corridor the gait films are shot in, which
+  every other place rig puts back before it starts -- and two films out of it:
+  `climbwild` (one of the valley's own frogs, `push 6.73`, standing on the bank
+  top) and `climb` (the body worn from that animal at the same face,
+  `push 6.728`). The tripod had to learn to frame a step rather than a walking
+  line, and the step had to be built away from the lens: framed through the step
+  the body was hidden for 4 frames of 10.
 
-The lens and the strip tool this round used are the previous round's
-(`69bac02`, `49236cc`, recorded under the history heading further down), and
-what the first films measured is still open as issues 13 and 14: the swim has no
-vertical component, and the frame's contrast and content bounds are only
-lower-bounded. Issue 15 is opened by this round and is *unmeasured*: a body worn
-from a frog hops through a roof the frog itself walks under, because the wild
-body has a ceiling gate and the worn one does not.
+What this round leaves open. Issues 13, 14 and 15 stand as written -- the swim
+still has no vertical component, the frame check still bounds nothing about what
+is behind the body, and a worn body still hops through a roof the animal walks
+under. The sized launch changes none of that; 15 is still *unmeasured*, and this
+round replaced a comment that implied the worn body asks a roof with one that says
+it does not. Issue 16 is new, and the bank rig found it: an animal is moved as a
+point with probes and drawn as a box, so an animal stopped by a wall is drawn with
+its nose inside the wall -- at every wall, in the game as it stands.
+
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -1491,12 +1496,127 @@ Left open because the arc coming down to 0.73 m makes the case rare now, and
 because the honest thing to do with an unmeasured asymmetry is to write it down
 rather than fix it on the way past.
 
+## 16. An animal stopped by a wall is drawn with its nose inside it (found by the bank rig)
+
+**Found while writing the rig that asks whether a body climbs a bank, not in the
+game itself.** The rig (`test/play.js`, step `aBodyWalkedIntoABankStandsOnItsFeet`)
+asks of three bodies whether one of them is left inside the bank it was walked at.
+For the person and for the body worn from a frog that is a real question with a
+real answer: their movement honours a collision box (`Player#hits`), and both read
+**0** frames inside the bank at either height. Asked the same way of the animal it
+first read **222** frames of a 420-frame window spent inside the bank -- a third of
+an afternoon standing inside a block -- and the report was simply wrong: the body
+was not inside the bank, it was pressed against it.
+
+**The two kinds of body are not moved the same way, and this is the seam.** A body
+the player drives is displaced as a box: its extent is asked at every step and it
+stops with its face at the face of the world. An animal is displaced as a point
+that is probed; the rectangle its trunk is drawn from -- the same one
+`N.MODEL_W` gives the keep-apart law, and it is kept on the body as `hl`/`hw` -- is
+never asked of the world on the body's way through it. So an animal pressed at a
+wall has its feet in front of it and its nose through it, by up to half its own
+length (**0.21 m** for a frog drawn 0.41 m nose to tail). This is not a bank
+business: it is every wall in the valley and every animal pressed at one, and the
+bank rig only happened to be the first thing that counted it.
+
+What the rig records now, with the two questions kept apart, is the honest version:
+at a two-metre wall the point its feet stand on is inside a bank cell in **0**
+frames and the rectangle of its trunk is in one in **222**; at a one-metre bank,
+which it climbs, the trunk rectangle is inside for **37** frames -- a body on its
+way over an edge has its nose over the ground beyond while its feet are still on
+the ground in front, which belongs to the climb and not to being stuck; with
+nothing built it is inside in **0**. The ask the step makes is of the feet, because
+that is what the movement code answers for an animal.
+
+Two things would close this, and they are the same one: ask the animal's step gate
+of the rectangle the body already carries instead of of its point, which is what
+the player's branch does, and then the box a body is drawn with and the box a body
+is moved with stop being two different facts about one body. The cost is real --
+`Creature`'s gates are point probes today, and a box changes which of the four
+contour steps exist at a narrow gap -- so it is a round of its own and not a
+sentence.
+
+**The half of it the same rig saw, and which no test pins.** An animal at a wall
+neither its legs nor its `step` can take does not go round it here: measured with a
+desk probe at the built two-metre bank, it walks about a metre and a half along the
+face and then gives the errand up. The mechanism is legible in the contour: its four
+probes are `spd*dt` to one side -- **3 cm** at a frog's cruise -- and the sideways
+probe of a body standing at the middle of a five-metre wall is the same wall, so
+there is no step to take and the law falls through to `this.tx = this.x;
+this.tz = this.z; this.pause = 0.5`, a fresh errand half a second later. That is
+the same for the worn body and for the animal, which is the only comfort in it: the
+two bodies of one animal fail a wide wall alike. Closing it means contouring in
+body-lengths rather than in frames -- the same reach `riseAhead` already computes
+for the step in front -- and it wants a rig of its own: a wall of 3, 5 and 9 cells
+and a target behind the far end of it.
+
 ## The record of the last rounds (kept as history)
 
 > Superseded by the commit log, which is where this file says round-by-round history
 > lives. Kept because these paragraphs name the measurements behind issues 1-11;
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
+
+### The round before this one: one animal, one record (9ad3323, 80c9da4, 7d8e668, 1c9a871)
+
+> This was the block at the top of the file until the round above superseded
+> it. Its issues (12 closed, 15 opened) are still the ones it names; the state
+> it describes is two rounds old.
+
+State at time of writing: this round is three commits -- `9ad3323` the change,
+`80c9da4` the measurements that follow it, `7d8e668` the docs written against the
+new numbers -- and this record is the docs-only commit that follows them on the
+same tree. All of them are pushed to both remotes. The full suite ran twice on
+that tree, both runs 10/10 with `0 CHECK FAILED` and `0 ERROR` in
+`/tmp/frutaria-play.log`; the doc gates are clean on it too
+(`tools/extract-comments.js` -> `[]` and `occurrences: 0, unique: 0`;
+`docs-sync` ending all-consistent; `docs-drift` catching every drift it plants;
+`reach` finding every field of every record read by the code that names it).
+
+One sentence drove the round, and it was about the game, not the code: becoming
+an animal has to be like becoming that animal in every way, including how fast it
+goes. Wearing a frog while travelling at the person's speed was issue 12, and
+issue 12 is now closed: an animal's row in `game/data/creatures.js` is the only
+place that animal's motion is written, and `Player.moveDef` asks that row whether
+the body you wear is walking, swimming, jumping or turning. A form record is
+shape and senses only -- the five motion fields it used to hold (`speed`, `jump`,
+`swim`, `hop`, `turn`) are deleted, and the run fails if any of them comes back.
+What was a constant (`WALK_TOP`, "on foot a body goes 5 m/s whatever it was worn
+from") and what were multipliers (a frog's `0.9` of a person's walk, `1.3` of a
+person's jump) are gone rather than re-tuned. The human row moved into
+`N.HUMAN_FORM` and states its own motion in the same absolute units, so neither
+kind of body is defined as a multiple of the other.
+
+- Measured through the same actions against that one row, the worn body and the
+  animal it was worn from give the same numbers: both leave the ground at
+  **5.617 m/s**, both rise **0.73 m** over their own feet, and both are off the
+  ground for about a third of a crossing (32% of the frames for the body, whose
+  window catches two arcs, 36% for the valley's frog, whose catches three -- the
+  share counts arcs, so the arc and the launch are the numbers that match). A
+  frog body walks the frog's 1.8 m/s, swims its 4.6, and hops
+  once every 0.9 s; a person's body still walks 4.7 and leaves the ground at
+  7.917. The costs of the trade are said in the game rather than left to be
+  noticed: a frog body is slow on land and has no sprint at all, and the fruit
+  says so in both languages.
+- `game/test/shots.js` gained a fifth film, `strip animal`, which stands one of
+  the valley's own frogs in the corridor the `hop` strip uses, and the two
+  montages were looked at side by side: the same crouch, push-off, nose-up
+  flight, landing. The `wild` film already in the tool could not make that
+  claim -- the animal it filmed spent the window walking, and the `push: 0` it
+  reported said exactly that.
+- The honest downside, also measured: a person's jump came down 0.14 m (1.57 ->
+  1.43 apex) because both bodies now spend the push-off frame the same way, and
+  the 2.62 m jump a frog body used to have is the other thing the change
+  removed.
+
+The lens and the strip tool this round used are the previous round's
+(`69bac02`, `49236cc`, recorded under the history heading further down), and
+what the first films measured is still open as issues 13 and 14: the swim has no
+vertical component, and the frame's contrast and content bounds are only
+lower-bounded. Issue 15 is opened by this round and is *unmeasured*: a body worn
+from a frog hops through a roof the frog itself walks under, because the wild
+body has a ceiling gate and the worn one does not.
+
 
 
 State at time of writing: round 29 follow, tree `0835510` (the
@@ -1849,15 +1969,21 @@ only (CJK inside string/regex literals is fine).
   path reads them (`Player.moveDef` in entities.js picks the row; issue 12 is
   closed and must not be reopened by a second copy of a number):
   - the animal (`game/data/creatures.js`, `frog`, `scale 0.13`): `speed 1.8`,
-    `swimSpeed 4.6`, `turn 0.9`, `hop { up: 6.0, period: 0.9 }`, `alert 12`,
-    `herd 8`; `tall = MODEL_H * 0.13 = 0.43`. This row also moves the body the
+    `swimSpeed 4.6`, `turn 0.9`, `hop { up: 6.0, max: 7.4, period: 0.9 }`,
+    `alert 12`, `herd 8`; `tall = MODEL_H * 0.13 = 0.43`. This row also moves the body the
     player wears when a fruit names that animal -- launch, arc, cadence, cruise
     and turn all come from here, and nothing else. The hop gate asks
     `up^2/2g + tall` of room over the body (0.78 + 0.43 = 1.21 m) before the
     legs load; the arc a body actually reaches is `up^2/2g - up*dt/2` = **0.73 m**
     for that launch, because the frame that pushes off spends the first sliver of
     the fall (`pushOff` in Player.update; the creature step integrates the same
-    way). Wander speed = `cruise * 0.42`, flee/chase `cruise * 1.7`, and the
+    way). **A step is the other half of the pair of numbers**: `up` is spent
+    unasked, `max` only when the ground ahead of the feet is above them, and then
+    sized to that step (`hopLaunchNow` -> `launchForArc(rise + 0.10)`, 6.73 for a
+    1 m riser); `hopReach` = `arcOf(max) - 0.10` = **1.09 m** is the line between
+    a step and a wall, `leapTravel` bounds how far off a face the sizing is asked
+    at, and a wild body whose row says `hop` is never given the box-lift
+    (`climbTo` is not set for it). Wander speed = `cruise * 0.42`, flee/chase `cruise * 1.7`, and the
     body a player drives goes at the cruise because they are holding the key.
   - the body you start in (`game/data/player.js`, `HUMAN_FORM`): `size
     [0.62,1.8]`, `scale 0.18`, `speed 4.7`, `sprint 1.45`, `swimSpeed 2.9`,
@@ -1869,7 +1995,10 @@ only (CJK inside string/regex literals is fine).
     `fov 100`, `step 0.3` and the two display names. **No motion at all** -- no
     `speed`, `jump`, `swim`, `hop`, `turn`; a form record carrying any of those
     fails `play.js`. `step` is the form's on purpose: it is how far that
-    collision box lifts without a jump.
+    collision box lifts without a jump -- and it answers no whole-block terrace,
+    because the largest such number any record carries (the person's 0.55) is
+    under the smallest riser the valley's ground is built with, so a step there
+    is taken with legs or not at all.
   - measured pair, same actions (`play.js` step `gait`, and `shots.js` strips
     `hop` / `animal`): worn body and wild animal both leave the ground at
     **5.617 m/s** and both reach **0.73 m**; the airborne share is not one of the
@@ -1877,10 +2006,12 @@ only (CJK inside string/regex literals is fine).
     36.4% and 44.7% for the two films -- the share counts the arcs a window
     happens to catch). The worn body crosses ground at **1.80 m/s** and water at
     **4.58**, the wild animal swims at **4.6**.
-- Frame order inside `Creature.update` (entities.js): steering + horizontal
-  step (~1408-1798) -> altitude (~1830-2170) -> hop gate (~2099-2141) ->
-  vertical fall/climb -> solid-exit correction (~2200-2220) -> shove
-  (~2221-2345). The gate and the shove run in the same frame, gate first.
+- Frame order inside `Creature.update` (entities.js, the class begins at 1252):
+  steering + the horizontal step and its gate (~1400-2046) -> altitude (2049) ->
+  the hop gate (~2230-2350: the countdown at 2232, the launch the legs are given
+  at ~2307) -> the vertical fall (2351) -> the solid-exit correction (~2404) ->
+  the keep-apart shove (~2450-2510). The gate and the shove run in the same
+  frame, gate first.
 - The solid-exit correction lifts a body out of a hard block at
   `Math.max(0.1, 6*dt)` per frame and zeroes `vy` — a body inside a slab with
   air under the slab rides that lift straight up through the masonry.
@@ -1927,7 +2058,7 @@ only (CJK inside string/regex literals is fine).
   only across `g.render()`, and the counters are zeroed immediately before each
   read. A rig that patches the draws and then reads gets a frame of nothing and
   reports 0 pixels without saying so.
-- The gait films: `node game/test/shots.js strip [hop|stroke|turn|wild|animal]`
+- The gait films: `node game/test/shots.js strip [hop|stroke|turn|wild|animal|climb|climbwild]`
   -- the page's clock stopped, the world stepped by hand at 1/60 with the same
   keys held, two lenses per action (the one a player owns, and a tripod stood at the
   middle of the path that pans but does not move), and every frame reporting
@@ -1943,7 +2074,13 @@ only (CJK inside string/regex literals is fine).
   spent the window walking and the film proves nothing about its arc. `subject` on
   a strip config says whose body the lens and the stepping follow -- never infer
   it from `where`, because an animal stood in the same corridor as the body you
-  wear is still an animal.
+  wear is still an animal. `climb` and `climbwild` stand either body of the frog at
+  a bank one block tall built across that same corridor -- the only place rig that
+  edits the world, and every other place rig puts those cells back first
+  (`window.__built`), so a film of the valley stays a film of the ground the game
+  made. A body stood at the foot of a step is given a starting `hopT` too: left in
+  whatever the walk that brought it there left behind, the first launch of the
+  window is the ordinary one and the climb falls outside the frame.
 - The stride law is calibrated at the body's own record: `walkMove(spd, row.speed)`
   -- `move` is the share of the speed the record names, so 1 is a person at their
   4.7 m/s and a frog at its 1.8 m/s, and a `sprint` above that cruise buys step
