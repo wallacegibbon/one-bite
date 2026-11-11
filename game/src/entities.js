@@ -755,16 +755,18 @@
            passes the gate is a roof the arc clears, never one it hits. */
         const pushOff = (v) => { this.vy = v - GRAVITY * dt; this.grounded = false; };
         /* The launch the legs give this frame, which for a body that hops is
-           not one number. On flat ground and at a roof it is `hop.up`, the
-           everyday launch, and every measurement of the stride stands as it was
-           measured. In front of a step it is the fuller extension the row states
-           (`hop.max`), sized to land on that step and no more -- and it is asked
-           of the same law the animal's own body asks a few hundred lines below,
-           from the same row, so the frog you wear climbs a bank the way the frog
-           on the bank does. A riser above that extension is not sized at all: it
-           is a wall, and the body stops at it, which is what it has always done.
+           not one number. On flat ground it is `hop.up`, the everyday launch,
+           and every measurement of the stride stands as it was measured. In
+           front of a step it is the fuller extension the row states (`hop.max`),
+           sized to land on that step and no more -- and it is asked of the same
+           law the animal's own body asks a few hundred lines below, from the same
+           row, so the frog you wear climbs a bank the way the frog on the bank
+           does. A riser above that extension is not sized at all: it is a wall,
+           and the body stops at it, which is what it has always done.
            Nothing here is asked of a body that is off the ground or in the
-           water's hold: a step is taken with feet. */
+           water's hold: a step is taken with feet. Nor is a roof asked: the
+           animal's body will not load its legs under a low ceiling and the worn
+           one still does, which is OPEN-ISSUES 15, unmeasured and still open. */
         const legsFor = (hop) => {
           if (!hop || !this.grounded || this.inWater) return launchOf(L);
           const ux = len > 0 ? dx : Math.sin(this.faceYaw);
