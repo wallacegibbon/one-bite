@@ -11,10 +11,17 @@
  *              the same when a species joins.
  *  turn      : the most radians a second this animal can add to its heading at
  *              its own cruising speed. Nothing with a body turns on the spot --
- *              the course bends, and this is the animal's agility. The form
- *              record of the same species carries the same number, because the
- *              animal and the body worn from it are one body (play.js checks
- *              that the two agree).
+ *              the course bends, and this is the animal's agility.
+ *  speed / swimSpeed / hop / turn: this row is the animal's way of moving, and
+ *              it is the ONLY place any of them is written. The body the player
+ *              wears from this animal's fruit reads this row for them
+ *              (`Player.moveDef` in src/entities.js); the fruit's form record
+ *              carries the shape and the senses and never a speed. A fruit names
+ *              which animal you wear; the animal says how it moves. That is what
+ *              makes wearing a frog moving like a frog, and it is why the valley
+ *              needs no second set of numbers for the same creature -- play.js
+ *              measures the body and the animal doing the same action and fails
+ *              when the arcs differ.
  *  active    : active period; day / night / both / dusk
  *  dex/dexEn: the codex entry, always "a verifiable fact + an unverifiable rumour"
  * ========================================================================== */

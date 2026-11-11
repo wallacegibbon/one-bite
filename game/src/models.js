@@ -422,7 +422,7 @@
   const _m = { a: N.M4.create(), b: N.M4.create(), c: N.M4.create(), d: N.M4.create(), e: N.M4.create(), f: N.M4.create() };
   const WALK_STRIDE = 0.9;  // how far a walking leg reaches at the hip, at a full stride
   const STANCE_WALK = 0.62;  // the share of a stride a foot is on the ground, at a walk
-  const STANCE_RUN = 0.30;   // ... and at the fastest the body travels: it flies between steps
+  const STANCE_RUN = 0.30;   // ... and at the speed the body's own record names: it flies between steps
   const SWIM_RATE = 4.2;  // the stroke's own clock, in rad/s: one stroke every 1.5 s
   /* How much of the stroke a body the water holds up does when it is going
      nowhere: the tread. A body at rest in the water is not kicking at the lake,
@@ -543,8 +543,10 @@
      legs stop; a body walking into a wall stops its legs with its body instead of
      running on the spot; and the rate of the steps stops being a constant and
      comes out of the leg alone. Read off the matrices the draw uploads, a person
-     at 4.7 m/s takes 1.85 m steps at 2.33 a second and at 2 m/s takes steps of
-     under a metre at the same rate. A body with short legs steps fast and a body with long legs steps
+     at their own cruising speed -- which is what `move` of 1 means now, the
+     record's own number and not a borrowed top -- takes 1.97 m steps at 2.38 a
+     second, and at 2 m/s takes steps of 0.85 m at the same rate. A body with
+     short legs steps fast and a body with long legs steps
      slowly, which is what animals do, and the length of a step, not its rate, is
      what the speed buys. */
 
@@ -561,15 +563,25 @@
      takes long fast ones, and either way the rate of the steps falls as the body
      goes faster, which is the opposite of what a body does.
      What a body does is hold its step rate nearly the same and change the length
-     of a step: a person walking at 1 m/s takes steps of 0.4 m at about 2.5 a
-     second and running at 4.7 m/s takes steps of 1.9 m at about the same 2.5 a
-     second. Read the same way, the reach of the foot under the body -- which is
-     what a stance is worth along the ground -- goes 0.22 m, 0.40 m, 0.58 m at
+     of a step: a person walking at 1 m/s takes steps of 0.43 m at 2.3 a
+     second and at their own cruising speed of 4.7 m/s takes steps of 1.97 m at
+     2.4 a second. Read the same way, the reach of the foot under the body -- which is
+     what a stance is worth along the ground -- goes 0.24 m, 0.41 m, 0.59 m at
      1, 2 and 4.7 m/s: it grows slower than the speed does, and the whole of the
      rest is bought by the stance taking a smaller share of the cycle.
      So the swing is made proportional to speed *times the stance*, and the two
      cancel in the one place they have to: a stride comes out proportional to the
-     speed, and the rate of the steps comes out a property of the leg alone. */
+     speed, and the rate of the steps comes out a property of the leg alone.
+     `move` is therefore the fraction of the speed the body's own record names,
+     and it stops there. A body with a sprint -- the body you start in has one,
+     bought with breath -- runs the same 1.97 m steps 45% quicker rather than
+     longer ones: 3.45 a second at 6.8 m/s. That is the honest end of the blend,
+     not a dodge: a stance is interpolated between a walk's 0.62 and a run's
+     0.30, and past one the next step down would be a body off the ground two
+     cycles in three, which no leg in these models is built to hold. A real
+     sprint does lengthen its stride, and the day a body in the valley sprints
+     long enough for that to show is the day a third point goes into the blend
+     and a deeper stance goes with it. */
   function ampOf(move) { return move * stanceOf(move) / STANCE_WALK; }
   function footAt(u, stance) {
     u -= Math.floor(u);

@@ -92,10 +92,13 @@
      the same number, so neither is held up in water the other stands in. */
   function bedFloor(bedTop, tall) { return bedTop + tall * 0.5; }
 
-  /* The speed the worn body's stride law is calibrated at, in m/s. See
-     `Player.walkMove` for why this is a number the player's body carries and a
-     wild body does not need. */
-  const WALK_TOP = 5;
+  /* How hard this body pushes off the ground with its feet, in m/s of launch.
+     A body that jumps states that as `jump`; a body that hops states it as
+     `hop.up`, because for it the two are the same event -- the animal pushing
+     off with the same legs, whether it was asked to or decided to. There is no
+     third case: a body with neither has no legs that push (a lamp), and the
+     caller does not ask it. */
+  function launchOf(L) { return L.jump !== undefined ? L.jump : (L.hop ? L.hop.up : 0); }
 
   /* ============================ player ============================ */
   /* The walk clock. A body's gait is where it is in its own stride, and it is
@@ -176,6 +179,23 @@
       this.dead = false;
     }
     get formDef() { return this.form ? N.FRUIT_BY_ID[this.form].form : HUMAN; }
+    /* How this body moves -- and it is one record, not two. The fruit's row says
+       which animal a body is worn from; that animal's row in data/creatures.js
+       is where the motion is written, for the animal walking the shore and for
+       the body worn from it alike. So the body you wear has the animal's cruise,
+       the animal's launch, the animal's turn rate, and it is measured against
+       those same numbers by the gait law: wearing a frog is moving like a frog.
+       A body worn from no fruit is the body the data says you start in, which is
+       a record of the same shape and states its own motion in the same absolute
+       units -- 4.7 m/s on foot, 2.9 through water, 8.3 m/s of launch.
+       `formDef` stays the shape and the senses: the box, the skin, the eye. The
+       split is exactly the one the design already made -- a fruit hands you a
+       body and the world's reaction to it, never a mind -- drawn where the code
+       has to draw it, because "what is the fastest this body goes" has one
+       answer and a record that has to invent a second one is the bug this is. */
+    get moveDef() {
+      return this.form ? N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature] : HUMAN;
+    }
     get modelId() { return this.form ? N.FRUIT_BY_ID[this.form].creature : 'human'; }
     size() { return this.formDef.size || HUMAN.size; }
     /* model units -> metres. The animal's own record carries the number (an
@@ -197,17 +217,20 @@
     /* How hard this body is asking for a stride, 0..1. The draw sizes the swing
        by this and `walkGait` sizes the stride by it, and they have to be the same
        number or the foot slips all the same -- so it is said once, here.
-       `WALK_TOP` is not the fastest this body can go on foot: a sprint reaches
-       4.7 x 1.45 = 6.8 m/s (`Player.update`), and the law has nothing left to say
-       above 1. It is the speed at which the stride law is calibrated, and it sits
-       a little above the human body's cruising 4.7 m/s on purpose: at 4.7 the body
-       is at 0.94 of the law, which is what puts its steps at 1.85 m and its legs
-       at 2.33 a second -- what a person actually does at that speed -- and leaves
-       the last sixth of the law for a body going faster still. A wild body needs no
-       such constant because it is measured against its own record
-       (`N.walkMove(c.speed, sp.speed)`); a worn body travels at the human body's
-       speed in the shape of something else, and so carries its own number. */
-    walkMove() { return Math.min(1, Math.hypot(this.vx, this.vz) / WALK_TOP); }
+       It is asked of the body's own record, which is the only way the question
+       makes sense: a gait is a share of the fastest this body travels on foot,
+       and a body that does not own that number has no gait to be sized by. This
+       is the same call a wild body makes (`N.walkMove(c.speed, c.sp.speed)` in
+       `Creature.update` and in the draw), and there used to be two of them: the
+       player's body was measured against a constant, `WALK_TOP = 5`, whose only
+       claim was that it sat a little above the human body's cruising 4.7, which
+       is a number a person needs and a frog wearing a person's speed does not.
+       It is gone, and with it the second record of the same animal: a worn body
+       is at 1.0 of its own law at the speed its own animal's row gives it, which
+       for the person is where the model's fullest stride is, and for a frog there
+       is no stride to size at all -- its model gives its legs no share of one,
+       because a frog does not walk on land, it hops. */
+    walkMove() { return N.walkMove(Math.hypot(this.vx, this.vz), this.moveDef.speed); }
     /* Held breath is a property of the body. A frog body does not need air at
        all (breatheAir: false, handled by the caller); every body that does need
        it holds it for the same eighteen seconds. No body in the valley carries
@@ -336,8 +359,8 @@
          under its feet is water while its origin is under 14.903 and air above
          it, the body bobs across that line, and `inWater` went on and off 42
          times in 240 frames -- and with it the whole water branch of its
-         movement: the water's hold and gravity in alternation, a cruising speed
-         of 4.65 and one of 4.23, and the stroke of its legs, which snapped 0.19 m
+         movement: the water's hold and gravity in alternation, one cruising
+         speed and then another, and the stroke of its legs, which snapped 0.19 m
          out and back again every few frames. The surface of the column is a
          property of the place rather than of where the body happens to sit
          inside it, which is the same reason `heldUp` a few lines below reads the
@@ -378,7 +401,20 @@
       } else this.dry = 0;
 
       // ---- intended velocity ----
-      const sprint = inp.sprint && this.air > 0 && !this.inWater;
+      /* What the body is trying to travel at: the animal's own cruise, from the
+         record its motion comes from. On foot that is `speed`; in water the
+         body's own `swimSpeed` takes over outright rather than a share of the
+         land figure, because the two are different achievements and not one
+         number seen through a medium: the person is slow in a lake at 2.9, the
+         frog is quick in it at 4.6 and slow on the bank at 1.8, and each of
+         those is written once, in the row of the body that does it.
+         A body worn from an animal has no burst of its own unless that animal's
+         row says it does -- and no animal in the valley has one, because no wild
+         animal in the valley sprints. The person's `sprint` is a field of its
+         record and is bought with breath, which is the only reason it is a
+         separate number and not a second cruise. */
+      const L = this.moveDef;
+      const sprint = inp.sprint && L.sprint && this.air > 0 && !this.inWater;
       /* Whether the feet were on the ground when the frame started. Two things
          make this harder than reading `grounded`.
          The vertical branch below decides "is this body in the air or in the
@@ -391,14 +427,11 @@
          be standing at in this column is this body. The 2 cm of slack is the
          same one the step-up and the water's hold use. */
       const onFoot = this.grounded || this.y - standY(W, cx, cz, this.y) < 0.02;
-      /* What the body is trying to travel at. On foot the body's own `speed`
-         multiplier decides, because on foot every body is measured against the
-         human body's 4.7 m/s; in water the `swim` fraction below takes over. */
-      let speed = 4.7 * (f.speed || 1) * (sprint ? 1.45 : 1);
-      if (this.inWater) speed *= (f.swim || 0.62);
+      let speed = L.speed * (sprint ? L.sprint : 1);
+      if (this.inWater) speed = L.swimSpeed;
       // a body that hops is thrown forward by the hop; it does not bleed speed
       // in the air the way a body that merely fell off a ledge does
-      if (!this.grounded && !this.inWater) speed *= (f.hop ? 1 : 0.92);
+      if (!this.grounded && !this.inWater) speed *= (L.hop ? 1 : 0.92);
       let dx = 0, dz = 0;
       const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
       const rx = Math.cos(this.yaw), rz = Math.sin(this.yaw);
@@ -428,7 +461,7 @@
          A body on foot is deliberately not in this branch: feet grip the
          ground, and the player's turning on foot is the game's answer to the
          mouse, not an animal's answer to momentum. */
-      const arc = f.turn || 0;
+      const arc = L.turn || 0;
       const hd0 = Math.hypot(this.vx, this.vz) > 0.05 ? Math.atan2(this.vx, -this.vz) : this.faceYaw;
       if (arc > 0 && this.inWater) {
         let spd = Math.hypot(this.vx, this.vz);
@@ -452,7 +485,7 @@
         this.vx = Math.sin(hd) * spd;
         this.vz = -Math.cos(hd) * spd;
       } else {
-        const accel = this.grounded ? 34 : (f.hop ? 18 : 12);
+        const accel = this.grounded ? 34 : (L.hop ? 18 : 12);
         this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt / Math.max(speed, 1));
         this.vz += (dz * speed - this.vz) * Math.min(1, accel * dt / Math.max(speed, 1));
       }
@@ -617,29 +650,57 @@
            the key was held. */
         this.vy -= GRAVITY * dt;
         this.vy = Math.max(-MAX_FALL, this.vy);
-        const hop = f.hop;
+        const hop = L.hop;
+        /* A push-off spends one frame of the fall at the moment of the push.
+           That is how the animal's own step does it -- `Creature.update` launches
+           and then integrates, in that order -- and the order is not a detail:
+           the half-frame a launch is left free of gravity is `v*dt/2` of extra
+           arc, 10 cm at the frog's 6 m/s launch and 7 cm at a person's 8.3.
+           Measured before this was closed: the body worn from a frog came
+           0.83 m off the ground and the frog it was worn from 0.73 --
+           one animal, two heights, because the two bodies integrate their
+           launches in different orders. The arc the ceiling gate asks
+           (`hop.up*hop.up/2g`) is the analytic one, which sits between the two
+           and is 5 cm over the arc either body actually reaches: a roof that
+           passes the gate is a roof the arc clears, never one it hits. */
+        const pushOff = (v) => { this.vy = v - GRAVITY * dt; this.grounded = false; };
         if (inp.jump && this.grounded) {
-          this.vy = 8.3 * (f.jump || 1); this.grounded = false;
+          /* The push key asks for this body's own launch -- 8.3 m/s for the body
+             you start in, 6.0 for the frog you are wearing -- and for a body
+             whose record says `hop` that number is the same one the animal
+             launches itself with (`launchOf`: a hopper states its launch once, as
+             the hop, because the push key and the hop are the same legs). The
+             worn body used to launch at `8.3 x 1.3` -- 1.31 m by the arc law,
+             1.38 m measured on the film -- against the 0.78 m the animal's own
+             launch asks for: a 0.5 m animal thrown higher than the animal is
+             long. There is no second number to reconcile any more. */
+          pushOff(launchOf(L));
           if (hop) this.hopT = hop.period;
         } else if (hop && this.grounded) {
           /* A body whose data says `hop` does not walk on land: it hops. The
              launch is an impulse and the arc is gravity's, so the animation and
              the displacement are the same event instead of two separate stories.
-             The kick is a nudge toward the hop speed, not an addition, or every
-             hop would add to the last one and the body would accelerate away.
-             The countdown only runs with feet on the ground: a frog that lands
-             stands, loads, and pushes off again. */
+             Both of the numbers the animal owns come from the animal's row: the
+             launch, and `period`, the seconds its feet stay down between hops --
+             which for the frog is 0.9, the cadence the valley's own frogs are
+             timed at, where the worn body used to have 0.22 and hopped four
+             times as often as the animal it was wearing.
+             The kick is a nudge toward the body's own cruise, not an addition, or
+             every hop would add to the last one and the body would accelerate
+             away; and it is that cruise and not a multiple of it, because a wild
+             body's forward speed through a hop is its cruise and the body you
+             wear is the same animal. The countdown only runs with feet on the
+             ground: a frog that lands stands, loads, and pushes off again. */
           if (len > 0) {
             this.hopT -= dt;
             this.wind = Math.min(1, this.wind + dt / 0.16);
             if (this.hopT <= 0) {
-              this.vy = 8.3 * (f.jump || 1) * hop.up;
-              const k = speed * hop.kick;
+              pushOff(hop.up);
+              const k = speed;
               this.vx += (dx * k - this.vx) * 0.6;
               this.vz += (dz * k - this.vz) * 0.6;
               this.hopT = hop.period;
               this.wind = 0;
-              this.grounded = false;
             }
           } else { this.hopT = 0; this.wind = 0; }
         }

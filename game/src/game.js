@@ -1212,12 +1212,18 @@
           // the same clearance the creatures' bodies get: see above
           off: Math.max(0, Math.min(1,
             (p.y - N.groundY(W, Math.floor(p.x), Math.floor(p.z), Math.floor(p.y))) / (N.MODEL_H[p.modelId] * sc))),
-          /* the form decides, not the water: a human in the lake wades, a frog
-             kicks. The stroke is sized by the water the body is actually pushing
-             -- see `strokeOf` above the draw -- and this is the one body in the
-             valley whose hold is eased, so a stroke comes in over a few frames
-             and goes out the same way instead of in one. */
-          swim: p.formDef.swim ? strokeOf(p.held, Math.hypot(p.vx, p.vz), p.cruise) : 0,
+          /* One question, asked the same way for both drawn bodies: does this
+             body's record give it a speed through water, and how much of it is it
+             pushing? The answer used to be two questions -- the creatures asked
+             their own row, the player asked its form for a `swim` multiplier --
+             and the two disagreed about what a body was capable of. The pose
+             still belongs to the model: a human in the lake does not kick because
+             the human's legs carry no stroke (no `swimKick`, no `swimPose` --
+             see models.js), not because a form record said so, and the frog's
+             legs do. And this is the one body in the valley whose hold is eased,
+             so a stroke comes in over a few frames and goes out the same way
+             instead of in one. */
+          swim: strokeOf(p.held, Math.hypot(p.vx, p.vz), p.moveDef.swimSpeed),
           held: p.held || 0,
           // signed rad/s of heading: the outside leg of a turn does the work
           turn: p.bend || 0

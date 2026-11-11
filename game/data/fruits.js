@@ -24,27 +24,31 @@
 
   /* ------------------------------------------------------------------
    * Form ability fields
+   *   A form record carries the body's SHAPE and the body's SENSES. It carries
+   *   no motion at all: no speed, no jump, no launch, no turn. Those belong to
+   *   the animal the fruit names in `creature`, and they are written once, in
+   *   its row in data/creatures.js. `Player.moveDef` in src/entities.js asks
+   *   that row -- and the body you start in is a record of the same shape, in
+   *   data/player.js -- so the body you wear and the animal you wear are moved
+   *   by one record, and wearing a frog is moving like a frog: at 1.8 m/s on
+   *   land, at 4.6 through water, 0.78 m off the ground. The old row carried
+   *   `speed 0.9 / jump 1.3 / swim 1.1 / hop { up: 0.72, kick: 1.25 }` as
+   *   multipliers on the human body's numbers, which made a worn frog cross
+   *   ground at 4.23 m/s and throw itself 1.31 m: a 0.5 m animal at a person's
+   *   speed, in the shape of a frog. Nothing was wrong with either record; the
+   *   pair of them was the mistake. play.js measures a worn body and a wild
+   *   animal of the same kind doing the same action and fails when the arcs
+   *   differ, so the pair cannot come back.
    *   size        : collision box [width, height] in metres
-   *   speed       : land movement multiplier
-   *   jump        : jump force multiplier
- *   hop         : { up, kick, period } -- a body that does not walk on land, it
- *                 hops. `up` is the fraction of its own jump the auto-hop uses,
- *                 `kick` the fraction of its land speed the launch throws it at,
- *                 `period` the seconds its feet stay on the ground between hops.
- *                 Only the gait changes: the arc is still gravity's.
-   *   swim        : underwater movement multiplier. 1.1 on the frog body puts it
-   *                 at 4.65 m/s -- the wild frog's own `swimSpeed` -- because the
-   *                 body you wear and the animal you wear are one animal.
-   *   turn        : the most radians a second the body can add to its heading at
-   *                 its own cruising speed. Water holds a body up by carrying
-   *                 it forward, so it cannot change course on the spot -- the
-   *                 course bends (Player.update, Creature.update).
-   *                 The same number the species has in data/creatures.js.
    *   breatheAir  : whether air is required (false = can breathe underwater)
    *   dryTimer    : seconds out of water before the skin starts to dry (amphibian bodies)
    *   nightVision : 0..1 brightening in the dark, and the same eye washed out by daylight
    *   stealth     : creature alert-radius multiplier (<1 = harder to spot)
-   *   step        : auto step-up height in metres
+   *   step        : auto step-up height in metres. This one is the form's and
+   *                 not the animal's on purpose: it is how far the collision box
+   *                 above is lifted without a jump, and the box is the form's
+   *                 (the animal's own model is a smaller body than the box the
+   *                 world enforces around it).
    *   fov         : field of view
    * Fields that no body in the valley uses any more (climb, dig, armor, web,
    * herd) were deleted with the animals that had them, and `tongue` went with
@@ -70,12 +74,11 @@
       habitat: ['mirrorlake', 'glowglade', 'starfall'], habitatCn: '镜湖芦苇 · 雨后水洼', habitatEn: 'Mirrorlake reeds · rain pools',
       duration: 420,
       form: {
-        cn: '雨蛙', en: 'frog', size: [0.5, 0.5], speed: 0.9, jump: 1.3, hop: { up: 0.72, kick: 1.25, period: 0.22 },
-        swim: 1.1, turn: 0.9, breatheAir: false,
-        dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, step: 0.3
+        cn: '雨蛙', en: 'frog', size: [0.5, 0.5],
+        breatheAir: false, dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, step: 0.3
       },
-      cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '太小：够不到高处的果，也推不开门'],
-      costEn: ['the skin must stay wet: after 90 s out of water it dries and vitality keeps draining', 'too small: cannot reach high fruit, cannot push a door open'],
+      cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '陆地上很慢：只有雨蛙自己的每秒 1.8 米，这具身体也没有冲刺', '太小：够不到高处的果，也推不开门'],
+      costEn: ['the skin must stay wet: after 90 s out of water it dries and vitality keeps draining', 'slow on land: 1.8 m/s, the frog\'s own pace, and this body has no sprint at all', 'too small: cannot reach high fruit, cannot push a door open'],
       lore: '长在芦苇半腰的绿果，雨后一夜之间全出来。它不喝水——它靠皮肤喝，所以它把这份本事也给了你。',
       loreEn: 'A green fruit halfway up a reed, all of them out overnight after rain. It does not drink water — it drinks through its skin, so it hands you that trick as well.'
     }
