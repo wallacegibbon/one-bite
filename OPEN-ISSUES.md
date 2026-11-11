@@ -1798,6 +1798,16 @@ Human instructions, verbatim, still in force:
    something you genuinely cannot solve." (Reaffirmed twice, most recently
    together with the order to keep the open issues in git.)
 4. "When a piece of work is done and committed, push it to the remotes."
+5. "变成了一个动物，各方面都要像那个动物。…你变成了青蛙，还以人的速度移动。
+   变成了青蛙，不就应该以青蛙的速度移动吗？" -- wearing an animal means being
+   like that animal in every way, its speed included. Closed as issue 12; it is
+   the rule any new animal or form arrives under.
+6. "水里上下运动目前绑定到了Space和Ctrl，这个非常不要，尤其是Ctrl和w会关掉页
+   面！换成j表示下，k表示上。Codex和Help之类的让用户鼠标点！不要浪费我快捷键"
+   -- the water's down and up are J and K, the panels are opened by clicking,
+   and a hotkey is not to be spent on a thing the mouse already reaches. This is
+   a standing rule about the key map, not one request: new keys are earned by a
+   body's held asks, and by nothing else (docs/07 §3.4).
 
 Per-round gate contract, in this order, never concurrent:
 

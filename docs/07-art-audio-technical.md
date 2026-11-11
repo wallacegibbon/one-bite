@@ -166,7 +166,36 @@ Measured in the prototype (1280×720, SwiftShader software rendering): all 100 c
 - Save: `localStorage['frutaria.save.v3']`, storing only the **block diff** (`diffs`) + player (position, vitality, current form and its remaining time) + **identity** (`id` / `name`, see 03 §6) + backpack + storages (every field stash records the `owner` id that planted it) + regrow queue (`regrow`) + planting queue (`growQueue`) + fruit scattered by death (`drops`) + backpack upgrades + deeds + time. Measured 2.3 KB with a cellar tree and a sapling. It is written by the Save button and by `Ctrl+S`, and the page writes it **on its way out** (`pagehide`) and **when it is put to sleep** (`visibilitychange`): between one save and the next the valley exists only in that tab, so a reload, a closed tab or a phone switched to another app must not cost the player everything since the last save. Both hooks are gated on the game having started — a page still sitting on the start screen is holding a valley it has not loaded, and writing that fresh world would overwrite the save the screen is offering back. `F5` stays bound for the browsers that hand that key to the page; the ones that keep it for themselves lose nothing either, because the page has already written the valley as it goes.
 - A save is **offered back, never silently loaded**: the start screen quotes it (day, hour, pack, trees) and Continue walks you back to it. The town cellar belongs to the valley rather than to the save, so it is rebuilt from the map data and every store is looked up by `id` — a save that lists only cellar trees still has a town to walk into. A save is also **read as data rather than as memory**: `localStorage` hands back whatever is in it -- the shape some other build wrote, a value a browser put down wrong, something typed into the console -- so every field the game indexes into is asked, before it is used, whether it is an object, a number, a list, or a row of four numbers pointing at a cell inside the valley. What cannot be answered stays at its default: a body wearing a fruit the valley no longer has wakes up as itself, a queue holding a null is dropped rather than thrown into `update()` every frame, and a save that is not an object is not offered back at all. Measured: eight shapes the game never wrote, each read by the same `load()` the Continue button calls and then run for a second of world time -- the body is somewhere, the clock is moving, nothing throws.
 
-### 3.4 Interface language
+### 3.4 Keys: what earns one
+
+A key is spent on a thing only a key can do: something **held** while the body is
+moving. That is the whole of the test, and it is the user's own rule, in their
+words: *不要浪费我快捷键* — do not waste my hotkeys.
+
+- The body's own asks are held keys: `WASD` to walk, `Shift` to run, `Space` to
+  push off the ground, and in water `J` down and `K` up. The water's two asks
+  used to be `Space` and `Ctrl`, which cost the player twice: a body swimming
+  down was doing the thing that pushes off the ground, and `Ctrl` under `WASD` is
+  a chord the browser answers to — **Ctrl+W closes the tab**, and `W` is forward.
+  There is no crouch in the valley, so the field behind that key was never a
+  crouch: it was the dive, under a name that had outlived its key.
+- A panel is not a held thing. The codex, this help and the storage panel are
+  opened by the buttons in the corner and closed by `Esc` or by their own close
+  button; they used to hold `J` and `H`, and those keys are back.
+- The remaining keys are the ones a hand cannot hold while walking: `E` interact,
+  `F` use, `R` end a transformation, `V` lens, `N` name, `L` language, `1`–`9`
+  and the wheel for the pack, `Ctrl+S` / `F5` to write the save, and the storage
+  panel's arrows and `Tab`.
+- `game/test/input.js` asks the binding rather than the mapping table: it puts the
+  body in deep water, holds the real keys through the real page, and reads where
+  the body ends up against the water's own laws — the ceiling a body that keeps
+  asking up to climbs to, the floor a body that keeps asking down to reaches, and
+  the level the water holds a body at when nothing is asked. `K` reaches the
+  ceiling, `J` the floor, and `Space` moves it **0.03 m**: it asks nothing of a
+  body that has no ground under its feet. It also asserts that no `Ctrl` field is
+  set at all, and that `J` and `H` open no panel while the buttons do.
+
+### 3.5 Interface language
 
 The interface is switchable between Chinese and English at run time (`L`, or the button in the HUD); the choice is stored in `localStorage['frutaria.locale.v1']` and, on a first visit, taken from the browser language.
 
@@ -184,7 +213,7 @@ Two consequences worth knowing:
 - **Nothing translated is ever stored.** A store has no name of its own — the interface calls it by kind (`store.cellar` / `store.tree`) — and a deed is a flag next to the check that seals it, with no text at all. So a save written in Chinese loads unchanged in English, and switching language cannot freeze a string into a warehouse. `game/test/lang.js` asserts the save file is byte-identical across languages.
 - **Adding a language is one table.** `data/i18n.js` holds `LANGS` plus one object per language; `node-smoke.js` fails the build if the tables do not cover exactly the same keys.
 
-### 3.5 Known technical debt
+### 3.6 Known technical debt
 
 | Item | Note |
 |---|---|

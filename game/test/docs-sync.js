@@ -4,7 +4,7 @@
  *  The setting documents keep one language: the single English set that sits
  *  flat in docs/ as the eight numbered chapters; the index lives in the root
  *  README.md and README.zh.md. The game's own strings stay bilingual in
- *  game/data/ (07 s3.4) -- this checks the setting documents.
+ *  game/data/ (07 s3.5) -- this checks the setting documents.
  *  Usage: node game/test/docs-sync.js
  * ========================================================================== */
 const fs = require('fs');
@@ -281,7 +281,7 @@ for (const L of LANGS) {
   const main = fs.readFileSync(path.join(base, 'src', 'main.js'), 'utf8');
   if (!new RegExp(`k === '${ID.nameKey}'`).test(main)) bad('IDENTITY.nameKey', ID.nameKey, 'not bound in main.js');
   else good(`rename key ${ID.nameKey} is bound`);
-  // the interface language switch is a documented control too (07 s3.4)
+  // the interface language switch is a documented control too (07 s3.5)
   if (!new RegExp(`k === '${N.LOCALE_KEY}'`).test(main)) bad('LOCALE_KEY', N.LOCALE_KEY, 'not bound in main.js');
   else good(`language switch key ${N.LOCALE_KEY} is bound`);
 }

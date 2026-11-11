@@ -46,20 +46,20 @@ The scripts are read **once**, when the page loads. After changing or pulling th
 | Key | Action |
 |---|---|
 | `WASD` | Move |
-| `Space` | Jump / swim (surface) |
+| `Space` | Push off the ground (it works standing on a lake bottom too) |
 | `Shift` | Sprint |
-| `Ctrl` / `C` | Sneak / descend |
+| `J` | In water: down (dive) |
+| `K` | In water: up (surface) |
 | `E` | Interact (harvest / open storage / observe a creature) |
 | `F` | Use selected item (eat fruit / plant a pit / use a plant) |
 | `R` | End the transformation early |
 | `V` | First / third person |
-| `J` | Codex (fruits / creatures) |
-| `H` | Help |
 | `N` | Give yourself a name (the valley addresses you by your epithet, not your name) |
 | `L` | Switch the interface language (中文 / English) |
 | `1`–`9` / mouse wheel | Select item |
 | `Ctrl+S` | Save (localStorage; the page also saves itself as it closes or hides) |
 | `Esc` | Close panel |
+| Panels (codex / help / storage) | opened by the buttons in the corner — they take no key |
 | Storage panel: `E` / `Tab` | Store / retrieve |
 | Storage panel: `←` `→` | Select a backpack item; `↑` `↓` select a storage item |
 
