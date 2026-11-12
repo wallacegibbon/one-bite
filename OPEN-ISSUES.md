@@ -7,63 +7,112 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is three commits -- `35e6191` the law and the
-row it is written in, `d26223c` the rigs and the films that ask it, `fb22b3c` a
-comment in the worn body's branch corrected to say what that branch does not ask
--- and this record, which is the docs-only commit that follows them on the same
-tree. The
-full suite ran twice on that tree: both runs 10/10, with `0 CHECK FAILED` and no
+State at time of writing: this round is three commits -- `cf2a0eb` the movement
+code asked once about rock, about a column and about a lift, `6fe89c7` the
+chapters' creature table read back out of the record it copies, `4d96afc` the
+chapters themselves saying which of that table's numbers means what -- and this
+record, which is the docs-only commit that follows them on the same tree. The
+full suite ran twice on this tree: both runs 10/10, with `0 CHECK FAILED` and no
 page errors in `/tmp/frutaria-play.log`; the doc gates are clean on it too
 (`extract-comments` -> `[]` and `occurrences: 0, unique: 0`; `docs-sync`
-all-consistent; `docs-drift` catching every drift it plants; `reach` finding
-every field of every record read by the code that names it). The strip films were
-run as a set on the same tree afterwards: `no errors`, every film `offFrame: 0`,
-and the two films that carry a pinned number (`hop`, `animal`) back at 5.617 m/s
-and 0.73 m as they were.
+all-consistent; `docs-drift` catching all 32 of the drifts it plants; `reach`
+finding every field of every record read by the code that names it). The strip
+films were run over on the same tree: `no errors`, every film `offFrame: 0`, and
+every pinned number back where it was -- 5.617 m/s and 0.73 m for both bodies of
+the frog, 6.728 and 1.04 for the worn body at a built bank, 6.73 and 1.73 for
+the animal at the same face.
 
-The sentence that opened it was about the animal again, and it named the one place
-the last round left inconsistent: *a frog's hopping should at least get it up a
-step.* It was not getting it up. Measured before the change, a terrace one block
-high was climbed by the animal and not by the body worn from that animal -- not
-because the animal hops and the worn body does not, but because the animal was
-handed a lift for its collision box by the movement code while the worn body,
-whose form states a lift of 0.3 m, stopped at the face. That is the same defect as
-issue 12, in a different field: two records of one animal, disagreeing. And it was
-disagreeing in the direction that made the animal look better at its own body than
-the body is.
+The order this time was about the code and not about an animal: simplify or
+optimise the system a little further, on the assumption that the rounds before it
+left pieces of themselves behind; fix what is clearly wrong, collect what is not
+certain, and ask at the end. What was read is the whole of how a body is moved
+-- the walking gate, the step gate, the altitude and the lift, the two hop gates,
+the solid-exit correction, and every reader of a column they call. One shape came
+back over and over: a question written twice.
 
-- The row now states one pair of legs twice: `hop: { up: 6.0, max: 7.4, period:
-  0.9 }`. `up` is untouched -- every film of the stride still measures **5.617**
-  and **0.73 m** -- and `max` is the fullest extension of the same legs, spent
-  only at a step and sized to that step (`launchForArc(rise + 0.10)`). What `max`
-  reaches at all, `arcOf(max) - 0.10` = **1.09 m**, is where a step stops being a
-  step and becomes a wall, and both bodies are stopped by a wall in the same way.
-  A wild body whose row says `hop` is never handed the box-lift.
-- Measured at a bank of built blocks -- `test/play.js` builds 0, 1 and 2 blocks of
-  riser on one level shelf it does search for, the same shelf for every body, and
-  puts the cells back -- the one-metre riser is climbed by either body of the frog
-  with exactly one launch that is not the everyday one (**6.73**, inside the
-  **7.4** the row states, the two bodies agreeing to **0.02**) and the ground under
-  their feet a metre up, the animal lifted in **0** frames; at two metres, and with
-  nothing built, every launch of either body is **5.617** and no ground ever rises
-  under their feet. The extra height is the step and nothing else, to **0.02 m**.
-- `test/shots.js` grew the one place rig that changes the valley -- a bank one
-  block tall and five wide across the corridor the gait films are shot in, which
-  every other place rig puts back before it starts -- and two films out of it:
-  `climbwild` (one of the valley's own frogs, `push 6.73`, standing on the bank
-  top) and `climb` (the body worn from that animal at the same face,
-  `push 6.728`). The tripod had to learn to frame a step rather than a walking
-  line, and the step had to be built away from the lens: framed through the step
-  the body was hidden for 4 frames of 10.
+- "Which cells are ground to a body, as against a wall its shoulders go through"
+  was written five times: inline in `terrainY`, as `bodyInSolid`, as a local
+  `rockAt` in the animal's step gate, as the `feetHard` test in the lift cap, and
+  in the solid-exit correction's guard. `rockAt(w,x,y,z)` states it once now, and
+  the comment beside it names the rules that ask the *other* table -- `FOLIAGE`,
+  where a trunk is a wall and a crown is not -- and says why those are different
+  laws and not a missed one.
+- "What is the crown of this column" was written twice: `terrainY`, and `rockTop`
+  with a lower bound the caller filtered out again (`t > y + 0.05`). The step
+  read-ahead asks `terrainY` now; `rockTop` is gone.
+- "Are these feet inside rock" was the third copy of `bodyInSolid`, written out
+  again in the lift cap. It asks the helper.
+- The solid-exit correction asked `groundY` for the surface a body inside a rock
+  cell belongs above. Its own guard only opens when that cell is rock, so the
+  scan can only ever answer the top of the cell it started in. It reads the cell.
+- The hop gate and the step gate tested `isAmphibian()` where the law is "this
+  record states a hop" -- which is what docs/03 already says the two bodies are
+  told apart by ("whether the data gives the frog a `hop`"). They ask `sp.hop`
+  now. `locomotion` is left to the two water reads, because those are about the
+  water and not about the legs; the pose block that ran "for an amphibian" runs
+  "for a body with an arc".
+- The height a body may be raised onto the ground in front of it was a bare
+  `1.6` in six places, three of which are one gate seen from three sides.
+  `LIFT_REACH` names it. `STAND_SCAN` is the column bound that follows from it,
+  kept as its own literal because `1.6 - 1` is not `0.6` in binary floating
+  point, and that row is the difference between reading a block and not.
+- `const placeable = stand;` in the step gate was an alias left behind by a
+  rename and used once.
 
-What this round leaves open. Issues 13, 14 and 15 stand as written -- the swim
-still has no vertical component, the frame check still bounds nothing about what
-is behind the body, and a worn body still hops through a roof the animal walks
-under. The sized launch changes none of that; 15 is still *unmeasured*, and this
-round replaced a comment that implied the worn body asks a roof with one that says
-it does not. Issue 16 is new, and the bank rig found it: an animal is moved as a
-point with probes and drawn as a box, so an animal stopped by a wall is drawn with
-its nose inside the wall -- at every wall, in the game as it stands.
+That none of it changes what the game does is a claim, so it was tested as one:
+`test/play.js` was run four times -- twice on the old tree, twice on this one --
+the timings stripped, and the JSON each step reports compared field by field.
+Every rig that does not draw with `Math.random` answers identically: the bank
+step, the stride, the feet holding their ground, the pace, the space bodies keep
+from one another, the lake hiding its bed from its bank. Of the rigs that do
+draw, the pair of unchanged runs differs in 28 of them and the pair that spans
+the change in 26, in the same fields and by the same amount -- the frame in which
+a wild frog first gets up the trunk step reads 54, 55, 71 and 75 across the four
+runs, and that assertion asks only that it gets up it at all. The suite is 10/10
+on this tree twice, and the films are unchanged.
+
+One inconsistency was found in the data rather than the code, and it is a
+documents bug with a test gap under it: the chapters' creature table printed **5**
+under a column called `Pack`, while the record says `herd: 8`. The column had
+become the valley's population -- a number that is on no record at all, it is
+what `spawnCreatures` in `src/game.js` decides -- and nothing could see it,
+because `docs-sync.js` has sections 1, 2, 4, 5 and no 3: the creature table was
+the one table in the set no checker asked. `docs-sync` now compares every number
+in that row against the record (the model, the scale, the whole ordered list of
+numbers in the motion cell, turn, alert, herd) and `docs-drift` plants three of
+them being wrong to prove it; the chapter prints the record's 8 under a column
+named for the field, and says in prose what the valley's five is. Issue 18 below.
+
+What this round looked at and left alone, with the reason:
+
+- The step gate's `stepAhead` and the hop's `riseAhead` are two look-aheads for
+  "the step in front". They are not one law: one is bounded by how far a leap
+  carries (`leapTravel`) and asks how far off the face is so the legs can be
+  sized before the body is at it, and the other is bounded by the lift's own
+  reach and sets the rate at which a body rises while it stands in front of the
+  face. They were compared column by column: they agree on everything the valley
+  is built with, and the one thing that separates them -- highest block in the
+  window versus the first face along the heading -- decides the ridge numbers,
+  which no rig measures any more. Merging them is a behaviour change dressed as a
+  tidy-up, so it is not in this round.
+- The lift (`climbTo`/`climbRate`) looks dead, because it is never set for a body
+  whose row states a hop and the valley's only animal has one. It is live for the
+  one case where such a body is not on its own feet: a frog wading the lake's
+  shore, where the water is too shallow to hold it up, which is where the "comes
+  out onto the shelf" law lives. Kept.
+- `worth()` repeats two of `can()`'s tests. They are not the same two: `can`
+  asks about the column being walked into, `worth` about the column the body is
+  being lifted through while it stands still. Left.
+
+What this round leaves open. Issues 13, 14, 15 and 16 stand exactly as written:
+the swim still has no vertical component, the frame check still bounds nothing
+about what is behind the body, a worn body still hops through a roof the animal
+walks under, and an animal is still moved as a point and drawn as a box. Two new
+ones are questions about the data rather than defects in the code, and both are
+asked rather than answered: 17, the `step` that every body record carries and
+that answers no riser the valley is built with; and 18, the herd on the record
+and the population of the valley, whose meaning is now written down and whose
+numbers are still in two places.
 
 
 Read the standing contract below first: it decides whether any of this counts as
@@ -1550,6 +1599,64 @@ body-lengths rather than in frames -- the same reach `riseAhead` already compute
 for the step in front -- and it wants a rig of its own: a wall of 3, 5 and 9 cells
 and a target behind the far end of it.
 
+## 17. Every body record states how far its own feet lift it, and the valley offers no step that far (found auditing the movement code)
+
+**Open, and asked rather than fixed: nothing in the world reaches the number.**
+
+`HUMAN_FORM` in `game/data/player.js` carries `step: 0.55`, and each form in
+`game/data/fruits.js` carries `step: 0.3`. `Player.update` spends the better part
+of its displacement loop on it: when a move is blocked the body is lifted 0.15 m
+at a time, up to that height, and the move is tried again from there -- and the
+lift is only kept if the body ends up somewhere its own feet could not have
+reached. The valley is built of whole blocks, so the smallest riser its ground
+offers is 1 m and the largest number any record carries is 0.55: the lift is
+tried, the box is still inside the block, and the body goes back down to its
+feet. Measured last round at a bank of built blocks, the person at a one-metre
+riser gained **0** m and threw **0** arcs, and the same at two metres. The Key
+facts below already say this out loud, so it is not a regression that was missed:
+it is a field, a chapter row, a law paragraph in docs/03 and a branch of the
+player's own movement, all kept for a shape the world never makes.
+
+Two honest answers, and the choice is about the world rather than about the code:
+
+- Take it out: `step` off the human record and off the three forms, the auto
+  step-up out of `Player.update`, and the docs law with them. The player climbs a
+  bank by jumping, which is what they do today, and `reach.js` never gets handed
+  a field a record carries that nothing acts on. (It reads the field as live
+  today precisely because that branch reads it, so deleting one half without the
+  other fails the suite -- which is what that test is for.)
+- Keep it and say what it is waiting for: it becomes live the moment the valley
+  holds anything shorter than a block to get onto -- a fallen trunk, a step laid
+  by hand, the low wall of a town. Then the record is ready before the world is,
+  and the chapters say so.
+
+Not in question: the animal's arc, moved onto the row's legs last round, and the
+worn body's use of the same legs.
+
+## 18. The herd on the record and the population of the valley are two facts, and only one of them is read (found auditing the data)
+
+**The words are fixed. The two numbers are still in two places, and that half is
+asked.**
+
+`game/data/creatures.js` states `herd: 8` for the frog; `spawnCreatures` in
+`src/game.js` holds `counts = { frog: 5 }`; and the chapters printed 5 under a
+column headed `Pack`, which is how one came to be read as the other. The chapter
+now prints the record's 8 under a column named for the field, says in prose what
+each of the two is, and `docs-sync` section 3 compares that row against the
+record -- so the confusion cannot come back unnoticed.
+
+What is left is the shape of it. `sp.herd` is read at exactly one place, as a
+flag: `(sp.herd || 1) > 1`, whether a stray walks back towards the middle of its
+own kind, which `game.js` works out once a tick for the whole flock. The number
+after the flag is inert. So either the record's herd becomes the population --
+`spawnCreatures` reading `sp.herd` instead of a private map of its own, one
+number in the repository for one fact -- or the field is named for what it is, a
+switch, and the valley's counts stay where the game decides them. The first is
+tidier and couples two ideas that are not one idea: how gregarious an animal is,
+and how many of them a particular valley holds. The second is honest and leaves a
+data field carrying a number nothing reads, which is the kind of thing `reach.js`
+was written to notice.
+
 ## The record of the last rounds (kept as history)
 
 > Superseded by the commit log, which is where this file says round-by-round history
@@ -1557,11 +1664,56 @@ and a target behind the far end of it.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### The round before this one: one animal, one record (9ad3323, 80c9da4, 7d8e668, 1c9a871)
+### The round before this one: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+
+> This was the block at the top of the file until the audit above superseded it.
+> Its issues (15 still open, 16 opened) are the ones it names; issue 16's bank
+> rig is still in `test/play.js` and still reads as it did there.
+
+The order that opened it was about the animal, and it named the one place the
+round before that left inconsistent: *a frog's hopping should at least get it up
+a step.* It was not getting it up. Measured before the change, a terrace one
+block high was climbed by the animal and not by the body worn from that animal --
+not because the animal hops and the worn body does not, but because the animal was
+handed a lift for its collision box by the movement code while the worn body,
+whose form states a lift of 0.3 m, stopped at the face. That is the same defect as
+issue 12, in a different field: two records of one animal, disagreeing. And it was
+disagreeing in the direction that made the animal look better at its own body than
+the body is.
+
+- The row stated one pair of legs twice: `hop: { up: 6.0, max: 7.4, period:
+  0.9 }`. `up` was untouched -- every film of the stride still measured **5.617**
+  and **0.73 m** -- and `max` was the fullest extension of the same legs, spent
+  only at a step and sized to that step (`launchForArc(rise + 0.10)`). What `max`
+  reaches at all, `arcOf(max) - 0.10` = **1.09 m**, is where a step stops being a
+  step and becomes a wall, and both bodies are stopped by a wall in the same way.
+  A wild body whose row says `hop` is never handed the box-lift.
+- Measured at a bank of built blocks -- `test/play.js` builds 0, 1 and 2 blocks of
+  riser on one level shelf it does search for, the same shelf for every body, and
+  puts the cells back -- the one-metre riser was climbed by either body of the
+  frog with exactly one launch that is not the everyday one (**6.73**, inside the
+  **7.4** the row states, the two bodies agreeing to **0.02**) and the ground under
+  their feet a metre up, the animal lifted in **0** frames; at two metres, and with
+  nothing built, every launch of either body was **5.617** and no ground ever rose
+  under their feet. The extra height was the step and nothing else, to **0.02 m**.
+- `test/shots.js` grew the one place rig that changes the valley -- a bank one
+  block tall and five wide across the corridor the gait films are shot in, which
+  every other place rig puts back before it starts -- and two films out of it:
+  `climbwild` (one of the valley's own frogs, `push 6.73`, standing on the bank
+  top) and `climb` (the body worn from that animal at the same face,
+  `push 6.728`). The tripod had to learn to frame a step rather than a walking
+  line, and the step had to be built away from the lens: framed through the step
+  the body was hidden for 4 frames of 10.
+
+What that round left open: issues 13, 14 and 15 stood as written, and 16 was new
+-- an animal moved as a point with probes and drawn as a box, so an animal
+stopped by a wall is drawn with its nose inside the wall.
+
+### Two rounds back: one animal, one record (9ad3323, 80c9da4, 7d8e668, 1c9a871)
 
 > This was the block at the top of the file until the round above superseded
 > it. Its issues (12 closed, 15 opened) are still the ones it names; the state
-> it describes is two rounds old.
+> it describes is older still.
 
 State at time of writing: this round is three commits -- `9ad3323` the change,
 `80c9da4` the measurements that follow it, `7d8e668` the docs written against the
@@ -2006,12 +2158,13 @@ only (CJK inside string/regex literals is fine).
     36.4% and 44.7% for the two films -- the share counts the arcs a window
     happens to catch). The worn body crosses ground at **1.80 m/s** and water at
     **4.58**, the wild animal swims at **4.6**.
-- Frame order inside `Creature.update` (entities.js, the class begins at 1252):
-  steering + the horizontal step and its gate (~1400-2046) -> altitude (2049) ->
-  the hop gate (~2230-2350: the countdown at 2232, the launch the legs are given
-  at ~2307) -> the vertical fall (2351) -> the solid-exit correction (~2404) ->
-  the keep-apart shove (~2450-2510). The gate and the shove run in the same
-  frame, gate first.
+- Frame order inside `Creature.update` (entities.js, the class begins at 1276):
+  steering + the horizontal step and its gate (~1551-2069) -> altitude (2072) ->
+  the feet/water branch (its own ground read at 2129) -> the hop gate
+  (~2255-2340: the countdown at 2259, the launch the legs are sized at 2301, the
+  arc given at 2335) -> the vertical fall (~2350-2410) -> the solid-exit
+  correction (2417) -> the keep-apart shove (2440). The gate and the shove run
+  in the same frame, gate first.
 - The solid-exit correction lifts a body out of a hard block at
   `Math.max(0.1, 6*dt)` per frame and zeroes `vy` — a body inside a slab with
   air under the slab rides that lift straight up through the masonry.
@@ -2035,11 +2188,19 @@ only (CJK inside string/regex literals is fine).
   and `game/src/{i18n,engine,world,worldgen,models,entities}.js`; then
   `const N = window.FRUTARIA; const w = new N.World(N.WORLD.w, N.WORLD.h, N.WORLD.d);
   N.generate(w, 20261008);`. `Particles` needs `gl = { createBuffer: () => ({}) }`.
-- Height functions (entities.js 857-1040): `groundY` scans down from `from`,
-  returns `y+1` of the highest solid (trees included); `terrainY` the same
-  but skips `TREE_BLOCK`; `standY(w,x,z,y) = terrainY(w,x,z, floor(y+0.6))`;
-  `roofY(w,x,z,from,top,soft)` scans UP from `from`, first solid not in
-  `soft || TREE_BLOCK`; `airCell` = not liquid and (not solid or FOLIAGE).
+- Height functions (entities.js 968-1160): `rockAt(w,x,y,z)` is the one
+  statement of which cells are ground to a body -- solid and not in `TREE_BLOCK`
+  -- and `terrainY`, `bodyInSolid`, the animal's step gate and the solid-exit
+  correction all ask it; the other table, `FOLIAGE` (a trunk is a wall, a crown
+  is not), is asked only by the span a walker is refused and the roof a hop is
+  refused. `groundY` scans down from `from`, returns `y+1` of the highest solid
+  (trees included); `terrainY` the same but skipping trees;
+  `standY(w,x,z,y) = terrainY(w,x,z, floor(y+STAND_SCAN))` with `STAND_SCAN`
+  0.6, and `LIFT_REACH` = 1.6 is the single name for how far a body may be
+  raised onto the ground in front of it -- six gates ask it, and it is why
+  `STAND_SCAN` is what it is; `roofY(w,x,z,from,top,soft)` scans UP from `from`,
+  first solid not in `soft || TREE_BLOCK`; `airCell` = not liquid and (not solid
+  or FOLIAGE).
 - Chrome harness: `node game/test/play.js` drives `game/index.html` through
   puppeteer-core + `/usr/bin/google-chrome` with
   `--no-sandbox --disable-gpu --enable-unsafe-swiftshader --use-gl=angle
