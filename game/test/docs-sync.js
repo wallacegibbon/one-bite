@@ -68,10 +68,11 @@ const LANGS = [
   {
     tag: 'en',
     dir: DOCS,
-    files: { zones: '02-map-and-scenes.md', fruits: '04-fruit-and-transformation.md', storage: '05-backpack-and-storage.md', life: '06-quests-and-progression.md' },
+    files: { zones: '02-map-and-scenes.md', creatures: '03-characters-and-creatures.md', fruits: '04-fruit-and-transformation.md', storage: '05-backpack-and-storage.md', life: '06-quests-and-progression.md' },
     heads: {
       zones: '## 2. Zone Table',
       poi: '## 3. Points of Interest (POI)',
+      creatures: '| id | 中文 | English | Model | scale | Habitat | Activity | Speed | turn | Alert | Herd | Fruit |',
       rarity: '| Rarity | English | Slots | Dormancy | Regrow | Ring |',
       storage: '| Tier | Name | Slots | Decay | Count | Location |',
       life: '| id | Deed | What it hands over | Where the valley sees it |'
@@ -157,6 +158,45 @@ for (const L of LANGS) {
       }
       if (n !== N.POIS.length) bad(`${T} 02 POI count`, n, N.POIS.length);
       else good(`${T} POI table: all ${n} rows match, display names included`);
+    }
+  }
+
+  /* ================= 3. creature table (03 s3) =================
+     The row that moves every animal in the valley is copied by hand into the
+     chapter, and one of its cells had been copied as a different fact: the
+     chapter printed 5 where the record says `herd 8`, because by then the column
+     had become the number of bodies the valley happens to hold -- which is not on
+     any record at all, it is what `spawnCreatures` in src/game.js decides. A
+     number copied by hand is exactly the drift this file exists for, so every
+     number the row prints is compared with the record it prints it from. */
+  {
+    const rows = tableAfter(readIn(L, L.files.creatures), L.heads.creatures);
+    if (!rows) bad(`${T} 03 creature table`, 'missing', L.heads.creatures);
+    else {
+      let n = 0;
+      for (const r of rows) {
+        const id = unbacktick(r[0]);
+        const c = N.CREATURE_BY_ID[id];
+        if (!c) { bad(`${T} 03 creature id`, id, 'not found'); continue; }
+        n++;
+        if (unbacktick(r[3]) !== c.model) bad(`${T} 03 ${id} model`, unbacktick(r[3]), c.model);
+        if (num(r[4]) !== c.scale) bad(`${T} 03 ${id} scale`, num(r[4]), c.scale);
+        /* The motion cell carries the whole of what the record says about moving:
+           the speed, and whatever else the record states -- swimming, and the two
+           launches of a hop. Asked as an ordered list of the numbers rather than
+           as a sentence, so the chapter may phrase the cell as it likes and still
+           be wrong the moment one of the numbers is not the record's. */
+        const said = (String(r[7]).match(/\d+\.\d+|\d+/g) || []).map(Number);
+        const wants = [c.speed];
+        if (c.swimSpeed) wants.push(c.swimSpeed);
+        if (c.hop) wants.push(c.hop.up, c.hop.max || c.hop.up);
+        if (said.join(',') !== wants.join(',')) bad(`${T} 03 ${id} motion`, said.join(','), wants.join(','));
+        if (num(r[8]) !== c.turn) bad(`${T} 03 ${id} turn`, num(r[8]), c.turn);
+        if (num(r[9]) !== (c.alert || 12)) bad(`${T} 03 ${id} alert`, num(r[9]), c.alert || 12);
+        if (num(r[10]) !== (c.herd || 1)) bad(`${T} 03 ${id} herd`, num(r[10]), c.herd || 1);
+      }
+      if (n !== N.CREATURES.length) bad(`${T} 03 creature rows`, n, N.CREATURES.length);
+      else good(`${T} creature table: all ${n} rows are the record (model, scale, motion, turn, alert, herd)`);
     }
   }
 

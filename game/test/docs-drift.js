@@ -24,6 +24,12 @@ const DRIFTS = [
   ['02-map-and-scenes.md', '| `cellar` | Main Cellar | (136,134) | 20 |', '| `cellar` | Main Cellar | (136,134) | 21 |', 'POI y'],
   ['02-map-and-scenes.md', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r38 | (78,106) |', '| `mirrorlake` | Mirrorlake | 镜湖 | circle r30 | (78,106) |', 'zone radius'],
   ['03-characters-and-creatures.md', '| `cellarseed` | 窖树种 | Cellar Stone |', '| `cellarseed` | 窖树种 | Cellar Seed |', 'plant name coverage'],
+  // the creature table: every number in the chapter's row is copied out of
+  // game/data/creatures.js by hand, and one of those cells had been copied as a
+  // different fact (the population of the valley in place of the record's herd)
+  ['03-characters-and-creatures.md', '| 0.9 | 12 | 8 | Frog Pear |', '| 0.9 | 12 | 5 | Frog Pear |', 'the herd the creature table prints'],
+  ['03-characters-and-creatures.md', '| 1.8 (swim 4.6, hop 6.0–7.4) |', '| 1.8 (swim 4.6, hop 6.0–7.0) |', 'the two launches of a hop the creature table prints'],
+  ['03-characters-and-creatures.md', '| frog | 0.13 |', '| frog | 0.16 |', 'the scale the creature table prints'],
   ['05-backpack-and-storage.md', 'press F to use', 'press Q to use', 'unbound key claim'],
   // each phrase in the docs-sync `cut` list gets its own injection, so deleting
   // one entry from that list makes exactly one of these four go MISSED
