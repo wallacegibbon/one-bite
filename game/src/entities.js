@@ -148,23 +148,18 @@
      a bank three metres away, and at that distance the answer is to hop closer
      first, which is what it is doing anyway. */
   function leapTravel(up, speed) { return speed > 0 ? speed * (2 * up / GRAVITY) : 0; }
-  /* The crown of the rock in a column, within `up` metres above the feet, or -1
-     where the column holds no rock up there. Wood and leaves are not in this:
-     a body on foot walks through a bush with its shoulders in it and walks under
-     a crown (docs/03 s5), and neither is ground to be pushed off or a step to be
-     climbed (see `rockAt` in the step gate, which asks the same question). */
-  function rockTop(w, bx, bz, feet, up) {
-    for (let cy = Math.floor(feet + up); cy >= Math.floor(feet); cy--)
-      if (w.solidAt(bx, cy, bz) && !N.TREE_BLOCK[w.get(bx, cy, bz)]) return cy + 1;
-    return -1;
-  }
   /* The step in front of a body: the first face of ground above its own feet
      along the way it is heading, and how far off that face is. Read from the
      feet it has, so a body in the middle of an arc reads the same ground as the
-     one it pushed off. */
+     one it pushed off. The crown of a column is `terrainY`'s question -- rock,
+     wood and leaves excused -- read from the highest row the body's own legs
+     could land on: a column whose rock runs above that is a wall, and the
+     answer it gives is above the feet either way, which the filter below reads
+     as a riser too tall for the legs and the caller answers as a wall. */
   function riseAhead(w, x, z, y, ux, uz, reach, up) {
     for (let d = 0.1; d <= reach + 1e-6; d += 0.1) {
-      const t = rockTop(w, Math.floor(x + ux * d), Math.floor(z + uz * d), y, up);
+      const t = terrainY(w, Math.floor(x + ux * d), Math.floor(z + uz * d),
+        Math.floor(y + up));
       if (t > y + 0.05) return { rise: t - y, d: d };
     }
     return null;
@@ -974,6 +969,20 @@
     for (let y = from; y > 0; y--) if (w.solidAt(x, y, z)) return y + 1;
     return 1;
   }
+  /* The one statement of which cells are ground to a body: solid, and not part
+     of a tree. Every rule that asks "is this a bank" rather than "is this a
+     wall the body's shoulders go through" asks it here -- the crown of a column
+     below, the riser in front of the feet, the roof over a step top, the cell a
+     body is standing inside, the cell a body is asked to leave. Wood and leaves
+     are excused because a body on foot walks through a bush with its shoulders
+     in it and walks under a crown (docs/03 s5), and neither is ground to be
+     pushed off. The other table, `FOLIAGE`, excuses only the leaf and is used
+     where a trunk is a wall: the span a walker is refused, and the roof a hop is
+     refused. Which of the two a rule uses is a decision about the rule, and each
+     of them says so where it stands. */
+  function rockAt(w, x, y, z) {
+    return w.solidAt(x, y, z) && !N.TREE_BLOCK[w.get(x, y, z)];
+  }
   /* The same column read again, but this time for the ground rather than for
      the highest thing in the way. A crown and the trunk that holds it up are
      solid -- a body can climb a tree and stand on it, and the player does --
@@ -984,8 +993,7 @@
   function terrainY(w, x, z, from) {
     const bx = x | 0, bz = z | 0;
     for (let y = from; y > 0; y--) {
-      if (!w.solidAt(bx, y, bz) || N.TREE_BLOCK[w.get(bx, y, bz)]) continue;
-      return y + 1;
+      if (rockAt(w, bx, y, bz)) return y + 1;
     }
     return 1;
   }
@@ -1003,11 +1011,25 @@
      feet rather than from the top of the column. A body stands on the top of
      the highest block level with its feet or a step above them, and walks
      through the bush with its shoulders in it. The bound is exact: a surface at
-     most 1.6 m above the feet is the top of a block at most floor(y + 0.6),
-     which is what the step test implies -- when that test lets a step through,
-     the two answers are the same block. */
+     most `LIFT_REACH` above the feet is the top of a block at most
+     `floor(y + STAND_SCAN)`, which is what the step test implies -- when that
+     test lets a step through, the two answers are the same block. */
+  /* How far above its own feet a body may be raised onto the ground it is
+     standing in front of. Six places ask it, and they are one law and not six
+     numbers: the gate that decides a column is walkable, the gate that decides a
+     riser is a step and not a wall, the read of the step in front of the feet,
+     the test that a climb already begun is still worth finishing, the test that
+     the body is standing on its own ground rather than floating over it, and the
+     place that asks whether another body could be put down here at all. It is
+     not the reach of a hop -- `hopReach` is that, and it is asked of the legs a
+     row states instead -- and it is what bounds the column read above, which is
+     written as its own literal because `LIFT_REACH - 1` is not `0.6` in binary
+     floating point and that row is the difference between reading a block and
+     not reading it. */
+  const LIFT_REACH = 1.6;
+  const STAND_SCAN = 0.6;
   function standY(w, x, z, y) {
-    return terrainY(w, x, z, Math.floor(y + 0.6));
+    return terrainY(w, x, z, Math.floor(y + STAND_SCAN));
   }
   /* Whether a water animal may be in this column at all -- the same test the
      spawn code makes: the column has to hold at least two blocks of water, so
@@ -1234,7 +1256,7 @@
        floating a metre and a half over the bed of the lake, which is where every
        frog in Mirrorlake spends the afternoon. */
     const gy = standY(w, bx, bz, c.y);
-    return gy - c.y < 1.6 && !w.solidAt(bx, Math.floor(gy + 0.2), bz);
+    return gy - c.y < LIFT_REACH && !w.solidAt(bx, Math.floor(gy + 0.2), bz);
   }
   /* The cell a body would be standing in at a place, asked of the body's own
      height rather than of the ground under it. `bodyRoom` above answers the
@@ -1248,7 +1270,7 @@
      in it, and a crown is not a wall. */
   function bodyInSolid(w, c, x, z) {
     const bx = Math.floor(x), by = Math.floor(c.y), bz = Math.floor(z);
-    return w.solidAt(bx, by, bz) && !N.TREE_BLOCK[w.get(bx, by, bz)];
+    return rockAt(w, bx, by, bz);
   }
 
   class Creature {
@@ -1789,7 +1811,7 @@
           const stand = (x, z) => {
             const bx = Math.floor(x), bz = Math.floor(z);
             const gy = standY(world, bx, bz, this.y);
-            if (gy - this.y >= 1.6) return false;
+            if (gy - this.y >= LIFT_REACH) return false;
             /* One cell over the surface is the whole of the difference between a
                wall and air for a walker, which is why this gate looked innocent:
                of the 2,684 wood cells of this valley 1,830 sit on wood and 843
@@ -1863,7 +1885,6 @@
              body already in the middle of a climb keeps climbing: it is above its
              own ground by then, which is what the second test would otherwise
              mistake for being in the air. */
-          const rockAt = (x, y, z) => world.solidAt(x, y, z) && !N.TREE_BLOCK[world.get(x, y, z)];
           /* A body whose only way up is a jump has no lift, and the lift is what
              the rest of this gate does: it raises the feet onto a surface at a
              rate while the body stands in front of it, which is a body sliding up
@@ -1876,8 +1897,11 @@
              a wall, and the body goes round a wall the way it goes round any
              other. Only on foot: a body the water is holding up comes out of the
              water by swimming up onto the shelf it stands on, which is the law
-             the altitude block below already keeps for the lake's shore. */
-          const hopRow = this.isAmphibian() ? sp.hop : null;
+             the altitude block below already keeps for the lake's shore.
+             Which body that is is asked of the row and not of the species: the
+             record is what says a body's legs are an arc, and the laws that ask
+             `locomotion` are the water ones. */
+          const hopRow = sp.hop || null;
           const legs = hopRow && !inWater;
 
           /* A body is on its feet unless something is carrying it down. Reading
@@ -1889,16 +1913,15 @@
           const onFoot = inWater || this.vy > -1;
           const riser = (x, z) => {
             const bx = Math.floor(x), bz = Math.floor(z), cell = Math.floor(this.y + 0.05);
-            if (!rockAt(bx, cell, bz)) return 0;
+            if (!rockAt(world, bx, cell, bz)) return 0;
             return standY(world, bx, bz, this.y);
           };
-          const placeable = stand;
           /* Where this body may go: 0 for "walk there", a height for "raise the
              feet onto that surface first, where it stands", null for "that is a
              wall". A body cannot raise itself through a ceiling, so a step with
              rock over it is a wall and not a step. */
           const can = (x, z) => {
-            if (!placeable(x, z)) return null;
+            if (!stand(x, z)) return null;
             /* A neighbour's own trunk is as much an obstacle as a bank is, and
                the contour below takes the body round it the same way. */
             if (crowded(x, z)) return null;
@@ -1909,14 +1932,14 @@
                a ledge and fell alongside the next one was lifted 0.83 m back up it
                in a single frame, because the step read as ground and the body was
                eased onto it. */
-            if (!onFoot || r - this.y > 1.6) return null;
-            /* The 1.6 above is how far a body that can lift itself onto a step
+            if (!onFoot || r - this.y > LIFT_REACH) return null;
+            /* LIFT_REACH is how far a body that can lift itself onto a step
                reaches. For a body whose legs are the only way up, the question is
                asked of its own legs instead -- see `legs` above -- so a step of
                1.3 m, which a lifted body climbs, is a wall to a frog and the
                contour below takes it round. */
             if (legs && r - this.y > hopReach(hopRow)) return null;
-            if (rockAt(Math.floor(this.x), Math.floor(r + 0.05), Math.floor(this.z))) return null;
+            if (rockAt(world, Math.floor(this.x), Math.floor(r + 0.05), Math.floor(this.z))) return null;
             return r;
           };
           const go = can(mx, mz);
@@ -1926,15 +1949,15 @@
             const ux = Math.sin(this.yaw), uz = -Math.cos(this.yaw);
             for (let d = 0.35; d <= 1.4; d += 0.35) {
               const s = standY(world, Math.floor(this.x + ux * d), Math.floor(this.z + uz * d), this.y);
-              if (s - this.y > 0.05) return s - this.y <= 1.6 ? { d: d, s: s } : null;
+              if (s - this.y > 0.05) return s - this.y <= LIFT_REACH ? { d: d, s: s } : null;
             }
             return null;
           };
           /* A climb already begun is finished: dropping it in the middle would let
              the ground under the body's feet reappear and the body fall back down
              the step it was on its way up. */
-          const worth = (r) => r && r > this.y + 0.02 && r - this.y <= 1.6 &&
-            !rockAt(Math.floor(this.x), Math.floor(r + 0.05), Math.floor(this.z));
+          const worth = (r) => r && r > this.y + 0.02 && r - this.y <= LIFT_REACH &&
+            !rockAt(world, Math.floor(this.x), Math.floor(r + 0.05), Math.floor(this.z));
           if (go === 0) {
             this.x = mx; this.z = mz;
             /* A step is begun before the face of it. A body that only learns about
@@ -1956,7 +1979,7 @@
                of it is how a frogpear climbed out of Mirrorlake into the air, three
                metres over the surface of the water it was swimming in, and fell
                back into it. */
-            const sa = onFoot && this.y - standY(world, Math.floor(this.x), Math.floor(this.z), this.y) <= 1.6
+            const sa = onFoot && this.y - standY(world, Math.floor(this.x), Math.floor(this.z), this.y) <= LIFT_REACH
               ? stepAhead() : null;
             if (sa && worth(sa.s) && !legs) {
               this.climbTo = sa.s;
@@ -2150,15 +2173,17 @@
            the solid after six hundred of them. A body with its feet in the rock
            is already inside the world, and the lift does there what it has
            always done: carries it onto the floor at the rate. */
-        const feetHard = world.solidAt(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z))
-          && !N.TREE_BLOCK[world.get(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z))];
+        const feetHard = bodyInSolid(world, this, this.x, this.z);
         let gyH = gyH0;
         if (!feetHard) {
           const roofOwn = roofY(world, Math.floor(this.x), Math.floor(this.z),
             Math.floor(this.y) + 1, world.h, N.TREE_BLOCK);
           gyH = Math.min(gyH0, roofOwn - this.tall - 0.05);
         }
-        const hop = this.isAmphibian() ? sp.hop : null;
+        // which bodies have an arc is what the row says; the two water reads
+        // below ask `locomotion`, because those are about the water and not the
+        // legs (see `hopRow` and `legs` in the step gate above)
+        const hop = sp.hop || null;
         // the cell convention, one below the surface: `room` below counts the
         // blocks of water between the bottom and the surface, and wants at least
         // two of them (see `liquidSurfaceAt` in world.js)
@@ -2357,8 +2382,8 @@
           } else {
             this.y = gyH; this.vy = 0;
           }
-          if (this.isAmphibian()) {
-            const airWant = hop && this.y > gyH + 0.02 ? 1 : 0;
+          if (hop) {
+            const airWant = this.y > gyH + 0.02 ? 1 : 0;
             this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
             this.crouch = this.y <= gyH + 0.02 ? this.wind : 0;
           }
@@ -2390,7 +2415,7 @@
          frames of a body moving more than 0.9 m in one frame, before and after. */
       {
         const gx = Math.floor(this.x), gy2 = Math.floor(this.y), gz = Math.floor(this.z);
-        if (world.solidAt(gx, gy2, gz) && !N.TREE_BLOCK[world.get(gx, gy2, gz)]) {
+        if (rockAt(world, gx, gy2, gz)) {
           /* Out, and at a rate. The distance is closed at up to 0.1 m a frame:
              in the running valley every one of these corrections is a body a few
              centimetres under the surface it stands on (measured: 85 of them in
@@ -2399,8 +2424,15 @@
              *inside* something by a metre -- put down there, or pushed there by a
              rule that has not been thought of -- which is lifted out over a
              quarter of a second instead of being thrown through the bank in one
-             frame. */
-          const out = groundY(world, gx, gz, gy2);
+             frame.
+             The surface it is asked to reach is the top of the cell it is inside:
+             the guard above only opens on a rock cell at the body's own height,
+             so the column cannot hold anything higher that this body belongs
+             above. Reading the column instead -- which this used to do, with
+             `groundY` -- can only answer the same number, and asks it as though
+             a crown lower down in the column could be the floor of a body the
+             guard has just found inside rock. */
+          const out = gy2 + 1;
           if (out > this.y) this.y = Math.min(out, this.y + Math.max(0.1, 6 * dt));
           this.vy = 0;
         }
