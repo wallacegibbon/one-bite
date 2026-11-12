@@ -106,7 +106,7 @@ node game/test/node-smoke.js   # no browser: data → generation → meshing (fa
 node game/test/probe.js        # camera spots and water depth for each zone / POI
 node game/test/reach.js        # every declared data field is either read by the code or listed as not built
 node game/test/docs-sync.js    # docs ↔ data consistency (exit 1 on drift)
-node game/test/docs-drift.js   # self-test: injects 29 errors into the docs, confirms docs-sync catches each one
+node game/test/docs-drift.js   # self-test: injects 32 errors into the docs, confirms docs-sync catches each one
 node game/test/play.js         # gameplay loop: harvest → regrow → capacity → transform → storage → cellar tree → save
 node game/test/save.js         # save round trip: write a save, reload, continue from the start screen
 node game/test/upgrade.js      # backpack upgrades and slot maths

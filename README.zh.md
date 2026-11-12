@@ -105,7 +105,7 @@ node game/test/node-smoke.js   # 无浏览器：数据 → 生成 → 网格化�
 node game/test/probe.js        # 各区域/POI 的取景点与水深
 node game/test/reach.js        # 数据里声明的每个字段：要么被代码读到，要么被列成"没做"
 node game/test/docs-sync.js    # 文档 ↔ 数据一致性（不一致 exit 1）
-node game/test/docs-drift.js   # 自检：向文档注入 29 处错误，确认 docs-sync 每一处都能抓到
+node game/test/docs-drift.js   # 自检：向文档注入 32 处错误，确认 docs-sync 每一处都能抓到
 node game/test/play.js         # 玩法闭环：采集→重生→容量→变形→存取→窖树→存档
 node game/test/save.js         # 存档往返：写入存档、重新加载、从开始界面继续
 node game/test/upgrade.js      # 背包升级与果格数学

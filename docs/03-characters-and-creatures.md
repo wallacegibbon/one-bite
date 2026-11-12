@@ -55,11 +55,20 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 
 ## 3. Creature table
 
-| id | 中文 | English | Model | scale | Habitat | Activity | Speed | turn | Alert | Pack | Fruit |
+| id | 中文 | English | Model | scale | Habitat | Activity | Speed | turn | Alert | Herd | Fruit |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6, hop 6.0–7.4) | 0.9 | 12 | 5 | Frog Pear |
+| `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6, hop 6.0–7.4) | 0.9 | 12 | 8 | Frog Pear |
 
 Distribution of the 5 individuals in the valley: frog 5.
+
+**That table is the row, cell for cell, and `test/docs-sync.js` reads it back out
+of `game/data/creatures.js` to keep it that way.** Two numbers near it are not
+the same fact and were mixed up once: the `herd` of the record is the animal's
+own — the code asks only whether it is more than one, which is whether this
+animal walks back towards the middle of its kind when it has wandered far — and
+how many bodies the valley actually holds is on no record at all, it is what
+`spawnCreatures` in `src/game.js` decides, which today is 5 frogs. So the row
+carries 8 and the valley carries 5, and the chapter's table prints the row.
 
 **This row is the only place an animal's motion is written, and it is read by both
 bodies.** `speed`, `swimSpeed`, `hop` (two launches and the seconds between them:
