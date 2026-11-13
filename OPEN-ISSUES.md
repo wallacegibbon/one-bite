@@ -7,12 +7,15 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is three commits -- `49848f6` a body with
-legs answers a shore, a wall and a ceiling with its own legs, and no body record
-carries a lift, `f57af60` the herd on a record and the population of a valley
-being two facts with two numbers, `f76f0e4` the chapters saying what a shore is
-and what a lift cost -- and this
-record, the docs-only commit that follows them on the same tree. The full suite
+State at time of writing: this round is six commits. Five are already made:
+`49848f6` a body with legs answers a shore, a wall and a ceiling with its own
+legs, and no body record carries a lift, `f57af60` the herd on a record and the
+population of a valley being two facts with two numbers, `f76f0e4` the chapters
+saying what a shore is and what a lift cost and which body reads a roof,
+`c8255e3` the record of that work, `d0ee9b6` the test chapter naming the same two
+bodies at the same roof and the same flooded bank. This record is the sixth, the
+docs-only commit that follows them on the same tree and names all of them. The
+full suite
 ran twice on this tree: both runs 10/10, with `0 CHECK FAILED` and no page errors
 in `/tmp/frutaria-play.log`; the doc gates are clean on it too (`extract-comments`
 -> `[]` and `occurrences: 0, unique: 0`; `docs-sync` all-consistent; `docs-drift`
