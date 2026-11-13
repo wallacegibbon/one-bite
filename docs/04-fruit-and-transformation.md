@@ -72,7 +72,6 @@ sit here looking implemented while nothing reads it.
 | `dryTimer` | seconds out of water before the skin starts to dry (amphibian bodies) | only the frog, 90 | live |
 | `nightVision` | brightening in the dark, 0–1, and the same eye overwhelmed by daylight | frog 0.3 | live |
 | `stealth` | creature alert-radius multiplier | frog 0.5 = hard to spot | live |
-| `step` | auto step-up height in metres | human 0.55 / frog 0.3 — the height a body steps up without jumping | live |
 | `fov` | field of view | human 76 / frog 100 | live |
 
 `tongue` used to sit on this table (frog, 4 m of plucking reach). It is gone: the
@@ -105,6 +104,20 @@ nobody: a person still crosses at 4.7 m/s. `game/test/shots.js` films the same
 claim: the `hop` strip and the `animal` strip run one window of 2.2 s over the same
 corridor, one through a body worn from a frog and one through the animal itself,
 and both films come back with an arc of 0.73 m and a launch of 5.617 m/s.
+
+**A lift went with them, and it belonged to the box and not to the legs.**
+`step` used to sit on the table above: the height a body was raised over a face
+it walked into, without asking its legs — **0.55 m** on the record you start in,
+**0.3 m** on the frogpear's. Nothing in this valley is built out of less than a
+whole block, so the shortest riser anywhere is a metre and neither number reached
+it: the field never once carried a body up a step, and everything it did buy was
+a box rising by itself — 0.124 m at a bank of one metre, which is the wobble at
+the water's edge that the movement chapter counts and stops. It is gone, from
+this table and from both records. What a body has is the launch its own row
+states, and a launch has a reach: **1.50 m** above its own feet for the body you
+start in, **1.09 m** at the fullest extension of a frog's legs (03 §3). Which
+steps that puts in front of which body is a difference between two animals, and
+it is meant to be one.
 That launch is what the legs spend on level ground, and one number cannot answer a
 step in front of the feet: the same row states the fullest extension of those same
 legs (`max: 7.4`) and spends it only at a step, sized to that step and no higher —
