@@ -91,6 +91,28 @@
      ground is a ground to stand on, feet and all. Both bodies ask the question of
      the same number, so neither is held up in water the other stands in. */
   function bedFloor(bedTop, tall) { return bedTop + tall * 0.5; }
+  /* Whether the water of a column is holding a body up, rather than being a
+     bottom it stands on: the film of it has to stand at least **two whole
+     blocks** over the surface that body's feet would find there. One block is a
+     shore shelf -- 183 columns of Mirrorlake are that shelf -- and a body
+     standing in one has feet: it wades, it walks, it pushes off with its legs.
+     Two is water a body can hang in: its own height plus the depth its row
+     states, clear of the bottom. The count is asked of the place and never of
+     where the body happens to sit in it, because a rule that turns on the
+     body's own height switches the force law back and forth as the body crosses
+     its own equilibrium and builds a sawtooth out of nothing -- that was the
+     bug the water branch of this file was last fixing.
+     Four readers ask it and they are one law: whether a water animal may be
+     born and live in a column (`waterColumn`), whether the body you wear is
+     held up or stands (`heldUp` in `Player.update`), whether the animal's own
+     body is (`held`, and the water branch of its altitude), and whether a body
+     is on its feet when it meets a bank (`legs` in the step gate). The last of
+     those is what says an animal climbs out of the lake the way it moves
+     everywhere else: a body whose row states a hop is never lifted up a bank on
+     straight legs, in water or out of it. Both heights are heights and not cell
+     indices -- see `liquidSurfaceAt` and `groundY` in world.js, and the cell
+     convention restated where each reader stands. */
+  function waterHoldsUp(surface, bedTop) { return surface - bedTop >= 2; }
 
   /* How hard this body pushes off the ground with its feet, in m/s of launch.
      A body that jumps states that as `jump`; a body that hops states it as
@@ -114,11 +136,11 @@
 
   /* A step is climbed with the legs a body has, and a body that hops has one
      kind of leg: it either leaves the ground or it does not. For a body that
-     walks on two feet there is a middle answer -- the feet lift the body onto a
-     low surface without a jump, which is `step` on its record and is what the
-     player's own body does and the person you start as does up to half a metre.
-     A hopper has no such thing, so the step in front of it is a question about
-     its launch instead: how hard do the legs push to land on that surface?
+     walks there is a middle answer -- the feet lift the body onto a low surface
+     without a jump, and that is what the animal's step gate does for a body
+     whose row states no arc. A hopper has no such thing, so the step in front
+     of it is a question about its launch instead: how hard do the legs push to
+     land on that surface?
      `hop.up` is the everyday launch, the one an animal gives a hop it has no
      reason to size; `hop.max`, where a row states one, is the fullest extension
      of the same legs, asked only when the ground the body wants to stand on is
@@ -176,6 +198,39 @@
     if (!up) return 0;
     if (face.d + half > leapTravel(up, speed)) return hop.up;
     return up;
+  }
+  /* Whether the arc a body is about to push off into has the sky over it. The
+     roof is not the cell over the body's head: an arc goes forward as far as it
+     goes up -- `speed * up / g` metres of ground before its top -- so a launch
+     read only over the column a body stands in lets it hop out of open sky into
+     a column whose beam is over its head while it stands and through its body at
+     the top of the arc. Measured on one frog walked at a trunk block two cells
+     over a shelf at 24: 14 of its 480 frames with its head 0.16 m inside that
+     block and its nearest wood at 0.31 m, having launched in the open column next
+     door -- 26 airborne frames spent inside the column that block stands over,
+     and not one push-off from it. So the roof is the lowest underside over the
+     columns the arc is spent over: one column ahead for each metre the arc will
+     have travelled by its top, and the cells the body's own box reaches into at
+     push-off, because the centre can stand a hand's width past the edge of a low
+     ceiling with half the body still under it.
+     Leaves are excused by the material table and a trunk is not: a body under a
+     crown hops, and a body under a beam does not (see `N.FOLIAGE` in world.js).
+     The one thing the two bodies in this file cannot share is the list of cells
+     a body stands across -- an animal stands in a rectangle turned by its own
+     heading, and the body you wear stands in the axis-aligned box its record
+     gives it -- so each of them hands that list over and the rest of the law is
+     one reading. A body that cannot clear the roof it is under does not load its
+     legs for the jump it is not going to make: the wind-up is held to the same
+     answer, and it goes the way it goes wherever the ground is open. */
+  function arcRoofClear(w, x, y, z, tall, fx, fz, spd, up, cols) {
+    const cx = Math.floor(x), cz = Math.floor(z), over = Math.floor(y) + 1;
+    const span = Math.max(1, Math.ceil((spd || 0) * up / GRAVITY));
+    let roof = roofY(w, cx, cz, over, w.h, N.FOLIAGE);
+    for (let k = 1; k <= span; k++)
+      roof = Math.min(roof, roofY(w, cx + Math.round(fx * k), cz + Math.round(fz * k),
+        over, w.h, N.FOLIAGE));
+    for (const c of cols) roof = Math.min(roof, roofY(w, c[0], c[1], over, w.h, N.FOLIAGE));
+    return roof - y >= arcOf(up) + tall;
   }
 
   /* ============================ player ============================ */
@@ -603,24 +658,17 @@
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
       /* ---- is the water deep enough to hold this body up at all? ----
-         The same test the creature step already makes for its own water
-         animals: compare the surface of the column with the level the body
-         would be standing at in it. A lake is a body of water the animal floats
-         in; a one-block shore shelf is a bottom it stands on and pushes off
-         from, and 183 columns of Mirrorlake are that shelf. Read once a frame
-         for a body that is in water, and deliberately not as a distance from
-         the body to the surface: a rule that turns on and off as the body
-         crosses its own equilibrium switches the force law back and forth and
-         builds a sawtooth out of nothing, which is the bug this file was last
-         fixing. Depth of the column is a property of the place, not of the
-         body's height, so it cannot chatter. */
-      /* the cell convention again, one below the surface height: this asks
-         whether the column holds water deep enough past the level the body would
-         stand at for the water to be holding the body rather than the body
-         standing on the bottom -- see `liquidSurfaceAt` in world.js. */
-      const wt = this.inWater ? wSurf - 1 : -1;
+         `waterHoldsUp`, asked of this column: the film of it standing over the
+         surface this body's feet would stand on. A lake is a body of water the
+         animal floats in; a one-block shore shelf is a bottom it stands on and
+         pushes off from, and 183 columns of Mirrorlake are that shelf. Read once
+         a frame for a body that is in water, and asked of the place rather than
+         of the distance from the body to its own surface, for the reason argued
+         where that law stands. The ground of the column is kept as `bedTop`
+         because the floor of a dive is asked of it below, and the cell
+         convention needs no restating here: the law takes two heights. */
       const bedTop = this.inWater ? standY(W, cx, cz, this.y) : -1;
-      const heldUp = canBreathe && wt > bedTop;
+      const heldUp = canBreathe && this.inWater && waterHoldsUp(wSurf, bedTop);
 
       // ---- vertical ----
       if (this.inWater && (heldUp || !this.grounded)) {
@@ -758,16 +806,41 @@
            row, so the frog you wear climbs a bank the way the frog on the bank
            does. A riser above that extension is not sized at all: it is a wall,
            and the body stops at it, which is what it has always done.
-           Nothing here is asked of a body that is off the ground or in the
-           water's hold: a step is taken with feet. Nor is a roof asked: the
-           animal's body will not load its legs under a low ceiling and the worn
-           one still does, which is OPEN-ISSUES 15, unmeasured and still open. */
+           Nothing here is asked of a body that is off the ground, or of one the
+           water is holding up: a step is taken with feet, and a body the water
+           carries has none under it. A body standing in shallow water is a body
+           with feet -- the same animal, the same bank, one metre from the place
+           where it jumps -- and it sizes the step in front of it there too, which
+           is what the animal's own body does at the lake's shore. And the roof
+           over the arc is asked: see `skyFor` below, which is the same reading
+           the animal's own body asks of the same material table. */
+        const aimX = () => (len > 0 ? dx : Math.sin(this.faceYaw));
+        const aimZ = () => (len > 0 ? dz : -Math.cos(this.faceYaw));
         const legsFor = (hop) => {
-          if (!hop || !this.grounded || this.inWater) return launchOf(L);
-          const ux = len > 0 ? dx : Math.sin(this.faceYaw);
-          const uz = len > 0 ? dz : -Math.cos(this.faceYaw);
-          return hopLaunchNow(hop, W, this.x, this.y, this.z, ux, uz,
+          if (!hop || !this.grounded || heldUp) return launchOf(L);
+          return hopLaunchNow(hop, W, this.x, this.y, this.z, aimX(), aimZ(),
             this.size()[0] / 2, speed) || launchOf(L);
+        };
+        /* Whether the arc those legs would give has the sky over it -- the same
+           ask, over the same material table and the same reach of arc, that the
+           animal's own body makes a few hundred lines below (`arcRoofClear`).
+           It is asked only of a body whose record states a `hop`, because that is
+           the body the animal's answer belongs to: the animal will not load its
+           legs for a jump it cannot finish and walks instead, and the body worn
+           from that animal is the same animal. A person's `jump` is not asked: a
+           body that was never an animal keeps the answer its own record gives it.
+           The cells a body stands across are the one part the two cannot share:
+           this box is square along the ground, and the animal's is a rectangle
+           turned by its own heading. */
+        const skyFor = (hop, up) => {
+          if (!hop) return true;
+          const half = this.size()[0] / 2;
+          const cols = [];
+          for (let bx = Math.floor(this.x - half); bx <= Math.floor(this.x + half); bx++)
+            for (let bz = Math.floor(this.z - half); bz <= Math.floor(this.z + half); bz++)
+              cols.push([bx, bz]);
+          return arcRoofClear(W, this.x, this.y, this.z, this.size()[1],
+            aimX(), aimZ(), speed, up, cols);
         };
         if (inp.jump && this.grounded) {
           /* The push key asks for this body's own launch -- 8.3 m/s for the body
@@ -782,9 +855,16 @@
              A body with one pair of legs has one answer to the push key and to
              its own hop, and that includes what the legs are asked to reach: the
              key at the foot of a step is the step the animal would take, so both
-             go through `legsFor`. */
-          pushOff(legsFor(L.hop));
-          if (hop) this.hopT = hop.period;
+             go through `legsFor`, and both are asked the same question about the
+             roof over them -- a frog under a low ceiling does not spring into it,
+             pushed there by a key or not. The body still goes: a body whose arc
+             is refused keeps being driven along the ground at its own cruise,
+             which is what the animal does under the same ceiling. */
+          const up = legsFor(L.hop);
+          if (skyFor(L.hop, up)) {
+            pushOff(up);
+            if (hop) this.hopT = hop.period;
+          }
         } else if (hop && this.grounded) {
           /* A body whose data says `hop` does not walk on land: it hops. The
              launch is an impulse and the arc is gravity's, so the animation and
@@ -801,13 +881,18 @@
              wear is the same animal. The countdown only runs with feet on the
              ground: a frog that lands stands, loads, and pushes off again. */
           if (len > 0) {
+            /* The everyday launch on level ground, the fuller one for the step in
+               front -- see `legsFor` above, which is the same ask the animal's own
+               body makes of its row -- and the same answer about the roof over it:
+               the wind is held to it, so the legs do not load for a hop the arc
+               has no sky for, and a frog worn under a low ceiling walks out the
+               way the frog it is worn from does. */
+            const up = legsFor(hop);
+            const sky = skyFor(hop, up);
             this.hopT -= dt;
-            this.wind = Math.min(1, this.wind + dt / 0.16);
-            if (this.hopT <= 0) {
-              /* The everyday launch on level ground, the fuller one for the step
-                 in front -- see `legsFor` above, which is the same ask the
-                 animal's own body makes of its row. */
-              pushOff(legsFor(hop));
+            this.wind = sky ? Math.min(1, this.wind + dt / 0.16) : 0;
+            if (this.hopT <= 0 && sky) {
+              pushOff(up);
               const k = speed;
               this.vx += (dx * k - this.vx) * 0.6;
               this.vz += (dz * k - this.vz) * 0.6;
@@ -840,56 +925,37 @@
         : 0;
       this.tilt += (tiltWant - this.tilt) * N.ease(4.5, dt);
 
-      // ---- displacement (sub-stepped + auto step-up) ----
-      const step = f.step || 0;
+      // ---- displacement (sub-stepped) ----
       const wasGrounded = this.grounded;
       const vyBefore = this.vy;                 // the speed it arrives at the ground with
       this.grounded = false;
       let moved = 0;
       const steps = Math.max(1, Math.ceil((Math.hypot(this.vx, this.vz) * dt) / 0.25));
+      /* There is no lift here, and there used to be one: when the move was
+         blocked the box was raised by up to `step` -- 0.55 m for the body a
+         person wears, 0.3 for the frog's -- and the move tried again from there.
+         It could never reach anything. The ground of this valley is whole
+         blocks, so the shortest riser anywhere is a metre, and a body standing
+         on a surface is stopped by a block whose top is a metre over that
+         surface until it is a whole metre up: less than that and the box is
+         still inside the block. Measured, the lift gained 0.124 m in three
+         seconds at a bank of one metre; and what it did buy was often nothing,
+         because the retry from the lifted height was handed the speed the
+         collision had already zeroed along the axis it had to stop, so the body
+         never moved and the lift was kept anyway -- a human pressed against a
+         wall stood on the ground in 34% of the frames and its height swung
+         0.124 m within a second, and even with nothing built in front of it it
+         was on the ground in only 89% with the same swing. That was the wobble
+         at the water's edge. It was fixed twice over: first by re-handing the
+         move and throwing a lift that bought nothing, and then by deleting it.
+         A body of any shape in this valley climbs a metre with the launch its
+         record states -- `jump` for a person, `hop` for the animal -- and stops
+         at a face it cannot launch over. That is one law for every body, which
+         is what the animal's own rows have always said. */
       for (let i = 0; i < steps; i++) {
         const sdt = dt / steps;
-        // auto step-up
-        if (step > 0 && (wasGrounded || this.grounded) && !this.inWater) {
-          const ox = this.x, oz = this.z;
-          /* The move the body asked for, read off the speed **before** `axis`
-             runs: `axis` zeroes the speed along the axis it had to stop, so the
-             retry below used to be handed a zero and never moved the body at
-             all. The lift was then kept although it had bought nothing, and a
-             body pressed against a wall it cannot climb was raised 0.15 m a
-             frame and had to fall back: walked at a bank two metres tall on one
-             flat shelf, a human stood on the ground in 34% of the frames and
-             its height swung 0.124 m within a second, and even with nothing
-             built in front of it the human was on the ground in 89% with the
-             same swing. That is the wobble at the water's edge. And the lift
-             had never once carried a body up a step it could reach: walked at
-             a step of one metre, the body gained 0.124 m in three seconds. */
-          const wx = this.vx * sdt, wz = this.vz * sdt;
-          let hit = this.axis('x', wx);
-          hit = this.axis('z', wz) || hit;
-          if (hit) {
-            const bx = this.x, bz = this.z;      // where the blocked move left it
-            let done = false;
-            for (let up = 0.15; up <= step + 1e-6 && !done; up += 0.15) {
-              const oy = this.y;
-              this.y = oy + up;
-              if (this.hits(this.x, this.y, this.z)) { this.y = oy; continue; }
-              this.x = ox; this.z = oz;
-              this.axis('x', wx); this.axis('z', wz);
-              /* A lift is worth its height only when the body ends up somewhere
-                 its own feet could not reach. Where it lands back at the place
-                 the blocked move left it, what is in front of the body is not a
-                 step: it is a wall taller than the body can climb, and the body
-                 goes back down to its feet and stands there. */
-              if (Math.hypot(this.x - bx, this.z - bz) < 1e-4) { this.y = oy; continue; }
-              if (!this.hits(this.x, this.y - 0.02, this.z)) this.y -= 0.02;
-              done = true;
-            }
-          }
-        } else {
-          this.axis('x', this.vx * sdt);
-          this.axis('z', this.vz * sdt);
-        }
+        this.axis('x', this.vx * sdt);
+        this.axis('z', this.vz * sdt);
         this.axis('y', this.vy * sdt);
         moved += (Math.abs(this.vx) + Math.abs(this.vz)) * sdt;
       }
@@ -908,10 +974,11 @@
          whole time it stands on the bottom: air pose, and a third of the push it
          should have (accel 12 against 34). So after the displacement, feet
          within 2 cm of a solid and the body not rising means it is standing.
-         2 cm is the distance the step-up above already uses to settle a body
-         back onto the ledge it just climbed, and it is far less than the fall a
-         body accumulates once it has actually left a surface -- 0.006 m in the
-         first frame of a drop, 0.10 m by the fifth -- so a body that walked off
+         2 cm is a hand's width off the surface -- far more than the 0.0015 m of
+         parking and sampling the collision leaves, and
+         far less than the fall a body accumulates once it has actually left a
+         surface -- 0.006 m in the first frame of a drop, 0.10 m by the fifth --
+         so a body that walked off
          a step is airborne again within a frame or two. */
       if (!this.grounded && this.vy <= 0 && this.colAt(this.x, Math.floor(this.y - 0.02), this.z)) this.grounded = true;
       // what the animation is allowed to know
@@ -1032,8 +1099,9 @@
     return terrainY(w, x, z, Math.floor(y + STAND_SCAN));
   }
   /* Whether a water animal may be in this column at all -- the same test the
-     spawn code makes: the column has to hold at least two blocks of water, so
-     there is somewhere to hover. Testing one cell at the animal's feet instead
+     spawn code makes, and the same `waterHoldsUp` every other reader asks: the
+     column has to hold at least two blocks of water, so there is somewhere to
+     hover. Testing one cell at the animal's feet instead
      rejects an animal that bobs, and testing only "is there water anywhere"
      lets it climb a one-block shelf, stand above the surface, and walk out of
      the lake on its own feet. Returns the water top, or -1 for "not water".
@@ -1063,7 +1131,7 @@
     const wt = waterTop(w, Math.floor(x), Math.floor(z), w.h - 1);
     if (wt < 0) return -1;
     const gy = groundY(w, Math.floor(x), Math.floor(z), wt);
-    return wt + 1 - gy >= 2 ? wt : -1;
+    return waterHoldsUp(wt + 1, gy) ? wt : -1;
   }
   /* How far a body's nose reaches from its own centre, in metres: the forward
      extent of the model at the scale the species draws at. Every model faces
@@ -1562,6 +1630,17 @@
       this.wSurf = wSurf;
       // cleared for the frame, and set by the branch that is actually in the water's hold
       this.held = 0;
+      /* What is holding this body up: the water of the column it stands in, or
+         its own feet. One law (`waterHoldsUp`), asked twice a frame -- by the
+         step gate below and by the altitude below that -- and each of them asks
+         it of the ground at the position it is itself deciding about, because a
+         body may cross the edge of a column between the two. Asking the same
+         question twice is the point: a body must not be told it is swimming by
+         one rule and lifted up a bank like a crate by the other. Whether the
+         species belongs to the water at all belongs to the body, not to the
+         column: a body that was not built for the lake stands in it whatever the
+         depth of it, and nothing holds it up. */
+      const waterHolds = (bed) => this.isAmphibian() && inWater && waterHoldsUp(wSurf, bed);
       const yaw0 = this.yaw;       // before steering, so the turn rate is measurable
       /* Which other bodies this one is already inside, and how deep. A step into
          a place another body's trunk holds is refused the way a wall is refused,
@@ -1895,14 +1974,26 @@
              extension (`hopReach`). Inside that the step is taken by the hop
              below, which is what the launch is sized for; outside it the riser is
              a wall, and the body goes round a wall the way it goes round any
-             other. Only on foot: a body the water is holding up comes out of the
-             water by swimming up onto the shelf it stands on, which is the law
-             the altitude block below already keeps for the lake's shore.
+             other.
              Which body that is is asked of the row and not of the species: the
-             record is what says a body's legs are an arc, and the laws that ask
-             `locomotion` are the water ones. */
+             record is what says a body's legs are an arc. */
           const hopRow = sp.hop || null;
-          const legs = hopRow && !inWater;
+          /* Not "is this body in water", which is what this asked, but "is
+             anything but its feet carrying it" -- the same question the altitude
+             block below asks, and it has a different answer at the shore than
+             the first one does. A frog wading the one-block shelf of Mirrorlake
+             (183 columns of it) is in the water and is not held up by it: its
+             feet are on the bottom, and an animal with feet at the foot of a bank
+             takes that bank the way it takes every other bank, which for this one
+             is a hop. Being lifted up it on straight legs was the same animal
+             crawling, one metre from the place where it jumps.
+             A body the water *is* holding up keeps the lift, and keeps it only in
+             appearance: it is not on its feet, so the step it is offered is never
+             spent -- the altitude below moves it through the water instead -- and
+             it comes out of the lake by swimming up over the shelf it then stands
+             on, which is the law that block keeps for the shore. */
+          const legs = hopRow && !waterHolds(standY(world, Math.floor(this.x),
+            Math.floor(this.z), this.y));
 
           /* A body is on its feet unless something is carrying it down. Reading
              it off the height instead -- "the body is above the surface of its own
@@ -2180,22 +2271,20 @@
             Math.floor(this.y) + 1, world.h, N.TREE_BLOCK);
           gyH = Math.min(gyH0, roofOwn - this.tall - 0.05);
         }
-        // which bodies have an arc is what the row says; the two water reads
-        // below ask `locomotion`, because those are about the water and not the
-        // legs (see `hopRow` and `legs` in the step gate above)
+        // which bodies have an arc is what the row says; the water read below is
+        // the same one the step gate asked (see `hopRow`, `legs` and
+        // `waterHolds` above)
         const hop = sp.hop || null;
-        // the cell convention, one below the surface: `room` below counts the
-        // blocks of water between the bottom and the surface, and wants at least
-        // two of them (see `liquidSurfaceAt` in world.js)
-        const wt = this.isAmphibian() ? wSurf - 1 : -1;
-        // the water holds this body up only where there is water deep enough to
-        // hold it up: at the edge of the lake the bottom is, and the legs go back
-        // to being feet. And it holds it up only while the body is off the
-        // bottom: a frog sitting on the lakebed has feet under it, and a body
-        // with feet does not kick at nothing.
-        const room = wt - gy;
-        this.held = (inWater && room > 0.8 && this.y > gy + 0.2) ? 1 : 0;
-        if (inWater && room > 0.8) {
+        /* the cell convention, one below the surface: this asks how many blocks
+           of water stand over the surface this body's feet would find (see
+           `liquidSurfaceAt` in world.js), and the answer is the same two-block
+           line every other reader of that law asks */
+        const holds = waterHolds(gy);
+        // and it holds this body up only while the body is off the bottom: a
+        // frog sitting on the lakebed has feet under it, and a body with feet
+        // does not kick at nothing
+        this.held = (holds && this.y > gy + 0.2) ? 1 : 0;
+        if (holds) {
           /* A frog does not swim in one layer. It holds a depth of its own,
              sinks now and then and comes back up to breathe, on a cycle of its
              own -- which is what the frogs of one lake look like when they
@@ -2221,8 +2310,8 @@
           /* the shallowest a frog goes is the level the water holds a resting
              body at -- its own height down, plus the depth its own record says a
              body of its kind hangs at -- and it is measured off the surface, not
-             off the top block of the water (`wt + 1` and `wSurf` are the same
-             height). The depth comes off the same animal record the body you wear
+             off the top block of the water (the film of a column and the top of
+             its water are one height). The depth comes off the same animal record the body you wear
              reads, so the herd and the body you wear are the same animal and hang
              in the same water the same way. */
           const fl = floatLevel(wSurf, this.tall, hoverOf(this.sp));
@@ -2270,26 +2359,13 @@
                under a low roof walks; that is what a frog does. And its legs do
                not load for a jump it is not going to make: a frog coiled under a
                ceiling for a minute is a frog that looks ready to spring and never
-               springs. */
-            /* The ceiling over a body on foot is asked of the material table, so
-               a trunk standing over the floor it is on is a roof and its arc is
-               not launched; leaves are not, and a frog under a crown still hops.
-               And it is asked over the whole of the arc, not over the body's own
-               cell: an arc goes forward as far as it goes up -- `speed * up / g`
-               metres of it before the top is reached -- and a launch read only over
-               the column the body stands in lets a frog hop out of open sky into a
-               column whose beam is over its head while it stands and through its
-               body at the top of the arc. Measured on one frog walked at a trunk
-               block two cells over a shelf at 24: 14 of its 480 frames with its head
-               0.16 m inside that block and its nearest wood at 0.31 m, having
-               launched the arc in the open column next door -- it spent 26 airborne
-               frames inside the column the block stands over and pushed off from
-               that column not once. So the roof is
-               the lowest of the cells the arc is spent over, one cell ahead for each
-               metre the arc will have travelled by its top. */
-            const cx = Math.floor(this.x), cz = Math.floor(this.z);
+               springs.
+               What the roof is, and how far ahead of the body it is asked -- the
+               cells the arc is spent over, the material table's excuse for
+               leaves, the cells the body's own box stands across -- is one law
+               for both bodies of this file and it stands at `arcRoofClear`. The
+               ask below is its only two callers. */
             const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-            const over = Math.floor(this.y) + 1;
             /* The step in front of the feet, and the launch the legs give for it.
                On level ground this is `hop.up` exactly as it was, and the animal's
                stride, its cadence and the films of it are unchanged; in front of a
@@ -2297,39 +2373,32 @@
                lands on the far side of the face. The body the player wears from
                this animal's fruit asks the same helper from the same row a few
                hundred lines above, which is what "one animal, one record" means
-               for a step as much as for a speed. */
+               for a step as much as for a speed -- and it asks `arcRoofClear`
+               below from the same reading too, so neither body loads its legs for
+               a jump the other would not make. */
             const up = hopLaunchNow(hop, world, this.x, this.y, this.z, fx, fz,
               this.hl, this.speed || 0) || hop.up;
-            const span = Math.max(1, Math.ceil((this.speed || 0) * up / GRAVITY));
-            let roof = roofY(world, cx, cz, over, world.h, N.FOLIAGE);
-            for (let k = 1; k <= span; k++)
-              roof = Math.min(roof, roofY(world, cx + Math.round(fx * k), cz + Math.round(fz * k),
-                over, world.h, N.FOLIAGE));
             /* The cells the body's box reaches into at push-off, not only the
-               column its centre stands in. The centre can be a hand's width
-               over the edge of a low ceiling with the column it stands in
-               reading open while half the back is still under the roof: the
-               body is under that ceiling, and its arc is no straight drift to
-               begin with -- it keeps steering over the top, and what it spends
-               there is the cell it left, not the cell it aimed at. Measured at
-               the pocket of the ledge at (119, 10) -- floor 26, ceiling 27, a
-               trunk standing in the column across the mouth at (118, 9) -- a
-               frog pushed off with its centre 5 mm over the mouth, with both
-               of the cells the gate asked open, bent back across the edge over
-               the top of the arc while it steered at the herd, and carried the
-               top of its head 0.16 m into the ceiling for a frame; the
-               standing watch caught it once in eight runs. A body that cannot
-               clear the roof it is still under walks out instead, and its legs
-               do not load for the hop they are not going to make: the wind is
-               held to the same answer. */
+               column its centre stands in: the centre can be a hand's width over
+               the edge of a low ceiling with the column it stands in reading open
+               while half the back is still under the roof. Measured at the pocket
+               of the ledge at (119, 10) -- floor 26, ceiling 27, a trunk standing
+               in the column across the mouth at (118, 9) -- a frog pushed off with
+               its centre 5 mm over the mouth, with both of the cells the gate
+               asked open, bent back across the edge over the top of the arc while
+               it steered at the herd, and carried the top of its head 0.16 m into
+               the ceiling for a frame; the standing watch caught it once in eight
+               runs. */
             const bcx = this.x + fx * this.oz - fz * this.ox;
             const bcz = this.z + fz * this.oz + fx * this.ox;
             const hxx = this.hl * Math.abs(fx) + this.hw * Math.abs(fz);
             const hzz = this.hl * Math.abs(fz) + this.hw * Math.abs(fx);
+            const cols = [];
             for (let bx = Math.floor(bcx - hxx); bx <= Math.floor(bcx + hxx); bx++)
               for (let bz = Math.floor(bcz - hzz); bz <= Math.floor(bcz + hzz); bz++)
-                roof = Math.min(roof, roofY(world, bx, bz, over, world.h, N.FOLIAGE));
-            const room = roof - this.y >= arcOf(up) + this.tall;
+                cols.push([bx, bz]);
+            const room = arcRoofClear(world, this.x, this.y, this.z, this.tall, fx, fz,
+              this.speed || 0, up, cols);
             this.wind = room ? Math.min(1, this.wind + dt / 0.18) : 0;
             if (this.hopT <= 0 && room && this.y <= gyH + 0.02) {
               this.vy = up;

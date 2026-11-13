@@ -90,14 +90,17 @@
                   as `hop.up`, and the body worn from it is launched by that.
        turn       the most radians a second this body can add to its heading at
                   its own cruising speed -- the same field the animal rows carry.
-       step       how high the feet lift the box without a jump, metres. This one
-                  stays on the body record and not on the animal's: it is a
-                  property of the collision box the world enforces, which is the
-                  form's, and not of the animal's legs. */
+       There is no `step` here and there was one: the height the feet lift the
+       box without a jump. The ground of this valley is whole blocks, so the
+       shortest riser anywhere is a metre, and 0.55 m of lift cannot reach it --
+       the code that asked for it never once carried a body up a step (0.124 m
+       gained in three seconds at a bank of one), and every part of a lift it did
+       buy was thrown back down again. A body of this shape climbs a metre by
+       jumping, which is `jump`, or it stops at the face. */
   N.HUMAN_FORM = {
     cn: '人形', en: 'human', size: [0.62, 1.8], scale: 0.18,
     speed: 4.7, sprint: 1.45, swimSpeed: 2.9, jump: 8.3, turn: 1.6,
-    fov: 76, step: 0.55
+    fov: 76
   };
 
 })(window.FRUTARIA = window.FRUTARIA || {});

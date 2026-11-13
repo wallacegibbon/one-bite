@@ -7254,7 +7254,11 @@ What was measured before any of this was fixed, over 180 frames of walking
      the valley caught a frog inside the tower's masonry one run in six, and
      nothing else in the suite could see it at all. A hop of 6 m/s under this
      world's gravity reaches 0.78 m over the feet, and a frogpear stands 0.43 m
-     tall, so a cavity a metre tall has no hop in it: the body walks. */
+     tall, so a cavity a metre tall has no hop in it: the body walks. The same
+     cavity is then asked of the body worn from that animal, which is the body
+     the user stands in: it gave 8 launches into that roof out of 8, at a roof
+     the animal standing in the same cavity refuses, and it walks out on its
+     feet now. One law reads the roof for both of them. */
   const lowRoof = await step('frogDoesNotHopThroughItsOwnCeiling', () => {
     const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
     // a cavity to stand in with a hard ceiling one block over the floor
@@ -7275,7 +7279,12 @@ What was measured before any of this was fixed, over 180 frames of walking
       pause: frog.pause, tx: frog.tx, tz: frog.tz, homeX: frog.homeX, homeZ: frog.homeZ,
       speed: frog.speed, t: frog.t, hopT: frog.hopT, wind: frog.wind, climbTo: frog.climbTo,
       climbRate: frog.climbRate };
-    const was = { x: p.x, y: p.y, z: p.z, form: p.form };
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form, formT: p.formT, formMax: p.formMax,
+      vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, faceYaw: p.faceYaw, pitch: p.pitch,
+      grounded: p.grounded, inWater: p.inWater, held: p.held, air: p.air, vital: p.vital,
+      airAmt: p.airAmt, crouch: p.crouch, squash: p.squash, hopT: p.hopT, wind: p.wind,
+      bank: p.bank, tilt: p.tilt };
+    const wasInput = g.input;
     p.form = null; p.x = 4; p.z = 4; p.y = W.h - 2;           // nobody to run from
     frog.x = spot.x; frog.z = spot.z; frog.y = spot.floor;
     frog.homeX = frog.x; frog.homeZ = frog.z;
@@ -7354,10 +7363,63 @@ What was measured before any of this was fixed, over 180 frames of walking
       if (hard(bx, by, bz)) inRock++;
       if (frog.y + frog.tall > roof) headThrough++;
     }
+    /* The same roof, asked of the body worn from that animal. The roof was read
+       out of the animal's head and the record you wear carried its own answer
+       for what a ceiling costs, which the numbers said nothing about
+       (OPEN-ISSUES 15): the body of the same animal launched into roofs its
+       animal refuses. It stands 0.5 m in this cavity, so it fits where the
+       animal fits; the arc those legs state is 1.84 m over its feet and its own
+       height on top of that, and a metre of cavity has no room for it. Key
+       held with nothing under it, the body is asked to launch not at all; key
+       held and walked, it is asked to go on its feet -- which is what the
+       animal does at this roof, and what this body has always done when the
+       roof says no: its body is driven toward its cruise every frame whatever
+       the legs decide, so refusing an arc is a refusal to leave the ground, not
+       a refusal to move. */
+    const worn = (form, hold, secs) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.x = spot.x; p.z = spot.z; p.y = spot.floor + 0.0005;
+      p.vx = p.vy = p.vz = 0; p.pitch = 0; p.grounded = true;
+      p.inWater = false; p.held = 0; p.air = 999; p.vital = 10;
+      p.airAmt = 0; p.crouch = 0; p.squash = 0; p.hopT = 0; p.wind = 0; p.bank = 0; p.tilt = 0;
+      /* aimed at the open side of the pocket: the animal in the window above is
+         given an errand 30 m away and this body is given the one direction out
+         of here, so both are asked what they do about a roof on the way somewhere */
+      let yaw = null;
+      const sx = Math.floor(p.x), sy = Math.floor(p.y), sz = Math.floor(p.z);
+      for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
+        if (!hard(sx + ax, sy, sz + az) && !hard(sx + ax, sy + 1, sz + az)) yaw = Math.atan2(ax, -az);
+      if (yaw === null) return { error: 'the pocket is closed on every side' };
+      p.yaw = yaw; p.faceYaw = yaw;
+      if (p.hits(p.x, p.y, p.z)) return { error: 'the body does not fit this cavity' };
+      const tall = p.size()[1];
+      const inp = hold === 'key' ? { jump: 1 } : { fwd: 1, jump: 1 };
+      let launches = 0, badLaunch = 0, coiled = 0, headThrough = 0, inRock = 0, underRoof = 0;
+      const x0 = p.x, z0 = p.z;
+      for (let i = 0; i < Math.round(secs * 60); i++) {
+        p.yaw = yaw;                                   // the pocket is walked, not steered
+        g.input = inp;
+        p.update(1 / 60, g.input, g); g.time += 1 / 60;
+        const bx = Math.floor(p.x), by = Math.floor(p.y), bz = Math.floor(p.z);
+        let roof = W.h;
+        for (let k = by + 1; k < W.h; k++) if (hard(bx, k, bz)) { roof = k; break; }
+        const room = roof - p.y;
+        if (room < tall + 0.7) { underRoof++; if (p.wind > 0.5) coiled++; }
+        if (p.vy > 5.4) { launches++; if (room < tall + 0.7) badLaunch++; }
+        if (p.y + tall > roof) headThrough++;
+        if (hard(bx, by, bz)) inRock++;
+      }
+      g.input = {};
+      return { tall: +tall.toFixed(2), underRoof, launches, badLaunch, coiled, headThrough,
+        inRock, walked: +Math.hypot(p.x - x0, p.z - z0).toFixed(2) };
+    };
+    const wornKey = worn('frogpear', 'key', 2.5);
+    const wornWalk = worn('frogpear', 'walk', 2.5);
     const out = { spot, tall: +frog.tall.toFixed(2), room: room0, launches, badLaunch,
       roomAt, inRock, headThrough, state: frog.state, speed: +frog.speed.toFixed(2),
-      wind: +frog.wind.toFixed(2), traj };
+      wind: +frog.wind.toFixed(2), wornKey, wornWalk, traj };
     Object.assign(frog, body);
+    g.input = wasInput;
     Object.assign(p, was);
     return out;
   });
@@ -7365,6 +7427,18 @@ What was measured before any of this was fixed, over 180 frames of walking
     !lowRoof.error && lowRoof.badLaunch === 0 && lowRoof.inRock === 0, lowRoof);
   check('and its body never passes through the ceiling of the place it is in',
     !lowRoof.error && lowRoof.headThrough === 0, lowRoof);
+  /* Asked of the worn body as well, because the roof is one law and the body
+     you wear is the body the user is standing in: at the same cavity it gave
+     8 launches into a roof its animal refuses, 8 of 8. */
+  check('the body worn from that animal reads that roof the way the animal reads it',
+    !lowRoof.error && !lowRoof.wornKey.error && lowRoof.wornKey.underRoof > 60 &&
+    lowRoof.wornKey.launches === 0 && lowRoof.wornKey.badLaunch === 0 &&
+    lowRoof.wornKey.coiled === 0 && lowRoof.wornKey.headThrough === 0 &&
+    lowRoof.wornKey.inRock === 0, lowRoof);
+  check('and under that roof it goes on its feet, which is what the animal does there',
+    !lowRoof.error && !lowRoof.wornWalk.error && lowRoof.wornWalk.badLaunch === 0 &&
+    lowRoof.wornWalk.coiled === 0 && lowRoof.wornWalk.headThrough === 0 &&
+    lowRoof.wornWalk.inRock === 0 && lowRoof.wornWalk.walked > 0.5, lowRoof);
 
   /* 11j. A body the water holds up floats; it does not settle on the bottom.
      Every body in the water branch carried the same fixed downward pull,
@@ -8888,13 +8962,30 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
     if (!spot) return { error: 'no flat shelf' };
     /* The surface at gy means the top block of the ground is the one at gy - 1,
-       so a bank h blocks tall is the blocks at gy .. gy + h - 1. */
+       so a bank h blocks tall is the blocks at gy .. gy + h - 1.
+       The second thing that is built is a shore: one block of water over the
+       shelf the body stands and walks on, everywhere but the row the bank
+       stands in. One block is what a shore is in this valley -- Mirrorlake has
+       183 columns of exactly that -- and it is the depth at which the water is
+       over an animal's back and its feet are still on the bottom: a body
+       standing in it has feet, and the question this asks is whether it uses
+       them. Two blocks would be a different question, and the answer to that
+       one is held by `waterHoldsWhatBreathesIt`. */
     const cells = [];
     for (const dx of [-2, -1, 0, 1, 2]) for (const dy of [0, 1])
       cells.push([spot.bx + dx, spot.gy + dy, spot.bz]);
+    const wet = [];
+    for (let dz = -6; dz <= 2; dz++) {
+      if (dz === 0) continue;                       // the bank's own row stays dry
+      for (let dx = -3; dx <= 2; dx++) wet.push([spot.bx + dx, spot.gy, spot.bz + dz]);
+    }
     const was = cells.map(c => W.get(c[0], c[1], c[2]));
-    const build = (h) => cells.forEach(c =>
-      W.set(c[0], c[1], c[2], (c[1] === spot.gy ? 1 : 2) <= h ? spot.block : 0));
+    const wasWet = wet.map(c => W.get(c[0], c[1], c[2]));
+    const build = (h, shore) => {
+      cells.forEach(c =>
+        W.set(c[0], c[1], c[2], (c[1] === spot.gy ? 1 : 2) <= h ? spot.block : 0));
+      wet.forEach((c, i) => W.set(c[0], c[1], c[2], shore ? 5 : wasWet[i]));
+    };
     const pw = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, form: p.form,
       formT: p.formT, formMax: p.formMax, grounded: p.grounded, inWater: p.inWater,
       held: p.held, air: p.air, vital: p.vital, yaw: p.yaw, faceYaw: p.faceYaw,
@@ -8924,11 +9015,13 @@ What was measured before any of this was fixed, over 180 frames of walking
          neither the height it reached nor the gap under it answers: a body that
          hopped against a wall reaches a height and never gets the ground. */
       const arcs = [];
-      let under = -9, prevVy = 0;
+      let under = -9, prevVy = 0, wetFrames = 0, heldFrames = 0;
       for (let i = 0; i < Math.round(secs * 60); i++) {
         g.input = { fwd: 1 };
         p.update(1 / 60, g.input, g); g.time += 1 / 60; n++;
         if (p.grounded) gnd++;
+        if (p.inWater) wetFrames++;
+        if (p.held > 0.5) heldFrames++;
         if (p.hits(p.x, p.y, p.z)) boxIn++;
         if (p.y > hi) hi = p.y;
         if (p.vy > 0.5 && prevVy <= 0.05) arcs.push(+p.vy.toFixed(3));
@@ -8947,10 +9040,10 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (gap > gapMax) gapMax = gap;
       }
       const last = ys.slice(-60);
-      return { step: p.formDef.step || 0, gndPct: Math.round(gnd / n * 100),
+      return { gndPct: Math.round(gnd / n * 100),
         span: +(Math.max.apply(null, last) - Math.min.apply(null, last)).toFixed(4),
         gapMin: +gapMin.toFixed(4), gapMax: +gapMax.toFixed(4),
-        gained: +(hi - y0).toFixed(3), boxIn, arcs,
+        gained: +(hi - y0).toFixed(3), boxIn, arcs, wet: wetFrames, held: heldFrames,
         groundTop: +under.toFixed(3) };
     };
     /* The same bank, asked of the animal the row belongs to, in its own body.
@@ -9020,12 +9113,15 @@ What was measured before any of this was fixed, over 180 frames of walking
       Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
       const y0 = c.y, hi = { y: y0 };
       let boxIn = 0, trunkFrames = 0, climbFrames = 0, under = -9, prevVy = 0;
+      let wetFrames = 0, heldFrames = 0;
       const arcs = [];
       for (let i = 0; i < Math.round(secs * 60); i++) {
         c.update(1 / 60, p, W, g); g.time += 1 / 60;
         if (bankCell(c.x, c.z, c.y + 0.05)) boxIn++;
         if (trunkIn()) trunkFrames++;
         if (c.climbTo !== null) climbFrames++;
+        if (c.inWater) wetFrames++;
+        if (c.held > 0.5) heldFrames++;
         if (c.y > hi.y) hi.y = c.y;
         if (c.vy > 0.5 && prevVy <= 0.05) arcs.push(+c.vy.toFixed(3));
         prevVy = c.vy;
@@ -9036,24 +9132,27 @@ What was measured before any of this was fixed, over 180 frames of walking
       if (g.herdCentres) g.herdCentres.frog = herdWas;
       Object.assign(p, pp);
       return { gained: +(hi.y - y0).toFixed(3), boxIn, trunkFrames, climbFrames, arcs,
-        groundTop: +under.toFixed(3) };
+        wet: wetFrames, held: heldFrames, groundTop: +under.toFixed(3) };
     };
     const res = { spot, row: { up: ROW.hop.up, max: ROW.hop.max } };
     /* the third one has nothing built: the same body on the same shelf with
        nothing in front of it, which is the control that says the rule above did
        not stop a body walking */
-    for (const [h, secs] of [[2, 3], [1, 3], [0, 1.5]]) {
-      build(h);
+    for (const [h, secs, shore] of [[2, 3, false], [1, 3, false], [0, 1.5, false],
+                                    [1, 3, true], [2, 3, true]]) {
+      build(h, shore);
       const per = {};
       for (const form of [null, 'frogpear'])
         per[form || 'human'] = run(form, secs);
       per.frog = runWild(7);
-      res['bank' + h] = per;
+      res[(shore ? 'wet' : 'bank') + h] = per;
     }
     cells.forEach((c, i) => W.set(c[0], c[1], c[2], was[i]));
+    wet.forEach((c, i) => W.set(c[0], c[1], c[2], wasWet[i]));
     Object.assign(p, pw);
     g.input = pw.input;
-    res.restored = cells.every((c, i) => W.get(c[0], c[1], c[2]) === was[i]);
+    res.restored = cells.every((c, i) => W.get(c[0], c[1], c[2]) === was[i]) &&
+      wet.every((c, i) => W.get(c[0], c[1], c[2]) === wasWet[i]);
     return res;
   });
   const onFeet = (k) => !!wall.bank2 && !!wall.bank2[k] && wall.bank2[k].gndPct >= 90;
@@ -9091,14 +9190,52 @@ What was measured before any of this was fixed, over 180 frames of walking
       peak(sized('bank1', k)) < wall.row.max) &&
     Math.abs(peak(sized('bank1', 'frog')) - peak(sized('bank1', 'frogpear'))) <= 0.02, wall);
   check('with no step within its legs nothing is sized: every arc of either body is the everyday launch, at a wall as on open ground',
+    ['frog', 'frogpear'].every(k => at('bank0', k).length > 1) &&
     ['bank0', 'bank2'].every(b => ['frog', 'frogpear'].every(k =>
-      at(b, k).length > 1 && at(b, k).every(v => Math.abs(v - everyday) <= 0.02))), wall);
+      at(b, k).every(v => Math.abs(v - everyday) <= 0.02))), wall);
+  /* The face of a wall the legs cannot size, asked of both bodies. The animal
+     has always known it: the window that catches 8 arcs of it on open ground
+     catches 3 at this bank, and every one of those is the everyday launch -- it
+     does not throw itself at a face it cannot get over, it stands there and
+     walks along it. The body worn from that animal answered the same face with 3
+     arcs and its feet on the ground in 60% of the frames, which are the numbers
+     it has in the open, because the sky over an arc was only ever read out of
+     the animal's head and not out of this body's (OPEN-ISSUES 15). One law
+     reads it now, and the same window records 1 arc and 83% standing. What is
+     asked is the direction of those numbers, not their values: an arc is not
+     more plentiful at a face than in the open, and the feet are no less at home
+     there than in the open. */
+  check('and a wall the legs cannot size is met on foot by both bodies, not thrown at',
+    ['frog', 'frogpear'].every(k => at('bank2', k).length <= at('bank0', k).length) &&
+    !!wall.bank2 && !!wall.bank0 && wall.bank2.frogpear.gndPct >= wall.bank0.frogpear.gndPct, wall);
   check('and the step is the whole of the extra height: above it a body hops no higher than anywhere else',
     ['frog', 'frogpear'].every(k => !!wall.bank1 && !!wall.bank0 &&
       wall.bank1[k].gained <= 1 + wall.bank0[k].gained + 0.02), wall);
   check('and no body is left inside the bank, or the bank inside the world',
     wall.restored && ['bank2', 'bank1', 'bank0'].every(k =>
       Object.keys(wall[k]).every(f => wall[k][f] === null || wall[k][f].boxIn === 0)), wall);
+  /* The same shelf with one block of water over it, which is the depth of every
+     shore of this valley (183 columns of Mirrorlake alone): the water is over
+     this animal's back and its feet are still on the bottom. Two of its bodies
+     used to answer that differently from the dry ground a metre away -- the
+     animal was handed the lift, the body worn from it the unsized launch --
+     because the test asked "is this body in water", which is not the question
+     any law of legs or of water asks. What is asked now is whether anything is
+     carrying the body, and the answer at a shore is its own feet. */
+  check('a body wading at that bank is not lifted at it: the water over its feet is not what carries it',
+    !!wall.wet1 && wall.wet1.frog.wet > 200 && wall.wet1.frog.held === 0 &&
+    wall.wet1.frog.climbFrames === 0, wall.wet1);
+  check('and it climbs that bank with its legs, at the one sized launch the same animal gives on dry ground',
+    !!wall.wet1 && wall.wet1.frog.groundTop >= 0.95 &&
+    sized('wet1', 'frog').length === 1 &&
+    Math.abs(peak(sized('wet1', 'frog')) - peak(sized('bank1', 'frog'))) <= 0.02, wall.wet1);
+  check('and the body worn from that animal sizes the same shore the same way',
+    !!wall.wet1 && wall.wet1.frogpear.groundTop >= 0.95 &&
+    sized('wet1', 'frogpear').length === 1 &&
+    Math.abs(peak(sized('wet1', 'frogpear')) - peak(sized('wet1', 'frog'))) <= 0.02, wall.wet1);
+  check('a bank taller than those legs is a wall in the water exactly as it is out of it',
+    !!wall.wet2 && wall.wet2.frog.climbFrames === 0 && wall.wet2.frog.groundTop <= 0.05,
+    wall.wet2);
 
   /* 11o. First person shows the valley, and nothing of the body wearing it. The
      view used to carry a hand: a box-built paw bolted to the corner of the lens,

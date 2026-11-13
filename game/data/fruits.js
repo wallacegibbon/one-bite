@@ -50,6 +50,14 @@
    *                 (the animal's own model is a smaller body than the box the
    *                 world enforces around it).
    *   fov         : field of view
+   * There is no `step` on a form any more, and both forms carried one: the
+   * height the collision box is lifted without a jump. The ground of this valley
+   * is whole blocks, so the shortest riser anywhere is a metre and no form's
+   * lift could reach it -- the code that asked for it gained 0.124 m in three
+   * seconds at a bank of one, and every lift it did buy was thrown back down.
+   * A body climbs a metre with the launch its record states, or it stops at the
+   * face: that is one law for every body in the valley, and the animals' rows
+   * already obeyed it.
    * Fields that no body in the valley uses any more (climb, dig, armor, web,
    * herd) were deleted with the animals that had them, and `tongue` went with
    * them: the frog's niche is swimming and breathing water, not reaching things.
@@ -75,7 +83,7 @@
       duration: 420,
       form: {
         cn: '雨蛙', en: 'frog', size: [0.5, 0.5],
-        breatheAir: false, dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100, step: 0.3
+        breatheAir: false, dryTimer: 90, nightVision: 0.3, stealth: 0.5, fov: 100
       },
       cost: ['皮肤必须湿润：离水 90 秒后开始脱水，活力持续下降', '陆地上很慢：只有雨蛙自己的每秒 1.8 米，这具身体也没有冲刺', '太小：够不到高处的果，也推不开门'],
       costEn: ['the skin must stay wet: after 90 s out of water it dries and vitality keeps draining', 'slow on land: 1.8 m/s, the frog\'s own pace, and this body has no sprint at all', 'too small: cannot reach high fruit, cannot push a door open'],
