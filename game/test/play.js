@@ -8912,14 +8912,24 @@ What was measured before any of this was fixed, over 180 frames of walking
      of the bank; the sized launch of the two bodies agrees to **0.002**, and
      neither asks more than the fullest extension the row states. The wild body
      is never lifted: `climbTo` is set in **0** of the 420 frames of that
-     window, at the bank it climbs and at the bank it does not. What is also
-     recorded, and not asked here: the rectangle that wild body is drawn with
-     stands inside the face it is stopped by in **222** of those frames. An
-     animal is moved as a point with probes and not as a box -- the body you wear
-     is the one body in the valley whose box the movement code honours -- so a
-     pressed animal has its nose in the wall, and one on its way over an edge has
-     its nose in the bank while its feet are still on the ground in front
-     (**37** frames of that climb). That belongs to its own question. */
+     window, at the bank it climbs and at the bank it does not.
+     What that body is drawn with is asked too, and this is the row that says a
+     body is not a point to the world it walks in. The rectangle the model draws
+     -- the body's own half-length and half-width about the centre its boxes sit
+     at -- stood inside the face it was stopped by in **220** of those frames, the
+     deepest corner **0.208 m** past the face, which is half a frog; at the same
+     bank with a shore of water in front of it, **308** frames and **0.226 m**.
+     The ground is now asked of every column that rectangle covers, and both rows
+     come back with **0** frames a centimetre through the face and a deepest
+     corner of **0.001** and **0.005 m** -- the body standing at the face of the
+     wall, not through it. What is not asked here is a different thing: a body on
+     its way over an edge it *can* climb has its front through the face for the
+     frames the crossing takes -- a corner inside the bank in **38** frames at a
+     bank of one metre, **36** of them a centimetre or more through the face, up to
+     **0.198 m**, and **9** and **8** frames up to **0.225 m** at the same bank
+     under water -- and
+     those rows are the same to the frame with this law in or out, because an arc
+     that ends on a step is asked by the step, not by the wall. */
   const wall = await step('aBodyWalkedIntoABankStandsOnItsFeet', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
     /* the row of the animal this step is about, and the two launches its legs
@@ -9082,27 +9092,50 @@ What was measured before any of this was fixed, over 180 frames of walking
          stopped picks a fresh errand and walks off, which is what it does. So
          the four corners of the rectangle this body actually has, at the heading
          it is holding, are asked of the cells the bank was built out of. */
-      /* "Left inside the bank", asked of the place this body stands: an animal
-         is moved as a point with probes, not as a box (the player's body is the
-         one body in the valley with a box the movement code honours), so the
-         point its feet stand on is what "left inside" means for it. The
-         rectangle it is drawn with is counted separately, and not asked: a body
-         stopped by a face has its nose in it, which every animal does at every
-         wall, and a body on its way over an edge has its nose in the bank while
-         its feet are still on the ground in front -- both are recorded below and
-         belong to their own question. */
+      /* "Left inside the bank", asked of the place this body stands: the point
+         its feet stand on. The rectangle it is drawn with is asked separately,
+         below, and that one is asked: a body stopped by a face it cannot climb
+         may not be drawn through it, and a body on its way over an edge is a
+         different case, recorded and explained there. */
       const bankCell = (x, z, y) => {
         const bx = Math.floor(x), bz = Math.floor(z), by = Math.floor(y);
         return cells.some(([cx, cy, cz]) => cx === bx && cy === by && cz === bz) &&
           W.solidAt(bx, by, bz);
       };
-      const trunkIn = () => {
+      /* The corners of the rectangle a body is drawn with, and how deep they are
+         inside whatever cells they are asked of: `hl`/`hw` about the centre the
+         model's boxes sit at (`ox`/`oz`), turned by the heading the body holds.
+         This is the same rectangle the movement code asks of the ground --
+         `bodyCells` in entities.js -- and it is the measure both body rigs below
+         are made with, which is why it is stated once and handed to the other rig
+         on `window` the way the move-record survey hands the lake it found. Stating
+         it twice is what cost a sitting: the first version of this measure left the
+         centre offset out and asked a rectangle **3.6 cm** ahead of the one the
+         model draws, and it counted **222** frames inside a bank both before and
+         after the ground began to be asked of the body's own rectangle, because what
+         it asked was not the body's shape. `pen` is how far past the face of the
+         cell the deepest corner got, in metres: **0.2** is half a frog through a
+         wall; a body `any` of whose corners is in a cell with `pen` under a
+         centimetre is standing at the face, which is what a body stopped by a wall
+         should be doing. */
+      const faceDepthOf = window.__bodyFaceDepth = (c, asked) => {
         const fx = Math.sin(c.yaw), fz = -Math.cos(c.yaw);
-        const rx = Math.cos(c.yaw), rz = Math.sin(c.yaw);
-        for (const s of [c.hl, -c.hl]) for (const t of [c.hw, -c.hw])
-          if (bankCell(c.x + fx * s + rx * t, c.z + fz * s + rz * t, c.y + 0.05)) return 1;
-        return 0;
+        const px = c.x + fx * c.oz - fz * c.ox, pz = c.z + fz * c.oz + fx * c.ox;
+        const by = Math.floor(c.y + 0.05);
+        let any = 0, worst = 0;
+        for (const s of [c.hl, -c.hl]) for (const t of [c.hw, -c.hw]) {
+          const qx = px + fx * s - fz * t, qz = pz + fz * s + fx * t;
+          const bx = Math.floor(qx), bz = Math.floor(qz);
+          if (!asked(bx, by, bz)) continue;
+          any = 1;
+          const pen = Math.min(qx - bx, bx + 1 - qx, qz - bz, bz + 1 - qz);
+          if (pen > worst) worst = pen;
+        }
+        return { any, pen: worst };
       };
+      const faceDeep = () => faceDepthOf(c, (bx, by, bz) =>
+        cells.some(([cx, cy, cz]) => cx === bx && cy === by && cz === bz) &&
+        W.solidAt(bx, by, bz));
       const crowdWas = g.creatures, herdWas = g.herdCentres && g.herdCentres.frog;
       const pp = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz };
       g.creatures = [c];
@@ -9112,13 +9145,16 @@ What was measured before any of this was fixed, over 180 frames of walking
       let sd = 20240921;
       Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
       const y0 = c.y, hi = { y: y0 };
-      let boxIn = 0, trunkFrames = 0, climbFrames = 0, under = -9, prevVy = 0;
+      let boxIn = 0, inFace = 0, through = 0, deep = 0, climbFrames = 0, under = -9, prevVy = 0;
       let wetFrames = 0, heldFrames = 0;
       const arcs = [];
       for (let i = 0; i < Math.round(secs * 60); i++) {
         c.update(1 / 60, p, W, g); g.time += 1 / 60;
         if (bankCell(c.x, c.z, c.y + 0.05)) boxIn++;
-        if (trunkIn()) trunkFrames++;
+        const fc = faceDeep();
+        if (fc.any) inFace++;
+        if (fc.pen > 0.01) through++;                 // a centimetre or more past the face
+        if (fc.pen > deep) deep = fc.pen;
         if (c.climbTo !== null) climbFrames++;
         if (c.inWater) wetFrames++;
         if (c.held > 0.5) heldFrames++;
@@ -9131,7 +9167,8 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.creatures = crowdWas;
       if (g.herdCentres) g.herdCentres.frog = herdWas;
       Object.assign(p, pp);
-      return { gained: +(hi.y - y0).toFixed(3), boxIn, trunkFrames, climbFrames, arcs,
+      return { gained: +(hi.y - y0).toFixed(3), boxIn, inFace, through,
+        deep: +deep.toFixed(3), climbFrames, arcs,
         wet: wetFrames, held: heldFrames, groundTop: +under.toFixed(3) };
     };
     const res = { spot, row: { up: ROW.hop.up, max: ROW.hop.max } };
@@ -9236,6 +9273,158 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('a bank taller than those legs is a wall in the water exactly as it is out of it',
     !!wall.wet2 && wall.wet2.frog.climbFrames === 0 && wall.wet2.frog.groundTop <= 0.05,
     wall.wet2);
+  /* The face of that wall, asked of the body rather than of its feet. The point
+     the feet stand on was never inside the bank (**0** frames in every row, which
+     is what the step gate has always refused), and the rectangle the body is
+     drawn with was: **220** frames of the 420-frame window at the two-metre bank,
+     the deepest corner **0.208 m** through the face, and **308** at **0.226 m**
+     with a shore of water in front of the same bank. Asking the ground of every
+     column that rectangle covers takes both of them to **0** frames through the
+     face and a deepest corner of **0.001** and **0.005 m** -- the boundary of the
+     cell, not a part of the body inside it. The ask is one centimetre, which is
+     the width between standing at a face and being drawn through one. */
+  check('and a body stopped by a face taller than its legs stands outside it, not through it',
+    !!wall.bank2 && !!wall.bank2.frog && !!wall.wet2 && !!wall.wet2.frog &&
+    wall.bank2.frog.through === 0 && wall.bank2.frog.deep <= 0.01 &&
+    wall.wet2.frog.through === 0 && wall.wet2.frog.deep <= 0.01,
+    { bank2: wall.bank2.frog, wet2: wall.wet2.frog });
+
+  /* 11n2. A wall, at three lengths, and the way round it. The rig above builds a
+     bank five cells long, which is one special case of a wall: an animal walked
+     at it has the end of it two steps away and walks off past the end without the
+     wall ever being the whole of what is in front of it. This asks the same
+     question of walls three, five and nine cells long -- three, five and nine
+     metres, the longest one twenty-two times the length of the body that has to go
+     round it -- with the errand held past the far end of the wall
+     every frame, as the sent-animal rig holds it, so what is measured is one road
+     and not the animal's own wandering. Two things are read on that road: whether
+     any part of the body is inside the rock it is being stopped by, and whether it
+     gets round the wall at all.
+     It got round every length before this -- 5.65, 6.52 and 8.93 seconds to get
+     past a wall three, five and nine cells long, the same body crossing the same
+     ground with nothing built in 4.83 -- so the contouring is not what was missing,
+     and the second ask below is here to keep it that way. What was missing is the
+     first: at the wall five cells long the body had some part of itself inside the
+     rock in **74**
+     of 2400 frames and a centimetre or more through the face in **69** of them,
+     the deepest **0.232 m**; at nine cells long, **158** and **156** frames, the
+     deepest **0.228 m**; and at every one of those the column its feet stood in was
+     outside in **0** frames, which is the whole of why the step gate never saw it.
+     With the ground asked of the rectangle the body is drawn with both walls read
+     **0** frames inside, and the road it takes is the same road: the body now
+     stands off the face instead of in it, so it gets past a wall half a second
+     later (6.28, 7.05 and 9.50 seconds against the same 4.83 with nothing built),
+     and what it costs is the same half second at every length -- **0.63**, **0.53**
+     and **0.57** -- which is standing off a face instead of in it, and nothing
+     else: the crossing still follows the length of the wall, not the animal. */
+  const longWall = await step('anAnimalWalkedAtAWallStandsOutsideItAndGoesRound', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    const ROW = N.CREATURE_BY_ID.frog;
+    /* one shelf to build on: level over the ground this run can touch -- thirteen
+       cells along a wall and seven in front of it, which is the longest wall
+       asked here plus the ground to walk round it -- and clear of everything solid
+       along that ground */
+    let spot = null;
+    for (let z = 14; z < W.d - 14 && !spot; z++)
+      for (let x = 14; x < W.w - 14 && !spot; x++) {
+        const gy = N.terrainY(W, x, z, W.h - 1);
+        if (gy <= 8 || gy >= 24) continue;
+        if (N.waterTop(W, x, z, W.h - 1) >= 0) continue;
+        let flat = true;
+        for (let dz = -6; dz <= 6 && flat; dz++) for (let dx = -3; dx <= 3; dx++)
+          if (N.terrainY(W, x + dx, z + dz, W.h - 1) !== gy) { flat = false; break; }
+        if (!flat) continue;
+        let clear = true;
+        for (let dz = -6; dz <= 6 && clear; dz++) for (let dx = -3; dx <= 3; dx++)
+          for (let dy = 0; dy <= 3; dy++)
+            if (W.solidAt(x + dx, gy + dy, z + dz)) { clear = false; break; }
+        if (!clear) continue;
+        spot = { x: x - 2.5, z: z + 0.5, gy, bx: x, bz: z };
+      }
+    if (!spot) return { error: 'no flat shelf long enough for a wall' };
+    /* the corners of the rectangle this body is drawn with, asked of the wall's
+       own cells -- or, with nothing built there, of whatever the world has standing
+       in the body's way, which is the control's question. The measure itself is
+       stated once, in the bank rig above: both rigs ask the same question of the
+       same body, and this file's steps are separate `page.evaluate` calls, so it
+       travels on `window` the way the survey step passes the lake it found */
+    if (!window.__bodyFaceDepth)
+      return { error: 'the corner measure is defined by the bank rig, which runs first' };
+    const faceDeep = (c, asked) => window.__bodyFaceDepth(c, asked
+      ? (bx, by, bz) => asked.has(bx + ',' + by + ',' + bz)
+      : (bx, by, bz) => W.solidAt(bx, by, bz));
+    const fresh = (x, y, z) => {
+      const c = new N.Creature(ROW, x, y, z);
+      Object.assign(c, { state: 'wander', pause: 9999, orbit: null, pace: 1, sleeping: false,
+        homeX: c.x, homeZ: c.z, hovering: false, buoy: 0, hopT: 0, wind: 0, speed: 0, t: 0,
+        diveTo: 1.6, diveRate: 0.1, phase: 0, alarm: 0, bank: 0, bend: 0, tilt: 0, held: 0,
+        airAmt: 0, crouch: 0, squash: 0, climbTo: null, climbRate: 0, gait: null,
+        watchX: null, watchZ: null, watchF: 0 });
+      return c;
+    };
+    const crowdWas = g.creatures, herdWas = g.herdCentres && g.herdCentres.frog;
+    const pp = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz };
+    const res = { spot };
+    const run = (width, secs) => {
+      /* one wall: one column wide, three blocks tall, `width` cells long, built
+         out of the ground it stands on -- and put back exactly as it was after.
+         With `width` 0 nothing is built, and the same question is asked of the
+         world as it stands: the control that says none of this stopped a body
+         walking. */
+      const z0 = spot.bz - Math.floor(width / 2);
+      const cells = new Set(), wasC = [];
+      for (let dz = 0; dz < width; dz++) for (let dy = 0; dy <= 2; dy++) {
+        cells.add(spot.bx + ',' + (spot.gy + dy) + ',' + (z0 + dz));
+        wasC.push([spot.bx, spot.gy + dy, z0 + dz]);
+      }
+      const asked = width ? cells : null;
+      const was = wasC.map(cc => W.get(cc[0], cc[1], cc[2]));
+      const fill = W.get(spot.bx, spot.gy - 1, z0);
+      wasC.forEach(cc => W.set(cc[0], cc[1], cc[2], fill));
+      /* stood in front of the middle of it, sent past the far end of it, and the
+         errand held there every frame: the road, not the wandering */
+      const c = fresh(spot.x, spot.gy + 0.0005, z0 + (width - 1) / 2 + 0.5);
+      const tx = spot.bx + 2.5, tz = spot.bz - width / 2 - 1.5;
+      c.tx = tx; c.tz = tz; c.yaw = Math.atan2(tx - c.x, -(tz - c.z));
+      g.creatures = [c];
+      if (g.herdCentres) g.herdCentres.frog = { x: c.x, z: c.z, n: 1 };
+      p.x = 4; p.z = 4; p.y = W.h - 2; p.vx = p.vy = p.vz = 0;
+      const rnd = Math.random;
+      let sd = 20240921;
+      Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+      let frames = 0, inFace = 0, through = 0, deep = 0, past = -1;
+      for (let i = 0; i < Math.round(secs * 60); i++) {
+        c.tx = tx; c.tz = tz;
+        c.update(1 / 60, p, W, g); g.time += 1 / 60; frames++;
+        const f = faceDeep(c, asked);
+        if (f.any) inFace++;
+        if (f.pen > 0.01) through++;
+        if (f.pen > deep) deep = f.pen;
+        if (past < 0 && c.x > spot.bx + 1.0) past = i;         // past the wall's face
+      }
+      Math.random = rnd;
+      wasC.forEach((cc, i) => W.set(cc[0], cc[1], cc[2], was[i]));
+      g.creatures = crowdWas;
+      if (g.herdCentres) g.herdCentres.frog = herdWas;
+      Object.assign(p, pp);
+      return { frames, width, inFace, through, deep: +deep.toFixed(3),
+        roundIt: past >= 0, atSecond: past >= 0 ? +(past / 60).toFixed(2) : null,
+        end: { x: +c.x.toFixed(2), z: +c.z.toFixed(2) } };
+    };
+    const out = [];
+    for (const width of [3, 5, 9]) out.push(run(width, 40));
+    /* the control: the same body, the same held errand, nothing built */
+    res.walls = out;
+    res.none = run(0, 40);
+    return res;
+  });
+  check('a body walked at a wall it cannot climb is never drawn inside it, at three lengths of wall',
+    !!longWall.walls && longWall.walls.length === 3 &&
+    longWall.walls.every(w => w.inFace === 0 && w.through === 0 && w.deep === 0) &&
+    !!longWall.none && longWall.none.inFace === 0, longWall);
+  check('and it goes round every length of wall it is sent past, as it went round them before',
+    !!longWall.walls && longWall.walls.every(w => w.roundIt === true) &&
+    longWall.none.roundIt === true, longWall);
 
   /* 11o. First person shows the valley, and nothing of the body wearing it. The
      view used to carry a hand: a box-built paw bolted to the corner of the lens,

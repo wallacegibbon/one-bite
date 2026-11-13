@@ -1294,6 +1294,47 @@
     } else if (dx * ux + dz * uz < 0) { ux = -ux; uz = -uz; }
     return { pen, ux, uz };
   }
+  /* The columns a body's own rectangle stands across. A body is not a point and
+     this file has never treated it as one: `N.MODEL_W` gives every model the
+     rectangle its trunk is drawn from, the constructor keeps it on the body as
+     `hl`/`hw` with the model's own centre offset as `ox`/`oz`, the keep-apart law
+     above moves bodies apart by exactly that pair, and `arcRoofClear` is handed it
+     when a launch is asked what is over it. What was missing is the ground. The
+     step gate asked the single column under the body's centre, and an animal was
+     drawn through every wall it was stopped by: at a bank two metres tall the
+     rectangle the model draws was inside the bank in **220** frames of a 420-frame
+     window, the deepest corner **0.208 m** through the face, which is half a frog;
+     at the same bank with a shore of water in front of it, **308** frames and
+     **0.226 m**; at walls three, five and nine cells long, walked at with an
+     errand held past the far end of them, **74** and **158** frames of 2400 in the
+     face at the two longer ones -- the three-cell wall was added to the rig to ask
+     whether the length of the wall changed the answer, and it never stood inside one
+     either way -- **69** and **156** of those a centimetre or more through the face,
+     the deepest **0.232** and **0.228 m** -- while the column its feet stood in was
+     inside the rock in **0** frames of every one of those runs, which is the whole
+     of why the gate never saw it. Asking the ground of the rectangle instead takes
+     every one of those counts to **0**, and leaves the road the body takes where it
+     was: the same way round every wall, half a second later at each length, because
+     the body now stands off the face instead of in it. Both measurements are in
+     test/play.js -- the bank rig and the wall rig -- and the count of the first
+     version of that measure, which read **222** frames before and after the change
+     because it asked a rectangle 3.6 cm ahead of the one the model draws, is told
+     there too.
+     The centre of that rectangle is not the position, either -- `ox`/`oz` are where
+     the model's boxes sit about the position -- and the half-spans are taken along
+     and across the heading and turned back into the axes, which is the same pair
+     of lines the roof ask carries and the keep-apart law carries as `ra`/`rb`. */
+  function bodyCells(c, x, z) {
+    const fx = Math.sin(c.yaw), fz = -Math.cos(c.yaw);
+    const cx = x + fx * c.oz - fz * c.ox;
+    const cz = z + fz * c.oz + fx * c.ox;
+    const hx = c.hl * Math.abs(fx) + c.hw * Math.abs(fz);
+    const hz = c.hl * Math.abs(fz) + c.hw * Math.abs(fx);
+    const cells = [];
+    for (let bx = Math.floor(cx - hx); bx <= Math.floor(cx + hx); bx++)
+      for (let bz = Math.floor(cz - hz); bz <= Math.floor(cz + hz); bz++) cells.push([bx, bz]);
+    return cells;
+  }
   /* Can this body be put at (x, z) at the height it is at? The same question the
      body's own movement asks of a step, asked of a place it has already been
      pushed into by another body: a body that cannot leave the water needs a
@@ -1322,7 +1363,17 @@
        pushed off one, and the ground takes the answer from there. Bounding the
        drop as well (the first version did) refused every shove for a frog
        floating a metre and a half over the bed of the lake, which is where every
-       frog in Mirrorlake spends the afternoon. */
+       frog in Mirrorlake spends the afternoon.
+       The seam, stated rather than hidden: this ask is still the body's point, and
+       the step gate above it is now its rectangle. A shove is not a step -- it is
+       the undoing of an overlap that already exists, into whichever of the places
+       about it the world will have -- and no rig on this tree measures what a box
+       would cost here, which is the honest reason it was left: the failure the
+       paragraph above is written around is an ask that refused more places than it
+       should have. What every other ask of the world now shares is the
+       rectangle: `bodyClash` asks one body's box of another's, `arcRoofClear` is
+       handed the cells an arc is spent over, the step gate asks the ground of the
+       body's own rectangle, and only this destination is still asked of a point. */
     const gy = standY(w, bx, bz, c.y);
     return gy - c.y < LIFT_REACH && !w.solidAt(bx, Math.floor(gy + 0.2), bz);
   }
@@ -1888,62 +1939,85 @@
              ridge instead of the ground under them, and went up 105 m and back
              down 114 m in a day doing it. */
           const stand = (x, z) => {
-            const bx = Math.floor(x), bz = Math.floor(z);
-            const gy = standY(world, bx, bz, this.y);
-            if (gy - this.y >= LIFT_REACH) return false;
-            /* One cell over the surface is the whole of the difference between a
-               wall and air for a walker, which is why this gate looked innocent:
-               of the 2,684 wood cells of this valley 1,830 sit on wood and 843
-               stand on the ground, so the cell over the surface a body stands on is
-               wood in every one of them and they were all refused. The other 11 are
-               wood with open air straight under them, over the surface a walker
-               stands on: there the feet cell is air, the gate opens, and the body
-               walks in with its shoulders through the block. Measured with one trunk
-               block at the height a walker's own body occupies, two cells over
-               the shelf it stands on, it came up against wood at 0.17 m and walked
-               through it: 30 of its 480 frames with part of itself inside, up to
-               0.54 m of it through the block, its feet on the ground every one of
-               them, 30 frames standing in that column. It now stops at the face of
-               it -- nearest wood 0.50 m, 0 frames in that column -- and still walks
-               its 16.5 m. The flock itself never walks into that shape: the 30
-               animals of a fresh valley, 18,000 frames each, were inside wood in 0
-               frames before this and 0 after, with their paths, their standing
-               frames and their frames pressed against wood the same to the
-               centimetre; so the rig found it and the valley did not.
-               So the span above that surface is asked too, feet cell up to head
-               cell, exactly what the gate for a body in the air asks, and it is
-               asked of this body's own height, which is what keeps the answer about
-               the body rather than about the block: the same block one cell higher,
-               over the walker's head, is walked under (29 frames in that column, 0 of
-               them inside, in every build), and the block that lies inside a
-               person's body is open ground to a 0.43 m frog, which walks into that
-               column 80 of its 480 frames -- 81 in the build that reads the ceiling
-               of a hop over the body's own cell only -- while a block at that
-               frog's own feet cell is refused it too. Asking the same span from the
-               height the body happens to be at, rather than from the surface of the
-               column it is asked about, was measured too: it keeps these bodies out
-               of the wood and takes the walk with it, the walker standing still 180 of
-               its 480 frames under a block one cell over its head and travelling
-               10.4 m instead of 16.5 m. A body on foot is on the floor it walks on,
-               and the body that is not --
-               a frog in the middle of an arc -- is answered by the roof instead (see
-               `roofY`, and the span and roof rig in test/play.js: with this half
-               missing alone the walker stands 30 frames inside the block and no other
-               rig moves, while with the roof asked out of the wrong table that frog
-               is inside the wood over its head -- 14 frames starting under the block,
-               28 walked at it -- and with the roof read over the body's own cell
-               only it is inside 14 frames walked at the same block and clean
-               starting under it).
-               Leaves are excused by the material table and not by a second list: a
-               body on foot walks through a crown with its shoulders in it, as it
-               always did. A trunk (6) and bone (22) are not in that table, so wood
-               is wood to a walker and to the body worn from the same animal at
-               last. */
-            const feet = Math.floor(gy + 0.2);
-            if (world.solidAt(bx, feet, bz)) return false;
-            const top = Math.floor(gy + this.tall);
-            for (let k = feet + 1; k <= top; k++)
-              if (world.solidAt(bx, k, bz) && !N.FOLIAGE[world.get(bx, k, bz)]) return false;
+            /* And the ask is of every column the body's rectangle stands across,
+               not of the column under its centre. That is the whole of the
+               difference between a body stopped by a wall and a body drawn
+               through it: the centre of a 0.41 m frog can stand a hand's width in
+               front of a bank while the trunk is inside it, and the count of that
+               is in the record above `bodyCells`. A body's feet are on every part
+               of the ground it stands on, so every one of those columns has to
+               answer the same question -- surface, feet cell, room over it -- and
+               one refusal is a refusal. The wood rig below feels it, and feels it
+               the right way: the frog driven at the one trunk this valley sets at
+               the height a frog's own body occupies used to come to 0.52 m centre
+               to centre of the nearest wood cell, which is its nose 0.19 m inside a
+               trunk it had been refused -- the gate had already refused that column,
+               and it stands in it 0 frames either way -- and now comes to **0.69 m**,
+               which is that body's own half-length with the face of the block at the
+               same place, and it goes round either way. What it costs is the
+               deciding: 35 of its 480 frames standing still at the face instead of
+               1, and a shorter way round -- the same animal on the same errand
+               travelling 5.28 m instead of 5.68 m. */
+            for (const [bx, bz] of bodyCells(this, x, z)) {
+              const gy = standY(world, bx, bz, this.y);
+              if (gy - this.y >= LIFT_REACH) return false;
+              /* One cell over the surface is the whole of the difference between a
+                wall and air for a walker, which is why this gate looked innocent:
+                of the 2,684 wood cells of this valley 1,830 sit on wood and 843
+                stand on the ground, so the cell over the surface a body stands on is
+                wood in every one of them and they were all refused. The other 11 are
+                wood with open air straight under them, over the surface a walker
+                stands on: there the feet cell is air, the gate opens, and the body
+                walks in with its shoulders through the block. Measured with one trunk
+                block at the height a walker's own body occupies, two cells over
+                the shelf it stands on, it came up against wood at 0.17 m and walked
+                through it: 30 of its 480 frames with part of itself inside, up to
+                0.54 m of it through the block, its feet on the ground every one of
+                them, 30 frames standing in that column. It stopped at the face of
+                it in that build -- 0 frames in that column -- and went on walking
+                its 16.5 m. That rig has been rebuilt since, around the one hopper
+                the species table leaves rather than around a walker, and the numbers
+                the suite prints today are in the paragraph above. The flock
+                itself never walks into that shape: the 30
+                animals of a fresh valley, 18,000 frames each, were inside wood in 0
+                frames before this and 0 after, with their paths, their standing
+                frames and their frames pressed against wood the same to the
+                centimetre; so the rig found it and the valley did not.
+                So the span above that surface is asked too, feet cell up to head
+                cell, exactly what the gate for a body in the air asks, and it is
+                asked of this body's own height, which is what keeps the answer about
+                the body rather than about the block: the same block one cell higher,
+                over the walker's head, is walked under (29 frames in that column, 0 of
+                them inside, in every build), and the block that lies inside a
+                person's body is open ground to a 0.43 m frog, which walks into that
+                column 80 of its 480 frames -- 81 in the build that reads the ceiling
+                of a hop over the body's own cell only -- while a block at that
+                frog's own feet cell is refused it too. Asking the same span from the
+                height the body happens to be at, rather than from the surface of the
+                column it is asked about, was measured too: it keeps these bodies out
+                of the wood and takes the walk with it, the walker standing still 180 of
+                its 480 frames under a block one cell over its head and travelling
+                10.4 m instead of 16.5 m. A body on foot is on the floor it walks on,
+                and the body that is not --
+                a frog in the middle of an arc -- is answered by the roof instead (see
+                `roofY`, and the span and roof rig in test/play.js: with this half
+                missing alone the walker stands 30 frames inside the block and no other
+                rig moves, while with the roof asked out of the wrong table that frog
+                is inside the wood over its head -- 14 frames starting under the block,
+                28 walked at it -- and with the roof read over the body's own cell
+                only it is inside 14 frames walked at the same block and clean
+                starting under it).
+                Leaves are excused by the material table and not by a second list: a
+                body on foot walks through a crown with its shoulders in it, as it
+                always did. A trunk (6) and bone (22) are not in that table, so wood
+                is wood to a walker and to the body worn from the same animal at
+                last. */
+              const feet = Math.floor(gy + 0.2);
+              if (world.solidAt(bx, feet, bz)) return false;
+              const top = Math.floor(gy + this.tall);
+              for (let k = feet + 1; k <= top; k++)
+                if (world.solidAt(bx, k, bz) && !N.FOLIAGE[world.get(bx, k, bz)]) return false;
+            }
             return true;
           };
           /* A step is climbed before it is walked on. `stand` answers what the
@@ -2003,6 +2077,18 @@
              rate of falling and is still on its feet. */
           const onFoot = inWater || this.vy > -1;
           const riser = (x, z) => {
+            /* The riser is asked of the column the body's feet stand in, and not
+               of the rectangle. This is the one ask the rectangle does not belong
+               to: a climb is begun from where the body is, not from wherever its
+               nose happens to be pointing, and the read that decides a step is
+               already made further along the heading than any box could reach --
+               `stepAhead` here and `riseAhead` in the hop gate both read the
+               ground ahead of the feet and size the climb or the arc from it. Ask
+               the riser of the rectangle and a body begins its climb half a body
+               length from the face; measured at a bank of one metre, the frog that
+               was thrown one sized arc at the edge now needed two, because the
+               time its own arc spends above the edge is what carries its body over
+               it, and half a body further back does not fit inside it. */
             const bx = Math.floor(x), bz = Math.floor(z), cell = Math.floor(this.y + 0.05);
             if (!rockAt(world, bx, cell, bz)) return 0;
             return standY(world, bx, bz, this.y);
@@ -2389,14 +2475,7 @@
                it steered at the herd, and carried the top of its head 0.16 m into
                the ceiling for a frame; the standing watch caught it once in eight
                runs. */
-            const bcx = this.x + fx * this.oz - fz * this.ox;
-            const bcz = this.z + fz * this.oz + fx * this.ox;
-            const hxx = this.hl * Math.abs(fx) + this.hw * Math.abs(fz);
-            const hzz = this.hl * Math.abs(fz) + this.hw * Math.abs(fx);
-            const cols = [];
-            for (let bx = Math.floor(bcx - hxx); bx <= Math.floor(bcx + hxx); bx++)
-              for (let bz = Math.floor(bcz - hzz); bz <= Math.floor(bcz + hzz); bz++)
-                cols.push([bx, bz]);
+            const cols = bodyCells(this, this.x, this.z);
             const room = arcRoofClear(world, this.x, this.y, this.z, this.tall, fx, fz,
               this.speed || 0, up, cols);
             this.wind = room ? Math.min(1, this.wind + dt / 0.18) : 0;
