@@ -204,6 +204,17 @@
     }
 
     spawnCreatures() {
+      /* Two numbers, two facts (OPEN-ISSUES 18). `herd` on a species record is
+         about the animal: how gregarious it is, how many of its own it keeps
+         together, which is why a stray walks back towards the middle of its kind
+         instead of standing alone by the water. This map is about this place: how
+         many of them the valley at your feet holds. A valley of five frogs holds
+         five whether its animals' herds run at eight or at three, and a record
+         that carried the valley's population would be saying something about the
+         map inside a file that knows nothing about maps. The chapters print the
+         record's herd under a column named for the field and say what this number
+         is, and `docs-sync` compares that row against the record -- so the two
+         cannot be read as one fact again. */
       const counts = { frog: 5 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
