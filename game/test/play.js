@@ -948,7 +948,11 @@ const { sim } = require('./simwait');
     stand(Math.PI / 2, 0, wall.x - 6, wall.z + 0.5, wall.y);
     for (let i = 0; i < 40; i++) g.update(1 / 60);
     out.free = +g._camFrame.d.toFixed(2);
-    // the picking ray is the lens ray: recompute it here and compare with the box
+    /* The picking ray is the lens ray: recompute it here and compare with what
+       the game picked. Note what is *not* compared: the marker. A wall is what
+       this rig builds, and a wall is not a thing the hand does anything to, so
+       the marked cell is asked for separately and has to be nothing at all --
+       10k2 asks the marker itself, of a frame, with a fruit in it to compare. */
     g.input = {};
     stand(Math.PI / 2, 0, wall.x - 4, wall.z + 0.5, wall.y);
     for (let i = 0; i < 40; i++) g.update(1 / 60);
@@ -956,14 +960,17 @@ const { sim } = require('./simwait');
     const dx = Math.sin(p.yaw) * cp, dy = sp, dz = -Math.cos(p.yaw) * cp;
     const back = Math.hypot(c.x - p.x, c.y - p.eyePos(), c.z - p.z);
     const want = g.world.raycast(c.x, c.y, c.z, dx, dy, dz, back + 5.5);
-    out.ray = { want: want && [want.x, want.y, want.z], hover: g.hover && [g.hover.x, g.hover.y, g.hover.z] };
+    const got = g.rayTarget();
+    out.ray = { want: want && [want.x, want.y, want.z], got: got && [got.x, got.y, got.z],
+      marked: g.hover && [g.hover.x, g.hover.y, g.hover.z], aim: g.aim && g.aim.kind, prompt: g.prompt };
     g.thirdPerson = false; g.input = {};
     stand(Math.PI / 2, 0, wall.x - 4, wall.z + 0.5, wall.y);
     for (let i = 0; i < 40; i++) g.update(1 / 60);
     const c1 = g._camFrame;
     const want1 = g.world.raycast(p.x, p.eyePos(), p.z, dx, dy, dz, 5.5);
-    out.rayFirst = { want: want1 && [want1.x, want1.y, want1.z], hover: g.hover && [g.hover.x, g.hover.y, g.hover.z],
-      d: +c1.d.toFixed(2) };
+    const got1 = g.rayTarget();
+    out.rayFirst = { want: want1 && [want1.x, want1.y, want1.z], got: got1 && [got1.x, got1.y, got1.z],
+      marked: g.hover && [g.hover.x, g.hover.y, g.hover.z], d: +c1.d.toFixed(2) };
     Object.assign(p, was); g.thirdPerson = was.tp; g.input = was.input; g._camFrame = was.frame; g.camReady = was.camReady; g.creatures = crowd;
     return out;
   });
@@ -972,11 +979,205 @@ const { sim } = require('./simwait');
   check('a lens pressed against a wall is pulled in, not buried',
     lens.pressed && lens.pressed.every(c => !c.inSolid) && lens.pressed.every(c => c.d < 2), lens.pressed);
   check('clear air behind the body keeps the shot its full length', lens.free > 5, lens.free);
-  check('the highlight box is the block under the crosshair',
-    lens.ray && lens.ray.want && JSON.stringify(lens.ray.want) === JSON.stringify(lens.ray.hover), lens.ray);
+  check('the picking ray is the block under the crosshair',
+    lens.ray && lens.ray.want && JSON.stringify(lens.ray.want) === JSON.stringify(lens.ray.got), lens.ray);
+  check('a wall the ray stops at is not offered to the hand',
+    lens.ray && !lens.ray.marked && !lens.ray.aim && lens.ray.prompt === '', lens.ray);
   check('in first person the crosshair is the eye',
-    lens.rayFirst && lens.rayFirst.want && JSON.stringify(lens.rayFirst.want) === JSON.stringify(lens.rayFirst.hover), lens.rayFirst);
+    lens.rayFirst && lens.rayFirst.want && JSON.stringify(lens.rayFirst.want) === JSON.stringify(lens.rayFirst.got), lens.rayFirst);
   check('first person has no lens behind the head to pull in', lens.rayFirst && lens.rayFirst.d === 0, lens.rayFirst);
+
+  /* 10k2. the box is the promise, so it is drawn only where the key can act.
+     A metre of wall stops the picking ray every time a body stands at a wall,
+     and the hand has nothing to do to it -- there is no dig, no break, no push
+     here -- and the box used to be drawn on it anyway. In third person the lens
+     is behind the body, so the picture was a bright wireframe cube round the
+     player's own animal, with no sentence under it and no answer to the key.
+     Measured here on a face built in a level shelf and walked into by a frog
+     body until it stopped, 0.251 m of its own depth from the stone: the box on
+     that face covers **4,202** pixels of a **900x560** frame, **152x148** px of
+     it, sitting dead centre (0.001 of the width off the middle) and holding the
+     body's own head at (450,266) and feet at (450,330) inside it -- while the
+     prompt is empty and pressing E to it does nothing at all. (The pixel count
+     moves a few dozen between runs, 4,290 the first time: the frame's own ease
+     is not bit for bit between runs. The box's size does not move.) The ask is
+     the promise, read off the frame: at a bare face the picture the game draws
+     is the same picture with the box turned off (**0** pixels differ), and the
+     same lens line with a fruit block hung in the air of that face is marked,
+     named by the prompt, drawn a box around (**681** px), and taken by the key. */
+  const promise = await step('theBoxIsThePromise', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, gl = R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      vx: p.vx, vy: p.vy, vz: p.vz, form: p.form, formT: p.formT, formMax: p.formMax,
+      grounded: p.grounded, inWater: p.inWater, held: p.held, air: p.air, vital: p.vital,
+      fright: p.fright, tp: g.thirdPerson, input: g.input, frame: g._camFrame, ready: g.camReady,
+      hover: g.hover, aim: g.aim, prompt: g.prompt, mode: g.mode, time: g.time,
+      creatures: g.creatures, inv: g.inv.slice(), harvested: g.stats.harvested,
+      regrow: g.regrow.slice(), logLen: g.log.length, diffs: g.diffs.length,
+      deeds: g.deeds.map(q => q.done), upg: Object.assign({}, g.upg) };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        faceYaw: was.faceYaw, vx: was.vx, vy: was.vy, vz: was.vz, form: was.form,
+        formT: was.formT, formMax: was.formMax, grounded: was.grounded, inWater: was.inWater,
+        held: was.held, air: was.air, vital: was.vital, fright: was.fright });
+      g.thirdPerson = was.tp; g.input = was.input; g._camFrame = was.frame; g.camReady = was.ready;
+      g.hover = was.hover; g.aim = was.aim; g.prompt = was.prompt; g.mode = was.mode; g.time = was.time;
+      g.creatures = was.creatures; g.stats.harvested = was.harvested;
+      g.inv.length = 0; for (const it of was.inv) g.inv.push(it);
+      g.regrow.length = 0; for (const r2 of was.regrow) g.regrow.push(r2);
+      g.log.length = was.logLen; g.diffs.length = was.diffs;
+      g.deeds.forEach((q, i) => { q.done = was.deeds[i]; });
+      g.upg = was.upg;
+      return r;
+    };
+    /* A shelf to walk on and a face to be stopped by, both built the way
+       `aBodyWalkedIntoABankStandsOnItsFeet` builds one: the shelf is hunted
+       (level over the ground a body can reach, clear of everything solid along
+       the way), the wall of the material under that shelf is put in it. */
+    let spot = null;
+    for (let z = 12; z < W.d - 12 && !spot; z++)
+      for (let x = 12; x < W.w - 12 && !spot; x++) {
+        const gy = N.terrainY(W, x, z, W.h - 1);
+        if (gy <= 8 || gy >= 24) continue;
+        if (N.waterTop(W, x, z, W.h - 1) >= 0) continue;
+        let flat = true;
+        for (let dz = -4; dz <= 4 && flat; dz++) for (let dx = -3; dx <= 3; dx++)
+          if (N.terrainY(W, x + dx, z + dz, W.h - 1) !== gy) { flat = false; break; }
+        if (!flat) continue;
+        let clear = true;
+        for (let dz = -4; dz <= 1 && clear; dz++) for (let dx = -2; dx <= 2; dx++)
+          for (let dy = 0; dy <= 2; dy++) if (W.solidAt(x + dx, gy + dy, z + dz)) { clear = false; break; }
+        if (!clear) continue;
+        spot = { x: x + 0.5, z: z + 0.5, gy, bx: x, bz: z - 3, block: W.get(x, gy - 1, z - 3) };
+      }
+    if (!spot) return back({ error: 'no flat shelf' });
+    const cells = [];
+    for (const dx of [-2, -1, 0, 1, 2]) for (let dy = 0; dy < 3; dy++)
+      cells.push([spot.bx + dx, spot.gy + dy, spot.bz]);
+    const wasCells = cells.map(c => W.get(c[0], c[1], c[2]));
+    cells.forEach(c => W.set(c[0], c[1], c[2], spot.block));
+    g.world.rebuildDirty(R.gl, 6);
+    const undo = () => {
+      cells.forEach((c, i) => W.set(c[0], c[1], c[2], wasCells[i]));
+      g.world.rebuildDirty(R.gl, 6);
+    };
+
+    /* the body the report was made in: a frog worn as a body, third person,
+       walking at the face until its own depth stops it against the stone */
+    g.creatures = [];
+    g.mode = 'play'; g.thirdPerson = true; g.camReady = false;
+    p.form = 'frogpear'; p.formT = 9999; p.formMax = 9999;
+    p.x = spot.x; p.y = spot.gy + 0.0005; p.z = spot.z + 1.2;
+    p.vx = p.vy = p.vz = 0; p.pitch = 0; p.yaw = 0; p.faceYaw = 0;
+    p.inWater = false; p.held = 0; p.air = 999; p.vital = 10; p.grounded = true;
+    g.input = { fwd: 1 };
+    for (let i = 0; i < 150; i++) g.update(1 / 60);
+    g.input = {};
+    for (let i = 0; i < 40; i++) g.update(1 / 60);
+    const face = g.rayTarget();
+    const out = { spot,
+      face: face && { x: face.x, y: face.y, z: face.z, block: W.get(face.x, face.y, face.z),
+        n: [face.nx, face.ny, face.nz], solid: !!N.BLOCKS[W.get(face.x, face.y, face.z)].solid },
+      gapToFace: +(p.z - (face.z + 1)).toFixed(3),
+      hover: g.hover && [g.hover.x, g.hover.y, g.hover.z], aim: g.aim && g.aim.kind, prompt: g.prompt };
+    if (!face) { undo(); return back(out); }
+
+    /* the frame, rendered twice: once as the game leaves it and once with the
+       box of one named cell put back into it. What differs is the box and
+       nothing else -- so the count is the box's own area on the screen, and the
+       bounds are where it was drawn. */
+    const shot = () => {
+      g.particles.n = 0;
+      g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { px, w, h };
+    };
+    const against = (cell) => {
+      const keep = g.hover;
+      g.hover = null; const A = shot();
+      g.hover = cell; const B = shot();
+      g.hover = keep;
+      let n = 0, x0 = A.w, y0 = A.h, x1 = -1, y1 = -1, bright = 0;
+      for (let Y = 0; Y < A.h; Y++) for (let X = 0; X < A.w; X++) {
+        const i = (Y * A.w + X) * 4;
+        if (A.px[i] === B.px[i] && A.px[i + 1] === B.px[i + 1] && A.px[i + 2] === B.px[i + 2]) continue;
+        n++;
+        if (X < x0) x0 = X; if (X > x1) x1 = X;
+        if (Y < y0) y0 = Y; if (Y > y1) y1 = Y;
+        if (0.2126 * B.px[i] + 0.7152 * B.px[i + 1] + 0.0722 * B.px[i + 2] > 180) bright++;
+      }
+      if (!n) return { px: 0, bright: 0, w: 0, h: 0, x0: 0, x1: -1, y0: 0, y1: -1, frame: [A.w, A.h] };
+      return { px: n, bright, x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1, frame: [A.w, A.h] };
+    };
+    // the box the game's own frame carries at a bare face: there is none
+    out.boxInGame = against(g.hover);
+    // and the box that used to be drawn there
+    out.wouldBeBox = against(face);
+    g.hover = null;
+    /* where the body itself stands on that frame, with the matrix the renderer
+       used for it: the ask is whether the old box sat on top of the animal */
+    const M = R.mvp, Wd = gl.drawingBufferWidth, Hd = gl.drawingBufferHeight;
+    const on = (wx, wy, wz) => {
+      const X = M[0] * wx + M[4] * wy + M[8] * wz + M[12];
+      const Y = M[1] * wx + M[5] * wy + M[9] * wz + M[13];
+      const Q = M[3] * wx + M[7] * wy + M[11] * wz + M[15];
+      if (!(Q > 0)) return null;
+      const sx = (X / Q + 1) / 2 * Wd, sy = (1 - Y / Q) / 2 * Hd;
+      const b = out.wouldBeBox;
+      return { at: [+sx.toFixed(1), +sy.toFixed(1)], inside: sx >= b.x0 && sx <= b.x1 && sy >= b.y0 && sy <= b.y1 };
+    };
+    out.body = { head: on(p.x, p.eyePos(), p.z), feet: on(p.x, p.y + 0.05, p.z) };
+
+    /* the same wall, the same yaw, the body back off it: one fruit block hung
+       in the air the ray passes through on its way to that face. This is the
+      same line with one thing on it the hand can do, and all three answers
+       have to follow: the mark, the sentence, and the key. */
+    const FID = 'frogpear', BID = N.FRUIT_BLOCK_REV[FID];
+    const hang = { x: face.x + face.nx, y: face.y + face.ny, z: face.z + face.nz };
+    const wasHang = W.get(hang.x, hang.y, hang.z);
+    W.set(hang.x, hang.y, hang.z, BID);
+    g.world.rebuildDirty(R.gl, 6);
+    p.z = spot.z + 1.2; p.x = spot.x; p.y = spot.gy + 0.0005;
+    p.vx = p.vy = p.vz = 0; p.grounded = true; g.camReady = false;
+    for (let i = 0; i < 40; i++) g.update(1 / 60);
+    const inv0 = g.inv.length, harv0 = g.stats.harvested;
+    const name = N.disp(N.FRUITS.find(f => f.id === FID));
+    out.pick = { fruit: BID, hang: [hang.x, hang.y, hang.z], marked: g.hover && [g.hover.x, g.hover.y, g.hover.z],
+      markedBlock: g.hover ? W.get(g.hover.x, g.hover.y, g.hover.z) : 0,
+      aim: g.aim && g.aim.kind, block: g.aim && g.aim.block, prompt: g.prompt,
+      names: g.prompt.indexOf(name) >= 0 };
+    out.pick.box = against(g.hover);
+    g.interact();
+    out.pick.taken = g.inv.length === inv0 + 1;
+    out.pick.gone = W.get(hang.x, hang.y, hang.z) === 0;
+    out.pick.harvested = g.stats.harvested === harv0 + 1;
+    W.set(hang.x, hang.y, hang.z, wasHang);
+    undo();
+    out.restored = cells.every((c, i) => W.get(c[0], c[1], c[2]) === wasCells[i]) &&
+      W.get(hang.x, hang.y, hang.z) === wasHang;
+    return back(out);
+  });
+  check('a body was walked up to a face its own depth stops it at',
+    !!promise.face && promise.face.solid && promise.gapToFace > 0 && promise.gapToFace < 0.4, promise);
+  check('a face the hand can do nothing to is not marked and asks nothing',
+    promise.face && promise.hover === null && promise.aim === null && promise.prompt === '', promise);
+  check('and the picture the game draws carries no box at it',
+    promise.boxInGame && promise.boxInGame.px === 0, promise.boxInGame);
+  check('the box that used to be drawn there was a metre of wall across the body',
+    promise.wouldBeBox && promise.wouldBeBox.px > 2000 && promise.wouldBeBox.w > 100 &&
+    promise.wouldBeBox.h > 100 && !!promise.body.head && !!promise.body.feet &&
+    promise.body.head.inside && promise.body.feet.inside, promise);
+  check('the same line with a fruit on it is marked, and the mark is the fruit',
+    !!promise.pick && promise.pick.aim === 'pick' && promise.pick.block === promise.pick.fruit &&
+    promise.pick.markedBlock === promise.pick.fruit &&
+    JSON.stringify(promise.pick.marked) === JSON.stringify(promise.pick.hang), promise.pick);
+  check('the sentence names the fruit the box is drawn on',
+    !!promise.pick && promise.pick.names && promise.pick.box.px > 200, promise.pick);
+  check('and the key takes it', !!promise.pick && promise.pick.taken && promise.pick.gone &&
+    promise.pick.harvested, promise.pick);
+  check('the shelf the box was tested in is put back', promise.restored === true, promise);
 
   /* 10l. a body change cannot leave you inside the world. `axis` stops a body
      entering a solid; it has no opinion about one that already is, and a body

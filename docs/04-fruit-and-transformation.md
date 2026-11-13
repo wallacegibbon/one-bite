@@ -171,9 +171,18 @@ The one exception is a **body reflex**: this body startles before you have decid
 
 ## 6. The picking interaction
 
+The crosshair, the highlight box and the key are **one answer**, worked out once a frame and read by all three: *what is the crosshair on, in the sense of a thing a hand can do something to?* The order of that answer is the order the key has always had — a store within arm's reach (3.2 m), then an animal in front of the body (4.5 m), then the block the ray stops at. Nothing else answers. A wall, the ground, a trunk or a roof stops the ray constantly — every time a body stands at a wall — and the hand has nothing to do to it: this game has no dig, no break and no push. Such a block gets no box and no sentence.
+
+It used to get a box, and that was the loudest thing on screen. The lens in third person sits behind the body, so the box drawn on the face the body was pressed against was drawn over the player's own animal. Measured at one such face — a frog body walked into it and stopped, 0.251 m of its own depth from the stone: **152×148 px** of a **900×560** frame, dead centre, covering where that body's own head and feet are on screen — with no prompt under it and no answer to E at all. `game/test/play.js` now asks the promise off the frame rather than off the code: at a bare face the picture the game draws is the picture with the box switched off (**0** pixels differ), and the same lens line with a fruit block hung in the air of that face is marked, named, boxed and picked.
+
 | Step | Presentation |
 |---|---|
 | Crosshair on a fruit block | highlight + prompt "E — pick Frog Pear" |
+| Crosshair on a plant block | highlight + prompt "E — gather …" |
+| Crosshair on a block that stores (the cellar crate) | highlight + prompt "E — main cellar" |
+| An animal in front of the body | prompt "E — observe …", no box — an animal is not a block |
+| A store within arm's reach | prompt "E — open …", no box |
+| Crosshair on a wall, the ground, a trunk, a roof | **nothing**: no box, no prompt, and E does nothing |
 | Press E | the fruit block disappears, backpack +1, rarity and slot cost announced |
 | Backpack full | "Backpack full (24/24 slots) — go back to the cellar first." The fruit does **not** drop, it stays where it is |
 | The fruit block | a faintly self-lit small box (0.44³ body + two small leaves), colour = the rarity ring colour |

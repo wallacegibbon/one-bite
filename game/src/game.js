@@ -123,7 +123,8 @@
       this.deeds = [];                   // what the valley has seen you do (docs/06 s2)
       this.mode = 'play';                  // play | cellar | journal | help | dead
       this.openStash = null;
-      this.hover = null;                   // the block the crosshair ray points at
+      this.hover = null;                   // the block the crosshair is aimed at, when the hand can do something to it (docs/04 s6)
+      this.aim = null;                     // the same answer in full: a store, an animal, or a block to pick
       this.prompt = '';
       this.thirdPerson = false;
       // the shot: the distance and the field of view are state, eased every frame
@@ -541,6 +542,39 @@
       if ((hx - p.x) * dx + (hy - ey) * dy + (hz - p.z) * dz < 0) return null;   // behind the body
       return t;
     }
+    /* What the crosshair is on, in the sense of a thing worth doing something
+       to. The prompt, the highlight box and the E key all read this one answer.
+       `rayTarget` answers where a line from the lens stops; that is not the same
+       question and only one of them is a promise. A block of stone, dirt, trunk
+       or glass stops the ray constantly -- every time a body stands at a wall --
+       and the hand has nothing to do to it: there is no dig, no break, no push
+       in this game, and `interact()` ends without acting. Boxed anyway, the
+       third-person frame is a bright rectangle drawn round the player's own
+       animal, because the lens is behind the body and the box is in front of it.
+       Measured at the face of a crater wall a frog body had walked up to and
+       been stopped by -- its own nose 0.02 m past the face, the metre of wall it
+       was boxed in running from **1.5 m** to **2.5 m** out from a lens standing
+       **1.19 m** behind it -- that box is **237 px** wide in a **1920 px**
+       frame, and pressing E to it did nothing at all. The order here is the order
+       `interact()` has always had -- a store at hand, then an animal in front of
+       the body, then the block the ray stops at -- because the marker that is
+       drawn has to be the thing the key would take. */
+    aimed() {
+      const p = this.player;
+      for (const s of this.stashes) {
+        if (Math.hypot(s.x + 0.5 - p.x, s.y + 1 - p.y, s.z + 0.5 - p.z) < 3.2) return { kind: 'store', store: s };
+      }
+      const c = this.nearestCreature(4.5);
+      if (c) return { kind: 'creature', creature: c };
+      const t = this.rayTarget();
+      if (!t) return null;
+      const b = this.world.get(t.x, t.y, t.z);
+      const bd = N.BLOCKS[b];
+      if (!bd) return null;
+      if (N.FRUIT_BLOCK[b] || N.PLANT_BLOCK[b]) return { kind: 'pick', at: t, block: b };
+      if (bd.store) return { kind: 'store', at: t };
+      return null;
+    }
     nearestCreature(r) {
       let best = null, bd = r;
       const p = this.player;
@@ -550,24 +584,14 @@
       }
       return best;
     }
+    /* The key and the marker are one answer: `aimed()` decides what the
+       crosshair is on, and this does the one thing there is to do to it. */
     interact() {
-      const p = this.player;
-      // 1. storage
-      for (const s of this.stashes) {
-        if (Math.hypot(s.x + 0.5 - p.x, s.y + 1 - p.y, s.z + 0.5 - p.z) < 3.2) { this.openStashUI(s); return; }
-      }
-      // 2. creatures
-      const c = this.nearestCreature(4.5);
-      if (c) { this.observe(c); return; }
-      // 3. blocks
-      const t = this.rayTarget();
-      if (!t) return;
-      const b = this.world.get(t.x, t.y, t.z);
-      const bd = N.BLOCKS[b];
-      if (!bd) return;
-      if (N.FRUIT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
-      if (N.PLANT_BLOCK[b]) { this.harvest(t.x, t.y, t.z, b); return; }
-      if (bd.store) { this.openStashUI(this.cellar()); return; }
+      const a = this.aimed();
+      if (!a) return;
+      if (a.kind === 'store') { this.openStashUI(a.store || this.cellar()); return; }
+      if (a.kind === 'creature') { this.observe(a.creature); return; }
+      this.harvest(a.at.x, a.at.y, a.at.z, a.block);
     }
     harvest(x, y, z, b) {
       const fid = N.FRUIT_BLOCK[b], pid = N.PLANT_BLOCK[b];
@@ -932,32 +956,25 @@
       if (this.world.anyDirty()) this.world.rebuildDirty(this.R.gl, 6);
 
       /* The frame's camera is worked out here, before the picking ray, so the
-         crosshair, the highlight box and E all agree on one line. render() uses
-         this frame instead of computing a second one, which would ease the
-         distance and the field of view twice per frame. */
+         crosshair, the highlight box and E all agree on one line -- and on one
+         answer, since all three now read `aimed()`. render() uses this frame
+         instead of computing a second one, which would ease the distance and the
+         field of view twice per frame. */
       this._camFrame = this.shootCamera(p);
 
-      // interaction prompt
+      // what the crosshair is on, and the sentence that says what E would do to it
       this.prompt = '';
-      if (playing) {
-        for (const s of this.stashes) {
-          if (Math.hypot(s.x + 0.5 - p.x, s.y + 1 - p.y, s.z + 0.5 - p.z) < 3.2) this.prompt = N.t('log.promptOpen', { n: storeName(s) });
-        }
-        if (!this.prompt) {
-          const c = this.nearestCreature(4.5);
-          if (c) this.prompt = N.t('log.promptObserve', { n: N.disp(c.sp) });
-        }
-        if (!this.prompt) {
-          const t = this.rayTarget();
-          if (t) {
-            const b = this.world.get(t.x, t.y, t.z);
-            const bd = N.BLOCKS[b] || {};
-            this.hover = t;
-            if (N.FRUIT_BLOCK[b]) this.prompt = N.t('log.promptPickFruit', { n: N.disp(FRU[N.FRUIT_BLOCK[b]]) });
-            else if (N.PLANT_BLOCK[b]) this.prompt = N.t('log.promptPickPlant', { n: N.disp(PLANT[N.PLANT_BLOCK[b]]) });
-            else if (bd.store) this.prompt = N.t('log.promptCellar');
-          } else this.hover = null;
-        } else this.hover = null;
+      const aim = this.aim = playing ? this.aimed() : null;
+      this.hover = aim && aim.at ? aim.at : null;
+      if (aim && aim.kind === 'pick') {
+        const fid = N.FRUIT_BLOCK[aim.block], pid = N.PLANT_BLOCK[aim.block];
+        this.prompt = N.t(fid ? 'log.promptPickFruit' : 'log.promptPickPlant', { n: N.disp(fid ? FRU[fid] : PLANT[pid]) });
+      } else if (aim && aim.kind === 'creature') {
+        this.prompt = N.t('log.promptObserve', { n: N.disp(aim.creature.sp) });
+      } else if (aim && aim.at) {
+        this.prompt = N.t('log.promptCellar');
+      } else if (aim && aim.store) {
+        this.prompt = N.t('log.promptOpen', { n: storeName(aim.store) });
       }
       /* Deeds are a fact, not a poll. Everything that can seal one (harvest,
          moving an item into a store) already calls checkDeeds() the moment it
@@ -1097,7 +1114,12 @@
         R.drawMesh(m[4], IDENT, { emisBoost: 0.2 });
         if (m[5]) glass.push(m[5]);
       }
-      /* highlight (wireframe, not a solid cube). The twelve bars are built once,
+      /* highlight (wireframe, not a solid cube). It is drawn on `hover`, which
+         is the block `aimed()` answered -- a block the hand does something to --
+         and never on a block that merely stopped the ray: at a wall that is a
+         metre of the valley with nothing to do to it, and in third person the
+         box is drawn over the player's own body, since the lens is behind it.
+         The twelve bars are built once,
          around the origin, and the block they are aimed at rides in the model
          matrix -- which is how a dropped fruit is already drawn. They used to be
          rebuilt in world coordinates every frame and thrown away again: 12 box
