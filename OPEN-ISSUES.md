@@ -7,169 +7,118 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is six commits. Five are already made:
-`49848f6` a body with legs answers a shore, a wall and a ceiling with its own
-legs, and no body record carries a lift, `f57af60` the herd on a record and the
-population of a valley being two facts with two numbers, `f76f0e4` the chapters
-saying what a shore is and what a lift cost and which body reads a roof,
-`c8255e3` the record of that work, `d0ee9b6` the test chapter naming the same two
-bodies at the same roof and the same flooded bank. This record is the sixth, the
-docs-only commit that follows them on the same tree and names all of them. The
-full suite
+State at time of writing: this round is two commits. The first is the whole of the
+work: `0d88846` move an animal as the body it is drawn with -- the ground asked of
+the rectangle the model draws, and a rig that builds walls three, five and nine
+cells long to ask it. This record is the second, the docs-only commit that follows
+it on the same tree and names it. The full suite
 ran twice on this tree: both runs 10/10, with `0 CHECK FAILED` and no page errors
 in `/tmp/frutaria-play.log`; the doc gates are clean on it too (`extract-comments`
 -> `[]` and `occurrences: 0, unique: 0`; `docs-sync` all-consistent; `docs-drift`
 catching every drift it plants; `reach` finding every field of every record read
-by the code that names it, with `step` gone from the records and from the code
-that read it). The strip films were run over on the same tree: `no errors`, every
-film `offFrame: 0`, and the pinned numbers back where they were -- 5.617 m/s and
-0.73 m for both bodies of the frog, 6.728 and 1.04 for the worn body at a built
-bank, 6.73 for the animal at the same face. What moved is the one number that was
-never pinned: the arc the animal's own climb film reports reads 1.52-1.73 across
-runs of the same film, because the path after the climb is the animal's; the
-chapter now says that instead of quoting a range that was two runs wide.
+by the code that names it).
 
-The brief this time was not a bug and not a feature. *"我把更多的决定权交到你手上，
+The brief is the standing contract, and one sentence of it: *"我把更多的决定权交到你手上，
 你来决定怎么设计、怎么实现。核心要点是，这是一个长远的项目，必须保持正确、简洁、
-robust，尽可能地符合物理世界的规律。比如说，青蛙不管在陆地还是水中，它都是以跳跃的
-方式行进的，就是两条后腿是同时运动的，不会有爬行，诸如此类。"* -- the design
-decisions are mine to make, and the test of one is whether it would still be
-correct in five years, and whether the world behaves the way a world does. The
-example given is the one this file has been circling since issue 12: a frog
-travels by hopping, both hind legs together, in water and out of it; it does not
-crawl, and it is not carried.
+robust，尽可能地符合物理世界的规律。比如说，青蛙不管在陆地还是水中，它都是以跳跃的方式
+行进的，就是两条后腿是同时运动的，不会有爬行，诸如此类。"* -- the design decisions are
+mine, and the test of one is whether the world behaves the way a world does. The
+example given there is the gait, which was closed last round. The sentence that
+matters this round is the one before it: *"变成了一个动物，各方面都要像那个动物"* --
+being that animal in every way. An animal has an extent. This one has had one
+since the first model was drawn, and one of its gates never knew.
 
-Three places in the movement code still answered that differently for the two
-bodies of one animal, and one number in the data answered it for neither.
+- **A body is drawn with a rectangle and asked the ground as a point (issue 16,
+  closed).** `N.MODEL_W` gives every model the box its trunk is carved from; the
+  constructor keeps it on the body as `hl`/`hw` with the model's own centre offset
+  as `ox`/`oz`; `bodyClash` moves bodies apart by that pair and `arcRoofClear` is
+  handed it when a launch asks what is over it. The walking step gate was the one
+  ask that read the single column under the position. So at a bank two metres tall
+  a frog spent **220** frames of a 420-frame window with a corner of itself inside
+  the bank, **219** of them a centimetre or more through the face, the deepest
+  **0.208 m** -- half of the animal through a face it had been stopped by -- while
+  the column its feet stood in was inside the rock in **0** frames, which is the
+  whole of why no gate ever saw it. `bodyCells` states the columns a body's own
+  rectangle covers, the step gate asks every one of them (surface, feet cell, room
+  over it) and refuses the step if one refuses, and the launch of a hop, which
+  already built that rectangle inline, calls the same helper. Every count above goes
+  to **0**; the body's worst corner now reaches **0.001 m**, which is one frame's
+  step. The animal in the game: walked at a wall it cannot climb it stands off the
+  face instead of in it, and the way round costs **half a second** -- **0.63**,
+  **0.53** and **0.57** s at walls three, five and nine cells long.
+- **The half of the issue that had no test at all, now has one, and it is not
+  where the complaint pointed.** The rig is `anAnimalWalkedAtAWallStandsOutsideItAndGoesRound`:
+  one flat shelf, a wall one cell thick and three blocks tall, three, five and nine
+  cells long, and an errand held past the far end of it every frame, as the
+  sent-animal rig holds it. Two questions on that road: is any part of the body
+  ever inside the rock that is stopping it, and does it get round. The first is the
+  one the issue was about: **74** frames inside at five cells and **158** at nine,
+  **69** and **156** of them a centimetre or more through the face, **0.232 m** and
+  **0.228 m** deep, and **0** at every length now. The second is said plainly
+  because it was never broken: the body got round all three lengths on the tree this
+  round started from too (**5.65**, **6.52**, **8.93** s against **4.83 s** with
+  nothing built there), so the contouring was not what was missing, and the desk
+  probe's complaint -- a metre and a half along a face and then the errand given
+  up, measured at the built two-metre bank, where the target has *no* way round --
+  is not reproduced by a wall with ends and is still unmeasured.
+- **Two asks stay points, and both say so where they are.** A climb is begun from
+  where the body stands, not from wherever its nose points, and the reads that
+  decide a step (`stepAhead`, `riseAhead`) already look ahead of the feet: making
+  the *riser* a box was tried and measured, and at a bank of one metre the frog
+  that was thrown one sized arc at the edge needed **two**, because what carries a
+  body over an edge is the time its own arc spends above it and half a body further
+  back does not fit inside that. `bodyRoom`, the destination of the keep-apart
+  shove, is left a point too: a shove is the undoing of an overlap that already
+  exists, no rig on this tree measures what a box would cost there, and the failure
+  that comment is written around is an ask that refused too many places -- so it is
+  named as a seam in the code rather than changed on the way past.
+- **What the same law costs where nobody went looking.** One other rig moved, and
+  it is the same fact seen from the wood side: driven at the one trunk in the valley
+  that stands at the height a frog's own body occupies, the animal used to come to
+  **0.517 m** centre to centre of the nearest wood cell, which is its nose **0.19 m**
+  inside a trunk it had been refused -- the walk gate had already refused that
+  column, and it stands in it in **0** frames of its 480 on either tree -- and now
+  comes to **0.69 m**, which is its own half-length with the face of the block at
+  the same place. It goes round the log either way. What it pays is the deciding:
+  **35** frames standing still at the face instead of **1**, and it saves route,
+  **5.28 m** instead of **5.68 m** on the same errand.
+- **How any of this was known, and what the method says about the rest of the
+  suite.** The same method as the last two rounds and one step more: `test/play.js`
+  run twice on the tree this round started from and twice on this one, the JSON
+  every step reports compared field by field, and a field attributed to the code only
+  when every run of each tree agrees with itself and the two trees disagree. Of the
+  **988** fields compared, **936** move between runs of one tree -- the wandering,
+  the flock, the swimming watches, and everything that reads a canvas -- and **52**
+  are steady on each tree and differ between them. Those 52 are in exactly three
+  rigs: the two that ask a body about a face it is refused (the bank rig and the new
+  wall rig) and the one that asks it about a trunk (the wood-span rig). Four fields
+  in a watch that asks about nothing of the kind moved too -- the distances three
+  animals end an afternoon at from the rest of their kind, **28.6 / 28 / 25.7 m**
+  becoming **29 / 28.2 / 27.1**, and **351.5 m** walked becoming **349.9** -- which
+  is one body standing off every face a hand's breadth further out, summed over a
+  morning of walking; that watch's own bounds are nowhere near. One further field in
+  that set is a millisecond timing read of the meshing watch and is the machine, not
+  the law. The three box rigs *are* steady: two runs of the old tree and two of the
+  new give them byte-identically, which is what makes the numbers above measurements
+  rather than impressions.
+- **The measure that was wrong first, kept because it is the interesting part.**
+  The first count of that bank read **222** frames before the change and **222**
+  after it, which is why the box gate looked like a no-op for a whole sitting. It
+  built the rectangle about the position and ignored `ox`/`oz` -- where a model's
+  boxes sit about the position -- and for a frog that is **3.6 cm** off centre: the
+  measure asked a rectangle 3.6 cm ahead of the one the model draws. The corrected
+  measure is the one the check is made on. A measure that agrees with itself across
+  a change is not a measure that is watching.
 
-- **A shore is ground, and a body with legs uses it.** What carries a wet body
-  -- its feet or the water -- was asked twice, in two different ways. The water
-  branch asked the place (`is there water over the level the body would stand
-  on`) and the step gate asked the body (`is this body in water`). A one-block
-  shore answers those two questions differently, and the one-block shore is the
-  common ground of this valley: **183** columns of Mirrorlake alone. So the frog
-  that lives there stopped using its legs exactly where it had ground under them,
-  and the animal the whole game was narrowed to spends the edge of its own home
-  being carried. `waterHoldsUp(surface, bed)` states it once -- the surface has to
-  be at least two metres over the ground those feet would stand on -- and four
-  readers ask it: whether a water animal may live in a column, whether the water
-  holds the body you wear up, whether a wild body's height is held by the water or
-  by its feet, and whether that body's legs may size a step. Measured at a built
-  bank with one block of water over the shelf, the same rig and the same bank with
-  the water on and off: the wild body used to be lifted **41** frames at a
-  one-metre bank and **113** at a two-metre one, gave no sized launch at all, and
-  never got the ground under its feet. It now gives the same single **6.73** launch
-  it gives on dry ground, its peaks agreeing to **0.02**, is lifted in **0** frames
-  of **420**, and stands on the bank top; the body worn from it gives **6.728** and
-  gets up too; at the two-metre bank in that same water no ground rises under
-  either body's feet, exactly as on the dry side of it. The water keeps what it was
-  for: that same frog is in water for **281** of those frames with its hold at **0**
-  and its feet running the bottom, and the deeper lake still holds it up at the
-  depth its row states.
-- **No body record carries a lift, and none needs one.** Issue 17 asked which of
-  two answers to take and both were honest; the one that is correct in five years
-  is the one that does not keep a number nothing reaches. `step` is off the human
-  record and off the form, and the auto step-up is out of `Player.update`. The
-  whole dry half of the bank rig -- the person, the animal and the worn body, at
-  banks of nought, one and two blocks, launches and heights and the ground under
-  their feet -- is byte-identical between the tree before this round and this one,
-  which is what removing a lift that never reached a block looks like: a **0.55 m**
-  lift cannot reach a whole block, and this valley builds nothing shorter. What it
-  did remove is the box rising by itself -- 0.124 m at a bank of one metre, the
-  wobble the movement chapter counts and stops. A body climbs with the launch its
-  own row states, which is a number with a reach: **1.50 m** above its own feet for
-  the body you start in, **1.09 m** at the fullest extension of a frog's legs.
-  Which steps that puts in front of which body is a difference between animals, and
-  it was always meant to be one.
-- **The sky over an arc is read once, for both bodies.** Issue 15 was left open
-  with the honest admission that no rig ran a worn body under a beam. Now one does,
-  in the rig that has always asked the animal (`frogDoesNotHopThroughItsOwnCeiling`
-  grew a second window with the player in the frog's form at the same cavity), and
-  it says what the issue expected and something sharper: at a cavity with one block
-  of ceiling over its floor, the animal launches **0** times and the worn body gave
-  **8** launches into that ceiling out of **8**. The reading is `arcRoofClear`
-  now -- the column the body stands in, the columns the arc will have crossed by
-  its top, and the cells the body's own box reaches at push-off, leaves excused by
-  the material table and a trunk not -- and the only thing the two bodies still
-  bring to it separately is that list of cells, because an animal stands in a
-  rectangle turned by its heading and the body you wear stands in the axis-aligned
-  box its record gives it. The wild half of the code moved not one number: the
-  bank rig's animal figures are byte-identical before and after, which is what a
-  refactor of a reading is supposed to look like. The worn body's half changed in
-  two places only, and both are the animal's behaviour: under a ceiling it cannot
-  clear it launches **0** times, never winds up (**0** frames with its legs loaded
-  under that roof), and walked, it leaves the pocket **4.25 m** later on its feet --
-  its body is driven toward its cruise every frame whatever its legs decide, which
-  is what "a frog under a low roof walks" means in code; and at the face of a
-  bank two metres tall -- above what those legs can size -- it stopped throwing
-  itself at the wall, **1** arc instead of **3** and standing in **83%** of the
-  frames instead of **60%**, which is what the animal there does (**3** arcs against
-  the **8** of open ground). The bank rig's guard that asked both bodies for more
-  than one arc at the wall was written when the worn body did not consult the roof
-  at all; it now asks for several on open ground, and asks at the wall the thing it
-  should have asked: no arc sized, and the feet no less at home there than in the
-  open.
-- **The herd on the record and the valley's five are two facts, and stay two
-  numbers.** Issue 18 asked which half to unify. Neither: `herd` on a species row
-  says how gregarious the animal is -- it is why a stray walks back toward the
-  middle of its kind -- and what this valley holds is a decision about this
-  valley, which belongs with the code that generates the valley and not with a
-  record that knows nothing about maps. The chapters print the row's number under a
-  column named for the field and say what the other number is, and the comment
-  beside `spawnCreatures` now says it where the number lives, so a reader who
-  arrives at the code does not arrive at the wrong conclusion on the way.
-
-How any of this was known: the same method as last round, and the same warning.
-`test/play.js` was run on the tree this round started from, again on the tree with
-only the water law in it, and twice on the final tree -- 10/10 every time, the
-timings stripped, and the JSON every step reports compared field by field. The rigs
-that do not draw -- the bank, the stride, the feet holding their ground, the
-water-and-breath pair, the new shore and ceiling windows -- answer byte-identically
-across runs when no law touched them, and the places where they do not are the ones
-named above, one figure at a time. The rigs that do draw are noise at the level of
-the frame a frog first gets up a step and the arc a wandering animal lands on;
-`frogDoesNotHopThroughItsOwnCeiling`'s animal half is one of those (its launch
-count read 0, 2, 0 across runs of unchanged code), which is why the assertions
-added this round are made about the driven body, and why the climb film's arc is
-now reported as a range instead of a pair of runs.
-
-What this round looked at and left alone, with the reason:
-
-- The arc gate could be read the other way: a wall straight in front of a body is
-  not space the body will move through -- the collision stops it at the face -- so
-  a law that asks the sky over a *face* refuses arcs that would only have bumped
-  it. That reading would let the worn body hop at a two-metre wall again. It was
-  tried, and it is not in this tree: it also un-refuses the trunk one cell over
-  the floor the animal stands on, which is the case the arc law was built for and
-  which the chapters report as measured (**0** arcs under a trunk, **1** under a
-  crown of leaves at the same height). One law that refuses both faces and roofs
-  is what the animal's own gate has been doing for two rounds; making the worn body
-  agree with it is what this round was for.
-- The lift (`climbTo`/`climbRate`) is now unreachable for the valley's only
-  animal -- a body whose row states a hop takes every step with its legs, on land
-  and in water -- and after this round nothing in the valley or in the suite
-  exercises it: the rigs that used to report a frog climbing a bank by that lift
-  now report it climbing by a hop or being corrected out of rock. It is the law by
-  which a body that *walks* climbs a riser, and the valley is explicitly staged to
-  hold more than one animal (issue 11), so it stays. Saying that plainly is the
-  point: the next round should meet it with a second animal and a rig that walks up
-  a step, not by deleting the law the first time it looks dead.
-- The solid-exit correction now carries the case `aBodyClimbsItsBank` builds -- a
-  body put down inside a bank under water -- where the lift used to carry it. The
-  worst height that rig reports moved from **0.153** to **0.325** against a bound of
-  **0.4**, and its companion from 0.153 to **0.077**. That is headroom spent, not a
-  bound broken: the rig starts a body inside rock on purpose, and the correction
-  that gets a body out of rock works at 0.1 m a frame, slower than the lift that
-  was being asked to do it. Left as it is, with the numbers here rather than the
-  bound quietly tightened.
-
-What this round leaves open. Issues 13, 14 and 16 stand exactly as written: the
-swim still has no vertical component, the frame check still bounds nothing about
-what is behind the body, and an animal is still moved as a point and drawn as a
-box. One new one, 19: the figure this round leaned on -- **183** one-block shore
-columns -- is quoted in the chapters and in the code comments and is computed by
-nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
-counts the lake's depths, not the shores. It is a number three laws now rest on.
+What this round leaves open. Issues 13, 14, 18 and 19 stand exactly as written (the
+swim still has no vertical component; the frame check still bounds nothing about
+what is behind the body; the valley's population is still a second number; and the
+**183** one-block shore columns are still counted by nothing that runs). Two new
+ones, 20 and 21: an animal walked at a wall that has *no* way round still gives the
+errand up after a metre and a half along the face, which the new rig does not ask
+because its walls have ends; and the width of the contour probes -- an animal looks
+**`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
+and never before, and nothing measures what that costs.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -1631,7 +1580,115 @@ Left open because the arc coming down to 0.73 m makes the case rare now, and
 because the honest thing to do with an unmeasured asymmetry is to write it down
 rather than fix it on the way past.
 
-## 16. An animal stopped by a wall is drawn with its nose inside it (found by the bank rig)
+## 16. An animal stopped by a wall is drawn with its nose inside it (found by the bank rig; closed the same round)
+
+**Closed: the rectangle a body is drawn with is now the rectangle its movement
+asks of the ground.** The law is one helper, `bodyCells` in `game/src/entities.js`,
+and two callers that already had it on the body and never used it -- the walking
+step gate, which asked the single column under the body's position, and the launch
+of a hop, which asked the roof over the body's cells and now asks it over the same
+rectangle. What a body has always carried is the fact: `N.MODEL_W` gives every
+model the box its trunk is carved from, the constructor keeps it as `hl`/`hw` with
+the model's own centre offset as `ox`/`oz`, `bodyClash` moves bodies apart by that
+pair and `arcRoofClear` is handed it. The ground was the one ask left reading a
+point, and the world is not a point.
+
+Measured on the tree that closed it against the tree that opened it, in the two
+rigs written for it (`test/play.js`, the bank rig `aBodyWalkedIntoABankStandsOnItsFeet`
+and the new wall rig `anAnimalWalkedAtAWallStandsOutsideItAndGoesRound`), counted
+at the four corners of the rectangle the model draws rather than of the cell the
+position falls in. At a bank two metres tall, walked at for 420 frames, a frog had
+a corner of itself inside the bank in **220** frames, **219** of them a centimetre
+or more through the face, the deepest corner **0.208 m** in -- half a frog; with a
+block of water laid as a shore in front of the same bank, **308** frames, **307**
+through, **0.226 m**. At a wall one cell thick and three blocks tall, walked at
+with an errand held past the far end of it, the same body was inside the wall in
+**0**, **74** and **158** frames of 2400 at walls **3**, **5** and **9** cells
+long, **0**, **69** and **156** of them a centimetre or more through the face,
+**0.232 m** and **0.228 m** at the deepest. In every one of those rows the column
+its own feet stood in was inside the rock in **0** frames, which is the whole of
+why no gate ever saw any of it. Asked of the rectangle instead, every one of those
+counts is **0** with anything of the body a centimetre through a face, and the
+deepest corner reaches **0.001 m** and **0.005 m**, which is one frame's step. The
+crossing of a one-metre bank -- which the animal climbs, so the nose is over the
+ground beyond while the feet are still on the ground in front -- is untouched at
+**36** frames and **0.198 m**, and is reported as the crossing it is. What the
+change costs in time is the body standing off the face instead of in it: the wall
+of 3 is crossed at **6.28 s** instead of 5.65, the wall of 5 at **7.05** instead of
+6.52, the wall of 9 at **9.50** instead of 8.93, against **4.83 s** with nothing
+built there at all on either tree.
+
+Both new asks fail on the tree this round started from and pass on the tree it
+ends on. Nothing else in the suite moved except one rig the round did not set out
+to touch, `aBodyOnFootAsksTheWoodOverItsOwnSpanAndTheRoofOverItsHead`, which is
+the same law seen from the wood side: the frog driven at a trunk block standing in
+its own span comes to **0.69 m** centre-to-centre of the nearest wood cell instead
+of **0.517**, which is its own half-length standing at the face of the block
+instead of half of it standing inside, 0 frames in that column either way, and it
+goes round it either way -- what it pays is **35** frames standing at the face
+instead of **1** and **5.28 m** of route instead of **5.68**. Its own checks still
+pass; the numbers are told where they are measured.
+
+That sentence was checked rather than asserted, and the checking is worth keeping
+because it says what this suite can and cannot show. `test/play.js` was run twice on
+the tree this round started from and twice on this one; the JSON every step reports
+was compared field by field, and a field was counted as moved only when every run of
+each tree agrees with itself and the two trees disagree. Of **988** fields, **936**
+move between two runs of the *same* tree -- the wandering and flock watches, the
+swimming ring, every rig that reads a canvas -- so a difference in one of those
+proves nothing about a change. The **52** that are steady and differ are in exactly
+three rigs: the bank rig, the wall rig and the wood-span rig, the three that ask a
+body about a face it is refused. Four fields in the watch that keeps bodies apart
+move as well -- the distances three animals end an afternoon at from their kind,
+**28.6 / 28 / 25.7 m** becoming **29 / 28.2 / 27.1**, and **351.5 m** walked
+becoming **349.9** -- which is a body standing off every face it meets a hand's
+breadth further out, summed over a morning, nowhere near that watch's bounds; and one
+field in the meshing watch is a millisecond timing read and is the machine. The three
+box rigs answer byte-identically across runs, old tree and new, which is what makes
+the figures in this record measurements rather than impressions.
+
+**The one ask that stays a point, and why.** A climb is begun from where the body
+stands, not from wherever its nose is pointing, and the read that decides a step is
+already made along the heading -- `stepAhead` and `riseAhead` both look ahead of the
+feet and size the climb or the arc from what they find. Making the *riser* a box as
+well was tried and measured: at a bank of one metre the frog that was thrown one
+sized arc at the edge needed **two**, because what carries a body over an edge is
+the time its own arc spends above it, and half a body further back does not fit
+inside that. So `riser` keeps the point and says so beside it. The other point ask
+left standing is `bodyRoom`, the destination of the keep-apart shove: no rig on this
+tree measures what a box would cost there, and the failure that comment is written
+around is an ask that refused too many places, so it is named as a seam in the code
+rather than changed on the way past.
+
+**The second half of the issue, which was the half with no test at all.** "An
+animal at a wall neither its legs nor its `step` can take does not go round it" --
+measured with a desk probe at the built two-metre bank, it walked a metre and a half
+along the face and gave the errand up, because its four contour probes are `spd*dt`
+wide (3 cm at a frog's cruise) and the sideways probe of a body standing in the
+middle of a five-metre wall is the same wall. The wall rig now asks exactly that:
+one shelf, walls of 3, 5 and 9 cells, an errand held past the far end of the wall,
+and the two questions "is it ever drawn inside, and does it get round". It gets
+round every one -- and it got round them on the tree this round started from too,
+which is said plainly: what the desk probe saw was an errand held at the *far side*
+of a built bank, a target with no way round it, and an errand held past the end of
+a wall has a way round it, so that complaint is not reproduced by this rig and is
+still unmeasured. What was reproducible, and is what the new check is made on, is
+the drawing: inside a wall at three lengths **0**, **74** and **158** frames before,
+**0** at every length now. And the time the way round takes -- **6.28**, **7.05**
+and **9.50** s against **4.83 s** with nothing built -- is the length of the wall
+and not the law. What the width of the contour probes costs is still unmeasured: a
+body in the middle of a nine-cell wall is 4.6 s further from its errand than a body
+walked at nothing, and that difference is the wall.
+
+Why the first count read **222** and the second reads **220** for the same body at
+the same bank is worth keeping, because it is how a measurement can agree with
+itself and still be wrong: the first version of that measure built the rectangle
+about the *position* and ignored `ox`/`oz`, which is where the model's boxes sit
+about the position -- for a frog that is 3.6 cm off centre, so the measure asked a
+rectangle 3.6 cm ahead of the one the model draws. It read **222** before the change
+and **222** after it, which is why the box gate looked like a no-op for a whole
+sitting. The corrected measure is the one above, and it is the one the check is
+made on.
 
 **Found while writing the rig that asks whether a body climbs a bank, not in the
 game itself.** The rig (`test/play.js`, step `aBodyWalkedIntoABankStandsOnItsFeet`)
@@ -1640,12 +1697,16 @@ For the person and for the body worn from a frog that is a real question with a
 real answer: their movement honours a collision box (`Player#hits`), and both read
 **0** frames inside the bank at either height. Asked the same way of the animal it
 first read **222** frames of a 420-frame window spent inside the bank -- a third of
-an afternoon standing inside a block -- and the report was simply wrong: the body
-was not inside the bank, it was pressed against it.
+an afternoon standing inside a block -- and the first reading of that was "the
+report is wrong, the body is not inside the bank, it is pressed against it". Half of
+that was right: the measure was 3.6 cm away from the rectangle the model draws,
+because it built the rectangle about the position and not about the boxes the model
+puts there. The rest of it -- that a body was standing with half of itself through a
+face it had been stopped by -- was the game, and it is what this issue closed.
 
-**The two kinds of body are not moved the same way, and this is the seam.** A body
+**The two kinds of body were not moved the same way, and that was the seam.** A body
 the player drives is displaced as a box: its extent is asked at every step and it
-stops with its face at the face of the world. An animal is displaced as a point
+stops with its face at the face of the world. An animal was displaced as a point
 that is probed; the rectangle its trunk is drawn from -- the same one
 `N.MODEL_W` gives the keep-apart law, and it is kept on the body as `hl`/`hw` -- is
 never asked of the world on the body's way through it. So an animal pressed at a
@@ -1654,24 +1715,33 @@ length (**0.21 m** for a frog drawn 0.41 m nose to tail). This is not a bank
 business: it is every wall in the valley and every animal pressed at one, and the
 bank rig only happened to be the first thing that counted it.
 
-What the rig records now, with the two questions kept apart, is the honest version:
-at a two-metre wall the point its feet stand on is inside a bank cell in **0**
-frames and the rectangle of its trunk is in one in **222**; at a one-metre bank,
-which it climbs, the trunk rectangle is inside for **37** frames -- a body on its
-way over an edge has its nose over the ground beyond while its feet are still on
-the ground in front, which belongs to the climb and not to being stuck; with
-nothing built it is inside in **0**. The ask the step makes is of the feet, because
-that is what the movement code answers for an animal.
+What the rig recorded then, with the two questions kept apart, was the honest
+version of the ask and the wrong version of the measure: at a two-metre wall the
+point its feet stand on is inside a bank cell in **0** frames and the rectangle of
+its trunk -- measured about the position, and so 3.6 cm ahead of the one the model
+draws -- is in one in **222**; at a one-metre bank, which it climbs, that rectangle
+is inside for **37** frames, a body on its way over an edge holding its nose over
+the ground beyond while its feet are still on the ground in front, which belongs to
+the climb and not to being stuck; with nothing built it is inside in **0**. The ask
+the step made was of the feet, on the argument that that is what the movement code
+answers for an animal. That argument is the half of it this round closed: what the
+movement code answers for an animal is whatever it is asked with, and a body drawn
+with a rectangle is an animal with a rectangle.
 
-Two things would close this, and they are the same one: ask the animal's step gate
+Two things would close this, and they were the same one: ask the animal's step gate
 of the rectangle the body already carries instead of of its point, which is what
 the player's branch does, and then the box a body is drawn with and the box a body
-is moved with stop being two different facts about one body. The cost is real --
+is moved with stop being two different facts about one body. The cost was real --
 `Creature`'s gates are point probes today, and a box changes which of the four
-contour steps exist at a narrow gap -- so it is a round of its own and not a
-sentence.
+contour steps exist at a narrow gap -- and it was a round of its own: the walk gate
+and the launch of a hop are the two callers that took it. The narrow-gap case is
+the one that did not move, and it was compared rather than argued: leaf by leaf
+across the whole suite, the only rigs that moved at all are the three that ask a
+body about a wall it is refused (the bank rig, the wall rig, and the wood-span rig,
+whose numbers are above), and the day and flock watches of the valley are unchanged
+wherever they do not touch a face.
 
-**The half of it the same rig saw, and which no test pins.** An animal at a wall
+**The half of it the same rig saw, and which no test pinned.** An animal at a wall
 neither its legs nor its `step` can take does not go round it here: measured with a
 desk probe at the built two-metre bank, it walks about a metre and a half along the
 face and then gives the errand up. The mechanism is legible in the contour: its four
@@ -1680,10 +1750,13 @@ probe of a body standing at the middle of a five-metre wall is the same wall, so
 there is no step to take and the law falls through to `this.tx = this.x;
 this.tz = this.z; this.pause = 0.5`, a fresh errand half a second later. That is
 the same for the worn body and for the animal, which is the only comfort in it: the
-two bodies of one animal fail a wide wall alike. Closing it means contouring in
-body-lengths rather than in frames -- the same reach `riseAhead` already computes
-for the step in front -- and it wants a rig of its own: a wall of 3, 5 and 9 cells
-and a target behind the far end of it.
+two bodies of one animal fail a wide wall alike. The rig this wanted -- a wall of 3,
+5 and 9 cells with a target behind the far end of it -- exists now, and what it
+found is in the paragraphs above: going round is not what was missing, being drawn
+outside was, and the desk probe's errand (a target with no way round it) is still
+unmeasured. What contouring in body-lengths rather than in frames would still change
+is the width of those probes, and that is a question about how far an animal looks
+sideways, not about what its body is, and it stays open.
 
 ## 17. Every body record states how far its own feet lift it, and the valley offers no step that far (found auditing the movement code)
 
@@ -1825,6 +1898,56 @@ count turns out to be; and the rigs, which build a one-block shore themselves
 (`aBodyWalkedIntoABankStandsOnItsFeet` floods a shelf with one block of water and
 asks both bodies about it) rather than trusting a census of the valley.
 
+## 20. An animal at a wall with no way round gives the errand up (found with a desk probe; the rig built for issue 16 does not ask it)
+
+**Open, and the only part of the old complaint that is still unmeasured.** Issue 16
+was closed on the half that was reproducible -- a body drawn through the wall that
+was stopping it. Its other half was this sentence, measured at the built two-metre
+bank with a hand-written probe rather than by the suite: an animal walked at a wall
+neither its legs nor a lift can take walks about **1.5 m** along the face and then
+gives the errand up, because the contour finds no step and the law falls through to
+`this.tx = this.x; this.tz = this.z; this.pause = 0.5` -- a fresh errand half a
+second later, in a body that is standing three metres from the thing it was walking
+to.
+
+The rig issue 16 grew (`anAnimalWalkedAtAWallStandsOutsideItAndGoesRound`) asks the
+same body at walls of three, five and nine cells with the errand held past the far
+end, and every one of those walls has an end and a way round: the animal went round
+all three, on the old tree and the new, in a time that follows the length of the
+wall. So the complaint is *not* reproduced there, and it is not answered either.
+What it would take to measure it is the same rig with the errand held on the far
+side of the wall instead of past its end -- a target the wall is between the body
+and, with no gap at either end of it within the window -- and the two questions
+"how far along the face does it get, and does it try again at all". A dog does not
+give up at a fence; whether *this* animal should keep looking is a decision about
+what an animal is, and it should be made against a measurement of what it costs now,
+which is what is missing. The one comfort in the old observation stands: the worn
+body and the animal fail a wide wall the same way, because both are answered by the
+same contour.
+
+## 21. An animal looks three centimetres to one side when it decides which way round (found while measuring the way round)
+
+**Open, and it is a question about how far an animal sees, not about what its body
+is.** The contour that picks a way round probes four directions at
+**`spd*dt`** to one side -- at a frog's cruise that is **3 cm**, one frame's walk.
+It works: the animal walks along a face until the face ends and then turns, at every
+length of wall tested, and the cost of the detour is the same **half a second** at
+walls of three, five and nine cells (issue 16's numbers), which is what walking to
+the end of a wall costs. What has not been measured is what the width of those
+probes costs: an animal that sees only one frame sideways cannot begin to turn
+before the wall ends, and the walk it makes is the one a body with no view makes.
+The walls of that rig were built long -- nine cells, twenty-two body-lengths -- so
+that the length, not the turning, was what was being timed, and they showed nothing
+about this.
+
+A rig for it would hold the same errand and ask where along the face the body turns,
+not whether it gets round: the distance from the end of the wall to the point where
+its path starts to leave the face, measured now against measured with probes sized
+in body-lengths rather than in frames. Before that is done nothing should be
+changed here: the numbers for a wider look are exactly as unknown as the numbers for
+the present one, and the animal in the valley reaches every errand it is given a way
+round.
+
 ## The record of the last rounds (kept as history)
 
 > Superseded by the commit log, which is where this file says round-by-round history
@@ -1832,125 +1955,187 @@ asks both bodies about it) rather than trusting a census of the valley.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### The round before this one: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4)
+### The round before this one: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
-> This was the block at the top of the file until the round above superseded
-> it. The three questions it left open -- 15, 17 and 18 -- are closed on the
-> current tree, and the audit it opens with is still the shape of the movement
-> code: a question written twice is two answers waiting to drift.
+> The record that round ended on, which was the block at the top of this file
+> until the round above superseded it. What it left open is closed on this tree:
+> issues 15, 17 and 18 stay closed, and so is 16, the one it opened -- an animal
+> is moved and drawn as one body now, not a point inside a box -- which also
+> means its own bank rig, where that was first counted, reads the rectangle the
+> model draws instead of the column under a foot. The shore law it states,
+> `waterHoldsUp`, is the one the box law is built on, and the **183** one-block
+> shore columns it leans on are still counted by nothing that runs (issue 19).
 
-State at time of writing: this round is three commits -- `cf2a0eb` the movement
-code asked once about rock, about a column and about a lift, `6fe89c7` the
-chapters' creature table read back out of the record it copies, `4d96afc` the
-chapters themselves saying which of that table's numbers means what -- and this
-record, which is the docs-only commit that follows them on the same tree. The
-full suite ran twice on this tree: both runs 10/10, with `0 CHECK FAILED` and no
-page errors in `/tmp/frutaria-play.log`; the doc gates are clean on it too
-(`extract-comments` -> `[]` and `occurrences: 0, unique: 0`; `docs-sync`
-all-consistent; `docs-drift` catching all 32 of the drifts it plants; `reach`
-finding every field of every record read by the code that names it). The strip
-films were run over on the same tree: `no errors`, every film `offFrame: 0`, and
-every pinned number back where it was -- 5.617 m/s and 0.73 m for both bodies of
-the frog, 6.728 and 1.04 for the worn body at a built bank, 6.73 and 1.73 for
-the animal at the same face.
+State at time of writing: this round is six commits. Five are already made: `49848f6` a body with legs answers a shore, a wall and a ceiling with its own
+legs, and no body record carries a lift, `f57af60` the herd on a record and the
+population of a valley being two facts with two numbers, `f76f0e4` the chapters
+saying what a shore is and what a lift cost and which body reads a roof,
+`c8255e3` the record of that work, `d0ee9b6` the test chapter naming the same two
+bodies at the same roof and the same flooded bank. This record is the sixth, the
+docs-only commit that follows them on the same tree and names all of them. The
+full suite
+ran twice on this tree: both runs 10/10, with `0 CHECK FAILED` and no page errors
+in `/tmp/frutaria-play.log`; the doc gates are clean on it too (`extract-comments`
+-> `[]` and `occurrences: 0, unique: 0`; `docs-sync` all-consistent; `docs-drift`
+catching every drift it plants; `reach` finding every field of every record read
+by the code that names it, with `step` gone from the records and from the code
+that read it). The strip films were run over on the same tree: `no errors`, every
+film `offFrame: 0`, and the pinned numbers back where they were -- 5.617 m/s and
+0.73 m for both bodies of the frog, 6.728 and 1.04 for the worn body at a built
+bank, 6.73 for the animal at the same face. What moved is the one number that was
+never pinned: the arc the animal's own climb film reports reads 1.52-1.73 across
+runs of the same film, because the path after the climb is the animal's; the
+chapter now says that instead of quoting a range that was two runs wide.
 
-The order this time was about the code and not about an animal: simplify or
-optimise the system a little further, on the assumption that the rounds before it
-left pieces of themselves behind; fix what is clearly wrong, collect what is not
-certain, and ask at the end. What was read is the whole of how a body is moved
--- the walking gate, the step gate, the altitude and the lift, the two hop gates,
-the solid-exit correction, and every reader of a column they call. One shape came
-back over and over: a question written twice.
+The brief this time was not a bug and not a feature. *"我把更多的决定权交到你手上，
+你来决定怎么设计、怎么实现。核心要点是，这是一个长远的项目，必须保持正确、简洁、
+robust，尽可能地符合物理世界的规律。比如说，青蛙不管在陆地还是水中，它都是以跳跃的
+方式行进的，就是两条后腿是同时运动的，不会有爬行，诸如此类。"* -- the design
+decisions are mine to make, and the test of one is whether it would still be
+correct in five years, and whether the world behaves the way a world does. The
+example given is the one this file has been circling since issue 12: a frog
+travels by hopping, both hind legs together, in water and out of it; it does not
+crawl, and it is not carried.
 
-- "Which cells are ground to a body, as against a wall its shoulders go through"
-  was written five times: inline in `terrainY`, as `bodyInSolid`, as a local
-  `rockAt` in the animal's step gate, as the `feetHard` test in the lift cap, and
-  in the solid-exit correction's guard. `rockAt(w,x,y,z)` states it once now, and
-  the comment beside it names the rules that ask the *other* table -- `FOLIAGE`,
-  where a trunk is a wall and a crown is not -- and says why those are different
-  laws and not a missed one.
-- "What is the crown of this column" was written twice: `terrainY`, and `rockTop`
-  with a lower bound the caller filtered out again (`t > y + 0.05`). The step
-  read-ahead asks `terrainY` now; `rockTop` is gone.
-- "Are these feet inside rock" was the third copy of `bodyInSolid`, written out
-  again in the lift cap. It asks the helper.
-- The solid-exit correction asked `groundY` for the surface a body inside a rock
-  cell belongs above. Its own guard only opens when that cell is rock, so the
-  scan can only ever answer the top of the cell it started in. It reads the cell.
-- The hop gate and the step gate tested `isAmphibian()` where the law is "this
-  record states a hop" -- which is what docs/03 already says the two bodies are
-  told apart by ("whether the data gives the frog a `hop`"). They ask `sp.hop`
-  now. `locomotion` is left to the two water reads, because those are about the
-  water and not about the legs; the pose block that ran "for an amphibian" runs
-  "for a body with an arc".
-- The height a body may be raised onto the ground in front of it was a bare
-  `1.6` in six places, three of which are one gate seen from three sides.
-  `LIFT_REACH` names it. `STAND_SCAN` is the column bound that follows from it,
-  kept as its own literal because `1.6 - 1` is not `0.6` in binary floating
-  point, and that row is the difference between reading a block and not.
-- `const placeable = stand;` in the step gate was an alias left behind by a
-  rename and used once.
+Three places in the movement code still answered that differently for the two
+bodies of one animal, and one number in the data answered it for neither.
 
-That none of it changes what the game does is a claim, so it was tested as one:
-`test/play.js` was run four times -- twice on the old tree, twice on this one --
-the timings stripped, and the JSON each step reports compared field by field.
-Every rig that does not draw with `Math.random` answers identically: the bank
-step, the stride, the feet holding their ground, the pace, the space bodies keep
-from one another, the lake hiding its bed from its bank. Of the rigs that do
-draw, the pair of unchanged runs differs in 28 of them and the pair that spans
-the change in 26, in the same fields and by the same amount -- the frame in which
-a wild frog first gets up the trunk step reads 54, 55, 71 and 75 across the four
-runs, and that assertion asks only that it gets up it at all. The suite is 10/10
-on this tree twice, and the films are unchanged.
+- **A shore is ground, and a body with legs uses it.** What carries a wet body
+  -- its feet or the water -- was asked twice, in two different ways. The water
+  branch asked the place (`is there water over the level the body would stand
+  on`) and the step gate asked the body (`is this body in water`). A one-block
+  shore answers those two questions differently, and the one-block shore is the
+  common ground of this valley: **183** columns of Mirrorlake alone. So the frog
+  that lives there stopped using its legs exactly where it had ground under them,
+  and the animal the whole game was narrowed to spends the edge of its own home
+  being carried. `waterHoldsUp(surface, bed)` states it once -- the surface has to
+  be at least two metres over the ground those feet would stand on -- and four
+  readers ask it: whether a water animal may live in a column, whether the water
+  holds the body you wear up, whether a wild body's height is held by the water or
+  by its feet, and whether that body's legs may size a step. Measured at a built
+  bank with one block of water over the shelf, the same rig and the same bank with
+  the water on and off: the wild body used to be lifted **41** frames at a
+  one-metre bank and **113** at a two-metre one, gave no sized launch at all, and
+  never got the ground under its feet. It now gives the same single **6.73** launch
+  it gives on dry ground, its peaks agreeing to **0.02**, is lifted in **0** frames
+  of **420**, and stands on the bank top; the body worn from it gives **6.728** and
+  gets up too; at the two-metre bank in that same water no ground rises under
+  either body's feet, exactly as on the dry side of it. The water keeps what it was
+  for: that same frog is in water for **281** of those frames with its hold at **0**
+  and its feet running the bottom, and the deeper lake still holds it up at the
+  depth its row states.
+- **No body record carries a lift, and none needs one.** Issue 17 asked which of
+  two answers to take and both were honest; the one that is correct in five years
+  is the one that does not keep a number nothing reaches. `step` is off the human
+  record and off the form, and the auto step-up is out of `Player.update`. The
+  whole dry half of the bank rig -- the person, the animal and the worn body, at
+  banks of nought, one and two blocks, launches and heights and the ground under
+  their feet -- is byte-identical between the tree before this round and this one,
+  which is what removing a lift that never reached a block looks like: a **0.55 m**
+  lift cannot reach a whole block, and this valley builds nothing shorter. What it
+  did remove is the box rising by itself -- 0.124 m at a bank of one metre, the
+  wobble the movement chapter counts and stops. A body climbs with the launch its
+  own row states, which is a number with a reach: **1.50 m** above its own feet for
+  the body you start in, **1.09 m** at the fullest extension of a frog's legs.
+  Which steps that puts in front of which body is a difference between animals, and
+  it was always meant to be one.
+- **The sky over an arc is read once, for both bodies.** Issue 15 was left open
+  with the honest admission that no rig ran a worn body under a beam. Now one does,
+  in the rig that has always asked the animal (`frogDoesNotHopThroughItsOwnCeiling`
+  grew a second window with the player in the frog's form at the same cavity), and
+  it says what the issue expected and something sharper: at a cavity with one block
+  of ceiling over its floor, the animal launches **0** times and the worn body gave
+  **8** launches into that ceiling out of **8**. The reading is `arcRoofClear`
+  now -- the column the body stands in, the columns the arc will have crossed by
+  its top, and the cells the body's own box reaches at push-off, leaves excused by
+  the material table and a trunk not -- and the only thing the two bodies still
+  bring to it separately is that list of cells, because an animal stands in a
+  rectangle turned by its heading and the body you wear stands in the axis-aligned
+  box its record gives it. The wild half of the code moved not one number: the
+  bank rig's animal figures are byte-identical before and after, which is what a
+  refactor of a reading is supposed to look like. The worn body's half changed in
+  two places only, and both are the animal's behaviour: under a ceiling it cannot
+  clear it launches **0** times, never winds up (**0** frames with its legs loaded
+  under that roof), and walked, it leaves the pocket **4.25 m** later on its feet --
+  its body is driven toward its cruise every frame whatever its legs decide, which
+  is what "a frog under a low roof walks" means in code; and at the face of a
+  bank two metres tall -- above what those legs can size -- it stopped throwing
+  itself at the wall, **1** arc instead of **3** and standing in **83%** of the
+  frames instead of **60%**, which is what the animal there does (**3** arcs against
+  the **8** of open ground). The bank rig's guard that asked both bodies for more
+  than one arc at the wall was written when the worn body did not consult the roof
+  at all; it now asks for several on open ground, and asks at the wall the thing it
+  should have asked: no arc sized, and the feet no less at home there than in the
+  open.
+- **The herd on the record and the valley's five are two facts, and stay two
+  numbers.** Issue 18 asked which half to unify. Neither: `herd` on a species row
+  says how gregarious the animal is -- it is why a stray walks back toward the
+  middle of its kind -- and what this valley holds is a decision about this
+  valley, which belongs with the code that generates the valley and not with a
+  record that knows nothing about maps. The chapters print the row's number under a
+  column named for the field and say what the other number is, and the comment
+  beside `spawnCreatures` now says it where the number lives, so a reader who
+  arrives at the code does not arrive at the wrong conclusion on the way.
 
-One inconsistency was found in the data rather than the code, and it is a
-documents bug with a test gap under it: the chapters' creature table printed **5**
-under a column called `Pack`, while the record says `herd: 8`. The column had
-become the valley's population -- a number that is on no record at all, it is
-what `spawnCreatures` in `src/game.js` decides -- and nothing could see it,
-because `docs-sync.js` has sections 1, 2, 4, 5 and no 3: the creature table was
-the one table in the set no checker asked. `docs-sync` now compares every number
-in that row against the record (the model, the scale, the whole ordered list of
-numbers in the motion cell, turn, alert, herd) and `docs-drift` plants three of
-them being wrong to prove it; the chapter prints the record's 8 under a column
-named for the field, and says in prose what the valley's five is. Issue 18 below.
+How any of this was known: the same method as last round, and the same warning.
+`test/play.js` was run on the tree this round started from, again on the tree with
+only the water law in it, and twice on the final tree -- 10/10 every time, the
+timings stripped, and the JSON every step reports compared field by field. The rigs
+that do not draw -- the bank, the stride, the feet holding their ground, the
+water-and-breath pair, the new shore and ceiling windows -- answer byte-identically
+across runs when no law touched them, and the places where they do not are the ones
+named above, one figure at a time. The rigs that do draw are noise at the level of
+the frame a frog first gets up a step and the arc a wandering animal lands on;
+`frogDoesNotHopThroughItsOwnCeiling`'s animal half is one of those (its launch
+count read 0, 2, 0 across runs of unchanged code), which is why the assertions
+added this round are made about the driven body, and why the climb film's arc is
+now reported as a range instead of a pair of runs.
 
 What this round looked at and left alone, with the reason:
 
-- The step gate's `stepAhead` and the hop's `riseAhead` are two look-aheads for
-  "the step in front". They are not one law: one is bounded by how far a leap
-  carries (`leapTravel`) and asks how far off the face is so the legs can be
-  sized before the body is at it, and the other is bounded by the lift's own
-  reach and sets the rate at which a body rises while it stands in front of the
-  face. They were compared column by column: they agree on everything the valley
-  is built with, and the one thing that separates them -- highest block in the
-  window versus the first face along the heading -- decides the ridge numbers,
-  which no rig measures any more. Merging them is a behaviour change dressed as a
-  tidy-up, so it is not in this round.
-- The lift (`climbTo`/`climbRate`) looks dead, because it is never set for a body
-  whose row states a hop and the valley's only animal has one. It is live for the
-  one case where such a body is not on its own feet: a frog wading the lake's
-  shore, where the water is too shallow to hold it up, which is where the "comes
-  out onto the shelf" law lives. Kept.
-- `worth()` repeats two of `can()`'s tests. They are not the same two: `can`
-  asks about the column being walked into, `worth` about the column the body is
-  being lifted through while it stands still. Left.
+- The arc gate could be read the other way: a wall straight in front of a body is
+  not space the body will move through -- the collision stops it at the face -- so
+  a law that asks the sky over a *face* refuses arcs that would only have bumped
+  it. That reading would let the worn body hop at a two-metre wall again. It was
+  tried, and it is not in this tree: it also un-refuses the trunk one cell over
+  the floor the animal stands on, which is the case the arc law was built for and
+  which the chapters report as measured (**0** arcs under a trunk, **1** under a
+  crown of leaves at the same height). One law that refuses both faces and roofs
+  is what the animal's own gate has been doing for two rounds; making the worn body
+  agree with it is what this round was for.
+- The lift (`climbTo`/`climbRate`) is now unreachable for the valley's only
+  animal -- a body whose row states a hop takes every step with its legs, on land
+  and in water -- and after this round nothing in the valley or in the suite
+  exercises it: the rigs that used to report a frog climbing a bank by that lift
+  now report it climbing by a hop or being corrected out of rock. It is the law by
+  which a body that *walks* climbs a riser, and the valley is explicitly staged to
+  hold more than one animal (issue 11), so it stays. Saying that plainly is the
+  point: the next round should meet it with a second animal and a rig that walks up
+  a step, not by deleting the law the first time it looks dead.
+- The solid-exit correction now carries the case `aBodyClimbsItsBank` builds -- a
+  body put down inside a bank under water -- where the lift used to carry it. The
+  worst height that rig reports moved from **0.153** to **0.325** against a bound of
+  **0.4**, and its companion from 0.153 to **0.077**. That is headroom spent, not a
+  bound broken: the rig starts a body inside rock on purpose, and the correction
+  that gets a body out of rock works at 0.1 m a frame, slower than the lift that
+  was being asked to do it. Left as it is, with the numbers here rather than the
+  bound quietly tightened.
 
-What this round leaves open. Issues 13, 14, 15 and 16 stand exactly as written:
-the swim still has no vertical component, the frame check still bounds nothing
-about what is behind the body, a worn body still hops through a roof the animal
-walks under, and an animal is still moved as a point and drawn as a box. Two new
-ones are questions about the data rather than defects in the code, and both are
-asked rather than answered: 17, the `step` that every body record carries and
-that answers no riser the valley is built with; and 18, the herd on the record
-and the population of the valley, whose meaning is now written down and whose
-numbers are still in two places.
+What this round leaves open. Issues 13, 14 and 16 stand exactly as written: the
+swim still has no vertical component, the frame check still bounds nothing about
+what is behind the body, and an animal is still moved as a point and drawn as a
+box. One new one, 19: the figure this round leaned on -- **183** one-block shore
+columns -- is quoted in the chapters and in the code comments and is computed by
+nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
+counts the lake's depths, not the shores. It is a number three laws now rest on.
 
 ### Two rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
-> Its issues (15 still open, 16 opened) are the ones it names; issue 16's bank
-> rig is still in `test/play.js` and still reads as it did there.
+> Of the issues it names, 15 is closed and 16 -- an animal moved as a point and
+> drawn as a box -- is closed on the current round; the bank rig it built is still
+> in `test/play.js`, but it no longer reads as it did there, because the ground is
+> asked of the rectangle the model draws and the rig counts those corners now.
 
 The order that opened it was about the animal, and it named the one place the
 round before that left inconsistent: *a frog's hopping should at least get it up
@@ -2455,13 +2640,17 @@ only (CJK inside string/regex literals is fine).
     36.4% and 44.7% for the two films -- the share counts the arcs a window
     happens to catch). The worn body crosses ground at **1.80 m/s** and water at
     **4.58**, the wild animal swims at **4.6**.
-- Frame order inside `Creature.update` (entities.js, the class begins at 1344; the
-  water reads and the `waterHolds` helper at 1643): steering + the horizontal step
-  and its gate (its `legs` test at 1995) -> altitude (2163, its own ground read at
-  2220, the water hold at 2282) -> the hop gate (2277-2407: the countdown at 2348,
-  `arcRoofClear` asked at 2400) -> the feet/water branch, standing, the step at a
-  rate and the fall (2408-2460) -> the solid-exit correction (2461, its lift at
-  2505) -> the keep-apart shove (2509). The gate and the shove run in the same
+- Frame order inside `Creature.update` (entities.js, the class begins at 1395; the
+  water reads and the `waterHolds` helper at 1678-1694): steering + the horizontal
+  step and its gate (its `stand` gate at 1941, its `legs` test at 2068, the
+  riser it sizes a climb from at 2078, `stepAhead` at 2124; the body's own
+  rectangle is one helper, `bodyCells` at 1327, used by that gate and by the hop
+  gate) -> altitude (2305, its own ground read there, the water hold at
+  2371) -> the hop gate (2362-2487: the countdown at 2433,
+  `bodyCells` and `arcRoofClear` asked at 2477-2480) -> the feet/water branch,
+  standing, the step at a
+  rate and the fall (2487-2537) -> the solid-exit correction (2539, its lift at
+  2566) -> the keep-apart shove (2608). The gate and the shove run in the same
   frame, gate first. `Player.update` keeps the same order for the body you wear:
   the legs (`legsFor`, and the sky over the arc is `skyFor`) -> the water hold ->
   the displacement, which is three axis moves and nothing else (no lift).
@@ -2495,7 +2684,7 @@ only (CJK inside string/regex literals is fine).
   `const N = window.FRUTARIA; const w = new N.World(N.WORLD.w, N.WORLD.h, N.WORLD.d);
   N.generate(w, 20261008);`. `Particles` needs `gl = { createBuffer: () => ({}) }`.
 - Height functions (entities.js: the water and arc laws at the top of the file,
-  53-235, and the column reads at 1050-1240): `rockAt(w,x,y,z)` is the one
+  53-263, and the column reads at 1050-1400): `rockAt(w,x,y,z)` is the one
   statement of which cells are ground to a body -- solid and not in `TREE_BLOCK`
   -- and `terrainY`, `bodyInSolid`, the animal's step gate and the solid-exit
   correction all ask it; the other table, `FOLIAGE` (a trunk is a wall, a crown
