@@ -19,7 +19,7 @@ Eight chapters, one language, in `docs/` — the root READMEs (this file and
 | Chapter | Contents |
 |---|---|
 | [00 — overview and design pillars](docs/00-overview-and-design-pillars.md) | Design pillars, experience goals, anti-goals, MVP boundary |
-| [01 — worldview and story](docs/01-worldview-and-story.md) | The valley (it has no name), the Grey Veil, the one magic, its three institutions |
+| [01 — worldview and story](docs/01-worldview-and-story.md) | The valley (it has no name) as an island in an unbounded sea, what a trip out costs, the one magic, its three institutions |
 | [02 — map and scenes](docs/02-map-and-scenes.md) | Zone table, ASCII map, vertical layers, fruit gating graph, POIs |
 | [03 — characters and creatures](docs/03-characters-and-creatures.md) | Protagonist, NPCs, creatures, attitude matrix, named individuals |
 | [04 — fruit and transformation](docs/04-fruit-and-transformation.md) | Full table of the fruits, form abilities, side effects |
@@ -65,11 +65,11 @@ The scripts are read **once**, when the page loads. After changing or pulling th
 
 ## What the prototype is
 
-- **160×48×160 voxel world, 10 zones**: Starfall Keep (castle on an island), Whisperwood, Glowglade, Echo Hollow, the Deep Grove, Ashscale Ridge, Mirrorlake (underwater, sunken tower, the Frogshall), Lanternrow, the Old Orchard, and the Grey Veil as the border.
+- **An authored square of ground, 160×48×160 voxels, standing on an island in a sea with no edge; 9 zones**: Starfall Keep (castle on an island), Whisperwood, Glowglade, Echo Hollow, the Deep Grove, Ashscale Ridge, Mirrorlake (underwater, sunken tower, the Frogshall), Lanternrow, the Old Orchard. Past the square the same terrain rule goes on answering every address, and nothing has been built out there yet — there is no wall, no fog and no border to reach.
 - **1 fruit, 1 body, one animal per niche**: the frog owns the shallows and the shore, and in the water it swims a ring round the isle at the centre of the lake, and only the frog's is a body you can wear; the open-water niche is empty for now. The rarity ladder has five rungs and the valley currently grows one of them (common); one fruit occupies 1 of your 24 slots.
 - **Transformation**: one body at a time. Eating a second fruit replaces the body you are wearing; the cost is the body you ended early and the fruit you spent.
 - **Body abilities the code actually runs**: collision size, walk / swim speed, a turn that is an arc rather than a pivot (every body carries the rate its own record allows, and the animal and the body worn from it carry the same one), jump force, auto step-up, a hop sized to the step in front of the feet (a body that hops climbs a one-block terrace on its legs and is stopped by a 1.2 m riser), held breath, breathing water, skin that dries out of it, night vision — and the same eye washed out by daylight —, stealth, field of view.
-- **1 species, 5 animals**, attitude-driven AI: the species is the one body you can wear, it reacts to the shape you are wearing right now, and it never hunts you on its own initiative. Danger is the water, the height, the fog, and what your current body cannot do.
+- **1 species, 5 animals**, attitude-driven AI: the species is the one body you can wear, it reacts to the shape you are wearing right now, and it never hunts you on its own initiative. Danger is the water, the height, and what your current body cannot do. The sea is not on that list: it is only long, and what crossing it costs is the clock of the fruit you are wearing.
 - **Storage**: 24-slot backpack, the main cellar (96 slots, decay ×0.1), and up to 3 cellar trees in the field (24 slots, ×0.33, at least 20 m apart).
 - **3 backpack upgrades**: Pouch +6 (storing fruit), Deep Pouch +6 (swimming the lake), Silver Divider (rare fruit costs one slot less, greenhouse) → 36 slots at full upgrade.
 - **Spoilage and regrowth**: a picked fruit goes dormant (rarer fruit faster) and can be planted from its pit; fruiting sites bear again after 1 / 1.5 / 2 / 2.5 / 3 game days (±20%), and the regrow queue is saved.
@@ -110,7 +110,7 @@ node game/test/docs-drift.js   # self-test: injects 32 errors into the docs, con
 node game/test/play.js         # gameplay loop: harvest → regrow → capacity → transform → storage → cellar tree → save
 node game/test/save.js         # save round trip: write a save, reload, continue from the start screen
 node game/test/upgrade.js      # backpack upgrades and slot maths
-node game/test/input.js        # real key events: walk / jump / time / Grey Veil border / camera comfort
+node game/test/input.js        # real key events: walk / jump / time / walking off the authored square onto the same ground past it / camera comfort
 node game/test/lang.js         # language switch: no raw key on screen, save file identical across languages
 
 node game/test/shots.js g      # 21 screenshots → .shots/ (zones, transformation, UI, identity, one panel per language, dusk)

@@ -27,9 +27,8 @@ const openWater = (x, z) => {                   // open water: the lakebed lies 
   return { wt, bed: s ? s.y : -1 };
 };
 
-/* zone centre: rect -> midpoint, circle -> cx/cz, border -> skip */
+/* zone centre: rect -> midpoint, circle -> cx/cz */
 function zoneCenter(z) {
-  if (z.kind === 'border') return null;
   if (z.kind === 'rect') return { x: Math.round((z.x0 + z.x1) / 2), z: Math.round((z.z0 + z.z1) / 2) };
   return { x: Math.round(z.cx), z: Math.round(z.cz) };
 }

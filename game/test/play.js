@@ -56,6 +56,19 @@ const { sim } = require('./simwait');
   // value assertions (the file used to fail only on console/page errors)
   const check = (name, cond, detail) => { if (!cond) errs.push('CHECK FAILED: ' + name + ' ' + JSON.stringify(detail)); };
 
+  /* One throw in the three-hundredth step used to take the whole run's record
+     with it: the file prints what it measured only at the end, so the reader
+     was left with a stack and nothing about the two hundred and ninety-nine
+     steps that had gone before. A run that cannot finish still prints its
+     record, then the throw, then fails. */
+  process.on('uncaughtException', e => {
+    console.log(log.join('\n'));
+    console.log('--- RUN ABORTED, THE RECORD ABOVE IS INCOMPLETE ---\n' + ((e && e.stack) || e));
+    if (errs.length) console.log('--- ERRORS ---\n' + errs.join('\n'));
+    browser.close().catch(() => {});
+    process.exit(1);
+  });
+
   /* The software rasterizer draws one full frame of the valley at the cost
      this file used to wait for: minutes, for the whole of it. Almost none of
      those frames is ever measured -- a frame that settles a camera, one that
@@ -2107,9 +2120,8 @@ const { sim } = require('./simwait');
      18:32 to 05:28 the band is the fog, luminance ~25, the same order the
      world sits at, and the same frame answers 0.14% (human) and 0.11% (frog)
      of black cut out of the sky. The fog the band asks of is the fog **after**
-     the lens has had its say -- the edge's veil and the water the lens sits in
-     have already moved it -- because that is the fog the world at the edge of
-     sight is fading into. */
+     the lens has had its say -- the water the lens sits in has already moved it
+     -- because that is the fog the world at the edge of sight is fading into. */
   const band = await step('theSkyBelowTheHorizon', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, R = g.R, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
@@ -5614,32 +5626,34 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.time = N.DAY_LEN * (tag === 'night' ? 22 / 24 : 13 / 24);
       stand(); g.update(1 / 60); g.update(1 / 60);      // let the environment settle
       P.n = 0;
-      const born = { total: 0, inSolid: 0, underWater: 0, inAir: 0, hover: 0, offMap: 0 };
+      const born = { total: 0, inSolid: 0, underWater: 0, inAir: 0, hover: 0, outsideWorld: 0, openSea: 0 };
       const real = P.spawn;
       P.spawn = function (x, y, z, vx, vy, vz, life, c, size, grav) {
         born.total++;
         if (grav === 0) born.hover++;
         const s = W.liquidSurfaceAt(x | 0, z | 0);
-        if (!W.inside(x | 0, y | 0, z | 0)) born.offMap++;
+        if (!W.place(x | 0, y | 0, z | 0)) born.outsideWorld++;
+        if (N.beyondCoast(x | 0, z | 0) > 0) born.openSea++;
         if (W.solidAt(x | 0, y | 0, z | 0)) born.inSolid++;
         else if (s >= 0 && y < s) born.underWater++;
         else born.inAir++;
         return real.call(this, x, y, z, vx, vy, vz, life, c, size, grav);
       };
-      let samples = 0, liveSolid = 0, liveUnder = 0, liveOff = 0, maxUnder = 0;
+      let samples = 0, liveSolid = 0, liveUnder = 0, liveOut = 0, liveSea = 0, maxUnder = 0;
       for (let f = 0; f < 900; f++) {
         stand();
         g.update(1 / 60);
         for (let i = 0; i < P.n; i++) {
           samples++;
-          if (!W.inside(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) liveOff++;
+          if (!W.place(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) liveOut++;
+          if (N.beyondCoast(P.px[i] | 0, P.pz[i] | 0) > 0) liveSea++;
           if (W.solidAt(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) liveSolid++;
           const s = W.liquidSurfaceAt(P.px[i] | 0, P.pz[i] | 0);
           if (s >= 0 && P.py[i] < s) { liveUnder++; if (s - P.py[i] > maxUnder) maxUnder = s - P.py[i]; }
         }
       }
       delete P.spawn;
-      runs[tag] = { born, samples, liveSolid, liveUnder, liveOff, maxUnder: +maxUnder.toFixed(2), live: P.n };
+      runs[tag] = { born, samples, liveSolid, liveUnder, liveOut, liveSea, maxUnder: +maxUnder.toFixed(2), live: P.n };
     }
     return back({ shore, runs });
   });
@@ -5653,9 +5667,11 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and none of the night\'s motes is found glowing through the lake it was put beside',
     mo.night && mo.night.samples > 2000 && mo.night.liveUnder === 0 && mo.night.maxUnder === 0,
     mo.night && { samples: mo.night.samples, liveUnder: mo.night.liveUnder, maxUnder: mo.night.maxUnder });
-  check('and none of them is let go off the edge of the map, where the world answers "air" to a question that was never asked',
-    mo.night && mo.night.born.offMap === 0 && mo.night.liveOff === 0,
-    mo.night && { bornOff: mo.night.born.offMap, liveOff: mo.night.liveOff });
+  check('and none of them is let go outside the world, nor out over the open sea where there is nothing for an insect to be',
+    mo.night && mo.night.born.outsideWorld === 0 && mo.night.liveOut === 0 &&
+    mo.night.born.openSea === 0 && mo.night.liveSea === 0,
+    mo.night && { bornOutside: mo.night.born.outsideWorld, liveOutside: mo.night.liveOut,
+      bornSea: mo.night.born.openSea, liveSea: mo.night.liveSea });
   check('and none of the night\'s motes is inside a block, where a mote is not seen through the block but simply is not',
     mo.night && mo.night.samples > 2000 && mo.night.liveSolid === 0,
     mo.night && { samples: mo.night.samples, liveSolid: mo.night.liveSolid });
@@ -5668,14 +5684,15 @@ What was measured before any of this was fixed, over 180 frames of walking
      whole of a life. The night over a lake shore: **703** of **12,917** samples
      inside a block. A spark burst at the ground: **286** of **4,109** samples
      under that ground; thrown up under a crown: **426** of **4,080** inside the
-     needles over its own head. And the ring the
-     night's motes are scattered over reaches eighteen metres out from the body,
-     which near the edge of the map is off the map, where `get` answers "air" to a
-     question that was never asked: standing eight blocks in from the edge, **85**
-     of **682** fireflies were let go outside the valley and **21,863** of
-     **149,080** samples (**14.7%**) were spent there, glowing at nothing. After:
-     **0** at every one of the three, and a mote deliberately closed inside a needle
-     still walks its way out in **19** frames. */
+     needles over its own head. And the ring the night's motes are scattered over
+     reaches eighteen metres out from the body, which near the edge of the
+     valley's square lies past the square -- and past the square is ground, the
+     same island the square sits on, answered by address: standing eight blocks in
+     from that edge, **80** of **590** fireflies are let go past the square and
+     **23,112** of **87,584** samples are spent there, over ground with ground
+     under it. None of them is let go at a place the world cannot answer for, none
+     hangs over eight metres of nothing, none is out over open sea. A mote
+     deliberately closed inside a needle still walks its way out in **19** frames. */
   const sparks = await step('aMoteKeepsToTheAirItWasGiven', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, P = g.particles, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, night: g.night, amb: g.ambTimer, parts: P.n,
@@ -5735,9 +5752,14 @@ What was measured before any of this was fixed, over 180 frames of walking
       crown: burst(crown, N.terrainY(W, crown[0], crown[1], W.h - 1) + 0.2)
     };
     /* the ring the night's motes are scattered over reaches eighteen metres out
-       from the body, so a body standing near the edge of the map scatters some of
-       them off the map, where `get` answers "air" to a question that was never
-       asked and nothing stops them again */
+       from the body. Eight blocks in from the edge of the valley's square that
+       ring lies past the square -- and past the square there is ground, the same
+       island the square sits on, asked for by address and answered the same way
+       every time. What used to be measured here was motes lost off the map,
+       where `get` answered "air" to a question that was never asked. What is
+       measured now is the other direction: the motes that go past the square are
+       let go over ground that is really there, with ground under them, and none
+       of them is let go where the world has no answer at all. */
     let edge = null;
     for (let z = 8; z < W.d - 8 && !edge; z++) {
       for (let x = 8; x < 16 && !edge; x++) {
@@ -5749,21 +5771,36 @@ What was measured before any of this was fixed, over 180 frames of walking
     if (!edge) return back({ error: 'no dry column within eighteen of the edge', rows });
     p.x = edge[0] + 0.5; p.z = edge[1] + 0.5; p.y = N.groundY(W, edge[0], edge[1], W.h - 1);
     g.night = 1; g.ambTimer = 0; P.n = 0;
-    let eBorn = 0, eOff = 0, eSamples = 0, eLiveOff = 0;
+    /* is there ground under a mote? a mote is a mote, not a survey, so the
+       question is asked straight: walk down from where it is and see whether the
+       world has anything solid within eight metres of it */
+    const groundUnder = (x, y, z) => {
+      for (let k = 0; k <= 8; k++) if (W.solidAt(x | 0, (y | 0) - k, z | 0)) return true;
+      return false;
+    };
+    let eBorn = 0, ePast = 0, eOut = 0, eNoGround = 0, eSea = 0, eSamples = 0, eLiveOut = 0, eLiveNoGround = 0, eLivePast = 0;
     for (let f = 0; f < 3600; f++) {
       const nWas = P.n;
       g.ambient(1 / 60);
       for (let i = nWas; i < P.n; i++) {
         eBorn++;
-        if (!W.inside(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) eOff++;
+        const px = P.px[i] | 0, pz = P.pz[i] | 0;
+        if (!W.inValley(px, pz)) ePast++;
+        if (N.beyondCoast(px, pz) > 0) eSea++;
+        if (!W.place(px, P.py[i] | 0, pz)) eOut++;
+        else if (!W.inValley(px, pz) && !groundUnder(px, P.py[i], pz)) eNoGround++;
       }
       for (let i = 0; i < P.n; i++) {
         eSamples++;
-        if (!W.inside(P.px[i] | 0, P.py[i] | 0, P.pz[i] | 0)) eLiveOff++;
+        const px = P.px[i] | 0, pz = P.pz[i] | 0;
+        if (!W.inValley(px, pz)) eLivePast++;
+        if (!W.place(px, P.py[i] | 0, pz)) eLiveOut++;
+        else if (!W.inValley(px, pz) && !groundUnder(px, P.py[i], pz)) eLiveNoGround++;
       }
       P.update(1 / 60, W);
     }
-    rows.edge = { at: edge, born: eBorn, bornOff: eOff, samples: eSamples, off: eLiveOff };
+    rows.edge = { at: edge, born: eBorn, bornPast: ePast, bornOutsideWorld: eOut, bornNoGround: eNoGround,
+      bornSea: eSea, samples: eSamples, livePast: eLivePast, liveOutsideWorld: eLiveOut, liveNoGround: eLiveNoGround };
     /* and a mote the world has already closed around keeps its own move: it is a
        mote inside a needle, not a mote pressed against one, and it can still work
        its way out -- the guard refuses the move into a solid, and never the move
@@ -5784,8 +5821,10 @@ What was measured before any of this was fixed, over 180 frames of walking
     !sparks.error && sparks.ground.samples > 2000 && sparks.ground.inSolid === 0 &&
     sparks.wall.inSolid === 0 && sparks.crown.inSolid === 0 && sparks.crown.inLeaf === 0 &&
     sparks.ground.far > 0.5, sparks);
-  check('and the night keeps its motes inside the valley: standing near the edge of the map does not scatter them off it',
-    !sparks.error && sparks.edge.born > 100 && sparks.edge.bornOff === 0 && sparks.edge.off === 0,
+  check('and the night stands on ground: near the edge of the valley\'s square its motes are scattered onto the island that goes on past it, with ground under them, never into a place the world was never asked to fill',
+    !sparks.error && sparks.edge.born > 100 && sparks.edge.bornPast > 0 &&
+    sparks.edge.bornOutsideWorld === 0 && sparks.edge.bornNoGround === 0 && sparks.edge.bornSea === 0 &&
+    sparks.edge.liveOutsideWorld === 0 && sparks.edge.liveNoGround === 0,
     sparks.edge);
   check('a mote the world has already closed around still keeps its move, and works its way out of it',
     !sparks.error && sparks.escape.out > 0 && sparks.escape.out < 240, sparks.escape);
@@ -6569,11 +6608,20 @@ What was measured before any of this was fixed, over 180 frames of walking
      run it the same way round, and that the pace a body is handed is the speed
      it swims at: five bodies handed five paces spread over a fifth of the
      cruise come out at five speeds, every one of them one cruise rate. Measured
-     on the ring before it was asked:
-     the water answers wet at every point of it, 3-4 m of it at the shallowest,
-     and the brick of the sunken tower and the huts of the frog's place both
-     stand in of it (17 m and 20 m out), so the ring is open water the whole
-     way round. */
+     on the ring before it was asked (tools/shallowprobe.js walks the whole band
+     with the game's own reading of water):
+     the water answers wet at every point of it, 3 m of it at the shallowest and
+     10 m at the deepest, a median of 7 m, so the ring is open water the whole
+     way round. What that walk also found is what the bodies meet out there: the
+     bed of the band is sand in 1,852 of its 1,890 columns, a stone outcrop in
+     the south-east arm in 36 of them (its top stands 4 m under the film at
+     24-26 m out), and 69 of those beds carry kelp, which a body swims through
+     rather than against. A little under half of the band, 54.4%, is water a frog
+     born with a long dive cannot really swim its dive in -- the room a dive needs
+     is the water it hangs in plus the dive itself, 6.8 m at the top of the band
+     a frog draws -- so a lane for this window is picked by asking the dive as
+     well as the ground. That the game does not ask its animals that is an open
+     question, not a fix made here; it is counted in 07 §3.6 and in 03 §3. */
   const ring = await step('theFrogsSwimTheRingOfTheKeep', () => {
     const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
     const lake = (N.ZONE_BY_ID.mirrorlake || {}).lake || [78, 106];
@@ -6582,36 +6630,119 @@ What was measured before any of this was fixed, over 180 frames of walking
     const was = { x: p.x, y: p.y, z: p.z, form: p.form, vital: p.vital, time: g.time };
     // the body parked where none of them can be sent: the ring lives out in the water
     p.form = null; p.vital = 10; p.x = 4; p.z = 4; p.y = W.h - 2;
-    const col = (x, z) => {
-      const wt = N.waterTop(W, Math.floor(x), Math.floor(z), W.h - 1);
-      return wt >= 0 && wt + 1 - N.groundY(W, Math.floor(x), Math.floor(z), wt) >= 2 ? wt + 1 : null;
+    /* A column this window can use: the water of it, its depth, and whether it
+       is water a body of this kind can hang and dive in. Two metres is the game's
+       own line for "the water holds this body up rather than being a bottom it
+       stands on" (`waterHoldsUp`), and it is nowhere near enough for this
+       window: a body the water holds hangs at the depth its row states (`hover`,
+       1.6 m for a frog, measured to its crown) and then works a cycle down to
+       `diveTo` under that -- 1.5-4.0 m further for a frog born in this valley.
+       A lane shallower than that whole reach is a lane where the dive runs into
+       the bottom every cycle, which is the case the water file names -- "a body
+       sliding along the mud with still legs" -- and which reads here as a body
+       whose own speed field says 2.2-2.3 m/s while it makes 0.6-0.8 m/s of
+       ground. Two runs of this suite went red over exactly that: the first body
+       had been placed in 2 m of water, and after the first version of this fix
+       -- which asked for the body's height and its dive and forgot the hang
+       depth, short by a metre and a half for a frog -- a second one was placed in
+       5 m and went red again. So the question is now asked with the game's own
+       three numbers instead of a restatement of them: the level its row says a
+       body of that kind hangs at (`floatLevel`), the lowest point of its own
+       dive cycle (`diveTo` under that level), and the gap it keeps off the bottom
+       when it is told to go down (`bedFloor`). Half a metre of room at the
+       bottom of the stroke is this rig's own: that is where the cycle spends its
+       slowest moment. Same question the `towerWater` step asks of the leg a body
+       swims down, asked here of the lane it swims round. */
+    const colFor = (c, x, z) => {
+      const fx = Math.floor(x), fz = Math.floor(z);
+      const wt = N.waterTop(W, fx, fz, W.h - 1);
+      if (wt < 0) return null;
+      const bed = N.groundY(W, fx, fz, wt);
+      const depth = wt + 1 - bed;
+      if (depth < 2) return null;
+      const hang = N.floatLevel(wt + 1, c.tall, N.hoverOf(c.sp));
+      /* `reach`: the longest dive this column is still water rather than a floor
+         to push against, the game's own numbers turned round. A column is a lane
+         for this body if the dive it drew is shorter than that, and if a body
+         has to be put in a column that is not deep enough for its dive the dive
+         is pinned to this same number -- one law, asked two ways, so the
+         fallback cannot disagree with the test that chose it. */
+      const reach = hang - N.bedFloor(bed, c.tall) - 0.5;
+      return { film: wt + 1, bed, depth, hang, reach, diveable: c.diveTo < reach };
     };
     const dist = (x, z) => Math.hypot(x - lake[0], z - lake[1]);
     const keep = frogs.map(c => ({ c, x: c.x, y: c.y, z: c.z, yaw: c.yaw, vy: c.vy, t: c.t,
       state: c.state, pause: c.pause, tx: c.tx, tz: c.tz, homeX: c.homeX, homeZ: c.homeZ,
       pace: c.pace, speed: c.speed, held: c.held, climbTo: c.climbTo, climbRate: c.climbRate,
+      diveTo: c.diveTo,
       orbit: Object.assign({}, c.orbit) }));
-    // settle each frog onto the arc of its own lane the ring owes it, in the water
+    /* Settle each frog onto the arc of its own lane the ring owes it, in the
+       water. A lane is a band, not a line: the radius a body drew at birth is
+       the middle of it, and at some angles the lake's own shore comes nearer than
+       that, so the body's own radius is dry ground there. The first version of
+       this searched outward only -- r, r+1, r+2, r+3 -- and when none of those
+       was water the body could swim in it let the body go unplaced and left it
+       standing where the world had put it, on land, and then measured it as one
+       of five swimmers: a body that went red for covering 4.7 m in half a
+       minute with nothing wrong anywhere in the game. The place asked for is now
+       the whole band -- three metres either way along the radius, a tenth of a
+       radian either way along the angle, which is nearly three metres of arc at
+       that radius -- and a body that still cannot be put in the water is named
+       instead of measured, because that is a failure of this rig and not of the
+       ring. Of
+       the places the band offers, the deepest is kept as a last resort and the
+       first the body's own dive clears is taken; over 200 bodies drawn as the
+       game draws them that search found such a lane every time (the probe above
+       says how shallow the rest of the band is). */
+    const unplaced = [], lanes = [], divePinned = [];
     for (let i = 0; i < frogs.length; i++) {
       const c = frogs[i];
       if (!c.orbit) continue;
       const a = i / frogs.length * Math.PI * 2;
-      let x = lake[0] + Math.cos(a) * c.orbit.r, z = lake[1] + Math.sin(a) * c.orbit.r;
-      let film = col(x, z);
-      for (let d = 1; d <= 3 && !film; d++) {
-        x = lake[0] + Math.cos(a) * (c.orbit.r + d);
-        z = lake[1] + Math.sin(a) * (c.orbit.r + d);
-        film = col(x, z);
+      let at = null, deepest = null;
+      for (const d of [0, -1, 1, -2, 2, -3, 3]) {
+        for (const da of [0, -0.05, 0.05, -0.1, 0.1]) {
+          const r = c.orbit.r + d, ang = a + da;
+          const q = colFor(c, lake[0] + Math.cos(ang) * r, lake[1] + Math.sin(ang) * r);
+          if (!q) continue;
+          if (!deepest || q.depth > deepest.depth) { deepest = Object.assign({ r, ang }, q); }
+          if (q.diveable) { at = { r, ang, film: q.film, depth: q.depth }; break; }
+        }
+        if (at) break;
       }
-      if (!film) continue;
-      c.x = x; c.z = z; c.y = film - 1;        // in the water, above the level it settles to
-      c.orbit.a = a;
+      if (!at && deepest) {
+        /* No place in this body's part of the band is water deep enough for the
+           dive it drew at birth. The band is 3 m at its shallowest and the room
+           a dive needs is 6.8 m at the top of what a frog of this valley is
+           born with, so the shallow half of it is in exactly this case; over 200
+           bodies drawn as the game draws them the search below still found a
+           lane every time, so this is a fallback and not the usual path. The
+           window is about pace, and this rig already pins the rest of that birth
+           (its lane, its phase, its cruise), so the dive is pinned to what this
+           water allows -- `reach`, the same number the search above tests, with
+           a quarter of a metre given back so the pinned dive is one that same
+           test says yes to -- and the pin is reported, rather than the body
+           being measured dragging the mud. */
+        const want = c.diveTo;
+        c.diveTo = Math.max(0.5, deepest.reach - 0.25);
+        divePinned.push({ i, from: +want.toFixed(2), to: +c.diveTo.toFixed(2),
+          depth: deepest.depth, room: +deepest.reach.toFixed(2) });
+        at = { r: deepest.r, ang: deepest.ang, film: deepest.film, depth: deepest.depth };
+      }
+      if (!at) { unplaced.push({ i, r: c.orbit.r, a: +a.toFixed(2) }); continue; }
+      c.x = lake[0] + Math.cos(at.ang) * at.r;
+      c.z = lake[1] + Math.sin(at.ang) * at.r;
+      c.y = at.film - 1;                       // in the water, above the level it settles to
+      c.orbit.a = at.ang;
       c.orbit.errand = true;                   // the errand the step puts on it is an arc of the ring
-      c.tx = lake[0] + Math.cos(a + 0.4) * c.orbit.r;
-      c.tz = lake[1] + Math.sin(a + 0.4) * c.orbit.r;
+      c.tx = lake[0] + Math.cos(at.ang + 0.4) * at.r;
+      c.tz = lake[1] + Math.sin(at.ang + 0.4) * at.r;
       c.state = 'wander'; c.pause = 0.5; c.vy = 0; c.climbTo = null; c.climbRate = 0;
+      lanes[i] = { r: +at.r.toFixed(1), ang: +at.ang.toFixed(2), depth: at.depth };
     }
-    const each = frogs.map(c => ({ c, a0: c.orbit ? c.orbit.a : 0, px: c.x, pz: c.z, path: 0 }));
+    const each = frogs.map((c, i) => ({ c, a0: c.orbit ? c.orbit.a : 0, px: c.x, pz: c.z, path: 0,
+      lane: lanes[i] || null, wet: 0, dry: 0, dryRun: 0, dryMax: 0, dryAt: [],
+      spd: 0, spdN: 0, blocked: 0, blockAt: null }));
     /* The pace each of these five bodies spends the window at is set here rather
        than taken from the draw it was born with. The window is what asks whether
        a pace is worth anything -- that a body given a bigger one covers the ring
@@ -6629,7 +6760,56 @@ What was measured before any of this was fixed, over 180 frames of walking
       for (const e of each) {
         const c = e.c;
         c.update(0.05, p, W, g);
-        if (c.inWater) wet++;
+        /* Counted as a run, not only as a total. A body of this kind hangs with
+           its crown 1.6 m under the film and works down to its own dive floor
+           under it, so rising out of a dive it can break the surface for a
+           frame or two -- which is a body surfacing, and is nothing like the
+           failure this window is guarding: a body that was never in the water at
+           all, or one that spent the window standing on the bottom. The longest
+           run of frames out of the film is what tells those apart, so it is what
+           is measured and reported; the total rides along beside it. */
+        if (c.inWater) { wet++; e.wet++; e.dryRun = 0; }
+        else {
+          e.dry++; e.dryRun++;
+          if (e.dryRun > e.dryMax) e.dryMax = e.dryRun;
+          /* and where, for the first three of them: the film of the water over
+             that column, the bed under it, and where the body was between the
+             two. A red here then says whether the body broke the surface on the
+             top of a dive (film above it) or was never in the water at all
+             (nothing above it), without the next reader having to run it again
+             under a probe. */
+          if (e.dryAt.length < 3) {
+            const fx = Math.floor(c.x), fz = Math.floor(c.z);
+            const wt = N.waterTop(W, fx, fz, W.h - 1);
+            e.dryAt.push({ frame: i, at: [fx, Math.round(c.y * 10) / 10, fz],
+              film: wt < 0 ? null : wt + 1, bed: wt < 0 ? null : N.groundY(W, fx, fz, wt),
+              state: c.state, held: c.held });
+          }
+        }
+        /* And what it was pressed against, if anything. This probe was written
+           for a red run in which one body of the five made no ground for the
+           whole window -- 4.7 m in 30 s, in water, inside the band, with its
+           errand marching round the ring the whole time -- while the others swam
+           at 1.7-2.3 m/s, and nothing in the payload could say which of two
+           things it was doing: stroking against a solid (the lake's own island
+           stands in the middle of this water -- the tower's brick 17 m out, the
+           huts of the frog's place 18-21 m -- and the lakebed's stone rises into
+           the band itself at 24-26 m) or not swimming at all. The answer it gave
+           is above, next to `colFor`: neither. It was a body born in two metres
+           of water with a four metre dive, pushing its legs against the bed. The
+           probe stays as a diagnostic, and what it reports in green runs is that
+           a body touches a solid in 0-13 of its 120 samples and passes on --
+           always that stone outcrop, which stands across no part of the ring --
+           and the same body keeps covering ground at 1.7-2.3 m/s through it. */
+        if (i % 5 === 0) {
+          e.spd += c.speed; e.spdN++;
+          const fx = Math.floor(c.x + Math.cos(c.yaw) * 1.0);
+          const fz = Math.floor(c.z + Math.sin(c.yaw) * 1.0);
+          if (W.solidAt(fx, Math.floor(c.y), fz)) {
+            e.blocked++;
+            if (!e.blockAt) e.blockAt = [fx, Math.floor(c.y), fz, W.get(fx, Math.floor(c.y), fz)];
+          }
+        }
         const de = dist(c.tx, c.tz), db = dist(c.x, c.z);
         if (de >= 23 && de <= 32) errIn++;
         if (db >= 16 && db <= 35) bodyIn++;
@@ -6644,13 +6824,21 @@ What was measured before any of this was fixed, over 180 frames of walking
          ring: the number a body's own pace multiplies, and the same number for
          every body of the five if the pace is really what drives the speed */
       rate: +(e.path / (n * 0.05) / frogs[i].pace).toFixed(2),
-      turn: e.c.orbit ? +(e.c.orbit.a - e.a0).toFixed(2) : 0 }));
+      turn: e.c.orbit ? +(e.c.orbit.a - e.a0).toFixed(2) : 0,
+      /* and where each body stood when the window ended, in whose lane it was
+         put, and how many of its frames the water was holding it: so that a red
+         here names what happened rather than leaving the next reader to guess
+         whether a body that made no ground was on land or stuck in it */
+      lane: e.lane, wetFrames: e.wet, dryFrames: e.dry, dryMax: e.dryMax, dryAt: e.dryAt,
+      selfSpeed: +(e.spd / Math.max(1, e.spdN)).toFixed(2),
+      pressedFrames: e.blocked, pressedAgainst: e.blockAt,
+      end: [Math.round(e.c.x), Math.round(e.c.y), Math.round(e.c.z)] }));
     const paces = frogs.map(c => +c.pace.toFixed(2));
     const rates = each.map((e, i) => e.path / (n * 0.05) / frogs[i].pace);
     const rateMean = rates.reduce((a, b) => a + b, 0) / rates.length;
     const spds = per.map(r => r.meanSpd);
     const res = {
-      seconds: n * 0.05, frogs: frogs.length,
+      seconds: n * 0.05, frogs: frogs.length, unplaced, divePinned,
       wetPct: +(100 * wet / n / frogs.length).toFixed(1),
       errPct: +(100 * errIn / n / frogs.length).toFixed(1),
       bodyPct: +(100 * bodyIn / n / frogs.length).toFixed(1),
@@ -6670,8 +6858,11 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   check('the frogs of the valley swim the ring round the keep: their errands run the ring and they keep the water it is in',
     !!ring.frogs && ring.frogs >= 5 && ring.wetPct > 90 && ring.errPct > 80 && ring.bodyPct > 80, ring);
-  check('and they are swimming it, not standing on it: every one of them covers ground at a few metres a second',
-    !!ring.frogs && ring.per.every(r => r.path > 20 && r.meanSpd >= 0.8 && r.meanSpd <= 3.5), ring);
+  check('and every body this rig measures it first put in the water: a lane is a band, and where one angle of it is dry ground the next is not',
+    !!ring.frogs && Array.isArray(ring.unplaced) && ring.unplaced.length === 0, ring);
+  check('and they are swimming it, not standing on it: every one of them covers ground at a few metres a second, and none of them spends a stretch of frames out of the water (a body at the surface of this lake breaks the film now and then; a body that was never in it is a rig failure)',
+    !!ring.frogs && ring.per.every(r => r.path > 20 && r.meanSpd >= 0.8 && r.meanSpd <= 3.5 &&
+      r.dryFrames <= 12 && r.dryMax <= 4), ring);
   check('and they all run the ring the same way round, each one of them through more than a quarter turn of it',
     !!ring.frogs && ring.per.every(r => r.turn > 0.8), ring);
   check('and they do not swim it in step: five bodies given five paces over a fifth of the cruise make five speeds, and every one of them swims the ring at its own pace times one common cruise',
@@ -9802,7 +9993,13 @@ What was measured before any of this was fixed, over 180 frames of walking
      Measured before the ring table was built up front: 4.15 ms for a chunk on
      average, 15.4 ms for the worst (17,064 vertices, 0.90 ms per thousand), and
      22.5 ms for the two chunks one fruit picked in that chunk flags. After:
-     about 1.05 ms on average. The worst chunk is deliberately not claimed here:
+     about 1.05 ms on average. That last number belongs to the machine it was
+     taken on. The same sweep on the box this runs on now reads 1.76 ms a chunk
+     (176 ms for the valley, 0.206 ms per thousand vertices), and the code this
+     one replaced, run over its own map in the same browser on the same box in
+     the same minute, reads 1.75 (175 ms, 0.182) -- so the cost of meshing the
+     valley did not move when the valley grew an outside; what moves is what the
+     box happens to be doing. The worst chunk is deliberately not claimed here:
      four runs of this same sweep named four different chunks and read
      1.8 ms, 1.9 ms, 2.1 ms and 4.8 ms for them, which is why the clock below is a generous
      backstop of 12 ms rather than a measured ceiling. */
@@ -9920,17 +10117,65 @@ What was measured before any of this was fixed, over 180 frames of walking
        answers 15 to the minimum and goes red the same way. The raw worst of
        all three passes is reported next to it, for the record, and is not
        asked of. */
-    let best = null;
+    /* The world grew an outside, and that changes what a lookup count means. A
+       chunk in the middle of the valley's square copies its neighbourhood out of
+       the array in one stride and asks no question of anything; a chunk on the
+       square's edge reads the ground next door through the world, and that costs
+       one address lookup per cell of ground it reaches outside the square. Those
+       lookups were never the water question and are not now: they are bounded by
+       the ground a chunk touches -- a fixed rectangle, the ring it meshes
+       against -- while the faces it makes vary twentyfold across the valley. So
+       the count is asked of the two groups apart. The middle of the square is
+       where the sharp edge of the law lives: there the answer is not "fewer than
+       a hundred per thousand vertices", it is none at all. */
+    const RW = W.cs + 3;                       // a chunk plus a ring of one, plus one more column for the water question
+    const edgeCi = (ci) => {
+      const cx = ci % W.cx, cz = (ci / W.cx) | 0;
+      return cx === 0 || cz === 0 || cx === W.cx - 1 || cz === W.cz - 1;
+    };
+    /* how many cells of ground an edge chunk's ring reaches outside the square,
+       worked out here rather than trusted to the mesher: the ring of one,
+       clipped to the side that chunk touches */
+    const ringCells = (ci) => {
+      const cx = ci % W.cx, cz = (ci / W.cx) | 0;
+      const nx = (cx === 0 ? 1 : 0) + (cx === W.cx - 1 ? 1 : 0);
+      const nz = (cz === 0 ? 1 : 0) + (cz === W.cz - 1 ? 1 : 0);
+      return ((nx + nz) * RW - nx * nz) * W.h;
+    };
+    /* One pass whose only purpose is to count what the mesher asks the world
+       for, with the world's own reading wrapped: every cell of ground it asks
+       for outside the square is tallied, and that is compared with the hash
+       lookups -- the claim is one lookup per place asked, never one per vertex.
+       Then the timing passes, where the same hash counter is read per chunk
+       without the wrapper in the way. */
+    const get0 = W.get;
     const mapGet = Map.prototype.get;
     let gets = 0;
     Map.prototype.get = function (k) { gets++; return mapGet.call(this, k); };
+    let askOut = [], innerPaying = 0, askedCells = 0;
+    W.get = function (x, y, z) { if (!W.inValley(x, z)) askedCells++; return get0.call(W, x, y, z); };
+    for (let ci = 0; ci < W.cx * W.cz; ci++) {
+      const g0 = gets;
+      const m = W.buildChunk(R.gl, ci);
+      const d = gets - g0;
+      if (edgeCi(ci)) {
+        let n = 0; if (m) for (const q of m) if (q) n += q.count;
+        askOut.push({ ci, d, n });
+      } else if (d) innerPaying++;
+    }
+    const countGets = gets, countAsked = askedCells;
+    W.get = get0;
+    let best = null;
     const perCi = new Array(W.cx * W.cz).fill(Infinity);
     let rawWorst = { ms: 0, ci: -1 };
     for (let pass = 0; pass < 3; pass++) {
-      let total = 0, nv = 0;
+      let total = 0, nv = 0, gIn = 0, gOut = 0;
       for (let ci = 0; ci < W.cx * W.cz; ci++) {
+        const g0 = gets;
         const t = performance.now(); W.buildChunk(R.gl, ci);
         const ms = performance.now() - t;
+        const d = gets - g0;
+        if (edgeCi(ci)) gOut += d; else gIn += d;
         total += ms;
         if (ms < perCi[ci]) perCi[ci] = ms;
         if (ms > rawWorst.ms) rawWorst = { ms, ci };
@@ -9938,30 +10183,241 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (m) for (const q of m) if (q) n += q.count;
         nv += n;
       }
-      if (!best || total < best.total) best = { total, nv };
+      if (!best || total < best.total) best = { total, nv, gIn, gOut };
     }
     Map.prototype.get = mapGet;
     let worstCi = 0;
     for (let ci = 1; ci < perCi.length; ci++) if (perCi[ci] > perCi[worstCi]) worstCi = ci;
     N.MeshBuilder.prototype.upload = up0;
+    /* the worst ratio of lookups to the ring of ground that bounds them, over
+       the edge chunks. The faces a chunk makes are deliberately not in it: the
+       chunks this valley carries run from 3,180 vertices to 16,404, and a chunk
+       of ground does not pay for its own faces when it is only being looked at
+       to find out what stands next door. */
+    let ratio = 0, worst = null;
+    for (const a of askOut) {
+      const r = a.d / Math.max(1, ringCells(a.ci));
+      if (r > ratio) { ratio = r; worst = { ci: a.ci, gets: a.d, ring: ringCells(a.ci), verts: a.n }; }
+    }
     return { chunks: wetCi.length, verts, wet, bad, badEx, cross, deep, micro, microWet,
       sweepVerts: best.nv, sweepMs: +best.total.toFixed(1),
       meanMs: +(best.total / (W.cx * W.cz)).toFixed(2),
       worstMs: { ms: +perCi[worstCi].toFixed(2), ci: worstCi },
       worstRaw: { ms: +rawWorst.ms.toFixed(2), ci: rawWorst.ci },
       perK: +(best.total / Math.max(1, best.nv) * 1000).toFixed(3),
-      mapGets: gets, getsPerK: +(gets / Math.max(1, best.nv) * 1000).toFixed(1) };
+      innerChunks: W.cx * W.cz - 4 * (W.cx + W.cz) + 4, edgeChunks: 4 * (W.cx + W.cz) - 4,
+      /* the hash: none at all in the middle of the square, and on its edges one
+         per cell of ground asked for outside it -- never one per vertex */
+      innerGets: best.gIn, edgeGets: best.gOut, innerPaying,
+      countGets, countAsked, oneLookupPerPlaceAsked: countGets === countAsked,
+      worstRatio: +ratio.toFixed(2), worstChunk: worst,
+      vertsMin: Math.min.apply(null, askOut.map(a => a.n)),
+      vertsMax: Math.max.apply(null, askOut.map(a => a.n)),
+      mapGets: countGets, getsPerK: +(countGets / Math.max(1, best.nv) * 1000).toFixed(1) };
   });
   check('every depth byte the mesher uploads is one the lake itself gives',
     !meshWater.error && meshWater.bad === 0 && meshWater.wet > 5000, meshWater);
   check('and some of them can only have come from a column in the next chunk over',
     !meshWater.error && meshWater.cross > 20, meshWater);
-  check('the water question is answered out of a table, not out of a hash',
-    !meshWater.error && meshWater.getsPerK < 100 && meshWater.mapGets < 200000, meshWater);
+  check('the water question is answered out of a table, not out of a hash: a chunk whose neighbourhood lies inside the square asks no map at all',
+    !meshWater.error && meshWater.innerGets === 0 && meshWater.innerPaying === 0, meshWater);
+  check('and the only hashes the mesher pays are one per place of ground it asks for beyond the square, bounded by the ground it reads and not by the faces it makes',
+    !meshWater.error && meshWater.oneLookupPerPlaceAsked && meshWater.countAsked > 0 &&
+    meshWater.worstRatio < 3 && meshWater.vertsMax > 10000, meshWater);
   check('and the whole valley rebuilds inside the budget a frame gives meshing',
     !meshWater.error && meshWater.worstMs.ms < 12 && meshWater.perK < 1, meshWater);
   check('and the corners that stand inside a column -- kelp, a berry in a window -- ask the column they stand in and wear it',
     !meshWater.error && meshWater.micro > 5000 && meshWater.microWet > 3000, meshWater);
+
+  /* ---- the valley is a square of ground with an address ----
+     The map used to stop where the array stopped. Past that edge `get` answered
+     "air" to a question nobody had asked, the mesher drew a wall of faces down
+     the boundary, the renderer hazed a cliff that was never there, a wall of
+     grey cloud stood on it to keep the body in, and a save refused any edit
+     written out there. None of it was a fact about the valley; all of it was a
+     fact about the storage. What stands now is one rule -- ground is a function
+     of where it is, for any address, in any direction, in any session -- and six
+     consequences of it, each asked here:
+       1. the same address answers the same cells, asked twice and asked out of
+          order: visiting a place does not create it;
+       2. letting go is not forgetting: a chunk dropped when nothing was near it
+          and asked for again comes back cell for cell the same, and its
+          geometry rebuilds to the same faces;
+       3. the question a body asks -- is this a place the world can answer for --
+          is not the question -- is this in the valley's array -- and out past
+          the shore the answer contains water and a seabed, not a void;
+       4. nothing stops a body at the old edge: it walks off the square onto the
+          ground that goes on past it, and it is standing on ground a hundred
+          metres further out;
+       5. what the player changes out there is kept: an edit made past the old
+          edge goes into the record and comes back out of it;
+       6. the world is held only where the lens can see it -- the ring is filled
+          nearest first inside the same millisecond budget a block edit uses, and
+          what lies beyond the reach of the air's haze is let go. */
+  const places = await step('theValleyIsASquareOfGroundWithAnAddress', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch,
+      faceYaw: p.faceYaw, grounded: p.grounded, inWater: p.inWater, air: p.air, fright: p.fright,
+      bank: p.bank, squash: p.squash, crouch: p.crouch,
+      form: p.form, formT: p.formT, formMax: p.formMax, vital: p.vital, time: g.time, day: g.day,
+      mode: g.mode, creatures: g.creatures, drops: g.drops, input: g.input, inv: g.inv.slice(),
+      diffs: g.diffs.slice(), amb: g.ambTimer, stashes: g.stashes, seen: g.seen, dex: g.dexFruit,
+      stats: JSON.parse(JSON.stringify(g.stats)), upg: Object.assign({}, g.upg), regrow: g.regrow,
+      growQueue: g.growQueue, deeds: g.deeds.map(q => q.done) };
+    const back = (v) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, vx: was.vx, vy: was.vy, vz: was.vz,
+        yaw: was.yaw, pitch: was.pitch, faceYaw: was.faceYaw, grounded: was.grounded,
+        inWater: was.inWater, air: was.air, fright: was.fright, bank: was.bank, squash: was.squash,
+        crouch: was.crouch,
+        form: was.form, formT: was.formT, formMax: was.formMax, vital: was.vital });
+      Object.assign(g, { time: was.time, day: was.day, mode: was.mode, creatures: was.creatures,
+        drops: was.drops, input: was.input, ambTimer: was.amb, stashes: was.stashes, seen: was.seen,
+        dexFruit: was.dex, stats: was.stats, regrow: was.regrow, growQueue: was.growQueue });
+      for (const k in g.upg) delete g.upg[k];
+      Object.assign(g.upg, was.upg);
+      g.deeds.forEach((q, i) => { q.done = was.deeds[i]; });
+      g.inv.length = 0; for (const it of was.inv) g.inv.push(it);
+      g.diffs.length = 0; for (const d of was.diffs) g.diffs.push(d);
+      return v;
+    };
+    const h32 = (a) => { let h = 2166136261; for (let i = 0; i < a.length; i++) { h ^= a[i]; h = Math.imul(h, 16777619); } return h >>> 0; };
+    const column = (x, z) => { const s = new Uint8Array(W.h); for (let y = 0; y < W.h; y++) s[y] = W.get(x, y, z); return s; };
+    const out = {};
+
+    /* 1 and 2. Six places: past each of the four edges, and two a kilometre out
+       to sea. Asked in one order, then in the reverse, then with every chunk of
+       the outside let go. */
+    const at = [[-37, 8], [212, 60], [8, -140], [-90, 320], [400, 400], [-520, -60]];
+    const first = at.map(([x, z]) => h32(column(x, z)));
+    const rev = at.slice().reverse().map(([x, z]) => h32(column(x, z)));
+    out.sameAnswer = first.every((hv, i) => hv === rev[at.length - 1 - i]);
+    const filledAfterFirst = W.filled;
+    /* one of them, held: its cells and its faces, then dropped, then asked for
+       again. `unload` is what the game does by itself when the lens walks away;
+       it is asked directly here so the drop is not an accident of where this
+       step happens to stand. */
+    const far = { cx: Math.floor(at[4][0] / W.cs), cz: Math.floor(at[4][1] / W.cs) };
+    const c0 = W.farChunk(far.cx, far.cz);
+    const count = (m) => m.reduce((s, q) => s + (q ? q.count : 0), 0);
+    const v0 = count(W.buildFarChunk(R.gl, c0));
+    const cells0 = h32(c0.vox);
+    const dropped = W.unload(R.gl, 0, 0);
+    const stillHeld = W.far.has(W.ckey(far.cx, far.cz));
+    const c1 = W.farChunk(far.cx, far.cz);
+    const v1 = count(W.buildFarChunk(R.gl, c1));
+    const after = at.map(([x, z]) => h32(column(x, z)));
+    out.letGo = { dropped, wasHeld: stillHeld, cellsTheSame: h32(c1.vox) === cells0, verts: v0, vertsTheSame: v1 === v0 };
+    out.sameAfter = first.every((hv, i) => hv === after[i]);
+    out.filled = { afterFirst: filledAfterFirst, now: W.filled, held: W.far.size };
+
+    /* 3. the two questions are different questions. */
+    const sea = [80, 460];
+    const bed = (() => { for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(sea[0], y, sea[1])) return y; return -1; })();
+    out.twoQuestions = {
+      inTheArray: W.inside(sea[0], 8, sea[1]), isAPlace: W.place(sea[0], 8, sea[1]),
+      aboveTheWorld: W.place(sea[0], W.h, sea[1]),
+      seabed: bed, surface: W.liquidSurfaceAt(sea[0], sea[1]),
+      water: Array.from(column(sea[0], sea[1])).filter(b => b === N.WATER).length,
+      cells: Array.from(column(sea[0], sea[1])).filter(b => b).length
+    };
+
+    /* 4. a body walks west off the square. Find a line of ground that stays
+       level over the forty metres it will cross and has clear air over it, so
+       the walk is asked about the boundary and not about a hill or a trunk. */
+    let line = null;
+    const clear = (x, z, ty) => {
+      for (let y = ty; y < ty + 3; y++) if (W.solidAt(x, y, z)) return false;
+      return true;
+    };
+    for (let z = 24; z < W.d - 24 && !line; z++) {
+      if (W.liquidSurfaceAt(2, z) >= 0) continue;
+      const base = N.terrainY(W, 2, z, W.h - 1);
+      if (!clear(2, z, base)) continue;
+      let ok = true;
+      for (let x = -22; x <= 2 && ok; x++) {
+        if (W.liquidSurfaceAt(x, z) >= 0) { ok = false; break; }
+        if (N.terrainY(W, x, z, W.h - 1) !== base) ok = false;
+        else if (!clear(x, z, base)) ok = false;
+      }
+      if (ok) line = { x: 2, z, level: base };
+    }
+    if (!line) return back(Object.assign(out, { error: 'no level ground crossing the west edge of the square' }));
+    /* the body walks under its own legs, through the game's own input path:
+       what is being asked is whether anything stops it at the old edge, so the
+       legs have to be the body's and not a velocity written in by the test. */
+    p.form = null; g.mode = 'play'; g.creatures = []; g.drops = [];
+    p.x = line.x + 0.5; p.z = line.z + 0.5; p.y = line.level;
+    p.vx = p.vy = p.vz = 0; p.yaw = -Math.PI / 2; p.faceYaw = p.yaw;
+    p.pitch = 0; p.bank = 0; p.squash = 0; p.crouch = 0;
+    p.grounded = true; p.inWater = false; p.air = 999; p.vital = 10; p.fright = 0;
+    g.input = { fwd: 1 };
+    let fell = 0, frames = 0, sunk = 0, stoodOn = 0;
+    for (let f = 0; f < 1500; f++) {
+      g.update(1 / 60); frames++;
+      const gy = N.terrainY(W, Math.floor(p.x), Math.floor(p.z), Math.floor(p.y + 2));
+      if (p.y < gy - 1) fell++;
+      if (p.y < 3) sunk++;
+      if (p.grounded) stoodOn++;
+      if (p.x < -16) break;
+    }
+    g.input = {};
+    const bx = Math.floor(p.x), bz = Math.floor(p.z);
+    out.walk = { line, from: line.x + 0.5, to: +p.x.toFixed(2), frames, fellFrames: fell, sunk,
+      onFootFrames: stoodOn, outsideTheArray: !W.inValley(bx, bz), groundUnderIt: W.get(bx, Math.floor(p.y) - 1, bz),
+      supported: p.y > N.terrainY(W, bx, bz, W.h - 1) - 1.2,
+      held: W.far.size, filled: W.filled };
+
+    /* 5. and the record keeps what the body changes out there. */
+    const edit = [bx - 2, N.groundY(W, bx - 2, bz, W.h - 1) - 1, bz];
+    const wasB = W.get(edit[0], edit[1], edit[2]);
+    g.setBlock(edit[0], edit[1], edit[2], 0);                 // the game's own edit path: it records the diff
+    g.save();
+    const forgotten = (W.set(edit[0], edit[1], edit[2], 12), W.get(edit[0], edit[1], edit[2]) === 12);
+    const loaded = g.load();
+    out.record = { at: edit, outsideTheArray: !W.inValley(edit[0], edit[2]), wasBlock: wasB,
+      forgotten, loaded, cameBack: W.get(edit[0], edit[1], edit[2]) === 0 };
+    W.set(edit[0], edit[1], edit[2], wasB);                   // put the world back
+
+    /* 6. the world in, nearest first, on the same millisecond budget a block
+       edit pays: how many frames of it the ring takes, and that a ring is never
+       left with a hole in it. */
+    const cx = Math.floor(p.x / W.cs), cz = Math.floor(p.z / W.cs);
+    let asks = 0, left = 1, worstMs = 0;
+    while (left > 0 && asks < 400) {
+      const t = performance.now();
+      left = W.stream(R.gl, cx, cz, 6);
+      const ms = performance.now() - t;
+      if (ms > worstMs) worstMs = ms;
+      asks++;
+    }
+    let holes = 0, built = 0;
+    for (let dz = -W.keep; dz <= W.keep; dz++) for (let dx = -W.keep; dx <= W.keep; dx++) {
+      if (dx * dx + dz * dz > W.keep * W.keep) continue;   // the same disc the stream fills
+      const nx = cx + dx, nz = cz + dz;
+      if (W.inChunkGrid(nx, nz)) continue;                    // the valley builds its own
+      const c = W.far.get(W.ckey(nx, nz));
+      if (c && c.mesh) built++; else holes++;
+    }
+    out.streamIn = { asks, left, holes, built, worstCallMs: +worstMs.toFixed(1), held: W.far.size };
+    return back(out);
+  });
+  check('the same address answers the same ground: asked twice, asked out of order, asked again after the ground was let go',
+    !places.error && places.sameAnswer && places.sameAfter && places.letGo.dropped > 0 &&
+    !places.letGo.wasHeld && places.letGo.cellsTheSame && places.letGo.vertsTheSame, places);
+  check('a place past the shore is a place: the world answers water and a seabed there, not a void',
+    !places.error && places.twoQuestions.inTheArray === false && places.twoQuestions.isAPlace === true &&
+    places.twoQuestions.aboveTheWorld === false && places.twoQuestions.seabed > 0 &&
+    places.twoQuestions.water >= 6 && places.twoQuestions.surface > places.twoQuestions.seabed, places.twoQuestions);
+  check('nothing stops a body at the edge of the valley\'s square: it walks twenty metres past it and is still standing on ground',
+    !places.error && places.walk.to < -16 && places.walk.outsideTheArray && places.walk.supported &&
+    places.walk.groundUnderIt > 0 && places.walk.fellFrames === 0 && places.walk.sunk === 0 &&
+    places.walk.onFootFrames > places.walk.frames * 0.9, places.walk);
+  check('an edit made past the old edge goes into the record and comes back out of it',
+    !places.error && places.record.outsideTheArray && places.record.forgotten &&
+    places.record.loaded && places.record.cameBack, places.record);
+  check('the world is held only round the lens, nearest first, inside the budget a frame gives meshing',
+    !places.error && places.streamIn.left === 0 && places.streamIn.holes === 0 && places.streamIn.built > 200 &&
+    places.streamIn.asks > 1 && places.streamIn.worstCallMs < 12, places.streamIn);
 
   /* ---- the box round the block the crosshair is on ----
      The twelve bars used to be rebuilt in world coordinates every frame and

@@ -11,7 +11,16 @@ fs.rmSync(BAK, { recursive: true, force: true });
 fs.mkdirSync(BAK);
 for (const f of files) fs.copyFileSync(path.join(DOCS, f), path.join(BAK, f));
 
-const restore = () => { for (const f of files) fs.copyFileSync(path.join(BAK, f), path.join(DOCS, f)); };
+/* Only the files this script actually touched are ever copied back. Restoring
+   every chapter from the copy taken at startup -- which is what this did --
+   quietly undoes any edit made to a chapter while the script is running: two
+   corrections to the technical chapter, made while a full suite was in its
+   stride, went missing that way and had to be written again. The copy of a
+   chapter that was only *read* is of no use here, and it is a small hazard: a
+   file is stale the moment anyone else writes it. */
+const touched = new Set();
+const restore = () => { for (const f of touched) fs.copyFileSync(path.join(BAK, f), path.join(DOCS, f)); };
+const plant = (p, text) => { touched.add(path.basename(p)); fs.writeFileSync(p, text); };
 const run = () => {
   try { const out = execSync('node game/test/docs-sync.js', { cwd: ROOT, encoding: 'utf8' }); return { code: 0, out }; }
   catch (e) { return { code: e.status, out: (e.stdout || '') + (e.stderr || '') }; }
@@ -71,7 +80,7 @@ for (const [file, from, to, label] of DRIFTS) {
   const p = path.join(DOCS, file);
   const md = fs.readFileSync(p, 'utf8');
   if (!md.includes(from)) { console.log(`SETUP FAIL: "${from}" not in ${file}`); missed++; continue; }
-  fs.writeFileSync(p, md.replace(from, to));
+  plant(p, md.replace(from, to));
   const r = run();
   const reported = r.code !== 0;
   console.log(`${reported ? 'caught ' : 'MISSED '} [${label}] exit=${r.code}`);
@@ -84,6 +93,7 @@ for (const [file, from, to, label] of DRIFTS) {
 }
 
 // missing counterpart file
+touched.add('07-art-audio-technical.md');   // removed here, so it is the one that has to come back
 fs.unlinkSync(path.join(DOCS, '07-art-audio-technical.md'));
 {
   const r = run();
@@ -107,24 +117,24 @@ fs.unlinkSync(path.join(ROOT, 'docs', 'stray.md'));
 {
   const f = '03-characters-and-creatures.md', p = path.join(DOCS, f);
   const bak = fs.readFileSync(p, 'utf8');
-  fs.writeFileSync(p, bak.replace('### The forager (16) — the name is the player\'s', '### Linnaeus (the forager, 16) — the name is the player\'s'));
+  plant(p, bak.replace('### The forager (16) — the name is the player\'s', '### Linnaeus (the forager, 16) — the name is the player\'s'));
   const r = run();
   console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [fixed protagonist name] exit=${r.code}`);
   if (r.code === 0) missed++;
   else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
-  fs.writeFileSync(p, bak);
+  plant(p, bak);
 }
 
 // identity numbers in the English docs must match IDENTITY
 {
   const f = '03-characters-and-creatures.md', p = path.join(DOCS, f);
   const bak = fs.readFileSync(p, 'utf8');
-  fs.writeFileSync(p, bak.replace('nameMax 16 characters', 'nameMax 20 characters'));
+  plant(p, bak.replace('nameMax 16 characters', 'nameMax 20 characters'));
   const r = run();
   console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [nameMax drift] exit=${r.code}`);
   if (r.code === 0) missed++;
   else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
-  fs.writeFileSync(p, bak);
+  plant(p, bak);
 }
 
 fs.rmSync(BAK, { recursive: true, force: true });

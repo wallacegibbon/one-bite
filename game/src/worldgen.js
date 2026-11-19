@@ -480,29 +480,80 @@
   }
 
   /* ---------------- entry point ---------------- */
+  /* ---------------- outside the valley: the sea ----------------
+     The valley is an island, and it is an island in the same sense any other
+     ground in this world is: an outline that is a function of where it is, water
+     round it, and the same terrain under the water as under the land. Three
+     harmonics of the seed draw the shore, so it is a coastline and not a
+     square -- the map's square was always the edge of an array, never the shape
+     of the ground. The shore is held outside the half-diagonal of the authored
+     map so that not one cell of that map is cut out of it: the island is what the
+     map is, plus the ground the array stopped before.
+     Past the shore the ground walks down to the sea floor over an apron, and the
+     floor keeps the same kind of noise the land has, because a flat seabed is a
+     plane and there are no planes on this planet. The floor is held between 3 m
+     and 2 m under the surface: below about 6 m of water our own measured
+     absorption leaves a bed 4.5% of its relief (docs/07), so digging deeper buys
+     geometry nothing can see. */
+  const COAST = {
+    cx: N.WORLD.w / 2, cz: N.WORLD.d / 2,
+    r: 150, wander: 0.16,                                  // mean radius, and how far it wanders
+    min: Math.hypot(N.WORLD.w, N.WORLD.d) / 2 + 8,         // never cuts the authored map open
+    apron: 70,                                             // shore to open sea floor, metres
+    deep: N.WORLD.sea - 8, floorRelief: 3                  // where the floor lies, and how much it moves
+  };
+  function coastR(theta) {
+    const k1 = h2(17, 3, seed) - 0.5, k2 = h2(41, 9, seed) - 0.5, k3 = h2(7, 61, seed) - 0.5;
+    const w = COAST.wander * (Math.sin(theta + k1 * 6.283)
+      + 0.55 * Math.sin(2 * theta + k2 * 6.283) + 0.3 * Math.sin(3 * theta + k3 * 6.283)) / 1.85;
+    return Math.max(COAST.min, COAST.r * (1 + w));
+  }
+  /* Metres beyond the island's shore; negative inland. A column's centre is the
+     point asked about, because the map is a grid of metre cells. */
+  function beyond(x, z) {
+    const dx = x + 0.5 - COAST.cx, dz = z + 0.5 - COAST.cz;
+    const d = Math.hypot(dx, dz);
+    if (d < 1) return -d;
+    return d - coastR(Math.atan2(dz, dx));
+  }
+  /* The height of the ground at any address in the world. Inside the shore this
+     is exactly the terrain the map was built from -- the blend starts at that
+     height, so there is no step and no seam where the array ends. */
+  function landH(x, z) {
+    const h = terrainH(x, z);
+    const s = beyond(x, z);
+    if (s <= 0) return h;
+    let v = h + (COAST.deep - h) * ss(0, COAST.apron, s);
+    if (s > COAST.apron) v += (fbm(x * 0.05, z * 0.05, seed + 71, 3) - 0.5) * 2 * COAST.floorRelief;
+    /* whole metres: a column of this world is a stack of metre cells, and a
+       height of 7.56 puts water at cell 8.56, which is nowhere. The blend is
+       continuous and the ground it describes is a slope made of steps. */
+    return Math.max(3, Math.min(Math.round(v), SEA - 2));
+  }
+  /* What a column of ground is made of, at any address. One table for the whole
+     world: sand at and near the water line, rock under three metres, soil
+     between, water above the ground up to the surface. A seabed is therefore the
+     same material as a lakebed, and the shore of an island is not a case. */
+  function columnInto(x, z, put) {
+    const h = landH(x, z);
+    const nearWater = h <= SEA + 1;
+    for (let y = 0; y <= h; y++) {
+      let b = 3;
+      if (y === h) b = nearWater ? 4 : (h > 34 ? 15 : (dist(x, z, GROVE.x, GROVE.z) < GROVE.r ? 23 : 1));
+      else if (y > h - 4) b = nearWater ? 4 : 2;
+      else if (y < 3) b = 24;
+      put(x, y, z, b);
+    }
+    for (let y = h + 1; y <= SEA; y++) put(x, y, z, 5);
+  }
+
   function generate(world, s) {
     W = world; seed = s | 0; rngS = seed + 12345;
     // terrain
-    for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) {
-      const h = terrainH(x, z);
-      const nearWater = h <= SEA + 1;
-      for (let y = 0; y <= h; y++) {
-        let b = 3;
-        if (y === h) b = nearWater ? 4 : (h > 34 ? 15 : (dist(x, z, GROVE.x, GROVE.z) < GROVE.r ? 23 : 1));
-        else if (y > h - 4) b = nearWater ? 4 : 2;
-        else if (y < 3) b = 24;
-        set(x, y, z, b);
-      }
-      for (let y = h + 1; y <= SEA; y++) set(x, y, z, 5);
-    }
+    for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) columnInto(x, z, set);
+    // and the ground beyond this square is answered by the same rule, by address
+    W.column = (x, z, put) => columnInto(x, z, put);
     cave(); castle(); village(); orchard(); lakebed(); forest();
-    // boundary: flatten the outermost ring and raise the Grey Veil pillars
-    for (let i = 0; i < W.w; i += 7) {
-      for (const [x, z] of [[i, 4], [i, W.d - 5], [4, i], [W.w - 5, i]]) {
-        const y = gy(x, z);
-        for (let yy = y; yy <= y + 6; yy++) set(x, yy, z, 16);
-      }
-    }
     /* spawn: Lanternrow, on the street outside the main cellar.
        A spawn is only good if the player starts out with somewhere to look. The
        old test asked whether the column under the player and its two side
@@ -582,6 +633,12 @@
   }
 
   N.generate = generate;
+  // the shape of the island and the ground beyond it, for the map, the tests and
+  // anything that has to know where the shore is
+  N.COAST = COAST;
+  N.coastRadius = coastR;
+  N.beyondCoast = beyond;
+  N.landHeight = landH;
   // overwritten by generate(); the fallback is Lanternrow's road, facing west
   N.spawn = { x: 136.5, y: 22.05, z: 128.5, yaw: -Math.PI / 2 };
 

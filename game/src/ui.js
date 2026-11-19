@@ -51,9 +51,8 @@
            lakebed, so every one of the valley's **2,958** wet columns was
            painted with the colour of its own floor (the sand and mud of
            Mirrorlake, 112/104/74 and 148/137/98) and the water palette below it
-           was never reached at all. Cloud, fruit, reeds and the glowcap ring
-           are still walked through: they hang in a column, they are not what it
-           shows. */
+           was never reached at all. Fruit, reeds and the glowcap ring are still
+           walked through: they hang in a column, they are not what it shows. */
         let y = W.h - 1, b = 0;
         for (; y >= 0; y--) {
           b = W.get(x, y, z);

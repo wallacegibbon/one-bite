@@ -1007,14 +1007,10 @@
       }
       this.squash = Math.max(0, this.squash - dt * 3.2);
 
-      // ---- boundary: the Grey Veil ----
-      const B = 6;
-      if (this.x < B || this.x > W.w - B || this.z < B || this.z > W.d - B) {
-        game.onVeil(this);
-        this.x = Math.max(B, Math.min(W.w - B, this.x));
-        this.z = Math.max(B, Math.min(W.d - B, this.z));
-        this.vx *= 0.2; this.vz *= 0.2;
-      }
+      /* There is no boundary to be pushed back from. The world is an island in
+         water that goes on, and what stops a body going further is the body: its
+         breath, its skin, the fruit it is wearing and how long that fruit will
+         stay worth eating. A wall at the edge of an array was never one of those. */
       if (this.y < -2) {
         game.damage(1.2, N.t('log.causeFall'));
         // if that was fatal, die() has already put this body back at the town
@@ -2789,12 +2785,19 @@
            **12,917** mote-samples inside a block. A spark burst thrown at the
            ground it stands on: **286** of **4,109**
            samples under that ground; thrown up under a crown: **426** of **4,080**
-           inside the needles over its own head. And the ring the night's motes are
-           scattered over reaches eighteen metres out from the body, which near the
-           edge of the map is off the map, where `get` answers "air" to a question
-           that was never asked: standing eight blocks in from the edge, **85** of
-           **682** fireflies were let go outside the valley and **21,863** of
-           **149,080** samples (**14.7%**) were spent there, glowing at nothing.
+           inside the needles over its own head. And the ring the night's motes
+           are scattered over reaches eighteen metres out from the body, which
+           near the edge of the valley's square lies past the square -- and past
+           the square is ground, the same island the square sits on, asked for by
+           address: standing eight blocks in from that edge, **80-106** of the
+           **586-590** fireflies that spawner lets go are out past the square and
+           **23,112-27,124** of the **82,369-87,584** samples are spent there,
+           over ground with ground under them (the ring is an unseeded draw, so
+           those two counts are a range over two runs; the zeros are not). What that
+           question used to be asked of was the map, and `get` answered "air" for
+           a place nobody had asked for: the same spot then let go **85** of
+           **682** fireflies off the map and spent **21,863** of **149,080**
+           samples (**14.7%**) glowing at nothing.
            So the world is a wall to a mote the same way it is a wall to a body: the
            move into a solid is refused and the mote spends itself against the face
            it reached -- one read, the same one the bubble rule below already pays.
@@ -2817,18 +2820,19 @@
            mote is *stored* in: the move is made first (the store is the
            rounding), and a mote that was not already inside a block is put
            back where it stood and spends its speed where the stored cell is
-           solid or off the map -- `inside` is part of the same question and
-           not a second one: outside the map `get` answers "air" to a question
-           that was never asked, and the stored position is the one the frame
-           is drawn from (**21,863** of **149,080** mote-samples were spent off
-           the map at a body eight blocks in from the edge, before the spawner
-           was kept on the map). */
+           solid or is not a place at all -- the height the world has, and a
+           finite place on the ground. It used to ask "is this cell in the
+           valley's array", which was the same question only while the array was
+           the world: a mote drifting past the edge of the array was treated as
+           having left the world, and **21,863** of **149,080** mote-samples
+           (**14.7%**) were spent off the map at a body standing eight blocks in
+           from the edge, before the spawner was kept on the map at all. */
         if (world) {
           const curSolid = world.solidAt(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0);
           const ox = this.px[i], oy = this.py[i], oz = this.pz[i];
           this.px[i] = nx; this.py[i] = ny; this.pz[i] = nz;
           if (!curSolid &&
-              (!world.inside(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0) ||
+              (!world.place(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0) ||
                world.solidAt(this.px[i] | 0, this.py[i] | 0, this.pz[i] | 0))) {
             this.px[i] = ox; this.py[i] = oy; this.pz[i] = oz;
             this.vx[i] = this.vy[i] = this.vz[i] = 0;
@@ -2893,5 +2897,18 @@
   N.standY = standY;
   N.waterTop = waterTop;
   N.hoverLevel = hoverLevel;
+  /* The two ends of the water's hold, as numbers rather than as a private
+     matter of this file. They are exported because they are one pair: the level
+     a body of a given height and a given `hover` hangs at, and the gap that same
+     body keeps off the bottom when it asks to go down (`bedFloor`). Anything
+     that asks whether a column of water can hold a diving animal -- a test rig
+     laying out a lane, a place deciding where an animal may be born -- has to ask
+     *this* inequality, because it is the inequality the step answers with. A
+     reader who restates it from the words in the chapter gets it wrong by the
+     `hover` term, and "wrong by the hang depth" is a body swimming with its legs
+     against the bed. */
+  N.floatLevel = floatLevel;
+  N.hoverOf = hoverOf;
+  N.bedFloor = bedFloor;
 
 })(window.FRUTARIA = window.FRUTARIA || {});

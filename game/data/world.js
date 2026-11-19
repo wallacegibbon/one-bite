@@ -10,11 +10,6 @@
   /* Zones: kind = rect | circle; drives terrain and the location label */
   const ZONES = [
     {
-      id: 'veil', cn: '灰雾墙', en: 'The Grey Veil', kind: 'border',
-      danger: 5,
-      desc: '谷地的边界。雾不阻止你离开，它只是让你走出去之后不记得为什么要回来。'
-    },
-    {
       id: 'whisperwood', cn: '低语林', en: 'Whisperwood', kind: 'rect',
       x0: 6, z0: 6, x1: 154, z1: 72,
       danger: 1,
@@ -42,7 +37,7 @@
       id: 'mountains', cn: '北岭 · 鹰喙峰', en: 'Ashscale Ridge', kind: 'circle',
       cx: 142, cz: 18, r: 26,
       danger: 3,
-      desc: '风把雪粒横着吹。山顶能看见灰雾墙在远处缓慢地“呼吸”。'
+      desc: '风把雪粒横着吹。山顶之上再没有别的东西高过它：远处雾把岛的边缘抹成一圈模糊的线，线外只有海。'
     },
     {
       id: 'mirrorlake', cn: '镜湖', en: 'Mirrorlake', kind: 'circle',

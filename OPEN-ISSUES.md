@@ -7,93 +7,154 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is three commits. The first is the whole of the
-work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
-`aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
-and a rig that renders one frame twice and counts the pixels that move. The second
-is the record of it, the docs-only commit that follows it on the same tree and names
-it; this block is the third thing on that tree, the sentence that says the tree was
-watched after the record was written. The full suite
-ran twice on this tree: both runs 10/10, with `0 CHECK FAILED` and no page errors
-in `/tmp/frutaria-play.log`; and six further times after that, ten green every time
-with `0 CHECK FAILED` -- eight faithful runs in all. The rig this round added is
-steady across them: the payload the numbers below are taken from (the box at the
-bare face 0 px, the box that used to be drawn there 4,202 px over 152x148, the
-fruit's box 681 px, the body stopped 0.251 m from the face) is byte for byte what
-the first of those runs reported. The doc gates are clean on it too (`extract-comments`
--> `[]` and `occurrences: 0, unique: 0`; `docs-sync` all-consistent; `docs-drift`
-catching every drift it plants; `reach` finding every field of every record read
-by the code that names it).
+State at time of writing: this round is one commit, and it changes what the world
+*is*. The map stops being the world and becomes a square of ground with an
+address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
+filled the authored square in the first place -- and that rule now answers every
+address on the plane, in every direction, in every session. Two questions that
+used to be answered by one word are separated: `inside` ("is this cell in the
+valley's own array", which is a save's bookkeeping question) and `place(x,y,z)`
+("is this a place the world can answer for"), which is the question the bodies,
+the particles and the save were actually asking when they were told there was
+nothing there. One mesher now builds valley ground and sea ground: `meshRegion`
+reads the neighbourhood a chunk needs -- the chunk, a ring of one, plus the one
+column the water question reaches -- into a single window, by row-stride when the
+window lies inside the array and through `get` when it does not. `stream()` holds
+the world round the lens, nearest ring first, on the **6 ms** a frame already
+gives meshing, and `unload()` lets go of what the lens has walked away from:
+`keep = 15` chunks, a number taken from the air's own haze (`fogDen 0.0075`
+leaves 95% of the contrast gone at **231 m**, and 231 m is 14.4 chunks). The Grey
+Veil that stood on that line -- **644** cloud cells in **92** columns, an edge
+term in the haze, a vitality drain while a body pressed on it, a log line and a
+sound design -- is out of the code and out of the setting; the island's own shore
+is where the ground runs out, and the sea goes on.
 
-The brief this time was a photograph, not a sentence about an animal: *"查看最近的
-一张系统截图，在第三人称视角的情况下，可以看到这样的错误的景象，是在移动的一个边界的
-情况下可以看到的。"* -- the most recent system screenshot; third-person view; at a
-boundary the body is moving against; the scene is wrong. A picture names its object
-before any code is read, so the picture was measured first.
+The brief was a design decision, not a report, and it came with decisions that
+are not to be reopened: the boundary is deleted rather than moved; what a trip
+out costs is the player's own arithmetic (one frog pear is **966 m** out and back,
+a picked batch of three **2,898 m**), not a wall, a fog or a drain; the world is
+fixed -- a place is a function of address and seed, so visiting discovers a place
+and never creates one; islands carry ids and a player's id belongs to a home
+island, and the continent is one island among others rather than a special case.
+The first two of those are shipped here. The island rule itself is not: it is
+stage C, and it is written down below as issue 25 rather than built under a
+deadline.
 
-- **The marker promised an action this game does not have (issue 22, closed).** The
-  bright cream rectangle in the user's frame is the interaction highlight box -- the
-  twelve bars `render()` draws on `this.hover` -- and what it stood on was the ground
-  block the picking ray stopped at, with no prompt sentence anywhere under it:
-  **232×215 px** of a **1920×952** frame, bars 13 px thick, drawn across the middle
-  of the picture, which is where the player's own frog is. The hand has nothing to do
-  to a wall: there is no dig, no break and no push in this game. `update()` set the
-  marker to *whatever the ray stopped at*, and `interact()` did something with only
-  three kinds of thing, so the two disagreed by construction, and in third person the
-  lens is behind the body, so the box in front of the body was a box round the body.
-- **One answer now, worked out once a frame: `aimed()`.** It holds the order the key
-  has always had -- a store within arm's reach (3.2 m), then an animal in front of the
-  body (4.5 m), then the block the ray stops at, and nothing else -- and returns a
-  store, an animal, a block to pick, or nothing. `update()` prompts from it and marks
-  from it; `interact()` is five lines and delegates to it. The prompt, the box and the
-  key are now the same question with the same answer, and a block that merely stopped
-  the ray gets neither box nor sentence nor action.
-- **What it measured like, before.** A desk probe (`tools/tpprobe.js`, untracked,
-  `*probe*` is gitignored on purpose) walked a frog body into a crater-wall face of
-  the generated valley at (44, 97) and read every frame: at frame 75 the marker of
-  that ground cell projected **236.6×236.6 px** in a 1920×952 frame -- x0 842, y0 320
-  -- with `hoverBlock: 1`, `prompt: ""`, and E doing nothing. That is the user's
-  frame. A second probe (`tools/tallprobe.js`) surveyed the valley and found no trunk
-  column anywhere **14** cells tall -- the longest trunk run is **6** cells -- so the
-  tall brown face in the screenshot is the wall of a crater, and that is what was
-  built for the test instead of hunted for.
-- **The new law reads the frame, not the fields (`theBoxIsThePromise`).** A level
-  shelf and a three-cell wall are built the way the bank rig builds one; a frog body
-  walks at it until its own depth stops it (**0.251 m** from the face) and the game is
-  left to settle its lens (**d 1.192, fov 108**). Then the frame is rendered twice,
-  once as the game leaves it and once with the box of one named cell forced back into
-  it, and the pixels that differ are that box and nothing else. At the bare face:
-  **0** pixels differ -- the picture the game draws carries no box -- while the box
-  that used to be drawn there is **4,202** px of a **900×560** frame, **152×148** px
-  of it, dead centre, containing the body's own head at (450,266) and feet at
-  (450,330). With one fruit block hung in the air of that same face the mark is the
-  fruit (**681** px), the sentence is `E — pick Frog Pear`, and the key takes it:
-  backpack +1, the block gone, the harvest count +1. The shelf and the fruit are put
-  back (`restored: true`).
-- **The rig that asked the opposite, and why it was not wrong either.** `10k. the
-  lens is the hand` already proves the picking ray is the block under the crosshair --
-  it recomputes the ray from the frame and compares. Its extra check said the marker
-  *is* that block, which is the law this round removed, so the rig now asks the two as
-  two questions: the ray is the block under the crosshair, and **a wall the ray stops
-  at is not offered to the hand** (`marked`, `aim` and `prompt` all empty). Nothing
-  else in the suite reads `hover` for its meaning; the drawing rigs set it to nothing
-  before rendering, which is what the law wants them to do.
-- **The screenshot's own position was never recovered, and it was not needed.** The
-  leveldb record under Chrome's Local Storage holds a save written at 18:02 -- seed
-  20261008, `form: frogpear`, `formT 297.8` of 420 -- but the 21:42 write-ahead log
-  is compressed, and the save in it is not readable. The situation, not the position,
-  is what the report describes: a body at a face it cannot move through, in third
-  person. That is reproducible by construction, and it is reproduced by construction.
+- **The new laws are asked, not asserted (`theValleyIsASquareOfGroundWithAnAddress`).**
+  Six places -- one beyond each edge of the authored square and two a kilometre out
+  to sea -- are hashed column by column in one order, in the reverse order, and
+  again after the outside has been let go and asked for: the same six hashes every
+  time, and one far chunk's geometry comes back **4,830** vertices for **4,830**
+  after **209** chunks were dropped by the same call the game makes on its own.
+  A place beyond the shore is asked two questions and answered two different
+  answers: it is **not** in the authored array, it **is** a place, and it has a
+  seabed at **y5**, a water surface at **y15** and **9** wet cells between them.
+  A body is walked west along a row of ground the rig searches for (level, dry and
+  clear of solid for forty metres) through the game's own input path: **x2.5** to
+  **x-16.04** over **244** frames, feet on the ground in **100%** of them, **0**
+  frames falling, **0** sunk. An edit written **19 m** past the old edge, through
+  the game's own block-edit path so that it enters the record, is overwritten in
+  memory and comes back out of the save with the world rebuilt from the seed. And
+  the held world is complete: the disc round a lens at the end of that walk is
+  **609** chunks of sea, the authored square's own chunks excluded, with **0**
+  holes in it, finished in **6** budgeted calls, longest **7.5 ms**.
+- **The keys, asked past the edge (`game/test/input.js`).** The claim is asked of
+  the keys and not of the world's code: the real `W` held for nine of the game's
+  own seconds walks the body **42.4 m**, the last **33.9 m** of them outside the
+  array, `grounded` in the reading taken afterwards at **x -33.93**.
+- **What it costs, and what did not move.** The first fill of the outside takes
+  **737-743** chunks over **153-162** budgeted calls, **1.0-1.1 s**, at three
+  different lenses; what is held is **9.1 MB** of voxels and **2.75-2.93 million**
+  vertices; one frame of that world draws in **2.0 ms** against **1.9 ms** with
+  the outside let go, because the frustum cull already refuses everything past the
+  far plane -- the cost of an outside is memory, not draw. One step outward costs
+  **51-54 ms** over **8** calls. A chunk of open sea is **0.08-0.13 ms** of ground
+  and about **1.6 ms** of geometry. The authored square's own meshing did not
+  move: **857,100** vertices in **182 ms**, **0.21 ms** per thousand, a mean of
+  **1.82 ms** a chunk. And the two trees were compared cell for cell: exactly
+  **644** cells differ, every one of them cloud, in **92** columns along the rim,
+  **7** rows tall -- which is the wall, and nothing else. Its removal is
+  **968,886 -> 864,090** indices, all of it inside the **36** chunks along the rim.
+- **A bug the window found, and the law that keeps it out.** The clear-look probe
+  (`OPEN_R = 4`) used to reach past whatever neighbourhood it was handed; it now
+  asks `this.get`, and the test holds the bound: **54,821** lookups for exactly
+  **54,821** places asked, **0** for any cell inside the square, and no chunk's
+  count above **2.11** times the ring of ground it reads -- the ground read, never
+  the faces made.
+- **A flake the suite caught, and the rig it was pointing at.** Two full runs of
+  `all.sh` earlier in this round came back **9/10** with `theFrogsSwimTheRingOfTheKeep`
+  red: one of five bodies covering **4.7 m** and (the second time) **18 m** in
+  thirty seconds while the other four swam at 1.7-2.3 m/s. The payload could not
+  say what that body was doing, so the rig was given the eyes to say it -- a lane
+  searched as a band rather than outward only, a body that cannot be placed named
+  (`unplaced`) instead of measured, every body's frames counted apart, its own
+  `speed` field, where it ended, and every fifth frame a solid test one metre
+  ahead of its nose. The second occurrence then read itself: placed in water
+  **2 m** deep -- the rig's own minimum, and the game's line for "the water holds
+  this body up" -- **599** of its 600 frames wet, **1** of 120 samples with a
+  block in front of it, its own speed field reading **2.17 m/s** while it made
+  **0.6 m/s** of ground. That is the case the water file already names: a dive
+  that runs into the bottom becomes a body sliding along the mud with still legs,
+  and a frog is born with a dive of **1.5-4.0 m**. The rig was asking the wrong
+  question of the lane; it now asks the animal's own, with the game's own
+  functions rather than a restatement of them (`floatLevel`, `diveTo`,
+  `bedFloor` -- the same three the `towerWater` step asks of the leg it swims
+  down), and with that all five lanes are found in **5-9 m** of water, no body is
+  left unplaced, no dive has to be pinned, every body is wet in **600 of 600**
+  frames, and the pace law holds -- every body at its own pace times one cruise
+  rate of **1.92-1.93 m/s** per unit of pace, no body off the mean of its own run
+  by more than **2.2%**. The first fix was itself wrong and is on record: it
+  asked for the body's height and its dive and not for the depth the water holds
+  that body at, and a run with it in placed a body in a **5 m** lane and went red
+  again; the same arithmetic had understated the count in issue 24 (**6.3%/22.9%**
+  where the game's predicate gives **22.9%/37%**). What that leaves genuinely open
+  is a question about the valley and not the rig: nothing bounds where an animal
+  is *born* to the dive it drew. Issue 24. And the first guess, written here
+  mid-round -- that a swimming body meeting a solid has no way round -- is **not**
+  supported and is retracted: what the solid probe finds is a lakebed outcrop in
+  the south-east arm of the band, touched in **0-13** of 120 samples and swum on
+  through at full speed.
+- **The runs.** `all.sh` **10/10** with `0 CHECK FAILED` and no page errors, six
+  times over this work -- the last two on a tree whose chapters already carried
+  the figures quoted here, the last one on the tree this record is committed on
+  apart from two figure ranges in this file and in 07's test row, numbers no gate
+  reads (`docs-sync` and `docs-drift` were run again after them, and both green)
+  -- and gates 1-4 clean on it
+  (`extract-comments` -> `[]`, `occurrences: 0, unique: 0`; `docs-sync` -> all
+  consistent, with the zone count now **9** and the World row of the scale table
+  reading "one authored square of ground ... standing in an island on an
+  unbounded plane"; `docs-drift` catching every drift it plants; `reach` finding
+  every field the code names). The suite had been run four times earlier in the
+  round on trees of the same work -- two of them **9/10** with the ring step red,
+  which is where issue 24 starts -- and `play.js` was run on its own while that
+  was being chased, because that step is four minutes of the seven a full suite
+  takes. The ring figures in docs/07 and in issue 24 are taken from the green
+  runs, and the document gates were run again after they were transcribed. What
+  those runs agree on is the rate: one cruise rate per unit of pace, **1.92-1.93
+  m/s**, with no body of the five more than **2.2%** off the mean of its own run.
+  What they do not agree on, and will not, is where a body starts: the lane
+  radius and the phase of its stroke are drawn at birth, so the arcs walked come
+  out at **51-70 m**, the angles closed at **1.75-2.97 rad**, and a body touches
+  the lakebed's stone outcrop in **0-13** of its 120 samples. docs/07 states each
+  of those as a range and says why it moves.
+- **A harness bug found on the way there.** `docs-drift.js` copied every chapter
+  aside when it started and copied them all back when it finished, so an edit made
+  to a chapter while that step was running was silently undone -- two corrections
+  to the technical chapter, written while a full suite was in its stride, vanished
+  and had to be written again. It now remembers which chapters it planted a drift
+  in (and the one it deletes, to test a missing counterpart) and restores only
+  those. Every drift still gets caught, and the chapters it never touched are left
+  as they were.
 
 What this round leaves open. Issues 13, 14, 18, 19, 20 and 21 stand exactly as
-written (the swim still has no vertical component; the frame check still bounds
-nothing about what is behind the body; the valley's population is still a second
-number; the **183** one-block shore columns are still counted by nothing that runs;
-an animal at a wall with no way round still gives the errand up; and the width of
-the contour probes is still unmeasured). One new one, 22's own seam: **the hand is
-5.5 m long whatever body is wearing it**, and the ray it follows starts at the lens
-in third person -- the marker now shows only where the key acts, which is what made
-that one distance and that origin visible.
+written. Three new ones: **24**, a water animal's birthplace is never asked of
+that animal's own dive, and the count is in the issue; **25**, the world outside
+the authored square is bare ground --
+no tree, no fruit, no animal, no place, and the minimap still paints only the
+authored square -- which is where the island rule, the home island a player's own
+id belongs to, and a map that can show a country with no edge belong; and **26**,
+the practice of not using names no longer has a cause attached to it, and this
+round deliberately refused to invent one.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -2053,6 +2114,201 @@ can pick at all, standing where it can stand -- which no rig reads today.
 
 Status: open. Found while closing 22; deliberately not acted on this round.
 
+## 24. An animal may be born in water shallower than the dive its own record states (found by a suite flake)
+
+Open. Two full runs of `all.sh` in this round came back 9/10 with
+`theFrogsSwimTheRingOfTheKeep` red: one of five bodies covering **4.7 m** and,
+the second time, **18 m** in thirty seconds, while the other four swam the ring at
+1.7-2.3 m/s. Nothing in the payload could say what that body was doing, so the
+rig was given the eyes to say it: per-body wet/dry frame counts, where each body
+was placed and where it ended, its own `speed` field, and every fifth frame a
+solid test one metre ahead of its nose at the height it floats at.
+
+The second occurrence then read itself, and it was not what it first looked like.
+The body had been **placed in water 2 m deep** -- the rig's own minimum, which is
+also the game's line for "the water holds this body up rather than being a bottom
+it stands on" (`waterHoldsUp`) -- **599** of its 600 frames wet, **1** of its 120
+samples with anything in front of it, and its own speed field reading **2.17 m/s**
+while it made **0.6 m/s** of ground. That is the case the water file already
+names: *"a dive that runs into the bottom is not a failure: it becomes a body
+sliding along the mud with still legs"* -- and a frog is born with a dive of
+**1.5-4.0 m** (`diveTo`). Every frame of it was held up at the surface while its
+legs worked against the bed. The rig, not the game, was asking the wrong question
+of the lane.
+
+The first answer to that was itself wrong, and it is on record because the way it
+was wrong is the point. It asked a lane for the body's height, its dive and half a
+metre -- `tall + diveTo + 0.5`, **4.93 m** for the worst dive a frog draws -- and left
+out the depth the water holds that body at, which is what the dive starts under:
+**1.6 m** for a frog, so the room is **6.75 m**, not 4.93. A run with that fix in
+placed a body in a **5 m** lane and went red for the same reason, and the count
+below, which was first read out of that same wrong arithmetic, was understated:
+it printed **6.3%** and **22.9%** of the lake's accepted water columns where the
+game's own predicate gives **22.9%** and **37%**.
+
+Fixed in the rig, and the fix is reported rather than hidden. A lane is now
+searched as the whole band it is (three metres either way along the radius, a
+tenth of a radian either way along the angle) rather than outward only, and the
+question asked of each place is the game's own rather than a restatement of it:
+the level `floatLevel` says a body of that kind hangs at, that body's own
+`diveTo` under it, and the gap `bedFloor` keeps off the bottom. A body that
+cannot be placed is named (`unplaced`) instead of measured, and a dive that has
+to be pinned to what the water allows is named too (`divePinned`) -- pinned to
+`reach`, the longest dive that column still allows, which is the same number the
+search tests, so the fallback and the test cannot disagree. In the green runs of
+this rig: all five lanes found in **5-9 m** of water, `unplaced` and
+`divePinned` both **empty**, every body wet in **600 of 600** frames (the count
+of frames a body spends out of the film, and the longest such run, are reported
+per body and stood at **0**; the check allows a body to break the surface on the
+top of a dive and holds it to four frames of it), and the five bodies of each
+run covering ground, by their own paces and the lanes they were born holding, at
+**1.70-2.32 m/s** for paces of 0.90-1.20 -- every one of them its own pace times
+one cruise rate, **1.93 m/s** per unit of pace in one run and **1.92** in the
+others (that one brought all five bodies back at the same 1.93, a spread of
+**0.001**), no body
+off the mean of its own run by more than **2.2%**. What is *not* the same from run to
+run is the angle each one closes (**1.75-2.97 rad**) and the radius of the lane
+it was born holding: those are drawn at birth, and they are reported, not
+bounded. (Runs whose lanes were taken at the game's two-block line reported
+spreads of **0.017-0.021** with two bodies at 1.88-1.91 rather than the run's
+own 1.93, and two of them went red outright.) The solid probe stays as a
+diagnostic and reports that a body touches a solid in **0-13 of its 120** samples
+and passes on: it is the lakebed's own stone, an outcrop in the south-east arm of
+the band at 24-26 m whose top stands 4 m under the film (36 of the band's 1,890
+columns; the other 1,852 are sand, and 69 of those beds carry kelp, which is not
+solid and is swum through), and it stands across no part of the ring.
+
+And the guess written down mid-round -- that a body swimming into a solid has no
+way round it -- is **retracted**. What the probe counts in green runs is **0-13**
+contacts in 120 samples, and the thing contacted is the lakebed's own stone
+outcrop, not a wall of the frog's place; the bodies carry on at full speed
+through it, and the red body's difficulty is fully accounted for by where it was
+placed. Whether a swimming body steers round an obstacle at the height it floats
+at is a question nobody has asked yet, and it should be asked with a rig of its
+own (a hut wall with an errand on the far side of it, the way the bank and wall
+steps do it on foot) before it is answered with a new movement law.
+
+What is genuinely open is in the game, not the rig: the water file's rules are
+stated for any animal -- the dive floor is the animal's own `diveTo`, a dive that
+runs into the bottom slides along it, a body cannot breathe below half its height
+-- but the one test that decides where a swimming body may be put, where it may
+be sent, which way it may swim and the height it hangs at (`waterColumn`) asks
+the ground only: two blocks of water, so there is somewhere to hover. It never
+asks the animal. The room a dive actually needs is not two blocks: it is the depth
+the water holds that body at (`hover`, **1.6 m** for a frog, measured to its
+crown), the body's own height twice over -- once at the level it hangs at, once
+at the gap it keeps off the bottom (`bedFloor`) -- and the dive under all of it.
+For the 0.43 m body a frog pear wears that is **4.3 m** of water for the shortest
+dive its kind draws and **6.8 m** for the longest. The count, before any rule
+(`tools/shallowprobe.js`, untracked; Mirrorlake's own habitat window, the columns
+`samplePos` will accept, read with the same water functions the animal uses, and
+with the room a dive needs found by bisection on the game's own predicate rather
+than by arithmetic written next to it -- the first version of this probe wrote
+`tall + diveTo + 0.5`, which is short by the hang depth, and rebuilt the body's
+height out of the model table instead of asking a body for it, getting **0.2 m**
+for an animal that stands **0.43 m**; that is how a "fix" for this flake let a
+second run go red): of **4,513** columns in the habitat,
+**2,820** are water the game accepts; their depths run **2 m** at the least to
+**8 m** at the median and **11 m** at the deepest. **22.9%** of those places hold
+too little water even for the smallest dive the kind draws, **29.9%** too little
+for a dive in the middle of its band, **37%** too little for the 4 m dive at the
+top of it. Pairing the 200 bodies the constructor makes with the places the
+sampler offers, **30.1%** of those pairings seat a body in water shallower than
+its own dive, and the five frogs this valley seats at a game start give an
+**83%** chance that at least one of them is. The animals are not broken by it --
+they hover, they swim, they eat -- but nearly a third of the places the game
+offers a frog is a place where its own dive cycle spends its time with its legs
+against the bed.
+
+The band the rig measures has the same shape: the water 25-30 m out round the keep
+is **3 m** deep at its shallowest, **7 m** at the median and **10 m** at the
+deepest, and **54.4%** of it is deep enough for a dive at the top of the band.
+The rig's own search, walked for 200 bodies drawn as the game draws them, found a
+lane the dive clears every time -- **0** would have needed the dive pinned, **0**
+would have gone unplaced -- so `divePinned` is a fallback and not a path; it is
+now derived from the same predicate that chose the lane (`reach`, the longest dive
+the column still allows, asked of the game's own `floatLevel` and `bedFloor`)
+instead of from a second arithmetic written beside it, because two restatements
+of one law drift, and one of them was already wrong by the hang depth.
+
+Status: open. The rig is closed; the birth is not.
+
+## 25. The world outside the authored square is bare ground (staged design)
+
+Open, and open on purpose. This round shipped the *world* part: one rule answers
+every address, the sea is drawn when the lens gets near, the save can hold an edit
+made 19 m past the old edge, and nothing stops a body at the last column of the
+array. What is *not* out there: any tree, fruit, animal, place or name. The
+outside is ground the player can walk and swim over and find nothing on.
+
+Measured, so the shape of the missing thing is known rather than imagined
+(`tools/spiralprobe.js`, untracked; distances in the only unit a player owns --
+one frog pear buys **966 m** out and back, a picked batch of three buys
+**2,898 m**, read from the shipped tables: 420 s of form, 1,500 s before a picked
+fruit goes dormant, 4.6 m/s of frog):
+
+- The rule the user accepted is an Archimedean spiral out of the island the game
+  already has, a fixed number of islands per turn (7), so the count per ring is
+  constant and the count per square kilometre falls as 1/r. In a 6 km window that
+  is **56** islands: **15.5 per km²** in the nearest band (median gap between
+  neighbours **42 m**), falling to **0.49 per km²** in the band at ~3 km (median
+  gap **573 m**, 95th percentile **958 m** -- 0.99 of one fruit). Over the whole
+  window the gap percentiles are p50 **257 m**, p90 **611 m**, p99 **943 m**, max
+  **1,197 m**, and **0%** of sampled sea points lie further from ground than one
+  picked batch reaches. The island types by rule: 12 sandbars, 15 reefs, 12 isles,
+  9 thickets, 8 ridges, and **73%** of them bear the fruit.
+- Identity works both ways: an island's id is its ordinal along the spiral (0 is
+  the island the game already is), its coordinates are computed from that ordinal
+  and its seed, and asking for the ordinal of a place found from its own
+  coordinates returns it (**23** asked, all found, scanning **56** ordinals). Four
+  sample user ids give four home islands (ids **11**, **38**, **56** at 606 m,
+  2,072 m and 3,008 m out), so "a player belongs to an island" is derivable with
+  no table.
+- The alternative was measured too and is on record as rejected: a per-address
+  hash (every 160 m cell of sea decides for itself, probability falling with
+  distance) gives **264** islands in the same window with a median gap of
+  **103 m** -- no gradient the player can feel, and no ordinal to name an island
+  by.
+
+What is still to be decided, and is not decided here: which island types exist and
+what each of them carries; whether the fruit a player's own island grows is the
+same fruit everywhere (the honest caveat: the tables hold exactly **one** fruit,
+`frogpear`, and **one** plant, `cellarseed`, so "different islands grow different
+things" is a rule with one thing available to fill it); how far from its own water
+an animal may be generated, since the herd placement today assumes the valley;
+what the minimap does in a world with no edge (see below); and how a map is drawn
+for a country that has no border.
+
+Two technical seams that belong to this and to no other issue:
+
+- **The minimap paints the authored square and nothing else.** `mmBase` in
+  `game/src/ui.js` reads columns x/z 0..160; out there the map is blank paper by
+  construction. A world with no edge needs a different question -- how far am I
+  from the island I started on -- and that is design, not a bug to patch.
+- **The block table has a hole at id 16.** The cloud block was deleted with the
+  wall, and `N.BLOCKS[16]` is now `undefined` while the number 16 is still a
+  number a saved diff could in principle carry. No cell anywhere holds 16 (the
+  cell-for-cell comparison at the head of this file counted 644 differences and
+  all of them were 16 -> something), and two helpers index the table unguarded
+  (`game/test/node-smoke.js` and the `surface()` helper in
+  `game/test/docs-sync.js`), so the exposure is latent rather than live. Either
+  the id is retired with a comment saying so, or the table rows are checked on
+  load; it should not be left to luck.
+
+## 26. The practice of not using names has no cause now (a decision, kept visible)
+
+Open question, deliberately unanswered. The in-world cause of forgetting -- the
+Grey Veil taking names -- is gone with the boundary (01 §3), and this round
+removed the sentence from the help text that stated it, in both languages and in
+the inline fallback in `index.html` that `lang.js` keeps honest. The *practice*
+stands unchanged, because it never needed the fog to be a rule: a player has an
+`id`, which is what the records are keyed by, and the fiction quotes an epithet
+earned by deeds ("the fruit counter" and what follows it). Docs/03 now says in
+terms that the practice stands and the cause does not, and refuses to invent a new
+mechanism to fill the hole -- an invented mechanism is exactly the over-design the
+standing contract rules out. If a cause is ever wanted, it has to come out of
+something the game already has; nothing in it does yet.
+
 ## The record of the last rounds (kept as history)
 
 > Superseded by the commit log, which is where this file says round-by-round history
@@ -2060,7 +2316,96 @@ Status: open. Found while closing 22; deliberately not acted on this round.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### The round before this one: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### The round before this one: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+State at time of writing: this round is three commits. The first is the whole of the
+work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
+`aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
+and a rig that renders one frame twice and counts the pixels that move. The second
+is the record of it, the docs-only commit that follows it on the same tree and names
+it; this block is the third thing on that tree, the sentence that says the tree was
+watched after the record was written. The full suite
+ran twice on this tree: both runs 10/10, with `0 CHECK FAILED` and no page errors
+in `/tmp/frutaria-play.log`; and six further times after that, ten green every time
+with `0 CHECK FAILED` -- eight faithful runs in all. The rig this round added is
+steady across them: the payload the numbers below are taken from (the box at the
+bare face 0 px, the box that used to be drawn there 4,202 px over 152x148, the
+fruit's box 681 px, the body stopped 0.251 m from the face) is byte for byte what
+the first of those runs reported. The doc gates are clean on it too (`extract-comments`
+-> `[]` and `occurrences: 0, unique: 0`; `docs-sync` all-consistent; `docs-drift`
+catching every drift it plants; `reach` finding every field of every record read
+by the code that names it).
+
+The brief this time was a photograph, not a sentence about an animal: *"查看最近的
+一张系统截图，在第三人称视角的情况下，可以看到这样的错误的景象，是在移动的一个边界的
+情况下可以看到的。"* -- the most recent system screenshot; third-person view; at a
+boundary the body is moving against; the scene is wrong. A picture names its object
+before any code is read, so the picture was measured first.
+
+- **The marker promised an action this game does not have (issue 22, closed).** The
+  bright cream rectangle in the user's frame is the interaction highlight box -- the
+  twelve bars `render()` draws on `this.hover` -- and what it stood on was the ground
+  block the picking ray stopped at, with no prompt sentence anywhere under it:
+  **232×215 px** of a **1920×952** frame, bars 13 px thick, drawn across the middle
+  of the picture, which is where the player's own frog is. The hand has nothing to do
+  to a wall: there is no dig, no break and no push in this game. `update()` set the
+  marker to *whatever the ray stopped at*, and `interact()` did something with only
+  three kinds of thing, so the two disagreed by construction, and in third person the
+  lens is behind the body, so the box in front of the body was a box round the body.
+- **One answer now, worked out once a frame: `aimed()`.** It holds the order the key
+  has always had -- a store within arm's reach (3.2 m), then an animal in front of the
+  body (4.5 m), then the block the ray stops at, and nothing else -- and returns a
+  store, an animal, a block to pick, or nothing. `update()` prompts from it and marks
+  from it; `interact()` is five lines and delegates to it. The prompt, the box and the
+  key are now the same question with the same answer, and a block that merely stopped
+  the ray gets neither box nor sentence nor action.
+- **What it measured like, before.** A desk probe (`tools/tpprobe.js`, untracked,
+  `*probe*` is gitignored on purpose) walked a frog body into a crater-wall face of
+  the generated valley at (44, 97) and read every frame: at frame 75 the marker of
+  that ground cell projected **236.6×236.6 px** in a 1920×952 frame -- x0 842, y0 320
+  -- with `hoverBlock: 1`, `prompt: ""`, and E doing nothing. That is the user's
+  frame. A second probe (`tools/tallprobe.js`) surveyed the valley and found no trunk
+  column anywhere **14** cells tall -- the longest trunk run is **6** cells -- so the
+  tall brown face in the screenshot is the wall of a crater, and that is what was
+  built for the test instead of hunted for.
+- **The new law reads the frame, not the fields (`theBoxIsThePromise`).** A level
+  shelf and a three-cell wall are built the way the bank rig builds one; a frog body
+  walks at it until its own depth stops it (**0.251 m** from the face) and the game is
+  left to settle its lens (**d 1.192, fov 108**). Then the frame is rendered twice,
+  once as the game leaves it and once with the box of one named cell forced back into
+  it, and the pixels that differ are that box and nothing else. At the bare face:
+  **0** pixels differ -- the picture the game draws carries no box -- while the box
+  that used to be drawn there is **4,202** px of a **900×560** frame, **152×148** px
+  of it, dead centre, containing the body's own head at (450,266) and feet at
+  (450,330). With one fruit block hung in the air of that same face the mark is the
+  fruit (**681** px), the sentence is `E — pick Frog Pear`, and the key takes it:
+  backpack +1, the block gone, the harvest count +1. The shelf and the fruit are put
+  back (`restored: true`).
+- **The rig that asked the opposite, and why it was not wrong either.** `10k. the
+  lens is the hand` already proves the picking ray is the block under the crosshair --
+  it recomputes the ray from the frame and compares. Its extra check said the marker
+  *is* that block, which is the law this round removed, so the rig now asks the two as
+  two questions: the ray is the block under the crosshair, and **a wall the ray stops
+  at is not offered to the hand** (`marked`, `aim` and `prompt` all empty). Nothing
+  else in the suite reads `hover` for its meaning; the drawing rigs set it to nothing
+  before rendering, which is what the law wants them to do.
+- **The screenshot's own position was never recovered, and it was not needed.** The
+  leveldb record under Chrome's Local Storage holds a save written at 18:02 -- seed
+  20261008, `form: frogpear`, `formT 297.8` of 420 -- but the 21:42 write-ahead log
+  is compressed, and the save in it is not readable. The situation, not the position,
+  is what the report describes: a body at a face it cannot move through, in third
+  person. That is reproducible by construction, and it is reproduced by construction.
+
+What this round leaves open. Issues 13, 14, 18, 19, 20 and 21 stand exactly as
+written (the swim still has no vertical component; the frame check still bounds
+nothing about what is behind the body; the valley's population is still a second
+number; the **183** one-block shore columns are still counted by nothing that runs;
+an animal at a wall with no way round still gives the errand up; and the width of
+the contour probes is still unmeasured). One new one, 22's own seam: **the hand is
+5.5 m long whatever body is wearing it**, and the ray it follows starts at the lens
+in third person -- the marker now shows only where the key acts, which is what made
+that one distance and that origin visible.
+
+### Two rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -2183,7 +2528,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Two rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Three rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -2357,7 +2702,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Three rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Four rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and

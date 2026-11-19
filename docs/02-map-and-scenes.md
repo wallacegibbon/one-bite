@@ -2,39 +2,75 @@
 
 Source of truth: `game/data/world.js` (zones / POIs), `game/src/worldgen.js` (generation and fruit placement).
 
-World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** The prototype world is 160×48×160 voxels (the full setting is 1024×128×1024).
+World coordinates: `x` east, `z` south, `y` up. **Mirrorlake surface = y14.** The authored map is a square of ground 160×48×160 voxels with an address: it sits inside a larger island, and the same terrain rule answers every address on the plane, so there is no edge to the world (§1.1).
 
 ## 1. Overview map (prototype coordinates, one cell ≈ 8 units)
 
 ```
         x=0        32        64        96       128      160
-   z=0  ┌──────────────────────────────────────────────────┐
-        │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │  ← Grey Veil (the whole ring)
-   16   │ ░ Echo Hollow ⛰          The Deep Grove (silver)  North Ridge ❄Ashscale ░ │
-        │ ░  (28,30)               (104,32) r18             (142,18) r26          ░ │
-   32   │ ░   ⌂cavemouth           ✦groveheart             ▲mountains            ░ │
-   48   │ ░   Glowglade ❍(60,56)                                                 ░ │
-   64   │ ░─────────── south edge of the Whisperwood ────────────────────────── ░ │
-        │ ░  Old Orchard ♠(24,104)     ~Mirrorlake~      Lanternrow ▣          ░ │
-   80   │ ░   oldtree                  ~~~~~~~~~~~~~~~~  (116..154,            ░ │
-        │ ░  ⌂orchard              ~~~ Starfall Keep ▦(78,106) ~~~ 114..152)     │
-   96   │ ░             ~~~  ▲belltower(78,104) ~~~      (136,134)             ░ │
-        │ ░             ~~~   ⌂greenhouse(78,110)~~~     ▣cellar               ░ │
-  112   │ ░             ~~~ sunken tower(66,118)  frogshall(92,120)~~~        ░ │
-        │ ░             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    ░ │
-  128   │ ░        SE Whisperwood              town orchard                  ░ │
-        │ ░                                             ░                    │
-  152   │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-  160   └──────────────────────────────────────────────────┘
-
+   z=0┌────────────────────────────────────────────────────────┐  ← the edge of the authored
+   z=0│                                                        │  square: past this line
+  16 │                                                        │  nothing was built, and
+     │ Echo Hollow ⛰        The Deep Grove (silver)          │  the same ground goes on
+  32 │ (28,30)              (104,32) r18     ❄ Ashscale      │
+     │  ⌂cavemouth          ✦groveheart      (142,18)        │
+  48 │ Glowglade ❍(60,56)                                    │
+  64 │ ────────── south edge of the Whisperwood ────────      │
+     │ Old Orchard ♠(24,104)      ~Mirrorlake~               │
+  80 │  oldtree                 ~~~~~~~~~~~~~~~               │
+     │ ⌂orchard            ~~~ Starfall Keep ▦ ~~~            │
+  96 │                  ~~~  ▲belltower(78,104)               │
+     │                  ~~~  ⌂greenhouse(78,110)              │
+ 112 │                  ~~~ sunken tower   frogshall ~~~      │
+ 128 │                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      │
+     │       SE Whisperwood          town orchard             │
+ 152 │                                                        │
+     │                                                        │
+     └────────────────────────────────────────────────────────┘
   ⛰ = a hill hollowed out   ~ = water surface
 ```
+
+### 1.1 The authored square, and the ground past it
+
+The map above is not the world; it is the ground somebody made. The world is a plane of
+metre cells that goes on in every direction, and one square of it — this one — was
+built: the town, the keep, the lake, the orchard, the trees and the cellars are all
+inside the square. Past the square the same terrain rule answers the same addresses it
+answered while they were inside it, so the ground does not change character at the
+line: walk west off x=0 along z=64 and the field you were standing in goes on level
+for another forty metres, because the same function is being asked the same question.
+What stops at the square is what was *built* — the trees stop, the walls stop, the
+paths stop. Nothing is planted out there yet: the ground past the square carries no
+tree, no fruit and no animal, and that is an honest hole in this map rather than a
+finished one.
+
+The island the square sits on runs out to a shore: the land is highest about the
+centre (80,80) and sinks towards a coastline that wanders between **121 m and 150 m**
+from that centre; past the shore the ground shelves down into the sea, six metres of
+water over a seabed of the same rock and sand as the lakebed, and the sea goes on for
+as far as the world does. There is nothing at the shore and nothing in the sea: no
+wall, no fog band, no gate. The only edge in this world is the edge of what a body
+can reach and get back from (01 §3, 04 §5).
+
+Two numbers bound that reach, and both belong to the player, not to the world:
+
+- **Sight.** The air's haze takes 95% of the contrast off at **231 m** in the clearest
+  air this world states, so ground further out than that is not worth holding in
+  memory: the renderer keeps chunks out to exactly that radius (`World.keep = 15`
+  chunks of 16 m, `game/src/world.js`), builds the nearest first, and lets go of the
+  rest.
+- **The day.** A fruit's clock is the trip's clock. One frog pear, picked at full
+  ripeness, is **420 s** of frog; a common fruit keeps **1,500 s** in a hand at night.
+  A frog walks **1.8 m/s** on land and swims **4.6 m/s**: one fruit carried in the
+  pocket is therefore **966 m** out and back along a shore, and a batch of three is
+  **2,898 m** — which is a little less than twice across the island. Those are the
+  units the valley is measured in, and no rule in the world stops the walk.
+
 
 ## 2. Zone Table
 
 | id | English | Chinese | Shape | Location | Danger | In one line |
 |---|---|---|---|---|---|---|
-| `veil` | The Grey Veil | 灰雾墙 | border | the whole ring | 5 | It does not stop you leaving, it only makes you forget why you came back |
 | `whisperwood` | Whisperwood | 低语林 | rect | (6,6)–(154,72) | 1 | Meadow and mushroom ring at the rim, ancient trees and deer paths further in |
 | `glowglade` | Glowglade | 蘑菇圈 | circle r13 | (60,56) | 1 | A ring of glowcaps that breathes in and out at night |
 | `batcave` | Echo Hollow | 回声丘 | circle r13 | (28,30) | 2 | The hill hollowed into three layers of tunnel, and nothing living at the bottom of them |
@@ -141,7 +177,7 @@ Radius 38, deepest at the centre at 11 blocks, with **62** stalks of kelp on the
 
 **The key design point**: every door needs exactly one body, and that body always appears outside the door first. The Frog Pear on the tower sill hangs two blocks under the surface: the fruit that teaches you the lake is a fruit the lake already gave you. Two places now have a shape and nothing behind it — Echo Hollow and the Deep Grove, both built for animals that were cut — and those are the honest holes in this map, not solved ones.
 
-## 7. Danger and the Grey Veil
+## 7. Danger
 
 | Zone | Danger | The actual threat |
 |---|---|---|
@@ -151,6 +187,12 @@ Radius 38, deepest at the centre at 11 blocks, with **62** stalks of kelp on the
 | Echo Hollow | 2 | darkness (needs night vision / glow), falls |
 | Old Orchard | 2 | broken ground and low wall; nothing that hunts you |
 | Deep Grove | 3 | nothing that hunts you: dense silver trunks, and nothing behind them |
-| Ashscale Ridge | 3 | the height and the falls: the ground rises fast and ends at the edge |
+| Ashscale Ridge | 3 | the height and the falls: the ground rises fast |
 | Mirrorlake | 3 | drowning (18 s for a human; only a frog body needs no air underwater), a frog drying out on land |
-| The Grey Veil | 5 | it is the edge of the world, and it drains your vitality while you press against it |
+
+The sea carries no danger rating, because a danger rating is a thing that can hurt you
+and nothing out there does. What the sea costs is distance and what you can carry
+(§1.1), and the honest version of that cost is the fruit in your pocket running out
+while you are standing on a shore with no reeds on it. The ground past the authored
+square has no wall on it, no fog and no drain: it is the same ground, unmade.
+

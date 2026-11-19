@@ -82,7 +82,6 @@
   def(13, { cn: '屋顶瓦', c: [0.47, 0.21, 0.19] });
   def(14, { cn: '辉石', c: [1.00, 0.86, 0.52], emis: 1 });
   def(15, { cn: '雪', c: [0.92, 0.94, 0.98] });
-  def(16, { cn: '云', c: [0.94, 0.95, 1.00], solid: false, opaque: true, soft: 1 });
   def(17, { cn: '石板路', c: [0.58, 0.56, 0.52] });
   def(18, { cn: '余烬', c: [1.00, 0.44, 0.14], emis: 1 });
   def(19, { cn: '金', c: [0.86, 0.72, 0.30] });
@@ -175,19 +174,22 @@
     { n: [0, 0, -1], c: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]], u: [1, 0, 0], v: [0, 1, 0], s: 0.58 }
   ];
   const AO_L = [1.0, 0.78, 0.60, 0.46];
-  /* A cloud is not a slab. The face table above is the brightness of a face
+  /* A blob is not a slab. The face table above is the brightness of a face
      relative to the ground it stands on: a bottom face is dark because it is
-     under something and never sees the sky. For a cloud the bottom face IS the
-     face you look at from the ground, and a cloud blob is nothing but corners,
-     so face shade times AO drove the underside of every cloud to 0.19 of its
-     own colour -- measured 0.32 on average, 0.19 at worst, i.e. RGB (61,65,72)
+     under something and never sees the sky. For a blob the bottom face IS the
+     face you look at from below, and a blob is nothing but corners, so face
+     shade times AO drove the underside of every such blob to 0.19 of its own
+     colour -- measured 0.32 on average, 0.19 at worst, i.e. RGB (61,65,72)
      against a sky at (102,127,163). Dark grey lumps hanging in a bright sky:
-     black blocks in the sky. A soft block keeps the same ordering of faces but
+     black blocks in the sky. That is how it was found: a sky deck of cloud
+     blocks. The deck is gone, and the boundary wall that was built out of the
+     same block is gone with it, so this world places no cloud anywhere. The
+     law stays because the living case is the same object for the same reason:
+     a crown is a blob of leaf blocks, its underside is the face you look at
+     when you stand under the tree, and the ring of solid its crevice samples
+     is the crown itself. A soft block keeps the same ordering of faces but
      never drops below 0.74 and takes no AO, so the blob still has a shape.
-     A canopy is the same object for the same reason: a crown is a blob of leaf
-     blocks, its underside is the face you look at when you stand under the
-     tree, and the ring of solid its crevice samples is the crown itself.
-     Leaf blocks are soft too. */
+     Leaf blocks are soft. */
   const SOFT_S = FACES.map(f => 0.55 + 0.45 * f.s);
   /* How far a face has to look clear, along its own normal, before it is taken
      to face open sky. Four cells: a roof rim hangs over a street, the keep's
@@ -198,6 +200,15 @@
   const OPEN_R = 4;
 
   /* ------------------------- world ------------------------- */
+  /* The valley is a square of ground with an address, not the whole world.
+     Inside that square every cell still lives in one array, exactly as it always
+     did -- the map the generator writes stays bit for bit the map the tests and
+     the docs quote. Anything outside it is asked for by address and answered by
+     the rule the generator installs on `world.column`: the same address gives the
+     same ground whenever it is asked, so a place is never created by being
+     visited, only found. Those chunks are filled the first time anything asks
+     about them and let go when nothing is near them; asked again they come back
+     cell for cell the same, and their geometry is built again. */
   class World {
     constructor(w, h, d) {
       this.w = w; this.h = h; this.d = d;
@@ -206,7 +217,25 @@
       this.cx = Math.ceil(w / this.cs); this.cz = Math.ceil(d / this.cs);
       this.chunks = new Array(this.cx * this.cz);
       this.dirty = new Uint8Array(this.cx * this.cz).fill(1);
+      /* the outside, held by address */
+      this.column = null;          // (x, z, put): what a column of ground is made of, at any address
+      this.far = new Map();        // ckey -> { cx, cz, vox, mesh }
+      this.farDirty = new Set();
+      /* How far out from the lens ground is held. The answer is the air's: the
+         haze is 1 - exp(-(den*d)^2), and the clearest air this world ever states
+         is den 0.0075 per metre (game.js, the day without glare), so at 231 m
+         the air has taken 95% of the contrast off and there is nothing left to
+         see. 231 m / 16 m is 15 chunks. Any nearer and the world visibly runs
+         out inside what the lens can reach; any further and the ground held is
+         ground nobody can see. */
+      this.keep = 15;              // how far out from the lens those chunks are held
+      this.filled = 0;             // for the tests: how many chunks of the outside were built
     }
+    /* One chunk address as one integer. Both axes are offset before the radix:
+       an ocean has negative coordinates, and a key that collides across the axis
+       line would put two places' ground in the same record. */
+    ckey(cx, cz) { return (cx + 0x8000) * 0x10000 + (cz + 0x8000); }
+    unkey(k) { return [((k / 0x10000) | 0) - 0x8000, (k & 0xffff) - 0x8000]; }
     /* No heightmap. A `maxY` map -- Uint8Array(w*d), kept up to date on every
        write, exactly as docs/07 s3.3 still plans for the full game -- was
        tried here to bound the meshing loop. Rebuilding all 100 chunks costs
@@ -214,14 +243,63 @@
        treetops is not where the time goes; the faces are. And it had to be
        right on every single write, or geometry would quietly be clipped. */
     idx(x, y, z) { return (y * this.d + z) * this.w + x; }
-    inside(x, y, z) { return x >= 0 && z >= 0 && y >= 0 && x < this.w && z < this.d && y < this.h; }
-    get(x, y, z) { return this.inside(x, y, z) ? this.blocks[(y * this.d + z) * this.w + x] : 0; }
+    inValley(x, z) { return x >= 0 && z >= 0 && x < this.w && z < this.d; }
+    /* `inside` is the question "is this cell in the valley's own array" -- the
+       array is a fixed square and other code asks about exactly that. The
+       question the save and the bodies need is the other one: is this a place the
+       world can be asked about at all, any ground on the plane at a height the
+       world has. Answering it with `inside` is how a body walking off the map
+       used to be told there was nothing there. */
+    inside(x, y, z) { return this.inValley(x, z) && y >= 0 && y < this.h; }
+    place(x, y, z) { return Number.isFinite(x) && Number.isFinite(z) && y >= 0 && y < this.h; }
+    /* A chunk of the outside, filled from the rule if it has not been asked for
+       before. Column-major: a column of ground is contiguous, because that is
+       how the rule writes it. */
+    farChunk(cx, cz) {
+      const k = this.ckey(cx, cz);
+      let c = this.far.get(k);
+      if (!c) {
+        c = { cx, cz, key: k, vox: this.fillChunk(cx, cz), mesh: null };
+        this.far.set(k, c);
+        this.filled++;
+      }
+      return c;
+    }
+    fillChunk(cx, cz) {
+      const cs = this.cs, h = this.h, vox = new Uint8Array(cs * h * cs);
+      const x0 = cx * cs, z0 = cz * cs;
+      if (this.column) {
+        for (let lz = 0; lz < cs; lz++) for (let lx = 0; lx < cs; lx++) {
+          const off = (lz * cs + lx) * h;
+          this.column(x0 + lx, z0 + lz, (X, Y, Z, b) => { vox[off + Y] = b; });
+        }
+      }
+      return vox;
+    }
+    get(x, y, z) {
+      if (y < 0 || y >= this.h) return 0;
+      if (this.inValley(x, z)) return this.blocks[(y * this.d + z) * this.w + x];
+      if (!this.column) return 0;            // a world nobody has told how to make
+      const cx = Math.floor(x / this.cs), cz = Math.floor(z / this.cs);
+      const c = this.farChunk(cx, cz);
+      return c.vox[((z - cz * this.cs) * this.cs + (x - cx * this.cs)) * this.h + y];
+    }
     set(x, y, z, b) {
-      if (!this.inside(x, y, z)) return;
-      const i = (y * this.d + z) * this.w + x;
-      if (this.blocks[i] === b) return;
-      this.blocks[i] = b;
-      this.markDirty(x, z);
+      if (y < 0 || y >= this.h) return;
+      if (this.inValley(x, z)) {
+        const i = (y * this.d + z) * this.w + x;
+        if (this.blocks[i] === b) return;
+        this.blocks[i] = b;
+        this.markDirty(x, z);
+        return;
+      }
+      if (!this.column) return;
+      const cx = Math.floor(x / this.cs), cz = Math.floor(z / this.cs);
+      const c = this.farChunk(cx, cz);
+      const i = ((z - cz * this.cs) * this.cs + (x - cx * this.cs)) * this.h + y;
+      if (c.vox[i] === b) return;
+      c.vox[i] = b;
+      this.markChunk(cx, cz);
     }
     solidAt(x, y, z) { const b = B[this.get(x | 0, y | 0, z | 0)]; return !!(b && b.solid); }
     liquidAt(x, y, z) { return this.get(x | 0, y | 0, z | 0) === WATER; }
@@ -282,14 +360,25 @@
       for (let y = this.h - 1; y >= 0; y--) if (this.liquidAt(x, y, z)) return y + 1;
       return -1;
     }
+    /* The 3x3 of chunks whose geometry one block edit can change, flagged on one
+       grid of addresses. A block at the edge of the valley's square changes the
+       mesh of the chunk next to it whether that chunk is inside the square or out
+       at sea, so the two cannot be flagged by two different rules; a chunk of the
+       outside that is not held has no geometry to go stale, and when it is made
+       later it is built from ground that already includes the edit. */
     markDirty(x, z) {
-      const c0x = Math.max(0, Math.floor((x - 1) / this.cs)), c1x = Math.min(this.cx - 1, Math.floor((x + 1) / this.cs));
-      const c0z = Math.max(0, Math.floor((z - 1) / this.cs)), c1z = Math.min(this.cz - 1, Math.floor((z + 1) / this.cs));
-      for (let cz = c0z; cz <= c1z; cz++) for (let cx = c0x; cx <= c1x; cx++) this.dirty[cz * this.cx + cx] = 1;
+      const c0x = Math.floor((x - 1) / this.cs), c1x = Math.floor((x + 1) / this.cs);
+      const c0z = Math.floor((z - 1) / this.cs), c1z = Math.floor((z + 1) / this.cs);
+      for (let cz = c0z; cz <= c1z; cz++) for (let cx = c0x; cx <= c1x; cx++) this.markChunk(cx, cz);
+    }
+    inChunkGrid(cx, cz) { return cx >= 0 && cz >= 0 && cx < this.cx && cz < this.cz; }
+    markChunk(cx, cz) {
+      if (this.inChunkGrid(cx, cz)) this.dirty[cz * this.cx + cx] = 1;
+      else { const k = this.ckey(cx, cz); if (this.far.has(k)) this.farDirty.add(k); }
     }
     anyDirty() {
       for (let ci = 0; ci < this.dirty.length; ci++) if (this.dirty[ci]) return true;
-      return false;
+      return this.farDirty.size > 0;
     }
     /* Re-mesh the chunks a block edit flagged. The game calls this once per
        frame with a millisecond budget: picking a fruit must not stall the
@@ -303,9 +392,58 @@
         if (!this.dirty[ci]) continue;
         this.buildChunk(gl, ci);
         n++;
+        if (performance.now() - t0 > budgetMs) return n;
+      }
+      for (const k of this.farDirty) {
+        const c = this.far.get(k);
+        if (c) this.buildFarChunk(gl, c); else this.farDirty.delete(k);
+        n++;
         if (performance.now() - t0 > budgetMs) break;
       }
       return n;
+    }
+    /* The outside, in as the lens walks towards it. Nearest ring first, so what
+       is about to be seen is what gets built; one chunk costs about 0.2 ms of
+       ground (the rule, 256 columns) and about 1.4 ms of geometry, and the same
+       millisecond budget the block edits use pays for both, so a frame that has
+       spent it leaves the rest to the next one. Nothing here decides where there
+       is ground: it only asks for what the rule already says is there. The
+       answer is how many chunks of the ring are still missing -- the game keeps
+       asking until that is none, so a ring cannot be left with a hole in it. */
+    stream(gl, cx0, cz0, budgetMs) {
+      const t0 = performance.now();
+      let left = 0;
+      const r2 = this.keep * this.keep;
+      for (let r = 1; r <= this.keep; r++) {
+        for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          if (dx * dx + dz * dz > r2) continue;             // a disc, not a square: the corners are further than the haze and cost ground
+          const cx = cx0 + dx, cz = cz0 + dz;
+          if (this.inChunkGrid(cx, cz)) continue;         // the valley builds its own
+          const c = this.far.get(this.ckey(cx, cz));
+          if (c && c.mesh) continue;
+          if (performance.now() - t0 > budgetMs) { left++; continue; }
+          this.buildFarChunk(gl, c || this.farChunk(cx, cz));
+        }
+      }
+      return left;
+    }
+    /* And out again: a chunk of the outside nothing is near is let go, its
+       geometry and its ground both. Asking about that address again gets the
+       same cells back from the rule -- which is the whole reason the ground is
+       asked for rather than kept. The radius let go at is wider than the radius
+       held to, so a lens standing at the edge of what it holds does not make the
+       world come and go under it. */
+    unload(gl, cx0, cz0) {
+      const lim = this.keep + 3;
+      let gone = 0;
+      for (const [k, c] of this.far) {
+        if (Math.max(Math.abs(c.cx - cx0), Math.abs(c.cz - cz0)) <= lim) continue;
+        if (c.mesh) this.dropMesh(gl, c.mesh);
+        this.far.delete(k); this.farDirty.delete(k);
+        gone++;
+      }
+      return gone;
     }
     /* One integer naming one block. Mixed radix (x, z, y) over the world bounds,
        so two different blocks can never share a key -- a decimal packing like
@@ -317,10 +455,86 @@
 
     /* ---- meshing ---- */
     buildChunk(gl, ci) {
-      const cx = ci % this.cx, cz = (ci / this.cx) | 0;
-      const x0 = cx * this.cs, z0 = cz * this.cs, y0 = 0, y1 = this.h;
-      const blocks = this.blocks, W = this.w, D = this.d;
-      const at = (x, y, z) => (x >= 0 && z >= 0 && y >= 0 && x < W && z < D && y < this.h) ? blocks[(y * D + z) * W + x] : 0;
+      const m = this.meshRegion(gl, (ci % this.cx) * this.cs, ((ci / this.cx) | 0) * this.cs);
+      const old = this.chunks[ci];
+      if (old) this.dropMesh(gl, old);
+      this.chunks[ci] = m;
+      this.dirty[ci] = 0;
+      return m;
+    }
+    buildFarChunk(gl, c) {
+      const m = this.meshRegion(gl, c.cx * this.cs, c.cz * this.cs);
+      if (c.mesh) this.dropMesh(gl, c.mesh);
+      c.mesh = m;
+      this.farDirty.delete(c.key);
+      return m;
+    }
+    dropMesh(gl, old) {
+      for (const m of old) if (m) { gl.deleteBuffer(m.pos); gl.deleteBuffer(m.col); gl.deleteBuffer(m.dat); }
+    }
+    /* One chunk of ground, wherever it is. A chunk of the sea is meshed by the
+       same code as a chunk of the valley: the neighbourhood it asks about -- the
+       chunk plus a ring of one -- is read once into a window through `get`, which
+       fills a neighbour that is not held yet from the rule instead of answering
+       air. The old form reached into the valley's own array with a bounds test
+       written out at every call, and that is how a face at the edge of the map
+       came to be drawn against nothing. */
+    meshRegion(gl, x0, z0) {
+      const cs = this.cs, H = this.h;
+      /* The window is the chunk plus a ring of one -- which is as far as the
+         face table, the ambient-occlusion probes and the water-column table
+         reach -- and one column further again, because a vertex of this chunk's
+         blocks stands on a column line at x0+cs and the water question about it
+         steps one column beyond that. */
+      const RW = cs + 3, RX = x0 - 1, RZ = z0 - 1, RS = RW * RW;
+      const win = this._win || (this._win = new Uint8Array(RW * H * RW));
+      /* The window is filled in one of two ways. When it lies wholly inside the
+         valley's own array -- every chunk but the ones along the square's edge --
+         the copy walks the array a row at a time: no bounds test, no rule, just
+         a stride. Otherwise every cell is asked through `get`, which fills a
+         chunk of the outside from the rule the first time anything needs it.
+         Either way the meshing below sees one contiguous block of ground and
+         asks nothing else about where it came from. */
+      if (RX >= 0 && RX + RW <= this.w && RZ >= 0 && RZ + RW <= this.d) {
+        for (let y = 0; y < H; y++) {
+          let di = y * RS;
+          for (let z = RZ; z < RZ + RW; z++, di += RW) {
+            let si = (y * this.d + z) * this.w + RX;
+            for (let x = 0; x < RW; x++) win[di + x] = this.blocks[si + x];
+          }
+        }
+      } else {
+        for (let y = 0; y < H; y++) {
+          const yo = y * RS;
+          for (let z = RZ; z < RZ + RW; z++) {
+            const zo = yo + (z - RZ) * RW;
+            for (let x = RX; x < RX + RW; x++) win[zo + (x - RX)] = this.get(x, y, z);
+          }
+        }
+      }
+      const at = (x, y, z) => (y < 0 || y >= H) ? 0 : win[(y * RW + (z - RZ)) * RW + (x - RX)];
+      /* The same face table as index steps into the window. One cell along x is
+         one index, along z is RW, along y is RS, so a face and the eight
+         ambient-occlusion probes round it are additions and nothing else: the
+         ring of one is exactly as far as they reach, which is why a face on the
+         edge of a chunk reads its real neighbour instead of the far side of the
+         row above it. The only probe that reaches past the ring is the one that
+         asks how far a face looks clear -- four cells -- and that one asks the
+         world. */
+      const ST = FACES.map((f) => {
+        const st = (v) => v[0] + v[1] * RS + v[2] * RW;
+        const dn = st(f.n);
+        const dc = f.c.map((c) => {
+          const cu = c[0] * f.u[0] + c[1] * f.u[1] + c[2] * f.u[2];
+          const cv = c[0] * f.v[0] + c[1] * f.v[1] + c[2] * f.v[2];
+          const su = cu ? 1 : -1, sv = cv ? 1 : -1;
+          const o1 = [f.u[0] * su, f.u[1] * su, f.u[2] * su];
+          const o2 = [f.v[0] * sv, f.v[1] * sv, f.v[2] * sv];
+          return [dn + st(o1), dn + st(o2), dn + st(o1) + st(o2)];
+        });
+        return { dn, dc, dh: f.n[0] + f.n[2] * RW };
+      });
+      const y0 = 0, y1 = H;
       /* How deep the water above a point is, baked into the vertices of the
          static world. The light reaching a surface under water has come down
          through that much of it, which is a fact about the surface being lit
@@ -354,17 +568,14 @@
          nothing. Measured over all 100 chunks before: a build cost 4.11 ms on
          average, 15.6 ms in the worst, and picking one fruit in that worst chunk
          cost 21.8 ms of frame. */
-      const RW = this.cs + 3, RX = x0 - 1, RZ = z0 - 1;
       const wTop = new Int16Array(RW * RW), wBot = new Int16Array(RW * RW);
       wTop.fill(-1); wBot.fill(-1);
       let wet = 0;
       for (let z = RZ; z < RZ + RW; z++) {
-        if (z < 0 || z >= D) continue;
         for (let x = RX; x < RX + RW; x++) {
-          if (x < 0 || x >= W) continue;
           let top = -1, bot = -1;
-          for (let y = this.h - 1; y >= 0; y--) {
-            const bd = B[blocks[(y * D + z) * W + x]];
+          for (let y = H - 1; y >= 0; y--) {
+            const bd = B[at(x, y, z)];
             if (bd && bd.liquid) { if (top < 0) top = y; }
             else if (top >= 0) { bot = y + 1; break; }
           }
@@ -376,9 +587,11 @@
       }
       /* A vertex of this chunk's blocks stands on a column line between x0 and
          x0+cs, and the question steps one column further out, which is exactly
-         the ring RW covers -- so the five columns are always inside the table,
-         and a step off its edge can only land on a column outside the map,
-         which answers dry. A micro box corner is not on a column line at all:
+         the ring RW covers -- so the five columns are always inside the table.
+         They come from the window, so a column beyond the valley's own square
+         answers the ground that is there instead of dry: that is the hazard the
+         edge of the map used to carry, and reading the ring through `get` is
+         what removes it. A micro box corner is not on a column line at all:
          a stem half a block across stands **inside** one, so the column it
          stands in answers, and the four round it are the same four. It used to
          answer dry -- which cost nothing while nothing micro stood in water,
@@ -399,9 +612,12 @@
         miE = new MB(under), tr = new MB(under);
 
       for (let y = y0; y < y1; y++) {
-        for (let z = z0; z < z0 + this.cs; z++) {
-          for (let x = x0; x < x0 + this.cs; x++) {
-            const b = at(x, y, z);
+        const yo = y * RS;
+        for (let lz = 1; lz <= cs; lz++) {
+          const z = z0 + lz - 1, co = lz * RW;
+          for (let lx = 1; lx <= cs; lx++) {
+            const x = x0 + lx - 1, i = yo + co + lx;
+            const b = win[i];
             if (!b) continue;
             const bd = B[b];
             if (!bd) continue;
@@ -414,8 +630,9 @@
             }
             if (bd.liquid) {
               // water surface / sides
-              for (const f of FACES) {
-                const nb = at(x + f.n[0], y + f.n[1], z + f.n[2]);
+              for (let fi = 0; fi < 6; fi++) {
+                const f = FACES[fi], s = ST[fi];
+                const nb = win[i + s.dn];
                 if (nb === b) continue;
                 if (B[nb] && B[nb].opaque) continue;
                 /* A face against a micro cell is water against water with
@@ -448,18 +665,18 @@
             }
             const col = bd.c, ct = bd.ct || col;
             for (let fi = 0; fi < 6; fi++) {
-              const f = FACES[fi];
+              const f = FACES[fi], s = ST[fi];
               const nx = x + f.n[0], ny = y + f.n[1], nz = z + f.n[2];
-              const nb = at(nx, ny, nz);
+              const nb = win[i + s.dn];
               const nbd = B[nb];
               if (nb && nbd && nbd.opaque) continue;           // occluded
               if (nb && nbd && !nbd.liquid && bd.id === nb) continue; // adjacent blocks of the same transparent kind (glass)
               // a block that culls nothing and is not water rides in its own
               // mesh, so it can be drawn blended with its own per-vertex alpha
               const tgt = bd.emis ? em : (bd.opaque ? op : tr);
-              /* AO. A soft block takes the flat table instead -- cloud, the Grey
-                 Veil wall built out of the same block, every canopy block. See
-                 SOFT_S. Everything else takes face shade times crevice table,
+              /* AO. A soft block takes the flat table instead -- cloud, every
+                 canopy block. See SOFT_S. Everything else takes face shade times
+                 crevice table,
                  and that product is where the black holes in the sky came from:
                  0.42 (a bottom face) times 0.46 (crevice level 3) is 0.19 of the
                  block's own colour. Measured over the whole map before this: of
@@ -494,21 +711,21 @@
               else {
                 let e = 1;
                 {
+                  /* The reach here is four cells, further than the window's ring
+                     of one, so this one probe goes back to the world -- which,
+                     unlike the array the valley's own ground sits in, answers a
+                     place outside that square with the ground that is there. */
                   let k = 1;
-                  while (k < OPEN_R && !occ(at(nx + f.n[0] * k, ny + f.n[1] * k, nz + f.n[2] * k))) k++;
+                  while (k < OPEN_R && !occ(this.get(nx + f.n[0] * k, ny + f.n[1] * k, nz + f.n[2] * k))) k++;
                   e = (k - 1) / (OPEN_R - 1);
                 }
                 const fs = fi === 1 ? f.s + (SOFT_S[1] - f.s) * e : f.s;
-                for (const c of f.c) {
-                  const cu = c[0] * f.u[0] + c[1] * f.u[1] + c[2] * f.u[2];
-                  const cv = c[0] * f.v[0] + c[1] * f.v[1] + c[2] * f.v[2];
-                  const su = cu ? 1 : -1, sv = cv ? 1 : -1;
-                  const o1 = [f.u[0] * su, f.u[1] * su, f.u[2] * su];
-                  const o2 = [f.v[0] * sv, f.v[1] * sv, f.v[2] * sv];
-                  const s1 = occ(at(nx + o1[0], ny + o1[1], nz + o1[2]));
-                  const s2 = occ(at(nx + o2[0], ny + o2[1], nz + o2[2]));
-                  const co = occ(at(nx + o1[0] + o2[0], ny + o1[1] + o2[1], nz + o1[2] + o2[2]));
-                  const lvl = s1 + s2 + ((s1 && s2) ? 1 : co ? 1 : 0);
+                for (let ci = 0; ci < 4; ci++) {
+                  const d = s.dc[ci];
+                  const s1 = occ(win[i + d[0]]);
+                  const s2 = occ(win[i + d[1]]);
+                  const co2 = occ(win[i + d[2]]);
+                  const lvl = s1 + s2 + ((s1 && s2) ? 1 : co2 ? 1 : 0);
                   sh.push(fs * (1 - (1 - AO_L[Math.min(3, lvl)]) * (1 - e)));
                 }
               }
@@ -528,7 +745,7 @@
               if (nbd && nbd.liquid) {
                 // the neighbour of a block of this chunk is always one of the
                 // columns the ring above walked, so this is a read, not a search
-                const t = wTop[(nz - RZ) * RW + (nx - RX)];
+                const t = wTop[co + lx + s.dh];
                 if (t >= 0) surf = t;
               }
               tgt.quadAO(p, faceCol, sh, !!bd.emis, 0, surf);
@@ -538,12 +755,8 @@
       }
       function occ(b) { return b && B[b] && B[b].opaque ? 1 : 0; }
 
-      const old = this.chunks[ci];
-      if (old) for (const m of old) if (m) { gl.deleteBuffer(m.pos); gl.deleteBuffer(m.col); gl.deleteBuffer(m.dat); }
       const mk = (mb) => mb.empty() ? null : mb.upload(gl);
-      this.chunks[ci] = [mk(op), mk(em), mk(wa), mk(mi), mk(miE), mk(tr)];
-      this.dirty[ci] = 0;
-      return this.chunks[ci];
+      return [mk(op), mk(em), mk(wa), mk(mi), mk(miE), mk(tr)];
     }
 
     /* ---- DDA raycast ----
@@ -579,8 +792,8 @@
   N.TREE_BLOCK = TREE_BLOCK;
   /* Which blocks a body on foot does not stop against: the material the mesher
      already calls `soft` and that is still solid -- leaves, needles, silver
-     leaves, dark leaves, willow. (Cloud is soft too and is not solid at all, so
-     it never comes up here.) The standing gate of a walking body -- a wild one
+     leaves, dark leaves, willow. (A soft block that is not solid at all never
+     comes up here, so the table only ever holds the leafy ones.) The standing gate of a walking body -- a wild one
      or the one the player wears -- asks this table, so a frog can stand in a
      crown and hop through a bush while a trunk stays a wall and a roof: a trunk
      (6) is not soft, so it stays solid to the body, and that body still climbs a

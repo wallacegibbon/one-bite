@@ -375,14 +375,11 @@
          colour, luminance ~25, the same order the world sits at, so a
          silhouette fades into the band instead of being cut out of it.
          The fog the blend asks of is the fog **after** the lens has had its
-         say -- the edge's veil and the water the lens is sitting in have
-         already moved it -- because that is the fog the world at the edge
+         say -- the water the lens is sitting in has already moved it --
+         because that is the fog the world at the edge
          of sight is fading into. */
       const groundDay = mix(horizon, [0.25, 0.22, 0.2], 0.5);
-      // the Grey Veil
       const W = this.world, p = this.player;
-      const edge = Math.min(p.x, p.z, W.w - p.x, W.d - p.z);
-      if (edge < 22) { fogDen += (22 - edge) * 0.004; fogCol = mix(fogCol, [0.55, 0.57, 0.62], (22 - edge) / 22 * 0.8); }
       /* The water the **lens** is sitting in, not the water the body is standing
          in. In third person the lens trails the body, and it trails it down: a
          body standing in the lake with its head in the air has its lens 0.2 m
@@ -751,12 +748,6 @@
       this.damage(dt * 0.5, N.disp(c.sp));
       if (Math.random() < dt * 2) this.logMsg(N.t('log.chased', { n: N.disp(c.sp) }), 'bad');
     }
-    onVeil(p) {
-      this.veilWarn = (this.veilWarn || 0) + 1;
-      if (this.veilWarn % 40 === 1) this.logMsg(N.t('log.veil'), 'warn');
-      // no form walks the fog any more: the veil is a border, not a place
-      p.vital -= 0.004;
-    }
     die(cause) {
       const p = this.player;
       this.stats.deaths++;
@@ -847,10 +838,15 @@
       this._zoneKey = k; this._zoneName = name;
       return name;
     }
+    /* where the body is standing, said as the place it is standing in */
     zoneNameAt(p) {
+      /* The sea answers first, because it is the larger fact: beyond the
+         island's shore there is no named place, and pretending otherwise -- the
+         old fallback called everything outside a zone "the wilds" -- is a map
+         lying about water. The shore is the one the generator drew. */
+      if (N.beyondCoast(p.x, p.z) > 0) return N.t('log.openSea');
       let best = null, score = -1e9;
       for (const z of N.ZONES) {
-        if (z.kind === 'border') continue;
         if (z.kind === 'circle') {
           const d = Math.hypot(z.cx - p.x, z.cz - p.z);
           if (d < z.r) { const s = (z.r - d) / z.r * 100 + (z.id === 'starfall' ? 40 : 0); if (s > score) { score = s; best = z; } }
@@ -955,6 +951,20 @@
       // cellar trees all edit blocks, and each edit flags its chunk
       if (this.world.anyDirty()) this.world.rebuildDirty(this.R.gl, 6);
 
+      /* Ground that is not part of the valley's own square comes in as the body
+         walks towards it and goes out again behind it. It is asked for on the
+         same millisecond budget the block edits already have, and it is asked
+         again on the following frames until the ring round the body is complete,
+         so a ring cannot be left with a hole in it. The demand is small: a 16 m
+         chunk at a swimming body's speed is one chunk every three seconds, and a
+         chunk of open sea costs about 1.6 ms to fill and mesh. */
+      const W2 = this.world, chx = Math.floor(p.x / W2.cs), chz = Math.floor(p.z / W2.cs);
+      if (chx !== this._chx || chz !== this._chz || this._streamLeft) {
+        this._chx = chx; this._chz = chz;
+        this._streamLeft = W2.stream(this.R.gl, chx, chz, 6);
+        W2.unload(this.R.gl, chx, chz);
+      }
+
       /* The frame's camera is worked out here, before the picking ray, so the
          crosshair, the highlight box and E all agree on one line -- and on one
          answer, since all three now read `aimed()`. render() uses this frame
@@ -1005,16 +1015,25 @@
         const a = Math.random() * 6.283, r = 4 + Math.random() * 14;
         const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
         const fx = Math.floor(x), fz = Math.floor(z);
-        const gy = Math.max(N.groundY(this.world, fx, fz, Math.floor(p.y + 6)),
-                            this.world.liquidSurfaceAt(fx, fz)) + 0.6;
-        /* and the column has to be a column of this world. The ring motes are
-           scattered over reaches eighteen metres out from the body, and near the
-           edge of the map that ring is off the map, where `get` answers "air" to a
-           question that was never asked: standing eight blocks in from the edge,
-           **85** of **682** fireflies were let go at x = -0.3 and the like, and
-           **21,863** of **149,080** mote-samples (**14.7%**) were spent outside the
-           valley, glowing at nothing. */
-        if (this.world.inside(fx, gy | 0, fz) && !this.world.solidAt(fx, gy | 0, fz))
+        const surf = this.world.liquidSurfaceAt(fx, fz);
+        const ground = N.groundY(this.world, fx, fz, Math.floor(p.y + 6));
+        /* and the column has to be a place where a firefly would be. The ring
+           motes are scattered over reaches eighteen metres out from the body; out
+           past the island's shore that ring lies on open sea, where there is
+           nothing for an insect to be, and a mote let go there is a light on the
+           water for no reason. Over the island's own water the old rule stands:
+           the surface is the floor a firefly lifts off, because that is where
+           reeds are, and the lake at night is exactly the place they swarm.
+           (The question used to be asked of the map instead: is this cell in the
+           array. Near the edge of the map that ring is off the map, where `get`
+           answers "air" to a question that was never asked: standing eight blocks
+           in from the edge, **85** of **682** fireflies were let go at x = -0.3
+           and the like, and **21,863** of **149,080** mote-samples (**14.7%**)
+           were spent outside the valley, glowing at nothing. The edge of the
+           array was never the edge of anything.) */
+        if (surf >= 0 && N.beyondCoast(fx, fz) > 0) return;
+        const gy = Math.max(ground, surf) + 0.6;
+        if (this.world.place(fx, gy | 0, fz) && !this.world.solidAt(fx, gy | 0, fz))
           P.spawn(x, gy, z, (Math.random() - 0.5) * 0.6, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6, 3 + Math.random() * 3, [0.7, 1, 0.45], 0.16, 0);
       }
       // bubbles off a body that is swimming under. They are born under the
@@ -1102,18 +1121,22 @@
       // depth they wrote decides whether a body shows through a window
       const W = this.world;
       const glass = [];
-      for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
-        const ci = cz * W.cx + cx;
-        const m = W.chunks[ci];
-        if (!m) continue;
+      const drawChunk = (cx, cz, m) => {
         // a chunk is a box 16 x 48 x 16, and it is culled as one
-        if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) continue;
+        if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) return;
         R.drawMesh(m[0], IDENT, {});
         R.drawMesh(m[1], IDENT, { emisBoost: 0.15 });
         R.drawMesh(m[3], IDENT, {});
         R.drawMesh(m[4], IDENT, { emisBoost: 0.2 });
         if (m[5]) glass.push(m[5]);
+      };
+      for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
+        const m = W.chunks[cz * W.cx + cx];
+        if (m) drawChunk(cx, cz, m);
       }
+      // and the ground that is not part of the valley's own square: held by
+      // address, built as the lens walks towards it, let go when nothing is near
+      for (const c of W.far.values()) if (c.mesh) drawChunk(c.cx, c.cz, c.mesh);
       /* highlight (wireframe, not a solid cube). It is drawn on `hover`, which
          is the block `aimed()` answered -- a block the hand does something to --
          and never on a block that merely stopped the ray: at a wall that is a
@@ -1293,14 +1316,16 @@
          A lake is a closed volume and the mesher only ever emits a face where
          water meets air, so no pixel can ever see both sides of one quad --
          un-culling it costs nothing in blending and adds no geometry. */
+      const drawWater = (cx, cz, m) => {
+        if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) return;
+        R.drawMesh(m, IDENT, { pane: 1, wave: true, noCull: true });
+        R.drawMesh(m, IDENT, { pane: 2, wave: true, noCull: true });
+      };
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
-        const ci = cz * W.cx + cx;
-        const m = W.chunks[ci];
-        if (!m || !m[2]) continue;
-        if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) continue;
-        R.drawMesh(m[2], IDENT, { pane: 1, wave: true, noCull: true });
-        R.drawMesh(m[2], IDENT, { pane: 2, wave: true, noCull: true });
+        const m = W.chunks[cz * W.cx + cx];
+        if (m && m[2]) drawWater(cx, cz, m[2]);
       }
+      for (const c of W.far.values()) if (c.mesh && c.mesh[2]) drawWater(c.cx, c.cz, c.mesh[2]);
       // particles: the world goes along, because what eats a mote's light is
       // the water it sits in, and only the world knows where the water is
       this.particles.draw(R, this.world);
@@ -1400,15 +1425,17 @@
       this.seen = plain(s.seen) ? s.seen : {};
       this.dexFruit = plain(s.dex) ? s.dex : {};
       this.stats = plain(s.stats) ? s.stats : this.stats;
-      /* A diff row is four numbers and a place inside the valley: anything else
-         either plants a block at the wrong cell (a null passes a `>= 0` test and
+      /* A diff row is four numbers and a place in the world: anything else
+         either plants a block at no cell at all (a null passes a `>= 0` test and
          lands at cell 0) or names a block the block table has no colour for, and
-         the mesher then throws over the chunk it was written into. Only the rows
-         that were applied are kept, so a save cannot go on writing what the game
-         refused. */
+         the mesher then throws over the chunk it was written into. The place is
+         asked of the world and not of the valley's array: fruit picked off an
+         island in the sea is a real edit, and refusing it would lose it. Only the
+         rows that were applied are kept, so a save cannot go on writing what the
+         game refused. */
       const kept = [];
       for (const d of list(s.diffs)) {
-        if (!cell(d) || !this.world.inside(d[0], d[1], d[2]) || !N.BLOCKS[d[3]]) continue;
+        if (!cell(d) || !this.world.place(d[0], d[1], d[2]) || !N.BLOCKS[d[3]]) continue;
         const c = [d[0] | 0, d[1] | 0, d[2] | 0, d[3] | 0];
         this.world.set(c[0], c[1], c[2], c[3]);
         kept.push(c);

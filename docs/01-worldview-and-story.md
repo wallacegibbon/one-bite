@@ -2,7 +2,7 @@
 
 ## 1. The Valley
 
-A basin completely ringed by **grey fog**, about nine kilometres across. Inside it: forest, one very deep lake, a north ridge, a ruined orchard, and a chain of **rock islands floating in the air**.
+A valley on an island, and sea all round it. On the ground somebody made: forest, one very deep lake, a north ridge, a ruined orchard, and a chain of **rock islands floating in the air**. The island's own ground runs out to a shore — about **300 m** from side to side at the widest — and the sea begins there and goes on for as far as the world does (02 §1.1). Nothing else has been found in that sea.
 
 There are only three kinds of thing in this world:
 
@@ -26,17 +26,19 @@ There is no mystery to solve, no one to rescue, no villain. You are here for two
 |---|---|
 | Fruit spoils, the backpack has 24 slots, and the valley is bigger than the life of a single fruit — so you arrange, you store, you choose | Sink to the bottom of Mirrorlake as a frog: every body shows you a part of the valley you could not otherwise see |
 
-Failing is simple too: drowning, a frog body drying out on the shore, the fog at the edge, and time running out. There is no failure cutscene — you wake up in town, and what you were carrying lies where you fell.
+Failing is simple too: drowning, a frog body drying out on the shore, a day that ends further from home than the fruit in your pocket can carry you back to, and time running out. There is no failure cutscene — you wake up in town, and what you were carrying lies where you fell.
 
-## 3. The Grey Fog (the edge of the world)
+## 3. The island, and what a trip costs
 
-A grey band of fog around the valley, roughly 400 m thick and too tall to see the top of.
+The valley is not the world; it is one place in it. It sits on an island of ground whose own surface runs out to a shore, and the sea begins there and goes on. Nothing stands at the shore: there is no wall, no band of fog, no gate, and no force that turns a body back.
 
-- It does **not** stop you leaving. You can walk in and through it; on the other side is an ordinary hillside.
-- What it stops is **coming back**. Anyone who leaves forgets, within two hours, why they were going back; fruit carried out turns into ordinary fruit within a day and loses all magic.
-- It is cold inside, and the deeper you go the harder walking gets. **There are no animals in the fog** — not one living thing, which is the most unsettling part of it.
+- It does **not** stop you leaving. Walk out of the authored valley and the same ground continues; swim and you are in open water with a seabed under it.
+- What bounds a trip is arithmetic the player carries. A fruit's clock is the trip's clock: one frog pear picked at full ripeness is 420 seconds of frog, which on this world's ground is **966 m** out and back along a shore; a human body holds its breath for 18 seconds. The air itself hides anything further than about 230 m (02 §1.1). Nothing else states a limit.
+- There is **nothing out there** — no reeds, no orchard, no path, no animal. The island outside the valley is bare ground and the sea is sea, and that is the most unsettling part of it.
 
-> Design purpose: the world border is not a wall, it is **forgetting**. The player never hits anything — they turn around, because further on there is no reason.
+> Design purpose: the world has no border, so the reason to turn around is not a wall. It is distance, an empty country, and a fruit running out.
+
+What the setting used to attribute to the fog at the edge — that anyone who goes far enough forgets *why they were going back*, and that a name does not travel out of the valley (03 §1) — is no longer attributed to anything. The institution stands (the valley runs on shapes, deeds and epithets, and the player's own name is theirs alone); its cause is an open question, and it has deliberately not been moved onto a new mechanism.
 
 ## 4. How transformation works (see 04)
 

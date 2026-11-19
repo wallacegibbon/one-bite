@@ -10,8 +10,10 @@
  *               multiple players.
  *    epithet -- what the valley calls you. World-given, changes with deeds,
  *               never chosen by the player. All fiction text quotes this.
- *    name    -- the player's own, mutable, not unique, and by worldview
- *               design the one thing the Grey Veil cannot carry out.
+ *    name    -- the player's own, mutable, not unique, and never written into
+ *               the world: the save carries the id, the fiction quotes the
+ *               epithet. Why a name does not travel out of the valley is an
+ *               open question in docs/03 s1, not an answer stored here.
  *
  *  Writing rule that follows from this: no line of fiction may interpolate
  *  the player's name. Use the epithet, or second person. game/test/docs-sync.js

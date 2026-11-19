@@ -26,7 +26,7 @@ Sealing a deed is silent. The only line the valley says is the handover itself: 
 
 ## 3. No main line
 
-There is no main line, no villain and no ending. A deed is not a quest, an invitation or a lesson — it is the valley noticing a life being lived, and the notice is the storage. Do none of the three and the valley is unchanged: the fruit still ripens, the fog still makes you forget, and no place holds its breath.
+There is no main line, no villain and no ending. A deed is not a quest, an invitation or a lesson — it is the valley noticing a life being lived, and the notice is the storage. Do none of the three and the valley is unchanged: the fruit still ripens, the sea outside the island is still empty, and no place holds its breath.
 
 **End state of all three**: the player can reach every habitat, carry what they need, and read a fruit at a glance. That is the whole of progression.
 
@@ -36,7 +36,7 @@ There is no second tier of content. The three deeds are the whole of what the va
 
 This section used to be a 12-row design table. After the roster and the magic were simplified it was the odd thing out: **every row in it was unimplemented**, and together the rows were the reason the map promised more than it paid — the hollow that answers dropped stones, the mounds in the orchard, the beams still standing, the grove with no door. Each of those was a place held open for a quest that was never going to arrive, and two of the rows depended on animals the valley no longer has.
 
-What stands in their place is the sentence the creature chapter already uses: the valley keeps its animals to itself until each one arrives with a fruit, a niche and a door only it can open. Until then a place may simply **be** there — dark, deep, good for nothing. That is not a hole to fill; it is the same kind of absence the fog is made of.
+What stands in their place is the sentence the creature chapter already uses: the valley keeps its animals to itself until each one arrives with a fruit, a niche and a door only it can open. Until then a place may simply **be** there — dark, deep, good for nothing. That is not a hole to fill; it is the same kind of absence the ground outside the authored square is made of.
 
 If a place ever earns a fourth notice, it has to be noticed the way the three are: by a fact the valley can see from where the player stands, answered with storage, never with text. That is the only kind of notice this game has, and there are exactly three of them.
 
@@ -64,7 +64,7 @@ The valley does not keep a record of what you have done; it changes the word it 
 | drowning | same as above |
 | drying out (frog form, 90 s out of water) | same as above — an amphibian body drowns on the shore, not in the water |
 | falling (y < −2) | teleported back to y30 + 1.2 damage (prototype); the full design is "you land in the nearest treetop" |
-| the Grey Veil | it is the edge of the world: you cannot walk through it, and it drains your vitality while you press against it, until you can die of it; the full design is "leaving costs 1 fruit permanently at random" |
+| the open sea | nothing stops you and nothing hurts you: the cost of going is the fruit clock running out while you stand on ground nobody planted, and the walk back (02 §1.1). There is no death by border in this world |
 | time bar runs out | no penalty, you simply revert |
 
 **Drops being retrievable** is deliberate: it turns death into "my things are over there, I have to go back", not "reload". It also meshes death with fruit spoilage — if you get back too late, every dropped fruit has become a pit. And it only works if the fruit lands somewhere a body can walk back to, so a drop comes to rest on the **surface** of the column it lands in — the ground, or the top of the water above it, never the lake floor — and a column whose surface is not level with the place the body fell (a roof, a cliff, the far side of a bank) takes the fruit to the body's own feet instead. `play.js` dies at three kinds of column and asks where each of the eight fruits ended up: none inside solid, none off the surface it should lie on, none under water, none further than 2.5 m from the body. Before this, dying on a lake shore put all eight under water, one of them 29 m down, and dying on a roof left all eight hanging in the air.

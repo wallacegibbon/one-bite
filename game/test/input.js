@@ -1,4 +1,5 @@
-/* real key-press test: walk / jump / form timer / interact key */
+/* real key-press test: walk / jump / form timer / interact key / and walking off
+   the authored square onto the same ground past it */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const { sim } = require('./simwait');
@@ -59,20 +60,53 @@ const { sim } = require('./simwait');
   const t2 = await page.evaluate(() => window.game.player.formT);
   out.push('formT ' + t1.toFixed(1) + ' → ' + t2.toFixed(1));
 
-  // time scale: how long a day lasts
+  // the clock: how long a day lasts
   const day = await page.evaluate(() => ({ hour: window.game.hour, len: window.game.constructor.DAY_LEN || 420 }));
   out.push('clock ' + JSON.stringify(day));
 
-  // the Grey Veil boundary
-  await page.evaluate(() => { window.game.player.x = 3; window.game.player.y = 25; window.game.player.z = 80; });
-  await page.keyboard.down('w');
-  await sim(page, 1.5);
-  await page.keyboard.up('w');
-  out.push('veil ' + JSON.stringify(await P()));
-
-  // ---- camera comfort: the lens never cuts, the body never snaps (docs/07) ----
+  /* ---- camera comfort: the lens never cuts, the body never snaps (docs/07) ---- */
   const bad = [];
   const check = (name, cond, detail) => { if (!cond) bad.push('CHECK FAILED: ' + name + ' ' + JSON.stringify(detail)); };
+
+  /* ---- the keys past the edge of the authored square ----
+     The valley's map is a square of ground with an address, not a box with a
+     wall at its rim (docs/02): past the last column the same ground goes on,
+     and the keys keep working there. The body is stood inside the square near
+     its west edge, aimed west, and W is held: what is asked is that the walk
+     does not stop at the last column and that its feet stay on ground past it.
+     The line it walks along is searched for, thirty metres of it level and
+     dry, so what answers is the edge and not a hill or a trunk. */
+  const edge = await page.evaluate(() => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    const clearOver = (x, z, ty) => {
+      for (let y = ty; y < ty + 3; y++) if (W.solidAt(x, y, z)) return false;
+      return true;
+    };
+    let line = null;
+    for (let z = 24; z < W.d - 24 && !line; z++) {
+      const base = N.terrainY(W, 8, z, W.h - 1);
+      if (W.liquidSurfaceAt(8, z) >= 0 || !clearOver(8, z, base)) continue;
+      let ok = true;
+      for (let x = 8; x >= -30 && ok; x--) {
+        if (W.liquidSurfaceAt(x, z) >= 0 || N.terrainY(W, x, z, W.h - 1) !== base || !clearOver(x, z, base)) ok = false;
+      }
+      if (ok) line = { z, level: base };
+    }
+    if (!line) return { error: 'no level ground crossing the west edge of the square' };
+    p.form = null; g.mode = 'play';
+    p.x = 8.5; p.z = line.z + 0.5; p.y = line.level;
+    p.vx = p.vy = p.vz = 0; p.yaw = -Math.PI / 2; p.faceYaw = p.yaw; p.pitch = 0;
+    p.grounded = true; p.inWater = false; p.air = 999; p.vital = 10; p.fright = 0;
+    return line;
+  });
+  await page.keyboard.down('w');
+  await sim(page, 9);
+  await page.keyboard.up('w');
+  const offSquare = await P();
+  await page.evaluate(() => { const p = window.game.player; p.vx = p.vz = 0; });
+  out.push('pastEdge ' + JSON.stringify({ edge, at: offSquare }));
+  check('W keeps walking the body past the edge of the authored square, with ground under its feet out there',
+    !edge.error && offSquare.x < -8 && offSquare.g, { edge, at: offSquare });
 
   await page.evaluate(() => { window.game.thirdPerson = false; });
   await sim(page, 0.5);
