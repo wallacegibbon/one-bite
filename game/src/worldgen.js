@@ -516,6 +516,192 @@
     if (d < 1) return -d;
     return d - coastR(Math.atan2(dz, dx));
   }
+  /* The islands of the open sea, and the rule that puts them there.
+     The requirement the user set is a gradient, not a distribution: more islands
+     the nearer they lie to the island this square sits on, thinner the further out
+     they go. The rule that gives that and keeps the world fixed is
+     an Archimedean spiral out of the island the game already is, with a fixed
+     number of islands to the turn: the count per turn stays constant while the
+     ring it lies on grows, so the count per square kilometre falls as 1/r.
+     Identity comes with it for free and is the point: an island's id is its
+     ordinal along the spiral -- 0 is the authored island -- and its position is
+     computed *from* the ordinal, never the other way round, so the same island is
+     met again from any direction, in any later session, and a player's own id
+     names a home island without a table anywhere.
+     `b` is metres of radius gained per full turn, so turns are 2*pi*b = 377 m
+     apart radially and the first turn stands at r 377 m: the authored island's
+     own shore is at 126-175 m (`COAST`), so the nearest island ever met is two
+     hundred metres of open water away, and the spacing only widens outwards.
+     The bearing of each turn is drawn once from the turn number, and each
+     island is jittered along its own radius, so the layout is a coast of
+     islands rather than a wheel of spokes. */
+  const ISLES = {
+    b: 60, perTurn: 7,
+    /* how far an island may be pulled off the turn it belongs to, along its own
+       radius. It has to stay under half the gap between turns (2*pi*b/2 = 188 m)
+       or two turns could trade places and the spiral would stop being one. */
+    jitter: 40,
+    /* water kept between two grounds. Two islands touching at their feet is not
+       a thing that happens: what is between them is a channel, and a channel is
+       what makes them two islands. */
+    keep: 24,
+    /* the smallest foot radius worth raising: below this the "island" is a few
+       cells of shingle the player can stand on and forget, and it would cost the
+       same looking-up as a real one. */
+    minFoot: 15
+  };
+  /* What the kinds of island are, in the only two numbers a shore has: how far
+     the foot of it reaches, and how high its crown stands over the water line.
+     A sandbar is ametre and a half of sand that the sea uncovers at the top of
+     a tide; a ridge is a hill the sea has cut the top of, high enough that the
+     material table puts snow on it by its own height rule (h > 34), which is why
+     no snow is written here. The mix of kinds changes with the distance: the
+     near turns are shallow sand and reef, the far ones are land. */
+  const ISLE_TYPES = {
+    sandbar: { r: [22, 45], crest: [1.2, 2.4] },
+    reef: { r: [30, 70], crest: [2.5, 4.5] },
+    thicket: { r: [50, 95], crest: [5, 9] },
+    isle: { r: [70, 125], crest: [8, 14] },
+    ridge: { r: [100, 165], crest: [14, 24] }
+  };
+  const ISLE_MIX = [
+    [['sandbar', 0.34], ['reef', 0.34], ['thicket', 0.22], ['isle', 0.08], ['ridge', 0.02]],
+    [['sandbar', 0.16], ['reef', 0.26], ['thicket', 0.30], ['isle', 0.20], ['ridge', 0.08]],
+    [['sandbar', 0.08], ['reef', 0.18], ['thicket', 0.28], ['isle', 0.30], ['ridge', 0.16]]
+  ];
+  /* the widest foot any kind states: this is what bounds the search for the
+     islands that could touch an address, and what bounds how far the authored
+     island's own ground can be approached */
+  const MAX_FOOT = ISLE_TYPES.ridge.r[1];
+  /* Ordinal -> centre. Ordinal 0 is the authored island, and the spiral starts
+     after it: one full turn of the spiral carries `perTurn` islands, so turn 1
+     (ordinals 1..7) runs from bearing 2*pi to 4*pi, which is the radius band
+     377-754 m. Numbering the turns from 1 is not decoration -- it is what keeps
+     the first turn outside the authored island's own shore, and it is what makes
+     "which turns can reach this address" mean the same thing here and in
+     `islesNear`. Positions are cached because they are pure arithmetic and every
+     column of ground asks for the same few dozen of them -- and both caches are
+     per world, cleared where a world begins: an island of the world before this
+     one must not answer for it. */
+  const islePosCache = new Map(), isleCache = new Map();
+  function forgetIsles() { islePosCache.clear(); isleCache.clear(); }
+  function islePos(n) {
+    if (n <= 0) return { x: COAST.cx, z: COAST.cz, turn: 0 };
+    if (islePosCache.has(n)) return islePosCache.get(n);
+    const t = Math.floor((n - 1) / ISLES.perTurn) + 1, j = (n - 1) % ISLES.perTurn;
+    const off = h2(t, 0, seed + 41);                    // this turn's starting bearing
+    const th = 2 * Math.PI * (t + (j + off) / ISLES.perTurn);
+    const rad = ISLES.b * th + (h2(n, 0, seed + 43) - 0.5) * 2 * ISLES.jitter;
+    const p = { x: COAST.cx + Math.cos(th) * rad, z: COAST.cz + Math.sin(th) * rad, turn: t };
+    islePosCache.set(n, p);
+    return p;
+  }
+  /* The full record of an island: where, what kind, and how big its foot really
+     is. The size the kind states is an upper bound only -- an island is never
+     allowed to grow over the channel that makes it an island, so its foot is cut
+     back by the authored island's shore and by its nearest neighbours on the
+     spiral, and an island with nothing left to stand on is not raised at all.
+     This is asked of the ordinal, not of the ground: the same question about the
+     same island gets the same answer in every session and from every direction,
+     and cutting one island down never depends on which island was looked at
+     first. */
+  function isleAt(n) {
+    if (n <= 0) return null;
+    if (isleCache.has(n)) return isleCache.get(n);
+    const p = islePos(n);
+    const d = Math.hypot(p.x - COAST.cx, p.z - COAST.cz);
+    const turn = p.turn;
+    const mix = ISLE_MIX[turn <= 3 ? 0 : turn <= 8 ? 1 : 2];
+    let t0 = h2(n, 0, seed + 47), type = mix[0][0];
+    for (const [k, w] of mix) { t0 -= w; if (t0 <= 0) { type = k; break; } }
+    const T = ISLE_TYPES[type];
+    const foot = T.r[0] + h2(n, 0, seed + 53) * (T.r[1] - T.r[0]);
+    const crest = T.crest[0] + h2(n, 0, seed + 59) * (T.crest[1] - T.crest[0]);
+    // room: to the authored shore, and to every neighbour that could reach here
+    const coastHere = coastR(Math.atan2(p.z - COAST.cz, p.x - COAST.cx));
+    let room = d - coastHere - ISLES.keep;
+    for (const m of isleNeighbours(n)) {
+      if (m === n) continue;
+      const q = islePos(m);
+      room = Math.min(room, Math.hypot(q.x - p.x, q.z - p.z) / 2 - ISLES.keep);
+    }
+    const r = Math.min(foot, room);
+    /* the floor this island stands in, asked once: an island's height is stated
+       above the water line, so the pile of ground needed is the water over this
+       floor plus that much, and every column of one island measures from the
+       same floor. */
+    const rec = { id: n, x: p.x, z: p.z, turn, type, r: r > ISLES.minFoot ? r : 0, crest,
+      foot, room: +room.toFixed(1), bed: seaFloorH(Math.floor(p.x), Math.floor(p.z)) };
+    isleCache.set(n, rec);
+    return rec;
+  }
+  /* The ordinals that could have a foot reaching ordinal n's centre: its own
+     turn, the turn before and the turn after, which is where the spiral can
+     come within one island's reach of a point on it. */
+  function isleNeighbours(n) {
+    const t = Math.floor((n - 1) / ISLES.perTurn) + 1, out = [];
+    for (let k = Math.max(1, t - 1); k <= t + 1; k++) {
+      for (let j = 0; j < ISLES.perTurn; j++) out.push((k - 1) * ISLES.perTurn + j + 1);
+    }
+    return out;
+  }
+  /* Which islands could touch this address: the same question from the other
+     end, answered from the address alone -- a place, not a walk over the sea.
+     The spiral is monotonic in radius, so the turns that can reach a point are
+     the turns whose radius is within one foot (plus that turn's own jitter) of
+     the point's: turn t sits at radius 2*pi*b*t, which is the same arithmetic
+     `islePos` used to put it there. */
+  function islesNear(x, z) {
+    const dx = x + 0.5 - COAST.cx, dz = z + 0.5 - COAST.cz;
+    const rad = Math.hypot(dx, dz);
+    if (rad < 1) return [];
+    const per = 2 * Math.PI * ISLES.b;
+    const tLow = Math.max(1, Math.floor((rad - MAX_FOOT - ISLES.jitter) / per));
+    const tHigh = Math.ceil((rad + MAX_FOOT + ISLES.jitter) / per);
+    const out = [];
+    for (let t = tLow; t <= tHigh; t++) {
+      for (let j = 0; j < ISLES.perTurn; j++) {
+        const n = (t - 1) * ISLES.perTurn + j + 1;
+        const p = islePos(n);
+        if (Math.abs(p.x - x) > MAX_FOOT || Math.abs(p.z - z) > MAX_FOOT) continue;
+        const isle = isleAt(n);
+        if (isle.r > 0) out.push(isle);
+      }
+    }
+    return out;
+  }
+  /* The sea floor at an address: the ground the island rule raises its piles
+     out of. This is `landH` with no island in it, and it is written once -- the
+     height of a pile is measured from here, so if this were restated beside
+     `landH` the two would drift and an island's crown would stop being the
+     height its kind states. */
+  function seaFloorAt(h, s, x, z) {
+    if (s <= 0) return h;
+    let v = h + (COAST.deep - h) * ss(0, COAST.apron, s);
+    if (s > COAST.apron) v += (fbm(x * 0.05, z * 0.05, seed + 71, 3) - 0.5) * 2 * COAST.floorRelief;
+    return v;
+  }
+  function seaFloorH(x, z) { return seaFloorAt(terrainH(x, z), beyond(x, z), x, z); }
+  /* An island is a pile of ground raised out of the floor it stands in, and the
+     pile is a dome: flat enough at the crown to be the island's own ground, and
+     running down to nothing at its foot with no step and no wall -- `1 -
+     smoothstep` has zero slope at both ends, so an island cannot leave a cliff
+     standing in the sea, and cannot leave a ring of it either. The crown height
+     is stated above the water line (that is what a sandbar and a ridge *are*),
+     so the height of the pile is the water over the floor plus that much, and a
+     shore appears wherever the dome crosses the water line by itself: a low
+     sandbar is dry over a small part of its footprint and a ridge over most of
+     its own, which is the difference between them. */
+  function isleLift(x, z) {
+    let add = 0;
+    for (const isle of islesNear(x, z)) {
+      const d = Math.hypot(x + 0.5 - isle.x, z + 0.5 - isle.z);
+      if (d >= isle.r) continue;
+      add = Math.max(add, (SEA + isle.crest - isle.bed) * (1 - ss(0, 1, d / isle.r)));
+    }
+    return add;
+  }
+
   /* The height of the ground at any address in the world. Inside the shore this
      is exactly the terrain the map was built from -- the blend starts at that
      height, so there is no step and no seam where the array ends. */
@@ -523,12 +709,20 @@
     const h = terrainH(x, z);
     const s = beyond(x, z);
     if (s <= 0) return h;
-    let v = h + (COAST.deep - h) * ss(0, COAST.apron, s);
-    if (s > COAST.apron) v += (fbm(x * 0.05, z * 0.05, seed + 71, 3) - 0.5) * 2 * COAST.floorRelief;
+    // the same floor the save and the tests ask for: one blend, restated nowhere
+    let v = seaFloorAt(h, s, x, z);
+    const lift = isleLift(x, z);
+    v += lift;
     /* whole metres: a column of this world is a stack of metre cells, and a
        height of 7.56 puts water at cell 8.56, which is nowhere. The blend is
-       continuous and the ground it describes is a slope made of steps. */
-    return Math.max(3, Math.min(Math.round(v), SEA - 2));
+       continuous and the ground it describes is a slope made of steps. Sea
+       floor is capped two metres under the surface -- deep enough that the
+       absorption in 07 says nothing down there is still visible -- and that
+       ceiling says nothing about an island: ground raised above the water line
+       is what the island rule asked for, and its own ceiling is the crown the
+       island's kind states. */
+    const ceil = lift > 0 ? SEA + 30 : SEA - 2;
+    return Math.max(3, Math.min(Math.round(v), ceil));
   }
   /* What a column of ground is made of, at any address. One table for the whole
      world: sand at and near the water line, rock under three metres, soil
@@ -549,6 +743,7 @@
 
   function generate(world, s) {
     W = world; seed = s | 0; rngS = seed + 12345;
+    forgetIsles();                       // another world, another set of islands
     // terrain
     for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) columnInto(x, z, set);
     // and the ground beyond this square is answered by the same rule, by address
@@ -639,6 +834,14 @@
   N.coastRadius = coastR;
   N.beyondCoast = beyond;
   N.landHeight = landH;
+  /* the islands, asked either way: an ordinal is a place, and a place names the
+     ordinals whose feet reach it */
+  N.ISLES = ISLES;
+  N.ISLE_TYPES = ISLE_TYPES;
+  N.islePosition = islePos;
+  N.isleRecord = isleAt;
+  N.islesNear = islesNear;
+  N.seaFloorHeight = seaFloorH;
   // overwritten by generate(); the fallback is Lanternrow's road, facing west
   N.spawn = { x: 136.5, y: 22.05, z: 128.5, yaw: -Math.PI / 2 };
 

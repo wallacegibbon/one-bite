@@ -54,6 +54,14 @@ const DRIFTS = [
   ['02-map-and-scenes.md', 'over all 2,958 water columns', 'over all 2,959 water columns', 'lake water-column census'],
   ['02-map-and-scenes.md', 'the deepest at (72,83) where the water runs y4..y14', 'the deepest at (72,84) where the water runs y4..y14', 'which column is the lake\'s deepest'],
   ['02-map-and-scenes.md', 'surface is **y23–36** (mean 30', 'surface is **y23–37** (mean 30', 'ridge surface band'],
+  // the sea's islands: the rule's constants and the counts of what it built
+  ['02-map-and-scenes.md', '| sandbar | 22-45 m | 1.2-2.4 m |', '| sandbar | 22-45 m | 1.2-3.4 m |', 'the crown a kind of island states'],
+  ['02-map-and-scenes.md', 'its seven centres actually stand **389-778 m** out', 'its seven centres actually stand **389-798 m** out', 'where the first turn of the spiral actually stands'],
+  ['02-map-and-scenes.md', '**70** of 70 ordinals', '**71** of 70 ordinals', 'how many of the spiral\'s ordinals stand as ground'],
+  ['02-map-and-scenes.md', '| kinds | 15 sandbars, 16 reefs', '| kinds | 14 sandbars, 16 reefs', 'what kinds the mix built'],
+  ['02-map-and-scenes.md', '**3.50** in the 0-1 km band', '**3.60** in the 0-1 km band', 'the island density gradient the rule exists for'],
+  ['02-map-and-scenes.md', 'foot **70 m** — has had its whole footprint (**15,421** columns)', 'foot **70 m** — has had its whole footprint (**15,422** columns)', 'the footprint of the island counted cell by cell'],
+  ['02-map-and-scenes.md', 'takes 95% of the contrast off at **231 m**', 'takes 95% of the contrast off at **321 m**', 'the range at which the air gives up its contrast'],
   ['02-map-and-scenes.md', '**Greenhouse** y21', '**Greenhouse** y23', 'the row the keep greenhouse marker stands on'],
   // what the island under that door holds, and the room the town's door does
   // open onto: the chapter states both as counts, and the counts are what say

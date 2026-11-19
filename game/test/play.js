@@ -10419,6 +10419,225 @@ What was measured before any of this was fixed, over 180 frames of walking
     !places.error && places.streamIn.left === 0 && places.streamIn.holes === 0 && places.streamIn.built > 200 &&
     places.streamIn.asks > 1 && places.streamIn.worstCallMs < 12, places.streamIn);
 
+  /* ---- the open sea holds land, and it is the same land twice ----
+     The ground past the shore is a sea, and a sea with no land in it is a
+     different world from the one the player was promised: more of it the nearer to
+     this island, thinner the further out. The rule that answers it is arithmetic -- an Archimedean
+     spiral of islands, seven to a turn of it, each one a dome of ground raised
+     out of the floor it stands in, its kind stating how far its foot reaches and
+     how high its crown stands over the water. That arithmetic is checked without
+     a browser in test/node-smoke.js. What is asked here is the part only the
+     game can answer: that the island is *built* -- streamed and meshed like any
+     other ground, standing above the water in cells the world holds, supporting a
+     body that walks onto it, and coming back cell for cell when the lens goes
+     away and comes again. And it asks what is *not* there: no tree, no fruit,
+     no animal. An island the player can reach is not yet a place with anything
+     on it, and this step says so in numbers rather than leaving it to be
+     imagined. */
+  const isle = await step('theOpenSeaHoldsLandAndItIsTheSameLandTwice', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch,
+      faceYaw: p.faceYaw, grounded: p.grounded, inWater: p.inWater, air: p.air, fright: p.fright,
+      form: p.form, formT: p.formT, formMax: p.formMax, vital: p.vital, time: g.time, day: g.day,
+      mode: g.mode, creatures: g.creatures, drops: g.drops, input: g.input, inv: g.inv.slice(),
+      diffs: g.diffs.slice() };
+    const back = () => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, vx: was.vx, vy: was.vy, vz: was.vz,
+        yaw: was.yaw, pitch: was.pitch, faceYaw: was.faceYaw, grounded: was.grounded,
+        inWater: was.inWater, air: was.air, fright: was.fright, form: was.form,
+        formT: was.formT, formMax: was.formMax, vital: was.vital });
+      Object.assign(g, { time: was.time, day: was.day, mode: was.mode, creatures: was.creatures,
+        drops: was.drops, input: was.input });
+      g.inv.length = 0; for (const it of was.inv) g.inv.push(it);
+      g.diffs.length = 0; for (const d of was.diffs) g.diffs.push(d);
+    };
+    const h32 = (a) => { let h = 2166136261; for (let i = 0; i < a.length; i++) { h ^= a[i]; h = Math.imul(h, 16777619); } return h >>> 0; };
+    const column = (x, z) => { const s = new Uint8Array(W.h); for (let y = 0; y < W.h; y++) s[y] = W.get(x, y, z); return s; };
+    const out = {};
+
+    /* the nearest island with a foot worth standing on, from the game's own rule */
+    let home = null;
+    for (let n = 1; n <= 20; n++) {
+      const q = N.isleRecord(n);
+      if (q.r >= 40 && (!home || Math.hypot(q.x - W.w / 2, q.z - W.d / 2) < Math.hypot(home.x - W.w / 2, home.z - W.d / 2))) home = q;
+    }
+    if (!home) return Object.assign(out, { error: 'no island with a foot of 40 m is in reach' });
+    const cx = Math.floor(home.x), cz = Math.floor(home.z);
+    out.isle = { ordinal: home.id, kind: home.type, at: [cx, cz], foot: +home.r.toFixed(1),
+      crest: +home.crest.toFixed(2), fromCentre: Math.round(Math.hypot(home.x - W.w / 2, home.z - W.d / 2)) };
+
+    /* the lens goes there and the ring fills: the same path the game walks when
+       it sails, and the same budget it pays */
+    const ckx = Math.floor(home.x / W.cs), ckz = Math.floor(home.z / W.cs);
+    let asks = 0, left = 1, coldMs = 0, worstMs = 0;
+    while (left > 0 && asks < 400) {
+      const t = performance.now();
+      left = W.stream(R.gl, ckx, ckz, 6);
+      const ms = performance.now() - t;
+      /* the first call is cold: it is the first time anyone has asked for these
+         islands, and its cost belongs to the first sight of a coast, not to the
+         frame that follows it. The worst of the rest is printed, not held: a call
+         spends the budget the game hands it by design, and on a loaded machine it
+         carries whatever the browser decided in the middle (10.5 ms run on its own,
+         30 ms with the other suites ahead of it). What is held is the unit the
+         streamer cannot interrupt -- one chunk -- measured below. */
+      if (asks === 0) coldMs = ms; else if (ms > worstMs) worstMs = ms;
+      asks++;
+    }
+    let holes = 0, built = 0, holeAt = [];
+    for (let dz = -W.keep; dz <= W.keep; dz++) for (let dx = -W.keep; dx <= W.keep; dx++) {
+      if (dx * dx + dz * dz > W.keep * W.keep) continue;
+      const nx = ckx + dx, nz = ckz + dz;
+      if (W.inChunkGrid(nx, nz)) continue;                    // the valley builds its own
+      const c = W.far.get(W.ckey(nx, nz));
+      if (c && c.mesh) built++; else { holes++; holeAt.push([nx, nz]); }
+    }
+    out.stream = { asks, left, holes, holeAt: holeAt.slice(0, 6), built,
+      coldCallMs: +coldMs.toFixed(1), worstWarmCallMs: +worstMs.toFixed(1), budgetMs: 6 };
+
+    /* the ground the island is: dry at its crown, wet at its foot, and what it
+       is made of, read out of the cells the world now holds. The top of a column
+       is its top *solid* cell: an island stands in the sea, so a column that has
+       water over it is the sea floor, not dry ground, and calling the water the
+       top of it is how a census comes back reporting zero dry ground on an island
+       whose crown is seven metres clear of the water line. */
+    const topSolid = (x, z) => { for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z)) return y; return -1; };
+    const crownY = topSolid(cx, cz), filmAt = W.liquidSurfaceAt(cx, cz);
+    let wetFoot = 0, dryCrown = 0, trees = 0, fruit = 0, plants = 0;
+    const materials = {};
+    const R2 = Math.round(home.r);
+    for (let x = cx - R2; x <= cx + R2; x++) for (let z = cz - R2; z <= cz + R2; z++) {
+      if (Math.hypot(x + 0.5 - home.x, z + 0.5 - home.z) > home.r) continue;
+      const col = column(x, z);
+      let top = -1;
+      for (let y = W.h - 1; y > 0; y--) {
+        const b = col[y], d = b && N.BLOCKS[b];
+        if (!d || !d.solid || N.TREE_BLOCK[b] || d.micro) continue;
+        top = y; break;
+      }
+      if (top < 0) continue;
+      materials[col[top]] = (materials[col[top]] || 0) + 1;
+      if (top > N.WORLD.sea) dryCrown++; else wetFoot++;
+      for (let y = 1; y < W.h; y++) {
+        const b = col[y];
+        if (!b) continue;
+        if (N.TREE_BLOCK[b]) trees++;
+        else if (N.FRUIT_BLOCK && N.FRUIT_BLOCK[b]) fruit++;
+        else if (N.BLOCKS[b] && N.BLOCKS[b].micro) plants++;
+      }
+    }
+    out.ground = { crownY, film: filmAt, aboveWater: crownY > N.WORLD.sea,
+      underTheCeiling: crownY <= N.WORLD.sea + 30, dryCols: dryCrown, wetCols: wetFoot,
+      materials, trees, fruit, microPlants: plants };
+
+    /* A body is put on it, and then walks on it. First it stands: the island has
+       to hold a body that asks nothing of it. Then it walks, and the honest
+       thing here is what walking down an island is -- the pile of ground is a
+       dome, and a dome in a world of metre cells is a staircase, so a body
+       walking away from the crown steps down it and leaves the ground on the
+       step. What must never happen is that it falls through, or is stopped, or
+       finds nothing under its feet. */
+    p.form = null; g.mode = 'play'; g.creatures = []; g.drops = [];
+    p.x = cx + 0.5; p.z = cz + 0.5; p.y = crownY;
+    p.vx = p.vy = p.vz = 0; p.yaw = 0; p.faceYaw = 0; p.pitch = 0;
+    p.grounded = true; p.inWater = false; p.air = 999; p.vital = 10; p.fright = 0;
+    const watch = (frames) => {
+      let fell = 0, onFoot = 0, lowest = p.y;
+      for (let f = 0; f < frames; f++) {
+        g.update(1 / 60);
+        const gy = N.terrainY(W, Math.floor(p.x), Math.floor(p.z), Math.floor(p.y + 2));
+        if (p.y < gy - 1) fell++;
+        if (p.grounded) onFoot++;
+        if (p.y < lowest) lowest = p.y;
+      }
+      return { fell, onFoot, lowest };
+    };
+    g.input = {};
+    const stood = watch(120);
+    const standTo = [Math.floor(p.x), Math.floor(p.z)];
+    g.input = { fwd: 1 };
+    const walked = watch(180);
+    g.input = {};
+    const bx = Math.floor(p.x), bz = Math.floor(p.z);
+    out.standing = { frames: 120, fellFrames: stood.fell, onFootFrames: stood.onFoot,
+      movedMetres: +Math.hypot(standTo[0] - cx, standTo[1] - cz).toFixed(1),
+      groundUnderIt: W.get(standTo[0], Math.floor(p.y) - 1, standTo[1]) };
+    out.walking = { frames: 180, fellFrames: walked.fell, onFootFrames: walked.onFoot,
+      from: [cx, cz], to: [bx, bz], movedMetres: +Math.hypot(bx - cx, bz - cz).toFixed(1),
+      droppedMetres: +((crownY + 1) - walked.lowest).toFixed(1),
+      outsideTheArray: !W.inValley(bx, bz), supported: p.y > N.terrainY(W, bx, bz, W.h - 1) - 1.2,
+      groundUnderIt: W.get(bx, Math.floor(p.y) - 1, bz) };
+
+    /* what one chunk of this ground costs, asked of the nine chunks the island
+       actually stands on: the rule for its 256 columns, then the geometry. This
+       is the number the millisecond budget is measured against -- `stream` asks
+       the time before each chunk, so a call may run past its budget by exactly
+       the one chunk it had already started -- and it is the number the technical
+       chapter prints for what the island rule costs, so it is read here off an
+       island rather than guessed at. */
+    let fillMs = 0, chunkMs = 0;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      const cxq = ckx + dx, czq = ckz + dz;
+      const c = W.far.get(W.ckey(cxq, czq));
+      if (!c) continue;
+      for (let k = 0; k < 2; k++) {
+        let t = performance.now();
+        W.fillChunk(cxq, czq);
+        const f = performance.now() - t;
+        t = performance.now();
+        W.buildFarChunk(R.gl, c);
+        const m2 = performance.now() - t;
+        if (k) { fillMs = Math.max(fillMs, f); chunkMs = Math.max(chunkMs, m2 + f); }
+      }
+    }
+    out.cost = { groundMs: +fillMs.toFixed(2), worstChunkMs: +chunkMs.toFixed(2), columns: W.cs * W.cs,
+      usPerColumn: +(fillMs * 1000 / (W.cs * W.cs)).toFixed(2) };
+
+    /* and it is the same ground: the lens goes away, the world lets go of every
+       chunk it held, and the island comes back cell for cell */
+    const at = [[cx, cz], [cx - R2, cz], [cx, cz - R2], [cx + R2, cz + R2]];
+    const before = at.map(([x, z]) => h32(column(x, z)));
+    const dropped = W.unload(R.gl, 0, 0);
+    const heldAgain = W.far.size;
+    let left2 = 1, asks2 = 0, ms2 = 0;
+    while (left2 > 0 && asks2 < 400) {
+      const t = performance.now();
+      left2 = W.stream(R.gl, ckx, ckz, 6);
+      ms2 = Math.max(ms2, performance.now() - t);
+      asks2++;
+    }
+    const after = at.map(([x, z]) => h32(column(x, z)));
+    out.twice = { dropped, wasHeldBeforeUnload: heldAgain, asks: asks2, left: left2,
+      worstCallMs: +ms2.toFixed(1), same: before.every((hv, i) => hv === after[i]), columns: at.length };
+    back();
+    return out;
+  });
+  /* The claim about cost has to be one the code can keep. `stream` reads the clock
+     before it starts a chunk and never in the middle of one, so the unit it cannot
+     interrupt is a single chunk: a call is allowed to run past its budget by exactly
+     that much, and nothing more. So what is bounded is the unit, not the call -- and
+     the call's own time, which on a loaded machine carries a browser pause in it
+     (10.5 ms run alone, 30 ms with the other suites ahead of it), is printed as
+     measured rather than asserted. */
+  check('an island the rule states is ground the game builds: streamed and meshed with no hole in the ring, and the unit the streamer cannot interrupt -- one chunk of its ground, rule and geometry together -- stays well inside a frame',
+    !isle.error && isle.stream.left === 0 && isle.stream.holes === 0 && isle.stream.built > 200 &&
+    isle.stream.asks > 1 && isle.cost.worstChunkMs < 16 && isle.cost.usPerColumn < 4,
+    Object.assign({}, isle.stream, isle.cost));
+  check('and it stands out of the water: dry ground at its crown, the sea floor at its foot, made of what the material table says',
+    !isle.error && isle.ground.aboveWater && isle.ground.underTheCeiling && isle.ground.dryCols > 200 &&
+    isle.ground.wetCols > 0 && isle.ground.materials[4] > 0, isle.ground);
+  check('a body set down on it stands there on ground a thousand metres from the valley\'s map, and does not fall through it',
+    !isle.error && isle.standing.fellFrames === 0 && isle.standing.onFootFrames === isle.standing.frames &&
+    isle.standing.groundUnderIt > 0 && isle.standing.movedMetres === 0, isle.standing);
+  check('and it walks: steps down the dome it is, never through it, never stopped by it',
+    !isle.error && isle.walking.outsideTheArray && isle.walking.supported && isle.walking.groundUnderIt > 0 &&
+    isle.walking.fellFrames === 0 && isle.walking.movedMetres >= 3 &&
+    isle.walking.onFootFrames > isle.walking.frames * 0.6, isle.walking);
+  check('the island is not a place that is remembered: no tree, no fruit stands on it',
+    !isle.error && isle.ground.trees === 0 && isle.ground.fruit === 0, isle.ground);
+  check('the lens goes away and comes back: the island returns cell for cell, every column of it',
+    !isle.error && isle.twice.dropped > 0 && isle.twice.same && isle.twice.left === 0, isle.twice);
+
   /* ---- the box round the block the crosshair is on ----
      The twelve bars used to be rebuilt in world coordinates every frame and
      thrown away again: 12 box calls, 432 vertices and 4,752 array pushes a

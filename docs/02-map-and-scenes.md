@@ -48,17 +48,80 @@ The island the square sits on runs out to a shore: the land is highest about the
 centre (80,80) and sinks towards a coastline that wanders between **121 m and 150 m**
 from that centre; past the shore the ground shelves down into the sea, six metres of
 water over a seabed of the same rock and sand as the lakebed, and the sea goes on for
-as far as the world does. There is nothing at the shore and nothing in the sea: no
-wall, no fog band, no gate. The only edge in this world is the edge of what a body
+as far as the world does. Nothing stops a body at the shore: no wall, no fog band, no
+gate. The only edge in this world is the edge of what a body
 can reach and get back from (01 §3, 04 §5).
+
+### 1.2 The sea, and the islands in it
+
+A sea with no land in it is a different world from the one the player was promised, so
+the sea is not empty: it holds islands, **more of them the nearer they lie to the
+island this square sits on, thinner the further out they go**, and there is no line
+where they stop. Only arithmetic can give a
+gradient like that and still keep the world fixed for every player and every session,
+and the arithmetic is an Archimedean spiral out of (80,80):
+
+- one full turn of the spiral carries **7** islands and gains **60 m** of radius, so
+  the turns stand **377 m** apart radially; the first turn is drawn at radii
+  **377-754 m** and its seven centres actually stand **389-778 m** out.
+  An island's foot is never allowed to come within **24 m** of this island's shore or
+  of another island's foot — the water between two grounds is the channel that makes
+  them two islands — so the nearest ground ever met is never nearer than that, and
+  measured, it is **210 m** of open water out;
+- every island is pulled up to **40 m** along its own radius, under half the gap
+  between turns (so two turns cannot trade places): what comes out is a coast of
+  islands rather than a wheel of spokes;
+- an island's id is its **ordinal along the spiral** — ordinal **0** is the island this
+  square sits on — and its place is computed *from* the ordinal, never the other way
+  round. The same island is therefore met again from any direction and in any later
+  session, and a player's own id would pick out one of them as a home island from the
+  same arithmetic, with no table kept anywhere — and nothing asks that question yet,
+  because no player id exists in this codebase (03 §6). The
+  same question is answered from the other end as well: the islands standing at an
+  address are found from the address alone, which is all a chunk of ground needs in
+  order to be built;
+- what kind of island it is is stated in the only two numbers a shore has: how far its
+  foot reaches, and how high its crown stands over the water line. The mix of kinds
+  changes with the distance — the near turns are sand and reef, the far ones are land.
+
+| kind | foot radius | crown above the water line | the ground it is |
+|---|---|---|---|
+| sandbar | 22-45 m | 1.2-2.4 m | a shoal of sand the sea uncovers at its top |
+| reef | 30-70 m | 2.5-4.5 m | a rock shelf with a lip all round it |
+| thicket | 50-95 m | 5-9 m | low land, grass over soil |
+| isle | 70-125 m | 8-14 m | land with a hill on it |
+| ridge | 100-165 m | 14-24 m | a hill the sea has cut the top of; high enough that the material table puts snow on it by its own height rule (a crown above y34), which is why no snow is written anywhere |
+
+The island itself is one pile of ground raised out of the floor it stands in, shaped
+`1 − smoothstep(d ÷ foot)`: flat enough at the crown to be the island's own ground,
+running down to nothing at its foot with no step and no wall, so no island can leave a
+cliff standing in the sea and no ring of one either. The crown comes out at the height
+the kind states, to the metre the ground is built in, and a shoreline appears wherever
+the dome crosses the water by
+itself — a sandbar shows a few metres of sand and a ridge most of its own footprint,
+which is the whole difference between them. What the ground is *made of* is the same
+table as everywhere else: sand at and near the water line, rock under three metres,
+soil between, water above.
+
+Measured at the seed the game opens with, over the first 70 islands of the spiral
+(which reaches about 4 km out), asked both of the rule and of the built world:
+
+| | |
+|---|---|
+| islands raised | **70** of 70 ordinals; nobody had to be cut down for want of room, the closest two feet came within **178.9 m** of each other |
+| kinds | 15 sandbars, 16 reefs, 23 thickets, 11 isles, 5 ridges |
+| islands per km², by band | **3.50** in the 0-1 km band, **2.02** at 1-2 km, **1.21** at 2-3 km, **0.82** at 3-4 km — the gradient the rule exists for, falling as 1/r |
+| the nearest of them | centre **389 m** from (80,80); **210 m** of open water between this island's shore and its foot |
+| how far open sea is from land | sampled on rings out to 1.5 km, the median point of sea is **171 m** from an island's foot and the furthest sampled point is **476 m**: one fruit is **966 m** out and back, so no water in that reach is a crossing a body cannot make |
+| what stands on the nearest ground big enough to stand on | **nothing**. The nearest island with a foot of 40 m or more — ordinal 4, a thicket, **603 m** out, foot **70 m** — has had its whole footprint (**15,421** columns) counted cell by cell: **0** cells of tree, **0** of fruit, **0** of plant. What it does hold: **71,920** cells of water, **64,670** of stone, **51,836** of sand, **43,763** of the mountain rock the sea floor is paved with, **7,386** of soil and **2,462** of grass — the dome the rule states, read back out of ground the game built. That is the honest hole (07 §3.6) |
 
 Two numbers bound that reach, and both belong to the player, not to the world:
 
 - **Sight.** The air's haze takes 95% of the contrast off at **231 m** in the clearest
-  air this world states, so ground further out than that is not worth holding in
-  memory: the renderer keeps chunks out to exactly that radius (`World.keep = 15`
-  chunks of 16 m, `game/src/world.js`), builds the nearest first, and lets go of the
-  rest.
+  air this world states (`fogDen = 0.0075` by day, and the shader's `1 − exp(−(fogDen·d)²)`),
+  so ground further out than that is not worth holding in memory: the renderer keeps
+  chunks out to **15 chunks of 16 m = 240 m** (`World.keep = 15`, `game/src/world.js`),
+  just past that radius, builds the nearest ring first, and lets go of the rest.
 - **The day.** A fruit's clock is the trip's clock. One frog pear, picked at full
   ripeness, is **420 s** of frog; a common fruit keeps **1,500 s** in a hand at night.
   A frog walks **1.8 m/s** on land and swims **4.6 m/s**: one fruit carried in the
@@ -191,8 +254,10 @@ Radius 38, deepest at the centre at 11 blocks, with **62** stalks of kelp on the
 | Mirrorlake | 3 | drowning (18 s for a human; only a frog body needs no air underwater), a frog drying out on land |
 
 The sea carries no danger rating, because a danger rating is a thing that can hurt you
-and nothing out there does. What the sea costs is distance and what you can carry
-(§1.1), and the honest version of that cost is the fruit in your pocket running out
-while you are standing on a shore with no reeds on it. The ground past the authored
-square has no wall on it, no fog and no drain: it is the same ground, unmade.
+and nothing out there does, islands or no islands. What the sea costs is distance and
+what you can carry (§1.1, §1.2), and the honest version of that cost is the fruit in
+your pocket running out while you are standing on a shore with no reeds on it. The
+ground past the authored square has no wall on it, no fog and no drain: it is the same
+ground, built by the same rule, holding land in the same way — and nothing living on
+any of it yet.
 

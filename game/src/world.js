@@ -409,12 +409,18 @@
        spent it leaves the rest to the next one. Nothing here decides where there
        is ground: it only asks for what the rule already says is there. The
        answer is how many chunks of the ring are still missing -- the game keeps
-       asking until that is none, so a ring cannot be left with a hole in it. */
+       asking until that is none, so a ring cannot be left with a hole in it.
+       The ring starts at r = 0, with the chunk the lens stands in. A body that
+       walks into a place finds its own chunk already built, because it was in the
+       ring of the place it came from; a body that is *put* there -- a save put
+       back, a lens started out at sea -- has no such ring behind it, and the
+       ground it stands on was filled but never meshed: standing on ground it
+       cannot see. The ground under a body is the ground it must see. */
     stream(gl, cx0, cz0, budgetMs) {
       const t0 = performance.now();
       let left = 0;
       const r2 = this.keep * this.keep;
-      for (let r = 1; r <= this.keep; r++) {
+      for (let r = 0; r <= this.keep; r++) {
         for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
           if (dx * dx + dz * dz > r2) continue;             // a disc, not a square: the corners are further than the haze and cost ground

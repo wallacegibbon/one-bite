@@ -599,6 +599,132 @@ for (const L of LANGS) {
   const townSpan = [tHi[0] - tLo[0] + 1, tHi[1] - tLo[1] + 1];
   const townFloor = townPOI.y + townRows.length + 1;
 
+  /* ---- the islands the sea holds (02 s1.2) ----
+     The rule is arithmetic on an ordinal, so every number the chapter states about
+     it is answered here without a browser: the spiral's constants, the two numbers
+     each kind of island is made of, and the counts -- how many stand, how far their
+     feet are from each other and from this island's shore, how the density falls
+     with the distance, how far a point of open sea stands from the nearest ground.
+     Asked at the seed the game opens with over the first 70 ordinals, which is as
+     far out as the game streams ground on its own and no further: a census of the
+     reach, not of a mathematically infinite sea. */
+  const ISLES = N.ISLES, CEN = { x: SZ.w / 2, z: SZ.d / 2 };
+  const ORD = 70;
+  const isleRows = []; for (let n = 1; n <= ORD; n++) isleRows.push(N.isleRecord(n));
+  const islesUp = isleRows.filter(r => r.r > 0);
+  const isleTypeCount = islesUp.reduce((m, r) => (m[r.type] = (m[r.type] || 0) + 1, m), {});
+  // where the first turn's centres actually stand, after the pull along the radius
+  let isleT1lo = 1e9, isleT1hi = -1e9;
+  for (const r of isleRows) {
+    if (r.turn !== 1) continue;
+    const d = Math.hypot(r.x - CEN.x, r.z - CEN.z);
+    if (d < isleT1lo) isleT1lo = d;
+    if (d > isleT1hi) isleT1hi = d;
+  }
+  // separation in both senses: foot to foot, and foot to this island's shore
+  let isleGap = 1e9, isleShore = 1e9;
+  for (const a of islesUp) {
+    const shoreHere = Math.hypot(a.x - CEN.x, a.z - CEN.z) - N.coastRadius(Math.atan2(a.z - CEN.z, a.x - CEN.x));
+    if (shoreHere - a.r < isleShore) isleShore = shoreHere - a.r;
+    for (const b of islesUp) {
+      if (b.id <= a.id) continue;
+      const g = Math.hypot(a.x - b.x, a.z - b.z) - a.r - b.r;
+      if (g < isleGap) isleGap = g;
+    }
+  }
+  let isleNear = 1e9, isleNearest = null, isleStand = null, isleStandDist = 1e9;
+  const ISLE_STAND = 40;         // a foot this small is a shoal, not standing ground
+  for (const r of islesUp) {
+    const d = Math.hypot(r.x - CEN.x, r.z - CEN.z);
+    if (d < isleNear) { isleNear = d; isleNearest = r; }
+    // the island the chapter's census is of: the nearest with a foot a body could
+    // stand on at all. Standing on a shoal is not what that row is about.
+    if (r.r >= ISLE_STAND && d < isleStandDist) { isleStandDist = d; isleStand = r; }
+  }
+  // the gradient the rule exists for: islands per km2 in each kilometre band
+  const isleBands = {};
+  for (const r of islesUp) {
+    const k = Math.floor(Math.hypot(r.x - CEN.x, r.z - CEN.z) / 1000);
+    isleBands[k] = (isleBands[k] || 0) + 1;
+  }
+  const isleDens = Object.keys(isleBands).sort((a, b) => a - b).map(k =>
+    isleBands[k] / (Math.PI * (Math.pow(+k + 1, 2) - Math.pow(+k, 2))));
+  /* how far a point of open sea stands from the nearest ground, sampled on rings:
+     190 m is just past the authored shore at its closest, 1,500 m is three fruits
+     out. Asked of every raised foot, including the ones whose own ground already
+     covers the point -- which is what "how far is the nearest land" means. */
+  const isleFar = [];
+  for (let a = 0; a < 96; a++) {
+    for (let rad = 190; rad <= 1500; rad += 25) {
+      const th = a / 96 * Math.PI * 2;
+      if (rad < N.coastRadius(th)) continue;             // standing on the authored island
+      const x = CEN.x + Math.cos(th) * rad, z = CEN.z + Math.sin(th) * rad;
+      let best = 1e9;
+      for (const r of islesUp) {
+        const d = Math.max(0, Math.hypot(x - r.x, z - r.z) - r.r);
+        if (d < best) best = d;
+      }
+      isleFar.push(best);
+    }
+  }
+  const islePct = p => { const s = isleFar.slice().sort((u, v) => u - v); return s[Math.min(s.length - 1, Math.floor(s.length * p))]; };
+  /* what stands on the nearest one, cell by cell. The world answers any address, so
+     the island's own footprint is counted out of built ground rather than out of the
+     rule that made it: the answer is what the ground is made of, and nothing that
+     grows. This is the half of the claim that stops the chapter describing a shore
+     with trees on it while the generator plants nothing outside the authored square. */
+  const IGRASS = 1, ISOIL = 2, ISTONE = 3, ISAND = 4, IWATER = 5, IMROCK = 24;
+  let isleCols = 0, isleTrees = 0, isleFruit = 0, islePlants = 0;
+  const isleCells = {};
+  const isleSpan = Math.ceil(isleStand.r);
+  for (let dz = -isleSpan; dz <= isleSpan; dz++) for (let dx = -isleSpan; dx <= isleSpan; dx++) {
+    if (Math.hypot(dx, dz) > isleStand.r) continue;
+    isleCols++;
+    const x = Math.round(isleStand.x) + dx, z = Math.round(isleStand.z) + dz;
+    for (let y = 0; y < SZ.h; y++) {
+      const b = w.get(x, y, z);
+      if (!b) continue;
+      isleCells[b] = (isleCells[b] || 0) + 1;
+      if (N.TREE_BLOCK[b]) isleTrees++;
+      if (N.FRUIT_BLOCK[b]) isleFruit++;
+      if (BK[b] && BK[b].micro) islePlants++;
+    }
+  }
+  /* the two numbers that bound what a body can do out there, both read out of the
+     code rather than remembered: the radius the renderer holds ground to, and the
+     distance at which the air has taken 95% of the contrast off -- the reason that
+     radius is what it is. */
+  const wsrc = fs.readFileSync(path.join(base, 'src', 'world.js'), 'utf8');
+  const keepChunks = +(wsrc.match(/this\.keep = (\d+)/) || [])[1];
+  const chunkSize = +(wsrc.match(/this\.cs = (\d+)/) || [])[1];
+  const drawRange = keepChunks * chunkSize;
+  const fogDen = +(src.match(/let fogDen = ([\d.]+)/) || [])[1];
+  const fogLaw = fs.readFileSync(path.join(base, 'src', 'engine.js'), 'utf8')
+    .includes('1.0 - exp(-uFogDen*uFogDen*d*d)');
+  const airRange = Math.round(Math.sqrt(Math.log(20)) / fogDen);   // where 1-exp(-(k*d)^2) = 0.95
+  // the trip's clock: a fruit's duration at the speeds the body it gives can move
+  const frogDur = N.FRUIT_BY_ID.frogpear.duration, handKeep = N.RARITY.common.fresh;
+  const frogWalk = N.CREATURE_BY_ID.frog.speed, frogSwim = N.CREATURE_BY_ID.frog.swimSpeed;
+  const oneFruit = Math.round(frogDur * frogSwim / 2), threeFruit = oneFruit * 3;
+
+  /* the two numbers a kind of island is: the chapter prints them as a table and the
+     rule keeps them in a table, so the table is compared rather than a sentence */
+  let isleTableBad = 0;
+  for (const L of LANGS) {
+    const rows = tableAfter(readIn(L, L.files.zones), '| kind | foot radius | crown above the water line |');
+    if (!rows) { bad(`${L.tag} 02 island kinds table`, 'missing', 'one row per kind'); isleTableBad++; continue; }
+    if (rows.length !== Object.keys(N.ISLE_TYPES).length) { bad(`${L.tag} 02 island kinds table`, `${rows.length} kinds`, `${Object.keys(N.ISLE_TYPES).length} kinds`); isleTableBad++; continue; }
+    for (const r of rows) {
+      const t = N.ISLE_TYPES[r[0]];
+      if (!t) { bad(`${L.tag} 02 island kind`, r[0], 'not in ISLE_TYPES'); isleTableBad++; continue; }
+      const m1 = r[1].match(/(\d+)-(\d+)/), m2 = r[2].match(/([\d.]+)-([\d.]+)/);
+      if (!m1 || +m1[1] !== t.r[0] || +m1[2] !== t.r[1]) { bad(`${L.tag} 02 ${r[0]} foot`, r[1], `${t.r[0]}-${t.r[1]} m`); isleTableBad++; }
+      if (!m2 || +m2[1] !== t.crest[0] || +m2[2] !== t.crest[1]) { bad(`${L.tag} 02 ${r[0]} crown`, r[2], `${t.crest[0]}-${t.crest[1]} m`); isleTableBad++; }
+    }
+  }
+  if (!isleTableBad) good(`02 the kinds the sea builds, and the two numbers each is made of: ` +
+    Object.keys(N.ISLE_TYPES).map(k => `${k} foot ${N.ISLE_TYPES[k].r[0]}-${N.ISLE_TYPES[k].r[1]} m, crown ${N.ISLE_TYPES[k].crest[0]}-${N.ISLE_TYPES[k].crest[1]} m`).join('; '));
+
     const crateRow = (p) => { for (let y = SZ.h - 1; y > 0; y--) if (at(p.x, y, p.z) === DOOR) return y; return -1; };
   const H = (label, cnRe, cnWant, enRe, enWant) => ({ label, cnRe, cnWant, enRe, enWant });
   const CLAIMS = [
@@ -665,7 +791,63 @@ for (const L of LANGS) {
       /standing (\d+\.\d) m from that door/, [+caseFar.toFixed(1)]),
     H('what fills the inside of that case, cell by cell',
       /内部 (\d+) 格里有 (\d+) 格是城堡自己的城砖，(\d+) 格是长草的地面，(\d+) 格是空的/, [caseRoom, caseWalls, caseGrass, caseAir],
-      /of its (\d+) inner cells, (\d+) are the keep's own city brick, (\d+) are ground under grass and (\d+) are empty/, [caseRoom, caseWalls, caseGrass, caseAir])
+      /of its (\d+) inner cells, (\d+) are the keep's own city brick, (\d+) are ground under grass and (\d+) are empty/, [caseRoom, caseWalls, caseGrass, caseAir]),
+
+    /* ---- the sea's islands (02 s1.2): the rule, and what the rule builds ---- */
+    H('the spiral: what a turn carries and how much radius it gains',
+      /carries \*\*(\d+)\*\* islands and gains \*\*(\d+) m\*\* of radius, so\s+the turns stand \*\*(\d+) m\*\* apart radially; the first turn is drawn at radii\s*\*\*(\d+)-(\d+) m\*\* and its seven centres actually stand \*\*(\d+)-(\d+) m\*\* out/,
+      [ISLES.perTurn, ISLES.b, Math.round(2 * Math.PI * ISLES.b), Math.round(2 * Math.PI * ISLES.b), Math.round(4 * Math.PI * ISLES.b), Math.round(isleT1lo), Math.round(isleT1hi)],
+      /carries \*\*(\d+)\*\* islands and gains \*\*(\d+) m\*\* of radius, so\s+the turns stand \*\*(\d+) m\*\* apart radially; the first turn is drawn at radii\s*\*\*(\d+)-(\d+) m\*\* and its seven centres actually stand \*\*(\d+)-(\d+) m\*\* out/,
+      [ISLES.perTurn, ISLES.b, Math.round(2 * Math.PI * ISLES.b), Math.round(2 * Math.PI * ISLES.b), Math.round(4 * Math.PI * ISLES.b), Math.round(isleT1lo), Math.round(isleT1hi)]),
+    H('the channel every island is held clear of, and the pull along the radius',
+      /never allowed to come within \*\*(\d+) m\*\*/, [ISLES.keep],
+      /never allowed to come within \*\*(\d+) m\*\*/, [ISLES.keep]),
+    H('how far a centre is pulled off the spiral it was drawn on',
+      /every island is pulled up to \*\*(\d+) m\*\* along its own radius/, [ISLES.jitter],
+      /every island is pulled up to \*\*(\d+) m\*\* along its own radius/, [ISLES.jitter]),
+    H('how many of them stand, and how close the closest two feet come',
+      /\|\s*islands raised\s*\|\s*\*\*(\d+)\*\* of (\d+) ordinals;[^|\n]*closest two feet came within \*\*(\d+\.\d) m\*\*/,
+      [islesUp.length, ORD, +isleGap.toFixed(1)],
+      /\|\s*islands raised\s*\|\s*\*\*(\d+)\*\* of (\d+) ordinals;[^|\n]*closest two feet came within \*\*(\d+\.\d) m\*\*/,
+      [islesUp.length, ORD, +isleGap.toFixed(1)]),
+    H('what kinds came out of the mix',
+      /\|\s*kinds\s*\|\s*(\d+) sandbars, (\d+) reefs, (\d+) thickets, (\d+) isles, (\d+) ridges/,
+      [isleTypeCount.sandbar, isleTypeCount.reef, isleTypeCount.thicket, isleTypeCount.isle, isleTypeCount.ridge],
+      /\|\s*kinds\s*\|\s*(\d+) sandbars, (\d+) reefs, (\d+) thickets, (\d+) isles, (\d+) ridges/,
+      [isleTypeCount.sandbar, isleTypeCount.reef, isleTypeCount.thicket, isleTypeCount.isle, isleTypeCount.ridge]),
+    H('the density of islands in each kilometre band, which is the gradient',
+      /islands per km², by band \| \*\*(\d+\.\d+)\*\* in the 0-1 km band, \*\*(\d+\.\d+)\*\* at 1-2 km, \*\*(\d+\.\d+)\*\* at 2-3 km, \*\*(\d+\.\d+)\*\* at 3-4 km/,
+      isleDens.slice(0, 4).map(d => +d.toFixed(2)),
+      /islands per km², by band \| \*\*(\d+\.\d+)\*\* in the 0-1 km band, \*\*(\d+\.\d+)\*\* at 1-2 km, \*\*(\d+\.\d+)\*\* at 2-3 km, \*\*(\d+\.\d+)\*\* at 3-4 km/,
+      isleDens.slice(0, 4).map(d => +d.toFixed(2))),
+    H('the nearest of them, in centre distance and in open water',
+      /the nearest of them \| centre \*\*(\d+) m\*\* from \((\d+),(\d+)\); \*\*(\d+) m\*\* of open water/,
+      [Math.round(isleNear), CEN.x, CEN.z, Math.round(isleShore)],
+      /the nearest of them \| centre \*\*(\d+) m\*\* from \((\d+),(\d+)\); \*\*(\d+) m\*\* of open water/,
+      [Math.round(isleNear), CEN.x, CEN.z, Math.round(isleShore)]),
+    H('how far a point of open sea stands from the nearest ground',
+      /median point of sea is \*\*(\d+) m\*\* from an island's foot and the furthest sampled point is \*\*(\d+) m\*\*: one fruit is \*\*(\d+) m\*\* out and back/,
+      [Math.round(islePct(0.5)), Math.round(islePct(1)), oneFruit],
+      /median point of sea is \*\*(\d+) m\*\* from an island's foot and the furthest sampled point is \*\*(\d+) m\*\*: one fruit is \*\*(\d+) m\*\* out and back/,
+      [Math.round(islePct(0.5)), Math.round(islePct(1)), oneFruit]),
+    H('what stands on the nearest ground big enough to stand on, cell by cell',
+      /what stands on the nearest ground big enough to stand on \| \*\*nothing\*\*\. The nearest island with a foot of (\d+) m or more — ordinal (\d+), a [a-z]+, \*\*(\d+) m\*\* out, foot \*\*(\d+) m\*\* — has had its whole footprint \(\*\*([\d,]+)\*\* columns\) counted cell by cell: \*\*(\d+)\*\* cells of tree, \*\*(\d+)\*\* of fruit, \*\*(\d+)\*\* of plant\. What it does hold: \*\*([\d,]+)\*\* cells of water, \*\*([\d,]+)\*\* of stone, \*\*([\d,]+)\*\* of sand, \*\*([\d,]+)\*\* of the mountain rock[^,]*, \*\*([\d,]+)\*\* of soil and \*\*([\d,]+)\*\* of grass/,
+      [ISLE_STAND, isleStand.id, Math.round(isleStandDist), Math.round(isleStand.r), isleCols, isleTrees, isleFruit, islePlants, isleCells[IWATER] || 0, isleCells[ISTONE] || 0, isleCells[ISAND] || 0, isleCells[IMROCK] || 0, isleCells[ISOIL] || 0, isleCells[IGRASS] || 0],
+      /what stands on the nearest ground big enough to stand on \| \*\*nothing\*\*\. The nearest island with a foot of (\d+) m or more — ordinal (\d+), a [a-z]+, \*\*(\d+) m\*\* out, foot \*\*(\d+) m\*\* — has had its whole footprint \(\*\*([\d,]+)\*\* columns\) counted cell by cell: \*\*(\d+)\*\* cells of tree, \*\*(\d+)\*\* of fruit, \*\*(\d+)\*\* of plant\. What it does hold: \*\*([\d,]+)\*\* cells of water, \*\*([\d,]+)\*\* of stone, \*\*([\d,]+)\*\* of sand, \*\*([\d,]+)\*\* of the mountain rock[^,]*, \*\*([\d,]+)\*\* of soil and \*\*([\d,]+)\*\* of grass/,
+      [ISLE_STAND, isleStand.id, Math.round(isleStandDist), Math.round(isleStand.r), isleCols, isleTrees, isleFruit, islePlants, isleCells[IWATER] || 0, isleCells[ISTONE] || 0, isleCells[ISAND] || 0, isleCells[IMROCK] || 0, isleCells[ISOIL] || 0, isleCells[IGRASS] || 0]),
+    H('the range the air gives up its contrast at, and the range the renderer holds',
+      /takes 95% of the contrast off at \*\*(\d+) m\*\*[^|]*?keeps\s*\n?\s*chunks out to \*\*(\d+) chunks of (\d+) m = (\d+) m\*\*/,
+      [airRange, keepChunks, chunkSize, drawRange],
+      /takes 95% of the contrast off at \*\*(\d+) m\*\*[^|]*?keeps\s*\n?\s*chunks out to \*\*(\d+) chunks of (\d+) m = (\d+) m\*\*/,
+      [airRange, keepChunks, chunkSize, drawRange]),
+    H('the trip a fruit pays for, in seconds, speeds and metres',
+      /is \*\*(\d+) s\*\* of frog; a common fruit keeps \*\*([\d,]+) s\*\* in a hand at night/, [frogDur, handKeep],
+      /is \*\*(\d+) s\*\* of frog; a common fruit keeps \*\*([\d,]+) s\*\* in a hand at night/, [frogDur, handKeep]),
+    H('the speeds that trip is walked at, and the two distances it buys',
+      /A frog walks \*\*(\d+\.\d+) m\/s\*\* on land and swims \*\*(\d+\.\d+) m\/s\*\*[^.]*?therefore \*\*(\d+) m\*\* out and back along a shore, and a batch of three is\s*\*\*([\d,]+) m\*\*/,
+      [frogWalk, frogSwim, oneFruit, threeFruit],
+      /A frog walks \*\*(\d+\.\d+) m\/s\*\* on land and swims \*\*(\d+\.\d+) m\/s\*\*[^.]*?therefore \*\*(\d+) m\*\* out and back along a shore, and a batch of three is\s*\*\*([\d,]+) m\*\*/,
+      [frogWalk, frogSwim, oneFruit, threeFruit])
   ];
 
   const measured = {
@@ -688,8 +870,22 @@ for (const L of LANGS) {
     'the room the town cellar door opens onto': `${tCols} dark-brick columns, plan ${townSpan[0]}x${townSpan[1]}, air at ${townRows.map(y => 'y' + y).join('/')} over marker y${townPOI.y}, solid at y${townFloor}`,
     'the plan and rows of the glass case the keep holds its demonstration fruit in': `${caseSpan[0]}x${caseSpan[1]}, y${gLo[1]}..y${gHi[1]}, ${gN} glass cells`,
     'how far that case stands from the door that marks it': `${caseFar.toFixed(2)} m from (${ghPOI.x},${ghPOI.z}) to the case centre (${(gLo[0] + gHi[0]) / 2},${(gLo[2] + gHi[2]) / 2})`,
-    'what fills the inside of that case, cell by cell': `${caseRoom} cells: ${caseFillLine}`
+    'what fills the inside of that case, cell by cell': `${caseRoom} cells: ${caseFillLine}`,
+    'the spiral: what a turn carries and how much radius it gains': `${ISLES.perTurn} per turn, b ${ISLES.b}, turns ${(2 * Math.PI * ISLES.b).toFixed(1)} m apart, first turn drawn ${(2 * Math.PI * ISLES.b).toFixed(0)}-${(4 * Math.PI * ISLES.b).toFixed(0)} and standing ${isleT1lo.toFixed(0)}-${isleT1hi.toFixed(0)} m out`,
+    'the channel every island is held clear of, and the pull along the radius': `keep ${ISLES.keep} m`,
+    'how far a centre is pulled off the spiral it was drawn on': `jitter ${ISLES.jitter} m (turn gap ${Math.floor(2 * Math.PI * ISLES.b / 2)} m)`,
+    'how many of them stand, and how close the closest two feet come': `${islesUp.length} of ${ORD} ordinals raised, closest foot gap ${isleGap.toFixed(1)} m`,
+    'what kinds came out of the mix': Object.keys(isleTypeCount).map(k => `${isleTypeCount[k]} ${k}`).join(', '),
+    'the density of islands in each kilometre band, which is the gradient': isleDens.map(d => d.toFixed(2)).join(' / '),
+    'the nearest of them, in centre distance and in open water': `${isleNear.toFixed(1)} m to the centre of the nearest, ${isleShore.toFixed(1)} m of open water past this island's shore`,
+    'how far a point of open sea stands from the nearest ground': `sampled ${isleFar.length} points, median ${islePct(0.5).toFixed(1)} m, furthest ${islePct(1).toFixed(1)} m`,
+    'what stands on the nearest ground big enough to stand on, cell by cell': `ordinal ${isleStand.id}: ${isleCols} columns over a foot of ${isleStand.r.toFixed(1)} m, ${isleTrees} tree cells, ${isleFruit} fruit cells, ${islePlants} plant cells, and by material ${Object.keys(isleCells).map(Number).sort((a, b) => isleCells[b] - isleCells[a]).map(k => `${k}x${isleCells[k]}`).join(' ')}`,
+    'the range the air gives up its contrast at, and the range the renderer holds': `fogDen ${fogDen} (${fogLaw ? 'the shader law is the one this solves' : 'THE SHADER LAW HAS CHANGED'}), 95% at ${airRange} m, renderer holds ${keepChunks} chunks x ${chunkSize} m = ${drawRange} m`,
+    'the trip a fruit pays for, in seconds, speeds and metres': `${frogDur} s of frog, ${handKeep} s in hand at night`,
+    'the speeds that trip is walked at, and the two distances it buys': `${frogWalk} m/s on land, ${frogSwim} m/s in the water: ${oneFruit} m out and back, ${threeFruit} m for three`
   };
+
+  if (!fogLaw) bad('02 the law the air costs contrast by', 'the shader no longer carries `1.0 - exp(-uFogDen*uFogDen*d*d)`', 'the law the chapter\'s 95% range is solved from');
 
   let badHeights = 0;
   for (const c of CLAIMS) {

@@ -480,6 +480,119 @@ console.log('水方块', water);
   if (bad.length) process.exitCode = 1;
 }
 
+/* The islands of the open sea. The ground past the authored square is a sea, and
+   the user asked for it to hold land: more of it the nearer to this island, and
+   thinner the further out --
+   dense near the island the game is, thinning outward. That is a gradient, and
+   the only rule that gives a gradient and still keeps the world fixed is an
+   Archimedean spiral: seven islands to a turn of it, so the count per ring stays
+   the same while the ring grows and the count per square kilometre falls as 1/r.
+   The rule is asked here in both directions, because both are things the game
+   needs: an island's id is its ordinal along the spiral and its place is computed
+   from that (so a player meets the same island again from any direction, in any
+   later session), and the islands standing at an address are found from the
+   address alone (so the mesher can build a chunk without knowing any island's
+   name). Between the two directions the whole island has to survive: its foot may
+   not overlap its neighbour's or reach the authored island's shore -- what lies
+   between two grounds is a channel, and a channel is what makes them two
+   islands -- and its crown has to break the water by the height its kind states,
+   which is the only difference between a sandbar and a ridge. Nothing is asked
+   of a name here: the valley's own ground is compared, cell for cell, with the
+   number this array hashed before any island rule existed. */
+{
+  const SEA = F.WORLD.sea, C = { x: F.WORLD.w / 2, z: F.WORLD.d / 2 };
+  const ISLES = F.ISLES, bad = [];
+  /* as far out as the game streams on its own, and no further: the numbers this
+     prints are the numbers the map document quotes, so both stop where the
+     player can actually walk. */
+  const ORD = 70;
+  const rows = [];
+  for (let n = 1; n <= ORD; n++) rows.push(F.isleRecord(n));
+  const raised = rows.filter(r => r.r > 0);
+
+  // the same ordinal in another world of another seed, and in the other order
+  const other = new F.World(F.WORLD.w, F.WORLD.h, F.WORLD.d);
+  F.generate(other, 20261009);
+  let leaked = 0;
+  for (let n = ORD; n >= 1; n--) {
+    const b = F.isleRecord(n), a = rows[n - 1];
+    if (Math.abs(b.x - a.x) < 1e-9 && Math.abs(b.z - a.z) < 1e-9 && b.type === a.type) leaked++;
+  }
+  /* a world is built once, into ground that is empty: planting asks the cell it
+     chose and moves on when something already stands there, so a second
+     `generate` over the same array draws a different set of numbers and grows a
+     different valley. The repeat is asked in a fresh array, which is also the
+     only honest way to compare this world's ground with the one the game had
+     before any island rule existed. */
+  const again = new F.World(F.WORLD.w, F.WORLD.h, F.WORLD.d);
+  F.generate(again, 20261008);
+  let moved = 0;
+  for (let n = ORD; n >= 1; n--) {
+    const b = F.isleRecord(n), a = rows[n - 1];
+    if (Math.abs(b.x - a.x) > 1e-9 || Math.abs(b.z - a.z) > 1e-9 || b.r !== a.r || b.type !== a.type) moved++;
+  }
+  // and the place naming its own island
+  let unnamed = 0;
+  for (const isle of raised) {
+    const mine = F.islesNear(Math.floor(isle.x), Math.floor(isle.z)).filter(q => q.id === isle.id);
+    if (mine.length !== 1 || mine[0].r !== isle.r) unnamed++;
+  }
+  // separation, in both senses
+  let worstPair = 1e9, worstShore = 1e9;
+  for (const a of raised) {
+    const d = Math.hypot(a.x - C.x, a.z - C.z);
+    worstShore = Math.min(worstShore, d - F.coastRadius(Math.atan2(a.z - C.z, a.x - C.x)) - a.r);
+    for (const b of raised) {
+      if (b.id <= a.id) continue;
+      worstPair = Math.min(worstPair, Math.hypot(a.x - b.x, a.z - b.z) - a.r - b.r);
+    }
+  }
+  // the crown: above the water, and by the height the kind states
+  let sunken = 0, wrongHeight = 0, leftStanding = 0;
+  for (const isle of raised) {
+    const crown = F.landHeight(Math.floor(isle.x), Math.floor(isle.z));
+    if (crown <= SEA) sunken++;
+    if (Math.abs((crown - SEA) - isle.crest) > 1.05) wrongHeight++;
+    // at the foot the ground has to be the sea floor again: no cliff in the sea
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const x = Math.floor(isle.x + dx * (isle.r + 2)), z = Math.floor(isle.z + dz * (isle.r + 2));
+      if (F.landHeight(x, z) - Math.round(F.seaFloorHeight(x, z)) > 0) leftStanding++;
+    }
+  }
+  // the gradient, per band
+  const bands = {};
+  for (const isle of raised) bands[Math.floor(Math.hypot(isle.x - C.x, isle.z - C.z) / 1000)] = (bands[Math.floor(Math.hypot(isle.x - C.x, isle.z - C.z) / 1000)] || 0) + 1;
+  const dens = Object.keys(bands).sort((a, b) => a - b).map(k =>
+    bands[k] / (Math.PI * (Math.pow(+k + 1, 2) - Math.pow(+k, 2))));
+  // and the valley: the array this world builds, cell for cell
+  const hashOf = (W) => { let h = 0; for (let i = 0; i < W.blocks.length; i++) h = (Math.imul(h, 31) + W.blocks[i]) >>> 0; return h >>> 0; };
+  const hashHere = hashOf(w), hashAgain = hashOf(again);
+  const PINNED = 1271637568;        // read out of seed 20261008 at f1f6970, before islands existed
+
+  if (!raised.length) bad.push('no island is raised at all');
+  if (leaked) bad.push(`${leaked} islands answered from the wrong world's seed`);
+  if (moved) bad.push(`${moved} islands moved between sessions of the same world`);
+  if (unnamed) bad.push(`${unnamed} islands not found from their own address`);
+  if (worstPair < ISLES.keep) bad.push(`feet overlap: closest pair ${worstPair.toFixed(1)} m, want >= ${ISLES.keep}`);
+  if (worstShore < ISLES.keep) bad.push(`an island reaches the authored shore: ${worstShore.toFixed(1)} m of water, want >= ${ISLES.keep}`);
+  if (sunken) bad.push(`${sunken} islands stand under the water`);
+  if (wrongHeight) bad.push(`${wrongHeight} islands of a height their kind does not state`);
+  if (leftStanding) bad.push(`${leftStanding} columns left raised past an island's foot: a cliff standing in the sea`);
+  for (let i = 1; i < dens.length; i++)
+    if (dens[i] >= dens[i - 1]) bad.push(`band ${i} km holds ${dens[i].toFixed(2)} islands per km2, band ${i - 1} holds ${dens[i - 1].toFixed(2)}`);
+  if (hashHere !== PINNED || hashAgain !== PINNED)
+    bad.push(`the authored array changed: ${hashHere} now, ${hashAgain} in a second build of the same seed, where ${PINNED} was read out before the island rule`);
+  const types = raised.reduce((m, r) => (m[r.type] = (m[r.type] || 0) + 1, m), {});
+  console.log('外海岛屿', raised.length, '座已升起',
+    Object.entries(types).map(([k, v]) => k + ' ' + v).join(' '),
+    '最近', Math.round(Math.min(...raised.map(r => Math.hypot(r.x - C.x, r.z - C.z)))) + 'm',
+    '与主岛之间最少', worstShore.toFixed(0) + 'm 水面',
+    '岛间最窄', worstPair.toFixed(0) + 'm',
+    '每 km2', dens.map(d => d.toFixed(2)).join('/'),
+    bad.length ? '!! ' + bad.join('; ') : 'OK');
+  if (bad.length) process.exitCode = 1;
+}
+
 /* A roof has to point up, and it has to keep the rain out. The roofs were
    written by walking a ring at a fixed angle step and raising the height with
    the radius: `y0 + r` grows outward, so the cone came out upside down -- a rim
