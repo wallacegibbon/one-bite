@@ -7,14 +7,20 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is two commits. The first is the whole of the
+State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
-and a rig that renders one frame twice and counts the pixels that move. This record
-is the second, the docs-only commit that follows it on the same tree and names it.
-The full suite
+and a rig that renders one frame twice and counts the pixels that move. The second
+is the record of it, the docs-only commit that follows it on the same tree and names
+it; this block is the third thing on that tree, the sentence that says the tree was
+watched after the record was written. The full suite
 ran twice on this tree: both runs 10/10, with `0 CHECK FAILED` and no page errors
-in `/tmp/frutaria-play.log`; the doc gates are clean on it too (`extract-comments`
+in `/tmp/frutaria-play.log`; and six further times after that, ten green every time
+with `0 CHECK FAILED` -- eight faithful runs in all. The rig this round added is
+steady across them: the payload the numbers below are taken from (the box at the
+bare face 0 px, the box that used to be drawn there 4,202 px over 152x148, the
+fruit's box 681 px, the body stopped 0.251 m from the face) is byte for byte what
+the first of those runs reported. The doc gates are clean on it too (`extract-comments`
 -> `[]` and `occurrences: 0, unique: 0`; `docs-sync` all-consistent; `docs-drift`
 catching every drift it plants; `reach` finding every field of every record read
 by the code that names it).
@@ -2020,8 +2026,10 @@ gets **nothing** -- and carries the measurement of the box that used to sit on t
 body. `docs/07-art-audio-technical.md`'s one-camera line says where the answer comes
 from (`aimed()`) and that the ray's stop is not what the frame shows.
 
-Status: fixed and pinned; the full suite ran twice on the tree with this in, 10/10,
-`0 CHECK FAILED`, no page errors, and the doc gates clean.
+Status: fixed and pinned. The full suite ran eight times on the tree with this in --
+twice as the round's own gate and six more as a watch after the record was written --
+10/10 each time, `0 CHECK FAILED`, no page errors, the doc gates clean, and the
+rig's own payload identical from the first of those runs to the last.
 
 ## 23. The hand is 5.5 m long whatever body is wearing it (found while closing 22)
 
