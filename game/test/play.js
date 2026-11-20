@@ -7290,13 +7290,14 @@ What was measured before any of this was fixed, over 180 frames of walking
      step (the step cell is the step's own rock). Asked the step gate's way --
      all wood excused, the way the gate that set the lift asks -- the trunk is
      the tree the walker goes under and the lift carries the feet onto the
-     top: the frog is over the edge by the fiftieth frame, its feet through
+     top: the frog is over the edge by the sixty-fourth frame of the three hundred it
+     is watched for, its feet through
      the severed cell for the one frame the crossing takes, which the
      correction at the end of the frame leaves alone as all wood. This is the
-     step itself, asked directly: a frog of the flock on the meadow grass
-     under the line, aimed at the step for five seconds, its errand held
-     where it is and the middle of the flock emptied for the watch, so the
-     walk measured is the walk to the step and not the walk back to the
+     step itself, asked directly: a body of that kind, made by the constructor on
+     the meadow grass under the line, aimed at the step for five seconds, its
+     errand held where it is and the middle of the flock emptied for the watch, so
+     the walk measured is the walk to the step and not the walk back to the
      lake. Before the table was the gate's it never crossed; after, it is
      over the edge well inside the watch, and the only height it is held at
      is the top of the step it came to climb. The tower's door is glass, and
@@ -7308,8 +7309,6 @@ What was measured before any of this was fixed, over 180 frames of walking
      points. */
   const floatStep = await step('theFrogClimbsTheStepBeneathTheFloatingTrunk', () => {
     const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
-    const frog = g.creatures.find(c => c.sp.id === 'frog');
-    if (!frog) return { error: 'no frog in the valley' };
     const hard = (x, y, z) => W.solidAt(x, y, z) && !N.TREE_BLOCK[W.get(x, y, z)];
     // the column is found, not remembered: since the islands came down the
     // world moved, and the meadow column this rig was cut on no longer stands
@@ -7334,10 +7333,22 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (face) { cx = x; cz = z; gy = y; ax = face[0]; az = face[1]; break; }
       }
     if (cx < 0) return { error: 'there is no severed trunk over the step top; the world moved' };
-    const body = { x: frog.x, y: frog.y, z: frog.z, yaw: frog.yaw, vy: frog.vy, state: frog.state,
-      pause: frog.pause, tx: frog.tx, tz: frog.tz, homeX: frog.homeX, homeZ: frog.homeZ,
-      speed: frog.speed, t: frog.t, hopT: frog.hopT, wind: frog.wind, sleeping: frog.sleeping,
-      climbTo: frog.climbTo, climbRate: frog.climbRate };
+    /* The body is made here, by the code that makes every body in the game, under a
+       draw this rig owns: it is not borrowed out of the flock. It was, and the rig then
+       measured that animal's afternoon rather than the law. Same column, same aim, same
+       watch: on the tree before this one the same rig reported the crossing at frame 5
+       in one run of it and at frame 49 in another, and in two runs of this one the
+       borrowed body never crossed at all -- 0 m of ground covered in 300 frames, its
+       highest point 0.13 m over the grass it was put on. Which member of the flock answers a `find`, and what
+       phase of its own hop cycle it is standing in, depend on every draw the page has
+       spent before the rig starts: the constructor's own draws (pace, dive, hop timer)
+       and the errands it has already run are all unseeded. That is the trap the wood rig
+       further down this file fell into and was rebuilt out of, for the same reason. */
+    const rnd = Math.random; let sd = 0;
+    const seed = (s) => { sd = s; Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; }; };
+    seed(77431);
+    const frog = new N.Creature(N.CREATURE_BY_ID.frog, cx + 0.5, gy + 1, cz + 0.5);
+    Math.random = rnd;
     const was = { x: p.x, y: p.y, z: p.z, form: p.form };
     const herdWas = g.herdCentres;
     p.form = null; p.x = 4; p.z = 4; p.y = W.h - 2;      // nobody to run from
@@ -7371,7 +7382,6 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     const out = { spot: [cx, cz, gy, ax, az], climbed, hover, insideHard, maxY: +maxY.toFixed(2),
       yEnd: +frog.y.toFixed(2), xEnd: +frog.x.toFixed(2), zEnd: +frog.z.toFixed(2) };
-    Object.assign(frog, body);
     Object.assign(p, was);
     g.herdCentres = herdWas;
     return out;
@@ -11247,6 +11257,174 @@ What was measured before any of this was fixed, over 180 frames of walking
     !isle.error && isle.ground.trees === 0 && isle.ground.fruit === 0, isle.ground);
   check('the lens goes away and comes back: the island returns cell for cell, every column of it',
     !isle.error && isle.twice.dropped > 0 && isle.twice.same && isle.twice.left === 0, isle.twice);
+
+  /* ---- a body walks up out of the sea and onto the island ----
+     The complaint was "there's no gentle place: there is no getting up onto the
+     island", and it was about the ground, not about the body. The rule this tree
+     replaced capped the ground past the shore at two metres under the surface and
+     then blended it against that cap, which flattened the blend from its first
+     metre: read through the same walk this step walks, HEAD's worldgen presented
+     a riser taller than one metre on **120 of 120** bearings, one on every
+     bearing, every one of them over four metres and a median of eleven, thirteen
+     at the worst (test/node-smoke.js prints what the rule now leaves: one metre
+     anywhere, and a steepest 20 m window of 0.40 metres of ground per metre
+     where the old one ran 0.65). One metre is the whole of the difference, and
+     it is a body's own number: the world is built of metre cells, so the shortest
+     riser anywhere is one metre, and a body climbs exactly that with the launch
+     its record states (data/player.js `jump`: 8.3 m/s, 1.43 m over its feet) and
+     stops at anything above it. A shore of one-metre risers is a beach the legs
+     go up; a riser of thirteen is a cliff.
+     So this is the complaint asked as it was made: the hardest shore the island
+     has -- the bearing that makes a body climb the furthest from the water up to
+     its own shore line, chosen by the island's rule and not by a remembered
+     coordinate -- with a body stood in the deepest water a standing body can
+     stand in (one metre over the ground; two and the water holds it up and the
+     swim begins, which is asked of elsewhere), walked at with the push key held
+     the way a player holds it up a bank. What is then asked is whether it got
+     up, and what it cost it in ground, height and frames. */
+  const shore = await step('aBodyWalksUpOutOfTheSeaOntoTheIsland', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch,
+      faceYaw: p.faceYaw, grounded: p.grounded, inWater: p.inWater, air: p.air, fright: p.fright,
+      form: p.form, formT: p.formT, formMax: p.formMax, vital: p.vital, mode: g.mode,
+      creatures: g.creatures, drops: g.drops, input: g.input, inv: g.inv.slice(), diffs: g.diffs.slice() };
+    const back = () => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, vx: was.vx, vy: was.vy, vz: was.vz,
+        yaw: was.yaw, pitch: was.pitch, faceYaw: was.faceYaw, grounded: was.grounded,
+        inWater: was.inWater, air: was.air, fright: was.fright, form: was.form,
+        formT: was.formT, formMax: was.formMax, vital: was.vital });
+      Object.assign(g, { mode: was.mode, creatures: was.creatures, drops: was.drops, input: was.input });
+      g.inv.length = 0; for (const it of was.inv) g.inv.push(it);
+      g.diffs.length = 0; for (const d of was.diffs) g.diffs.push(d);
+    };
+    const C = { x: N.COAST.cx, z: N.COAST.cz }, SEA = N.WORLD.sea;
+    const ground = (x, z) => N.landHeight(Math.floor(x), Math.floor(z));
+
+    /* the hardest shore: the bearing whose climb from the water line to the
+       island's own shore line is the longest. `N.shoreWater` is where the sea
+       stands and `N.coastRadius` where the island's shore is, both read from the
+       rule that made them, so the choice is the island's and not a coordinate
+       remembered from a screenshot. */
+    let hard = null;
+    for (let deg = 0; deg < 360; deg += 3) {
+      const th = deg * Math.PI / 180, ct = Math.cos(th), st = Math.sin(th);
+      const wr = N.shoreWater(th), cr = N.coastRadius(th);
+      let startR = 0;
+      for (let d = wr + 1; d < wr + 80; d++) if (ground(C.x + ct * d, C.z + st * d) === SEA - 1) { startR = d; break; }
+      if (!startR) continue;
+      const climb = ground(C.x + ct * (cr - 2), C.z + st * (cr - 2)) - (SEA - 1);
+      if (!hard || climb > hard.climb) hard = { deg, th, ct, st, wr, cr, startR, climb };
+    }
+    if (!hard) return { error: 'no bearing where the sea stands one metre over the ground' };
+    const sx = C.x + hard.ct * hard.startR, sz = C.z + hard.st * hard.startR;
+    const start = { x: Math.floor(sx), z: Math.floor(sz), y: ground(sx, sz) };
+    const inlandR = hard.cr;
+    const out = { bearing: hard.deg, from: start, waterLineR: Math.round(hard.wr),
+      shoreLineR: Math.round(hard.cr), climbToShoreLine: hard.climb,
+      walkMetres: Math.round(hard.startR - hard.cr + 6) };
+
+    /* the ground has to be there before a body walks on it. In play the game
+       streams it round the body itself (game.js update), and it does that here
+       too -- this call only takes the race out of the measurement, so the frame
+       the body starts on already stands. */
+    let left = 1, asks = 0;
+    while (left > 0 && asks < 300) { left = W.stream(R.gl, Math.floor(sx / W.cs), Math.floor(sz / W.cs), 6); asks++; }
+    let holes = 0;
+    for (let dz = -W.keep; dz <= W.keep; dz++) for (let dx = -W.keep; dx <= W.keep; dx++) {
+      if (dx * dx + dz * dz > W.keep * W.keep) continue;
+      const c = W.far.get(W.ckey(Math.floor(sx / W.cs) + dx, Math.floor(sz / W.cs) + dz));
+      if (W.inChunkGrid(Math.floor(sx / W.cs) + dx, Math.floor(sz / W.cs) + dz)) continue;
+      if (!c || !c.mesh) holes++;
+    }
+    out.stream = { asks, left, holes };
+
+    p.form = null; g.mode = 'play'; g.creatures = []; g.drops = [];
+    p.x = start.x + 0.5; p.z = start.z + 0.5; p.y = start.y + 1;
+    p.vx = p.vy = p.vz = 0; p.pitch = 0; p.grounded = true; p.inWater = true;
+    p.air = p.maxAir(); p.vital = 10; p.fright = 0;
+    const yaw = Math.atan2(C.x - p.x, -(C.z - p.z));     // along the bearing, towards the island's middle
+    p.yaw = p.faceYaw = yaw;
+    /* how deep the water is over the surface the body's feet are on -- the reading
+       the body itself makes (entities.js: `liquidSurfaceAt` of the column minus
+       `standY` at its own feet), because that difference and nothing else is what
+       decides whether it walks or is carried: at two the water holds it up. */
+    const depthAt = () => {
+      const s = W.liquidSurfaceAt(Math.floor(p.x), Math.floor(p.z));
+      return s < 0 ? 0 : s - N.standY(W, Math.floor(p.x), Math.floor(p.z), p.y);
+    };
+    out.startWater = depthAt();
+    const x0 = p.x, z0 = p.z, y0 = p.y;
+    let frames = 0, onFoot = 0, inWorld = 0, sunk = 0, maxRise = 0, hops = 0, wasFoot = true;
+    let reachFrame = -1, highest = p.y, deepest = p.y, wet = 0, walked = 0, px = p.x, pz = p.z, lastY = p.y;
+    /* the arc, measured one push-off at a time: the height it reaches over the
+       ground it left, and how long it stays off the ground. A body climbing a
+       shore in this world is a body hopping up one metre at a time, so the two
+       figures that say it is doing that and not floating are the apex of each
+       hop over its own take-off and the longest airborne run between two of them
+       -- both of which the record's own launch bounds. */
+    let airRun = 0, maxAirRun = 0, apexAboveTakeoff = 0, takeoffY = p.y;
+    const limit = 2400;
+    g.input = { fwd: 1, jump: 1 };
+    for (; frames < limit; frames++) {
+      g.update(1 / 60);
+      const gy = N.terrainY(W, Math.floor(p.x), Math.floor(p.z), Math.floor(p.y + 2));
+      if (p.grounded) onFoot++;
+      if (p.hits(p.x, p.y, p.z)) inWorld++;
+      if (p.y < gy - 1) sunk++;
+      if (p.y > highest) highest = p.y;
+      if (p.y < deepest) deepest = p.y;
+      const dy = p.y - lastY;
+      if (dy > maxRise) maxRise = dy;
+      lastY = p.y;
+      if (depthAt() > 0) wet++;
+      if (wasFoot && !p.grounded) { hops++; takeoffY = p.y; airRun = 0; }
+      if (!p.grounded) {
+        airRun++;
+        if (airRun > maxAirRun) maxAirRun = airRun;
+        if (p.y - takeoffY > apexAboveTakeoff) apexAboveTakeoff = p.y - takeoffY;
+      }
+      wasFoot = p.grounded;
+      walked += Math.hypot(p.x - px, p.z - pz); px = p.x; pz = p.z;
+      if (Math.hypot(p.x - C.x, p.z - C.z) < inlandR) { reachFrame = frames; break; }
+    }
+    g.input = was.input;
+    const endR = Math.hypot(p.x - C.x, p.z - C.z);
+    out.walk = { frames, limit, reached: reachFrame >= 0, reachFrame,
+      seconds: +(frames / 60).toFixed(1),
+      metres: +Math.hypot(p.x - x0, p.z - z0).toFixed(1), walked: +walked.toFixed(1),
+      runOfShoreClimbed: Math.round(hard.startR - inlandR),
+      endDistanceFromCentre: +endR.toFixed(1), insideShoreLine: endR < inlandR,
+      heightGained: +(p.y - y0).toFixed(2), highest: +(highest - y0).toFixed(2),
+      deepestBelowStart: +(y0 - deepest).toFixed(2),
+      /* the run the body went up, in the ground's own number: the height gained
+         over the run of shore it covered -- the figure the shore was asked for,
+         read off the way up a body actually took. */
+      gradeClimbed: +((p.y - y0) / Math.max(1, hard.startR - inlandR)).toFixed(3),
+      groundUnderIt: W.get(Math.floor(p.x), Math.floor(p.y) - 1, Math.floor(p.z)),
+      feetOnGroundFrames: onFoot, insideSolidFrames: inWorld, throughGroundFrames: sunk,
+      wetFrames: wet, hops, maxRisePerFrame: +maxRise.toFixed(3),
+      apexPerHop: +apexAboveTakeoff.toFixed(3), longestAirborneRun: maxAirRun };
+    out.arc = { launch: N.HUMAN_FORM.jump, apex: (() => {
+      const G = 23, dt = 1 / 60, k = Math.max(0, Math.floor(N.HUMAN_FORM.jump / (G * dt)));
+      return +(k * N.HUMAN_FORM.jump * dt - G * dt * dt * k * (k + 1) / 2).toFixed(3);
+    })(),
+      /* the frames one arc's flight lasts in this world: the launch up and the
+         launch down, at the frame rate the body is stepped at */
+      flightFrames: Math.ceil(2 * N.HUMAN_FORM.jump / (23 * (1 / 60))) };
+    back();
+    return out;
+  });
+  check('the hardest shore the island has starts in the sea and ends inland: a body walked up it, in metres of ground and of height',
+    !shore.error && shore.stream.left === 0 && shore.stream.holes === 0 && shore.startWater === 1 &&
+    shore.walk.reached && shore.walk.insideShoreLine &&
+    shore.walk.heightGained >= shore.climbToShoreLine - 1 && shore.walk.metres > 20, shore);
+  check('it went up on its feet: never inside the world, never through the ground, and the ground was there for every push-off it made',
+    shore.walk.insideSolidFrames === 0 && shore.walk.throughGroundFrames === 0 &&
+    Math.abs(shore.walk.feetOnGroundFrames - shore.walk.hops) <= 1 &&
+    shore.walk.longestAirborneRun <= shore.arc.flightFrames && shore.walk.groundUnderIt > 0, shore.walk);
+  check('each step is the arc that record states, taken one riser at a time: no hop rose past what its own legs reach, no frame lifted it at all',
+    shore.walk.hops >= 3 && shore.walk.apexPerHop <= shore.arc.apex + 0.06 &&
+    shore.walk.maxRisePerFrame < shore.arc.launch / 60 + 0.01, shore.walk);
 
   /* ---- the box round the block the crosshair is on ----
      The twelve bars used to be rebuilt in world coordinates every frame and

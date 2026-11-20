@@ -541,7 +541,7 @@ console.log('水方块', water);
   let worstPair = 1e9, worstShore = 1e9;
   for (const a of raised) {
     const d = Math.hypot(a.x - C.x, a.z - C.z);
-    worstShore = Math.min(worstShore, d - F.coastRadius(Math.atan2(a.z - C.z, a.x - C.x)) - a.r);
+    worstShore = Math.min(worstShore, d - F.shoreWater(Math.atan2(a.z - C.z, a.x - C.x)) - a.r);
     for (const b of raised) {
       if (b.id <= a.id) continue;
       worstPair = Math.min(worstPair, Math.hypot(a.x - b.x, a.z - b.z) - a.r - b.r);
@@ -591,6 +591,74 @@ console.log('水方块', water);
     '每 km2', dens.map(d => d.toFixed(2)).join('/'),
     bad.length ? '!! ' + bad.join('; ') : 'OK');
   if (bad.length) process.exitCode = 1;
+}
+
+/* The shore is the ground a body walks up out of the sea. The rule that used to
+   cap the ground past the island's shore at two metres under the surface
+   flattened the blend against the cap from its first metre, so every shore came
+   out a wall: ten to thirteen metres of ground in three metres of walk, on every
+   bearing, and nothing walked up it. What the rule states now is a slope --
+   COAST.grade is the steepest shore this world runs into anywhere, and shoreRun
+   derives the run a drop needs from it -- and the question asked back is the one
+   the complaint was made in: standing in the water, how tall is the tallest step
+   of ground between here and the island's interior? The sea floor's own band is
+   measured too, because that cap was also (badly) protecting it: the floor the
+   sea rests on stays under water, never shallow enough to be land and never deep
+   enough to be invisible. */
+{
+  const C = { x: F.COAST.cx, z: F.COAST.cz }, SEA = F.WORLD.sea, CL = F.COAST;
+  const g = (x, z) => F.landHeight(Math.floor(x), Math.floor(z));
+  const shoreBad = [];
+  let worstStep = 0, worstAt = null, waterLo = 1e9, waterHi = 0, climbLo = 1e9, climbHi = 0;
+  let worstGrade = 0, floorLo = 1e9, floorHi = -1e9;
+  for (let deg = 0; deg < 360; deg += 3) {
+    const th = deg * Math.PI / 180;
+    const wr = F.shoreWater(th);
+    if (wr < CL.min) shoreBad.push(`bearing ${deg}: water inside the authored map`);
+    if (wr < F.coastRadius(th)) shoreBad.push(`bearing ${deg}: the water stands inside the shore line`);
+    /* the profile: from open water, up the shore, to the island's own ground */
+    const prof = [];
+    for (let d = wr + 25; d >= CL.r - 40; d--) prof.push({ d, h: g(C.x + Math.cos(th) * d, C.z + Math.sin(th) * d) });
+    // (a) the shore's own reach: open water to the shore line, step by step
+    for (let i = 1; i < prof.length; i++) {
+      if (prof[i].d < F.coastRadius(th)) break;          // inland: the land's own relief, reported only
+      const step = prof[i].h - prof[i - 1].h;
+      if (step > worstStep) { worstStep = step; worstAt = { deg, d: prof[i].d }; }
+      if (i >= 20) {                                     // a 20 m window: the rounding has somewhere to hide
+        const gr = (prof[i].h - prof[i - 20].h) / (prof[i - 20].d - prof[i].d);
+        if (gr > worstGrade) worstGrade = gr;
+      }
+    }
+    if (prof[0].h >= SEA) shoreBad.push(`bearing ${deg}: dry ground 25 m out to sea`);
+    // (b) the sea floor, past the end of every shore's run
+    for (let d = CL.r + CL.apron + 220; d <= CL.r + CL.apron + 260; d += 10) {
+      const x = C.x + Math.cos(th) * d, z = C.z + Math.sin(th) * d;
+      const h = g(x, z);
+      if (h > SEA - 2) shoreBad.push(`bearing ${deg}: a sea floor at y${h}, 2 m or less under the surface`);
+      if (h < SEA - 12) shoreBad.push(`bearing ${deg}: a sea floor at y${h}, deeper than this world states`);
+      floorLo = Math.min(floorLo, h); floorHi = Math.max(floorHi, h);
+    }
+    waterLo = Math.min(waterLo, wr); waterHi = Math.max(waterHi, wr);
+    const climb = prof[prof.length - 1].h - prof[0].h;
+    climbLo = Math.min(climbLo, climb); climbHi = Math.max(climbHi, climb);
+  }
+  if (worstStep > 1) shoreBad.push(`a shore step of ${worstStep} m at bearing ${worstAt.deg}, r ${worstAt.d}`);
+  /* The figure the whole island's ground is held to is the height of a riser,
+     because that is the figure a body answers: the world's own minimum riser is
+     one metre, and a body climbs one metre with the launch its record states and
+     stops at anything above it. A wall -- the 11-13 m of ground in 3 m of walk
+     this rule used to make -- is uncrossable for the same reason.
+     `grade` bounds the descent the shore rule itself makes. The ground it carries
+     keeps its own relief, since an island's shore cannot be gentler than the
+     island, so the composed figure measured over a 20 m window sits above 0.25;
+     the bound below is that measured figure with room in it, and it is the one
+     that would have gone red on the wall (the wall ran 4 m of ground per m). */
+  if (worstGrade > 0.45) shoreBad.push(`a 20 m window of shore running ${worstGrade.toFixed(2)} m of ground per m`);
+  console.log('主岛海岸 水面半径', waterLo.toFixed(0) + '-' + waterHi.toFixed(0) + 'm',
+    '岸上最高一步', worstStep + 'm', '坡比最大', worstGrade.toFixed(3),
+    '水面到岛内升高', climbLo + '-' + climbHi + 'm', '外海床 y', floorLo + '-' + floorHi,
+    shoreBad.length ? '!! ' + shoreBad.join('; ') : 'OK');
+  if (shoreBad.length) process.exitCode = 1;
 }
 
 /* A roof has to point up, and it has to keep the rain out. The roofs were

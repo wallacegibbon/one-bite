@@ -46,11 +46,62 @@ finished one.
 
 The island the square sits on runs out to a shore: the land is highest about the
 centre (80,80) and sinks towards a coastline that wanders between **121 m and 150 m**
-from that centre; past the shore the ground shelves down into the sea, six metres of
-water over a seabed of the same rock and sand as the lakebed, and the sea goes on for
-as far as the world does. Nothing stops a body at the shore: no wall, no fog band, no
-gate. The only edge in this world is the edge of what a body
+from that centre; past the shore the ground shelves down into the sea and the sea goes
+on for as far as the world does. Nothing stops a body at the shore: no wall, no fog
+band, no gate. The only edge in this world is the edge of what a body
 can reach and get back from (01 §3, 04 §5).
+
+**A shore is a slope, and the slope is stated as one number: how steep.** The complaint
+that put this law in was "there's no gentle place on the main island — there's no
+getting up onto it", and it was about the ground, not about the body. The rule that was
+there capped the ground past the shore at two metres under the surface and then blended
+the land towards that cap, which flattened the blend from its first metre: read through
+a walk from open water inland, that rule presented a riser taller than a metre on
+**120 of 120** bearings, every one of them over four metres, a **median of 11 m** and
+**13 m** at the worst — ten to thirteen metres of ground inside three metres of walk —
+with the sea floor lying at **y 7-12**. One metre is the whole of the difference, and it
+is the body's own number: the world is built of metre cells, so the shortest riser
+anywhere is a metre, and a body climbs exactly that with the launch its record states
+(03 §3, `jump` 8.3 m/s, 1.43 m over its feet) and stops at anything above it. A shore of
+one-metre risers is a beach the legs go up; a riser of thirteen is a cliff.
+
+- `COAST.grade` **0.25** is the steepest slope any shore in this world runs. A
+  `smoothstep` over a run of R is steepest at its middle, at 1.5 · drop / R, so
+  `shoreRun(h) = max(apron, 1.5 · (h − deep) / grade)` is a run that never exceeds it: a
+  high piece of land reaches the sea over a longer walk than a low one, which is what a
+  shore is. `COAST.apron` **70 m** is the least such a run may take — a shallow drop
+  still gets a shore wide enough to be a shore and not a dip;
+- `COAST.smooth` **40 m** is the reach over which the sea works the land's own relief
+  away: the fine relief an island carries (`reliefH`, the same arithmetic the land is
+  made of) is subtracted out between the shore and the open sea, because a shore that
+  keeps it is a cliff standing in the water — measured with it left in, 88 of 120
+  bearings presented a two-metre step on the way up out of the sea. The seabed's own
+  noise (`COAST.floorRelief`, 3 m) fades in only past the end of the run, so a shore ends
+  in ground and not in a step standing in the sea;
+- the height of the ground past the shore is no longer capped. Its two ends are the
+  island's own ground and that island's sea floor, both stated by rules, and the water
+  line falls wherever that slope crosses it: that line is the beach, and it is not
+  something a second rule gets to place. Measured, the sea floor lies at **y 4-9** —
+  **5 to 10 m** of water over it, never shoal enough to be land and never deep enough to
+  stop being ground; the water's edge stands **172-221 m** from the centre, and from that
+  water to the island's own ground is **11-19 m** of height.
+
+`game/test/node-smoke.js` walks 120 bearings from open water inland and holds the
+tallest step anywhere on a shore to **1 m**, the steepest 20 m window to **0.45 m of
+ground per m** (what the rule leaves today is **0.400**: the shore's own 0.25 with the
+relief it carries still on it — the bound is that measured figure with room in it, and it
+is the one the wall above failed, at 0.65), and the sea floor to the band above.
+`game/test/play.js` then asks the complaint as it was made: it takes the hardest shore
+the island has — the bearing that makes a body climb furthest from the water to its own
+shore line, chosen by the island's rule and not from a remembered coordinate — stands a
+body in the deepest water a body walks in (one metre over the ground it stands on; at two
+the water carries it, which is 03 §3's question and is asked of elsewhere), and walks it
+inland with the push key held the way a player holds it up a bank. It got up: bearing
+36°, from ground y13 under a metre of water 201 m out, **47 m of ground and 12.2 m of
+height in 729 frames** — 12.2 s, **20 hops**, each one's top **1.30 m** over where it
+left the ground against the **1.43 m** the record reaches, its longest run off the ground
+**42 frames** against the **44** one such arc lasts, inside a block in **0** frames and
+through the ground in **0**.
 
 ### 1.2 The sea, and the islands in it
 
@@ -66,8 +117,11 @@ and the arithmetic is an Archimedean spiral out of (80,80):
   **377-754 m** and its seven centres actually stand **389-778 m** out.
   An island's foot is never allowed to come within **24 m** of this island's shore or
   of another island's foot — the water between two grounds is the channel that makes
-  them two islands — so the nearest ground ever met is never nearer than that, and
-  measured, it is **210 m** of open water out;
+  them two islands — so the nearest ground ever met is never nearer than that. That
+  room is measured to where the sea stands rather than to the shore line, because the
+  channel is water and a body crossing it starts in water: over the first 70 ordinals
+  the least open water between this island's edge and any of those feet is **169 m**,
+  and the closest two feet came within **178.9 m** of each other;
 - every island is pulled up to **40 m** along its own radius, under half the gap
   between turns (so two turns cannot trade places): what comes out is a coast of
   islands rather than a wheel of spokes;
@@ -115,7 +169,7 @@ Measured at the seed the game opens with, over the first 70 islands of the spira
 | islands raised | **70** of 70 ordinals; nobody had to be cut down for want of room, the closest two feet came within **178.9 m** of each other |
 | kinds | 15 sandbars, 16 reefs, 23 thickets, 11 isles, 5 ridges |
 | islands per km², by band | **3.50** in the 0-1 km band, **2.02** at 1-2 km, **1.21** at 2-3 km, **0.82** at 3-4 km — the gradient the rule exists for, falling as 1/r |
-| the nearest of them | centre **389 m** from (80,80); **210 m** of open water between this island's shore and its foot |
+| the nearest of them | centre **389 m** from (80,80); **169 m** of open water between this island's water's edge and its foot |
 | how far open sea is from land | sampled on rings out to 1.5 km, the median point of sea is **171 m** from an island's foot and the furthest sampled point is **476 m**: one fruit is **966 m** out and back, so no water in that reach is a crossing a body cannot make |
 | what stands on the nearest ground big enough to stand on | **nothing**. The nearest island with a foot of 40 m or more — ordinal 4, a thicket, **603 m** out, foot **70 m** — has had its whole footprint (**15,421** columns) counted cell by cell: **0** cells of tree, **0** of fruit, **0** of plant. What it does hold: **71,920** cells of water, **64,670** of stone, **51,836** of sand, **43,763** of the mountain rock the sea floor is paved with, **7,386** of soil and **2,462** of grass — the dome the rule states, read back out of ground the game built. That is the honest hole (07 §3.6) |
 

@@ -42,7 +42,7 @@
   const ORCH = { x: 24, z: 104, r: 15 };
   const GROVE = { x: 104, z: 32, r: 17 };
 
-  function terrainH(x, z) {
+  function landRawH(x, z) {
     let h = 19 + fbm(x * 0.035, z * 0.035, seed, 4) * 7;
     h += fbm(x * 0.11, z * 0.11, seed + 5, 2) * 2.2;
     // Ashscale Ridge
@@ -95,7 +95,23 @@
     // orchard ruins flat ground
     const doo = dist(x, z, ORCH.x, ORCH.z);
     if (doo < ORCH.r + 4) { const w = 1 - ss(ORCH.r - 2, ORCH.r + 4, doo); h = h * (1 - w) + 20 * w; }
-    return Math.max(3, Math.min(W.h - 12, Math.round(h)));
+    return h;
+  }
+  /* The land as the map is built from it: whole metres, inside the world. A
+     shore's blend wants the unrounded ground (see `landH`): rounding first puts a
+     sawtooth of a metre in every metre of the slope, and a bound on the slope
+     would then be a bound on the wrong thing. */
+  function terrainH(x, z) {
+    return Math.max(3, Math.min(W.h - 12, Math.round(landRawH(x, z))));
+  }
+  /* The land's relief: all of the terrain above with a wavelength under twenty
+     metres. Asked on its own because the sea works it off a shore (see
+     `seaFloorAt`), and there it is subtracted from the land rather than being a
+     second terrain: the land's arithmetic stays written in one place and comes
+     out to exactly the same cells it always did. */
+  function reliefH(x, z) {
+    return (fbm(x * 0.035, z * 0.035, seed, 4) - fbm(x * 0.035, z * 0.035, seed, 2)) * 7 +
+      fbm(x * 0.11, z * 0.11, seed + 5, 2) * 2.2;
   }
 
   /* ---------------- basic helpers ---------------- */
@@ -489,17 +505,22 @@
      of the ground. The shore is held outside the half-diagonal of the authored
      map so that not one cell of that map is cut out of it: the island is what the
      map is, plus the ground the array stopped before.
-     Past the shore the ground walks down to the sea floor over an apron, and the
-     floor keeps the same kind of noise the land has, because a flat seabed is a
-     plane and there are no planes on this planet. The floor is held between 3 m
-     and 2 m under the surface: below about 6 m of water our own measured
+     Past the shore the ground walks down to the sea floor, and the floor keeps
+     the same kind of noise the land has, because a flat seabed is a plane and
+     there are no planes on this planet. The floor lies 8 m under the surface with
+     +-3 m of that noise on it: below about 6 m of water our own measured
      absorption leaves a bed 4.5% of its relief (docs/07), so digging deeper buys
-     geometry nothing can see. */
+     geometry nothing can see. The descent is bounded by a slope, not by a height:
+     `grade` is the steepest shore this world runs into anywhere, and `shoreRun`
+     derives the run a drop needs from it. The rule this replaces -- cap the
+     ground past the shore at 2 m under the surface -- made every shore a wall. */
   const COAST = {
     cx: N.WORLD.w / 2, cz: N.WORLD.d / 2,
     r: 150, wander: 0.16,                                  // mean radius, and how far it wanders
     min: Math.hypot(N.WORLD.w, N.WORLD.d) / 2 + 8,         // never cuts the authored map open
-    apron: 70,                                             // shore to open sea floor, metres
+    apron: 70,                                             // the least run a shore may take
+    grade: 0.25,                                           // steepest a shore may run: m of ground per m of ground
+    smooth: 40,                                            // the reach over which the sea works the land's relief away
     deep: N.WORLD.sea - 8, floorRelief: 3                  // where the floor lies, and how much it moves
   };
   function coastR(theta) {
@@ -605,6 +626,23 @@
      same island gets the same answer in every session and from every direction,
      and cutting one island down never depends on which island was looked at
      first. */
+  /* Where the authored island's own water stands along a bearing: its shore
+     profile walked in from well outside until the ground reaches the water line
+     (ground at the surface height is dry: the water fills the cells above the
+     ground up to that height and no further). `seaFloorH` is asked and not
+     `landH`: the channel between an island and the authored one is about the
+     authored island's ground, and the piles raised out there must not decide
+     where its own shore falls -- that would be circular, and would make cutting
+     one island down depend on which island was looked at first. */
+  function waterR(theta) {
+    const cr = coastR(theta);
+    for (let s = 460; s > 0; s -= 2) {
+      const x = Math.floor(COAST.cx + Math.cos(theta) * (cr + s));
+      const z = Math.floor(COAST.cz + Math.sin(theta) * (cr + s));
+      if (seaFloorH(x, z) >= SEA) return Math.hypot(x - COAST.cx, z - COAST.cz);
+    }
+    return cr;
+  }
   function isleAt(n) {
     if (n <= 0) return null;
     if (isleCache.has(n)) return isleCache.get(n);
@@ -617,9 +655,8 @@
     const T = ISLE_TYPES[type];
     const foot = T.r[0] + h2(n, 0, seed + 53) * (T.r[1] - T.r[0]);
     const crest = T.crest[0] + h2(n, 0, seed + 59) * (T.crest[1] - T.crest[0]);
-    // room: to the authored shore, and to every neighbour that could reach here
-    const coastHere = coastR(Math.atan2(p.z - COAST.cz, p.x - COAST.cx));
-    let room = d - coastHere - ISLES.keep;
+    // room: to the authored island's water, and to every neighbour that could reach here
+    let room = d - waterR(Math.atan2(p.z - COAST.cz, p.x - COAST.cx)) - ISLES.keep;
     for (const m of isleNeighbours(n)) {
       if (m === n) continue;
       const q = islePos(m);
@@ -670,6 +707,14 @@
     }
     return out;
   }
+  /* The shortest run of ground that carries a drop from the island's own ground
+     down to its sea floor without ever running steeper than COAST.grade: a
+     smoothstep over a run R is steepest at its middle, at 1.5 * drop / R, so a
+     run of 1.5 * drop / grade never does. `apron` is the floor of that: a shallow
+     drop still gets a shore wide enough to be a shore and not a dip. */
+  function shoreRun(h) {
+    return Math.max(COAST.apron, 1.5 * (h - COAST.deep) / COAST.grade);
+  }
   /* The sea floor at an address: the ground the island rule raises its piles
      out of. This is `landH` with no island in it, and it is written once -- the
      height of a pile is measured from here, so if this were restated beside
@@ -677,11 +722,23 @@
      height its kind states. */
   function seaFloorAt(h, s, x, z) {
     if (s <= 0) return h;
-    let v = h + (COAST.deep - h) * ss(0, COAST.apron, s);
-    if (s > COAST.apron) v += (fbm(x * 0.05, z * 0.05, seed + 71, 3) - 0.5) * 2 * COAST.floorRelief;
+    /* Where the sea reaches, the sea has graded the ground: the land's fine relief
+       is worked away over COAST.smooth metres and what runs down to the floor is
+       the land's shape. The blend starts at the land's own height, so nothing
+       steps or seams where the authored array ends. Leaving the relief in makes
+       the grade bound true of the slope and false of the ground: measured with it
+       in, 88 of 120 bearings presented a step of two metres on the way up out of
+       the sea -- taller than either body lifts itself. */
+    const hs = h - reliefH(x, z) * ss(0, COAST.smooth, s);
+    const run = shoreRun(hs);
+    let v = hs + (COAST.deep - hs) * ss(0, run, s);
+    /* the seabed's own noise fades in past the end of the run, so a shore ends in
+       ground rather than in a step standing in the sea */
+    v += (fbm(x * 0.05, z * 0.05, seed + 71, 3) - 0.5) * 2 * COAST.floorRelief *
+      ss(run, run + 40, s);
     return v;
   }
-  function seaFloorH(x, z) { return seaFloorAt(terrainH(x, z), beyond(x, z), x, z); }
+  function seaFloorH(x, z) { return seaFloorAt(landRawH(x, z), beyond(x, z), x, z); }
   /* An island is a pile of ground raised out of the floor it stands in, and the
      pile is a dome: flat enough at the crown to be the island's own ground, and
      running down to nothing at its foot with no step and no wall -- `1 -
@@ -706,23 +763,23 @@
      is exactly the terrain the map was built from -- the blend starts at that
      height, so there is no step and no seam where the array ends. */
   function landH(x, z) {
-    const h = terrainH(x, z);
     const s = beyond(x, z);
-    if (s <= 0) return h;
+    if (s <= 0) return terrainH(x, z);
     // the same floor the save and the tests ask for: one blend, restated nowhere
-    let v = seaFloorAt(h, s, x, z);
+    let v = seaFloorAt(landRawH(x, z), s, x, z);
     const lift = isleLift(x, z);
     v += lift;
     /* whole metres: a column of this world is a stack of metre cells, and a
        height of 7.56 puts water at cell 8.56, which is nowhere. The blend is
-       continuous and the ground it describes is a slope made of steps. Sea
-       floor is capped two metres under the surface -- deep enough that the
-       absorption in 07 says nothing down there is still visible -- and that
-       ceiling says nothing about an island: ground raised above the water line
-       is what the island rule asked for, and its own ceiling is the crown the
-       island's kind states. */
-    const ceil = lift > 0 ? SEA + 30 : SEA - 2;
-    return Math.max(3, Math.min(Math.round(v), ceil));
+       continuous and the ground it describes is a slope made of steps. The only
+       ceiling here is an island's own: ground raised above the water line is what
+       the island rule asked for, and its limit is the crown that island's kind
+       states. A shore wants no ceiling of height -- its two ends are the island's
+       own ground and that island's sea floor, both stated above, and the water
+       line falls wherever that slope crosses it: that line is the beach, and it
+       is not something a second rule gets to place. */
+    if (lift > 0) v = Math.min(v, SEA + 30);
+    return Math.max(3, Math.round(v));
   }
   /* What a column of ground is made of, at any address. One table for the whole
      world: sand at and near the water line, rock under three metres, soil
@@ -832,6 +889,8 @@
   // anything that has to know where the shore is
   N.COAST = COAST;
   N.coastRadius = coastR;
+  N.shoreWater = waterR;    // where the authored island's water stands along a bearing
+  N.shoreRun = shoreRun;    // the run of ground a drop of h takes to reach its floor
   N.beyondCoast = beyond;
   N.landHeight = landH;
   /* the islands, asked either way: an ordinal is a place, and a place names the

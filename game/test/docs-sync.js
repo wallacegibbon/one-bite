@@ -621,10 +621,14 @@ for (const L of LANGS) {
     if (d < isleT1lo) isleT1lo = d;
     if (d > isleT1hi) isleT1hi = d;
   }
-  // separation in both senses: foot to foot, and foot to this island's shore
+  // separation in both senses: foot to foot, and foot to the water's edge round this
+  // island. The second is measured to where the sea stands, not to the island's own
+  // shore line: the channel between two grounds is water, and a body crossing it starts
+  // at the water, so this is the same measure test/node-smoke.js prints and the chapter
+  // quotes (see `shoreWater`).
   let isleGap = 1e9, isleShore = 1e9;
   for (const a of islesUp) {
-    const shoreHere = Math.hypot(a.x - CEN.x, a.z - CEN.z) - N.coastRadius(Math.atan2(a.z - CEN.z, a.x - CEN.x));
+    const shoreHere = Math.hypot(a.x - CEN.x, a.z - CEN.z) - N.shoreWater(Math.atan2(a.z - CEN.z, a.x - CEN.x));
     if (shoreHere - a.r < isleShore) isleShore = shoreHere - a.r;
     for (const b of islesUp) {
       if (b.id <= a.id) continue;
