@@ -5242,9 +5242,12 @@ What was measured before any of this was fixed, over 180 frames of walking
   /* The mirror a lens looks through is the same water the lens stands in, so it
      carries what that eye is given: the middle of it sits at the colour of the
      water under the eye line, not at the block row's raw colour. Put back the way
-     it was read and the split is there -- 81 under the line, 56 above it, one
-     eye, one frame. */
-  check('the surface that same eye looks through is the colour that eye is given: a median of 85 above the eye line against 81 of the water it stands in, and 56 with the mirror read off the block row',
+     it was read and the split is there -- 81 under the line, 53 above it, one
+     eye, one frame. (Both numbers moved when the surface was given its own
+     critical angle: at 85 and 56 the mirror was the water's colour with a little
+     sky leaking through it at every angle. Handing the light back below 41.4
+     degrees instead is what makes the mirror read the colour exactly.) */
+  check('the surface that same eye looks through is the colour that eye is given: a median of 83 above the eye line against 81 of the water it stands in, and 53 with the mirror read off the block row',
     openSea.mirror && openSea.split && openSea.washedBelow &&
     Math.abs(openSea.mirror.p50 - openSea.washedBelow.p50) < 8 &&
     openSea.split.p50 <= openSea.water.lum + 6 &&
@@ -5282,7 +5285,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      added the water's colour over the last one -- a dotted line, twice the
      colour of the water it stands in, at the eye line of a lens standing on the
      floor of an open sea. */
-  check('a lens on the floor of that sea keeps its colour above its eye line too: of the 252,000 pixels of that half, 0 are brighter than the water it stands in and the brightest reads 55 against a water at 53',
+  check('a lens on the floor of that sea keeps its colour above its eye line too: of the 252,000 pixels of that half, 0 are brighter than the water it stands in and the brightest reads 53, the water\'s own 53',
     openSea.deep && openSea.deepAbove && openSea.deep.lensUnder === openSea.deepUnder &&
     openSea.deepAbove.brighterThanWater === 0 && openSea.deepAbove.over200 === 0 &&
     openSea.deepAbove.maxLum <= openSea.deepAbove.ref + 6, openSea);
@@ -5302,6 +5305,170 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the frame this round found is drawn by the step, not remembered from a probe: with both halves of the defect in it that half of the frame keeps 1,403 pixels over the water it stands in and 198 at the brightest of them',
     openSea.deepBefore && openSea.deepBefore.brighterThanWater > openSea.deepAbove.brighterThanWater + 300 &&
     openSea.deepBefore.maxLum > openSea.deepAbove.ref + 100, openSea);
+
+  /* A lens under the skin of a lake is under a mirror, not under a window --
+     except inside a cone. Light climbing out of water is turned back into it
+     past 48.6 degrees from the vertical (asin(1/1.333), the index the water's
+     own block row states), so a ray meeting the surface at less than 41.4
+     degrees above its own eye line never leaves the water at all: the face hands
+     it back. The pane's Schlick term is the air-to-glass number and only fades
+     towards 1, so it let the sky through at 10 degrees, at 20, at 30 -- a lens
+     just under the surface looking level saw the far sky across its whole view.
+     The rig stands a lens 30 cm under the widest stretch of open water the
+     valley has (found by search: the longest run of lake with nothing standing
+     in it), level and then pitched up, and reads the frame by the angle of each
+     of its rows: what has to be true is a bright fan starting at the angle the
+     index states and nowhere else. 30 cm under, because the water itself eats
+     the sky over the long roads -- from 4 m down the same view reads the water
+     at every angle with the law off as with it on, and the law cannot be seen
+     doing anything there. */
+  const surfaceMirror = await step('theSurfaceUnderWaterHandsTheLightBack', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, formT: p.formT, formMax: p.formMax, third: g.thirdPerson, time: g.time,
+      mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady,
+      creatures: g.creatures, drops: g.drops };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, formT: was.formT, formMax: was.formMax });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+      g.creatures = was.creatures; g.drops = was.drops;
+      return r;
+    };
+    p.form = null; g.mode = 'play'; g.thirdPerson = false;
+    g.time = N.DAY_LEN * (13 / 24);
+    const topOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) return y + 1; return -1; };
+    const floorOf = (x, z) => { const s = topOf(x, z); if (s < 0) return -1;
+      for (let y = s; y >= 0; y--) if (W.solidAt(x, y, z)) return y + 1; return -1; };
+    /* the longest stretch of open lake: surface at the sea line, four metres of
+       water, and nothing standing in the water or breaking the surface along the
+       bearing the lens will look down. */
+    let spot = null, best = 0;
+    for (let z = 0; z < 160; z += 2) for (let x = 0; x < 160; x += 2) {
+      const s = topOf(x, z), b = floorOf(x, z);
+      if (s !== N.WORLD.sea + 1 || b < 0 || s - b < 4) continue;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        let run = 0;
+        for (let d = 1; d <= 200; d++) {
+          const px2 = Math.floor(x + dx * d), pz2 = Math.floor(z + dz * d);
+          if (topOf(px2, pz2) !== s || W.solidAt(px2, s - 1, pz2)) break;
+          run = d;
+        }
+        if (run > best) { best = run; spot = { x: x + 0.5, z: z + 0.5, surface: s, floor: b,
+          depth: s - b, dx, dz, run }; }
+      }
+    }
+    if (!spot) return back({ error: 'no open water to look across' });
+    const yaw = Math.atan2(spot.dx, -spot.dz);
+    const put = (lensY, pitch) => {
+      g.camReady = true; g.cam.d = 0; g.cam.fov = p.fov();
+      p.x = spot.x; p.z = spot.z; p.vx = p.vy = p.vz = 0; p.yaw = yaw; p.pitch = pitch;
+      p.y = lensY;
+      p.y = lensY - (p.eyePos() - p.y);
+      g._camFrame = g.shootCamera(p);
+      g.creatures = []; g.drops = []; g.hover = null;
+      const chx = Math.floor(p.x / W.cs), chz = Math.floor(p.z / W.cs);
+      let left = 1, guard = 0;
+      while (left > 0 && guard++ < 400) left = W.stream(gl, chx, chz, 6);
+      g.updateEnv();
+      /* render() is what the game shoots its own lens with, and it lets that
+         lens go again when the frame is over, so the eye this frame was drawn
+         at is kept here and handed to the reader rather than read back later. */
+      return { lensY: +lensY.toFixed(2), eye: +p.eyePos().toFixed(2), pitch: +pitch.toFixed(2),
+        lensUnder: g.env.inWater ? +(g.env.waterY - g._lens.y).toFixed(2) : 0,
+        inWater: g.env.inWater, ior: g.env.liqIor, fov: g._camFrame.fov };
+    };
+    /* Every row of the frame asks the world at one elevation: pitch plus the
+       angle the row sits off the middle of the view. Reading the frame by that
+       angle rather than by its half is what makes this a measurement of a law
+       and not of a band -- the row where the sky starts is the number the index
+       of refraction states, and the row where it starts with the index asked of
+       air is the defect. */
+    const frame = () => {
+      g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { w, h, px };
+    };
+    const luma = (c) => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * 255;
+    const readByAngle = (s, at) => {
+      const ref = luma(g.env.fogCol);
+      const tanY = Math.tan(at.fov * Math.PI / 360);
+      const rows = [];
+      let over = 0, max = -1;
+      for (let y = 0; y < s.h; y++) {
+        const up = (y + 0.5) / s.h * 2 - 1;
+        const elev = (at.pitch + Math.atan(up * tanY)) * 180 / Math.PI;
+        let rOver = 0, rMax = -1;
+        for (let x = 0; x < s.w; x++) {
+          const i = (y * s.w + x) * 4;
+          const l = 0.2126 * s.px[i] + 0.7152 * s.px[i + 1] + 0.0722 * s.px[i + 2];
+          if (l > ref + 12) rOver++;
+          if (l > rMax) rMax = l;
+          if (l > max) max = l;
+        }
+        if (rOver > 0) over += rOver;
+        rows.push({ elev: +elev.toFixed(1), over: rOver, max: Math.round(rMax) });
+      }
+      /* The angle the sky starts at. Rows are read from the bottom of the frame
+         up, which is from the lowest angle up, and the first row with anything
+         of a sky in it -- half a per cent of its pixels, so a stray cannot
+         answer it -- is where the fan the index closes ends. Only rows above
+         the eye line are asked: at or below it the ray never reaches this
+         surface at all. */
+      let edge = null;
+      for (const r of rows) {
+        if (r.elev <= 0) continue;
+        if (r.over > s.w * 0.005) { edge = r.elev; break; }
+      }
+      return { ref: Math.round(ref), over, maxLum: Math.round(max),
+        skyStartElev: edge, rows: rows.filter((r, i) => i % 16 === 0) };
+    };
+    const iorWas = g.env.liqIor;
+    const withAir = (fn) => { g.env.liqIor = 1; const r = fn(); g.env.liqIor = iorWas; return r; };
+
+    /* 1. level, 30 cm under: the whole of the frame above the eye line is
+       inside the fan, so it is the water's colour and nothing else. */
+    const level = put(spot.surface - 0.3, 0);
+    const levelOn = readByAngle(frame(), level);
+    const levelOff = withAir(() => readByAngle(frame(), level));
+    /* 2. pitched up 0.62 rad (35.5 degrees, so that the frame spans angles on
+       both sides of the edge): the angle the sky starts at is readable. */
+    const pitched = put(spot.surface - 0.3, 0.62);
+    const pitchOn = readByAngle(frame(), pitched);
+    const pitchOff = withAir(() => readByAngle(frame(), pitched));
+    /* 3. the control: the same place 30 cm over the skin. Out of the liquid the
+       surface is a window with a sheen on it and the sheen is the whole of what
+       that face does; the fan belongs to a lens inside the water. */
+    const dry = put(spot.surface + 0.3, 0);
+    const dryOn = readByAngle(frame(), dry);
+    const dryOff = withAir(() => readByAngle(frame(), dry));
+    const law = { ior: iorWas, criticalDeg: +(Math.asin(1 / iorWas) * 180 / Math.PI).toFixed(1),
+      edgeElevDeg: +(Math.asin(Math.sqrt(1 - 1 / (iorWas * iorWas))) * 180 / Math.PI).toFixed(1) };
+    return back({ spot, law, level, pitched, dry, levelOn, levelOff, pitchOn, pitchOff,
+      dryOn, dryOff, held: W.far.size });
+  });
+
+  check('a lens 30 cm under a lake keeps its own colour across the whole of the fan the index closes: not one pixel of that frame is brighter than the water it stands in, and its brightest reads 53, the water\'s own 53',
+    !surfaceMirror.error && surfaceMirror.level.inWater === 1 &&
+    surfaceMirror.levelOn.over === 0 && surfaceMirror.levelOn.maxLum <= surfaceMirror.levelOn.ref + 6,
+    surfaceMirror);
+  check('that is the index talking and not the absorption: asked of air the same angles hand the sky through the surface -- 62,741 pixels over the water\'s colour, the brightest 119, the sky starting 7.8 degrees above the eye line',
+    surfaceMirror.levelOff.over > 5000 &&
+    surfaceMirror.levelOff.maxLum > surfaceMirror.levelOff.ref + 50, surfaceMirror);
+  check('and it closes at the angle the index states: pitched up over the same surface, the sky starts at the angle asin(1/ior) leaves it at and nowhere lower, where asking the same face of air let it through from a fifth of that angle up',
+    surfaceMirror.pitchOn.skyStartElev !== null &&
+    Math.abs(surfaceMirror.pitchOn.skyStartElev - surfaceMirror.law.edgeElevDeg) < 2 &&
+    surfaceMirror.pitchOff.skyStartElev !== null &&
+    surfaceMirror.pitchOff.skyStartElev < surfaceMirror.law.edgeElevDeg - 20, surfaceMirror);
+  check('a lens over the water is asked none of this: 30 cm above the same skin the frame is the frame it was, index on or off',
+    surfaceMirror.dry.inWater === 0 && surfaceMirror.dryOn.over === surfaceMirror.dryOff.over &&
+    surfaceMirror.dryOn.maxLum === surfaceMirror.dryOff.maxLum && surfaceMirror.dryOn.maxLum > 200,
+    surfaceMirror);
 
   /* How far under the water a surface is belongs to the surface, not to the
      point its shading is read at. The mesher asked the world "how deep is this

@@ -447,6 +447,7 @@
            air's answer stays the air's. */
         veil: inWater ? fogCol : W.liquidVeil(),
         liqK: W.liquidAbsorb(),
+        liqIor: W.liquidIor(),
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
         far: 260,
         /* Where the frame's ground is certain to stop. The world holds ground

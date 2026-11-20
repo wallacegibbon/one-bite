@@ -360,7 +360,7 @@
      all, so the one here is spelled out. */
   uniform highp vec3 uLiqK;
   uniform vec3 uVeil, uZen, uHor;
-  uniform float uPane;
+  uniform float uPane, uIor;
   void main(){
     if (uPane > 0.5) {
       /* The water's own face, drawn in two passes over the frame.
@@ -396,11 +396,26 @@
          Seen from under the water the surface reflects the lake rather than the
          sky, so the mirror takes the water's own colour there; what it would
          really show outside Snell's window is the lakebed at that angle, and
-         this is the cheap version of that -- the same colour, not the picture. */
+         this is the cheap version of that -- the same colour, not the picture.
+         And Schlick is the air-to-glass number, which only fades towards 1 as
+         the view grazes the surface and never gets there. From inside the water
+         that is wrong by a whole fan of the view: light climbing out is turned
+         back into it past asin(1/ior) from the vertical -- 48.6 degrees at
+         1.333 -- and outside that cone the face returns everything and passes
+         nothing at all. The test is written on a cosine because cn is one:
+         sqrt(1 - 1/(ior*ior)) is the cosine of the same angle, and against a
+         flat surface it lands the edge of that fan 41 degrees above the eye
+         line of a lens under the water. The ray is not bent anywhere, so the
+         sky that does come through is not folded into the 48.6 degree window it
+         belongs in, and this is the one clause that knows about either. */
       float d = length(vEye);
       vec3 v = vEye / max(d, 1e-4);
       float cn = mix(sqrt(max(0.0, 1.0 - v.y * v.y)), abs(v.y), vPan.x);
       float F = 0.02 + 0.98 * pow(1.0 - cn, 5.0);
+      /* uIor arrives as 1 when there is no liquid in the frame at all, and then
+         this edge is 0 and the clause cannot fire. */
+      float tir = uIor > 1.0 ? sqrt(max(0.0, 1.0 - 1.0 / (uIor * uIor))) : 0.0;
+      if (vPan.y > 0.5 && cn < tir) F = 1.0;
       vec3 surv = exp(-uLiqK * vPan.z);
       if (uPane < 1.5) { gl_FragColor = vec4(surv * (1.0 - F), 1.0); return; }
       float ry = mix(v.y, abs(v.y), vPan.x);
@@ -708,6 +723,7 @@
         u.uWaterK = gl.getUniformLocation(P.p, 'uWaterK');
         u.uWaterY = gl.getUniformLocation(P.p, 'uWaterY');
         u.uLiqK = gl.getUniformLocation(P.p, 'uLiqK');
+        u.uIor = gl.getUniformLocation(P.p, 'uIor');
         u.uHazeK = gl.getUniformLocation(P.p, 'uHazeK');
         u.uHazeOn = gl.getUniformLocation(P.p, 'uHazeOn');
         u.uInWater = gl.getUniformLocation(P.p, 'uInWater');
@@ -733,6 +749,10 @@
       // the liquid's own absorption, against the depth baked into every vertex
       // of the static world: a dry frame has 0 everywhere, and exp(0) is 1
       gl.uniform3fv(u.uLiqK, e.liqK || [0, 0, 0]);
+      // and the same stuff's index, which the water's own face reads as the one
+      // angle past which it hands everything back: only the pane pass uses it,
+      // and only when the lens is inside the liquid.
+      gl.uniform1f(u.uIor, e.liqIor || 1);
       // the other half of the same law, for the things that are not baked: a
       // body's vertices are built every frame, so the caller hands over the
       // surface of the water that body stands in -- and a column with no water

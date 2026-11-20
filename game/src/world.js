@@ -71,7 +71,14 @@
               is the one this row has always had, because that ratio is why the
               floor is teal and not grey -- only how fast the whole thing happens
               was the part that was wrong. */
-           fogK: [1.40, 0.40, 0.15] });
+           fogK: [1.40, 0.40, 0.15],
+           /* The other thing this stuff does to light is bend it, and for a
+              lens inside the water that bends one whole fan of the view out of
+              existence. Light climbing out is turned back into it past 48.6
+              degrees from the vertical -- asin(1/1.333) -- so outside that cone
+              the surface is a mirror and no sky comes through it at all. One
+              number states that, and the renderer reads the angle off it. */
+           ior: 1.333 });
   def(6, { cn: '树干', c: [0.38, 0.27, 0.17], ct: [0.46, 0.34, 0.21] });
   def(7, { cn: '树叶', c: [0.20, 0.40, 0.18], soft: 1 });
   def(8, { cn: '针叶', c: [0.14, 0.30, 0.20], soft: 1 });
@@ -338,6 +345,14 @@
        what the stuff is made of. There is one liquid in the valley; a second
        one would need its coefficient baked alongside the depth, not read here. */
     liquidAbsorb() { const b = B[WATER]; return (b && b.fogK) || [0, 0, 0]; }
+    /* The index of refraction of the valley's liquid, air to it. The surface's
+       law follows from this one number -- light climbing out of the water is
+       turned back into it past asin(1/ior) from the vertical -- and the pane
+       asks it as a cosine, sqrt(1 - 1/ior^2), because the angle it has is the
+       one between the ray and the surface's normal. Same reason as the
+       absorption: the stuff is what the stuff is, whatever side of its skin the
+       lens is on. */
+    liquidIor() { const b = B[WATER]; return (b && b.ior) || 1; }
     /* The height of the surface of the liquid a lens is sitting in: the top of
        the liquid column it is inside. The renderer needs it because the light
        reaching a surface under water has come down through that much water,
