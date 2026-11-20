@@ -7,108 +7,80 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one commit, and it changes how a jump is
-measured. A body whose legs are an arc was sized by the parabola -- launch squared over
-twice the gravity -- and the parabola is what the flight tends to as the frame goes to
-nothing, not what these frames do. So the whole of the movement code now asks the same
-question the integration answers, frame by frame: `arcApex` is the top the launch
-reaches and `arcGround` the ground it covers, and the launch a height or a stretch of
-ground asks of a pair of legs (`launchForApex`, `launchForGround`) is that law read
-backwards. One pair of legs, one ask, one law, and every number in this file and in
-docs/03 s3 is that second form -- the rate read at the frame the legs give it, which is
-the row's number less the **0.383 m/s** the frame spends on gravity before a height is
-ever written.
+State at time of writing: this round is one commit, and it changes what the minimap is.
+It was a picture: one canvas of the authored square, 160x160 cells, painted once at boot, and
+the dial blitted a window out of it. Past that square the canvas had nothing to blit, so the
+map went black at the shore of the main island -- which is also why nothing the player digs
+appears on it, and why the map cannot show the sea the last rounds put ground in. It is now a
+window of ground round the body: `mmSample` is the one reading of what a column shows to a
+lens straight above it, ground is painted into tiles of **32x32 cells** nearest the body first
+and inside a frame's share, a tile is painted again when a count says the ground under it has
+been written, and tiles the dial can no longer reach are let go.
 
-Three things came out of that, and each is asked by a rig of its own; a fourth is a
-number those rigs were asked to account for and did not.
+- **A count, not a flag.** The mesh already knows a chunk is behind, and clears that knowledge
+  as soon as it catches up, so a second reader cannot ask it the other question -- is the
+  ground I painted an hour ago still that ground. `World.edits` is that count:
+  ckey -> times written, an entry only for ground something actually wrote. A tile covers a
+  whole number of chunks (32 cells / 16), so `mmStamp` sums the four addresses it overlaps and
+  a tile whose sum moved is repainted. Measured: **1** block written under a window that wants
+  **49** tiles and holds **60** repaints exactly **1** of them, and putting that block back is seen the same way
+  again (**1** tile, **1** stale).
+- **The window is bounded in size, in cost and in what it throws away.** A settled window
+  paints **0** tiles; a walk of **320** cells asks for **50** tiles and the worst step asks for
+  **6**; the tiles held never pass **54** against the **64** that window and its one-tile ring
+  are. The cost is bounded by the frame's share: **4 ms** is the map's, two thirds of the
+  **6 ms** the frame already hands the chunk mesher (docs/07 s3.6), and a frame handed a budget
+  of nothing still paints exactly **1** tile -- **1.2-1.3 ms** for 1,024 columns -- so the dial
+  never shows nothing where ground has just appeared. The whole dial (the 172 px canvas is one
+  pixel per cell, so 86 cells of ground in every direction: **36** tiles) costs **66.9-70.8 ms**
+  the first time it is asked for, which is what a load or a walk across the sea pays, spread
+  over ~20 frames and not over one.
+- **One pixel per cell needs the filter off, and that is now measured rather than asserted.**
+  The dial blits its tiles at the whole-number scale and under rotation; with the filter a
+  canvas leaves by default it showed colours no ground has. The rig stands a body at a place
+  **387** cells out -- dry ground past the authored square, found by asking the world for it --
+  and classifies every cell the dial shows: of the **5,809** sampled across the disc, **527**
+  are the 4-pixel band at the edge the dial is clipped to (the HUD strokes a warm ring there,
+  and no ground has that colour) and are not read; of the **5,282** that are, **all** lie
+  outside the authored square, **5,262** are the exact colour of the cell they look at, **20**
+  are the heading mark, and **0** are a neighbouring cell, the map's own backing colour, a
+  column the world answers with sky, or a colour of no ground. The control is the same tile
+  canvases blitted at the same place with the filter left on: **686** of those cells come out
+  as colours no ground there has.
 
-- **The room over a body's head is asked with the ground in front of it, not as a lid
-  afterwards.** A roof that takes height out of an arc takes the ground that arc covers
-  with it, and an arc lowered onto the face of the step it was sized for ends inside the
-  rock. Measured in a passage -- three cells with a ceiling one cell over the floor, rock
-  walls either side, a step of a metre closing the end, so the only way out is an arc:
-  **0.57 m** of headroom against a riser asking **1.0 m**: under a ceiling of leaves the
-  body takes the launch that step asks (**7.31 m/s**, recorded as **6.924**), stands on
-  the step, and is out -- **81** frames up there, **418** of the window spent more than a
-  metre from where it started, **7.36 m** of ground covered. Under the same geometry of
-  trunk it never gets a foot on the step (**0** frames), spends all **480** inside the
-  column the block stands over, and covers **0.43 m**: the room over its head leaves
-  **5.088** (**4.705** recorded) against the **7.307** (**6.924** recorded) that riser
-  asks, so that step is not a step those legs may take there, and the body is thrown its
-  face-hedge -- an arc sized on the ground short of the face, of which there is none, so
-  the ask falls to its own floor of **0.12 m** and the shortest arc these legs give,
-  **0.958 m/s**, is **9** of the **10** launches that window records. That is the material
-  control now: the headroom and the riser are identical both times and only the material
-  decides whether the room counts. The control that used to make that point -- one block over the head, nothing in
-  front of the feet -- stopped separating the two materials once the launch was sized by
-  what is in front of the legs: such a block leaves **0.57 m** and an errand arc never
-  gets that body more than **0.161 m** off its floor, so a ceiling an arc passes half a
-  metre under is a roof to nothing, trunk or crown, and the two rigs of that pair, one
-  body and one draw, agree in every figure the rig takes (**11** frames in the column,
-  **10** arcs, **110** airborne frames, **6.18 m**). A height by itself makes no roof.
-- **A body in the middle of an arc is not walked into the columns it flies over.** A face
-  above the height the fall still left in its vertical rate could take it to is neither
-  ground it stands on nor a wall it is meeting, so the columns are not asked of it and
-  the arc is finished; the arc's own apex bounded the look-ahead at push-off, and a face
-  beyond that arc is met by that arc's landing and the frame after it. The frame that
-  found it: a body's centre crossing the face of a step it had never been thrown at, on an
-  arc of **0.958 m/s**, **0.022 m** of ground and **0.971 m** of height in the one frame.
-  The `pops` guard -- any frame that moves a body more than **0.9 m** -- read **1** such
-  frame in the wood rig and now reads **0** in all seven. What crossing a step costs is
-  now **one** frame with a corner through the riser, **0.119 m** past the face, where it
-  was **38** frames and **0.198 m**; at a two-metre wall the body's own rectangle is
-  inside the bank in **0** frames, and a wall the legs cannot size is met with *shorter*
-  arcs (**2.492**, **1.533**, **1.415** against the **2.533** of open ground), never
-  longer ones -- the same brace, read from the side of the ground.
-- **A step is sized to the step, and a shore is ground.** At a one-metre riser either
-  body of the frog gives exactly one launch that is not its own everyday one: **6.924**
-  through the animal, **6.922** through the body worn from it, **0.002** apart, inside the
-  **7.4** the row states, with the animal lifted in **0** frames. With nothing built, or
-  at a bank of two metres, no arc of either body leaves the ground harder than that body's
-  own everyday launch -- **2.533** for the animal pottering at **0.42** of its row's rate,
-  **4.035** for a body driven at the row's **1.8 m/s** -- and a block of water laid over
-  the shelf changes nothing about any of it (**249** of the window spent in water, held up
-  in **0**), because the water over a shore is over the back and the feet are on the
-  bottom. The two films agree with the rigs: `strip climbwild` and `strip climb` read
-  `push 6.924` and `push 6.922` at the same bank.
+Two things this round got wrong, and both are of the kind written down last round.
 
-- **A launch named as the reason for something has to be a number a rig prints, and one
-  of mine was not.** The trunk side of that passage was written up here and in docs/03 s3
-  and in the roof comment as a body left with "the **0.958 m/s** that room leaves". The
-  figure is real; the reason written under it is not. The span rig now prints every launch
-  both passage bodies give (`stepArcs`) beside the arithmetic of the room and the riser
-  (`roomLaunch`): the room is **0.57 m** and leaves **5.088** (**4.705** recorded), the
-  step asks **7.307** (**6.924** recorded) -- the room's launch is *under* the step's,
-  which is the whole of why the step is refused there -- and what that window gives is
-  **0.958** nine times over, which is `launchForGround` read on the **0.12 m** floor of
-  the ground ask (the same record calls it `minArc`), plus one hedge of **1.533**. Two
-  checks hold that now: the room's launch must sit under the step's ask and above every
-  launch that window gave, and the modal launch of that window must be the arc sized on
-  that floor rather than anything the ceiling sized. Under the crown, the largest launch
-  of that same body is the step's own, to the millimetre a second.
+- **A number quoted in a code comment that no rig printed.** The comment about the filter said
+  "measured at the shore of an island, **912** of the **5,543** cells". Nothing in the suite
+  ever read those two numbers; they were written from a scratch probe that is gone. The control
+  above is what makes that claim a measurement (**686** of **5,282**), and the comment now
+  quotes the rig's figures.
+- **A test that reported instead of checking.** The first version of this rig baked POI dots
+  into the map and counted how many cells it skipped; and the check names were left with
+  `<sharp> of <inside>` and the cost comment with `<FIXME> ms` in them. Both are filled with
+  what the run printed. The old step that read the lake back off the map's canvas also had to
+  be restated: it used to count only the wet columns that happened to land on the dial's
+  pixels at boot (**2,816** of **2,958**), and the reading now asks every wet column of the
+  authored square -- **2,837** have their water as the top of the column and paint as water,
+  **121** are columns whose own ground stands above the film (the sunken tower's brick), **0**
+  come out warmer than blue, and the depth that shades them is counted down (red **42.8** and
+  luminance **86.6** over **1,848** deep columns against **82.2** and **130.6** over **322**
+  shallow ones).
 
-The suite carries the arithmetic as well as the readings: the launch of a body asked for
-height must be the row's number (`**5.617**` for the frog's `6.0`, `**7.917**` for the
-person's `8.3`) and must reach `arcApex` of it (**0.73 m**, **1.43 m**); the launch of a
-body driven along the ground must be the one `launchForGround` sizes for the ground its
-ask wants (**4.035** for **1.62 m** of ground; **2.875** for the **0.82 m** a frog
-pottering at **1.22 m/s** wants) and may not exceed the row; the two `under` rigs --
-one body, one draw, a block of another material between them -- must agree in every
-figure; and the passage must be left under one material and not the other.
+- **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the commit
+  message has no non-ASCII; `docs-sync.js` ends 全部一致。 and `docs-drift.js` detects every
+  injected drift; `bash game/test/all.sh` **10/10** twice on this tree with
+  `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**. No worldgen, no map-authoring and
+  no save anchor moved: the world under the map is the world of the last round.
 
-- **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the
-  commit message has no non-ASCII; `docs-sync.js` ends 全部一致。 and `docs-drift.js`
-  detects every injected drift; `bash game/test/all.sh` **10/10** twice on this tree with
-  `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**. No worldgen, no map and no
-  save anchor moved: the world of the last round is the world of this one.
-
-What this round leaves open is the user's own queue, in the order they gave it, recorded
-under **25**: the minimap paints the authored square and nothing past it; the main
-island's shores are too steep to walk up, which is what "no landing place" means; and
-after those a sea turtle -- wings-for-flippers, faster in water than the frog's **4.6**,
-no skin-drying clock on land, slower than **1.8** on it -- the island nearest this one to
-be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
-is currently empty of everything but frogs.
+What this round leaves open is the user's own queue, in the order they gave it, recorded under
+**25**: the main island's shores are too steep to walk up, which is what "no landing place"
+means -- nothing in the suite asks a shore for its slope today; and after that a sea turtle --
+wings-for-flippers, faster in water than the frog's **4.6**, no skin-drying clock on land,
+slower than **1.8** on it -- the island nearest this one to be a sand isle carrying the
+turtle's fruit in sand, the main island keeping only the frog's, and animals in the sea at all,
+which is currently empty of everything but frogs. The minimap half of that queue is closed by
+this round.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -2254,10 +2226,14 @@ each one would otherwise be rediscovered:
   new game; there is no second player either (07 §3.6, "No identity service"; 03 §6
   documents the three identity layers). The open half is therefore a design question --
   what is a home island *for*, and should it survive a new game -- not a missing field.
-- **The minimap paints the authored square and nothing else.** With real ground out
-  there, blank paper is now a map lying rather than a map being modest: `mmBase` in
-  `game/src/ui.js` reads columns x/z 0..160. A world with no edge needs a different
-  question -- how far am I from the island I started on -- and that is design.
+- **The minimap painted the authored square and nothing else.** Closed by this round. With
+  real ground out there, blank paper was a map lying rather than a map being modest: the
+  old `mmBase` in `game/src/ui.js` read columns x/z 0..160 and was painted once at boot.
+  The map is a window of ground round the body now, bounded in size, cost and holding, and
+  the question it answers -- what does the ground around me look like from above, and has
+  it been changed since I painted it -- is answered by `mmSample`, `mmWindow` and
+  `World.edits`, with the rig described at the top of this file asking it at a place
+  **387** cells out.
 **The queue the user gave, in their order (this round, recorded so it is not lost).**
 
 1. The main island needs a gentle shore. In their words: 主岛是不是得有一个平缓的地方，
@@ -2268,8 +2244,10 @@ each one would otherwise be rediscovered:
    to the nearest centre, **210.0 m** of open water, the **15/23/16/11/5** kind census)
    are all re-measured by any change to `isleLift`/`ISLE_TYPES`, so the answer has to be
    a rule and the numbers have to move with it, in one commit.
-2. The minimap stops lying about the world outside the authored square: it blists past
-   the main island because it paints one **160x160** base image and nothing else.
+2. **Done this round.** The minimap stops lying about the world outside the authored
+   square: it went black past the main island because it painted one **160x160** base
+   image and nothing else. It paints a window of ground round the body now -- see the
+   round's record at the top of this file.
 3. Then the sea turtle, and the sea being peopled: it swims by moving its front
    flippers up and down the way a bird's wings move; `swimSpeed` above the frog's
    **4.6**; no skin-drying clock on land; land speed under **1.8**; the island nearest
@@ -2303,7 +2281,111 @@ something the game already has; nothing in it does yet.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### The round before this one: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+### The round before this one: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
+State at time of writing, then:
+A body whose legs are an arc was sized by the parabola -- launch squared over
+twice the gravity -- and the parabola is what the flight tends to as the frame goes to
+nothing, not what these frames do. So the whole of the movement code now asks the same
+question the integration answers, frame by frame: `arcApex` is the top the launch
+reaches and `arcGround` the ground it covers, and the launch a height or a stretch of
+ground asks of a pair of legs (`launchForApex`, `launchForGround`) is that law read
+backwards. One pair of legs, one ask, one law, and every number in this file and in
+docs/03 s3 is that second form -- the rate read at the frame the legs give it, which is
+the row's number less the **0.383 m/s** the frame spends on gravity before a height is
+ever written.
+
+Three things came out of that, and each is asked by a rig of its own; a fourth is a
+number those rigs were asked to account for and did not.
+
+- **The room over a body's head is asked with the ground in front of it, not as a lid
+  afterwards.** A roof that takes height out of an arc takes the ground that arc covers
+  with it, and an arc lowered onto the face of the step it was sized for ends inside the
+  rock. Measured in a passage -- three cells with a ceiling one cell over the floor, rock
+  walls either side, a step of a metre closing the end, so the only way out is an arc:
+  **0.57 m** of headroom against a riser asking **1.0 m**: under a ceiling of leaves the
+  body takes the launch that step asks (**7.31 m/s**, recorded as **6.924**), stands on
+  the step, and is out -- **81** frames up there, **418** of the window spent more than a
+  metre from where it started, **7.36 m** of ground covered. Under the same geometry of
+  trunk it never gets a foot on the step (**0** frames), spends all **480** inside the
+  column the block stands over, and covers **0.43 m**: the room over its head leaves
+  **5.088** (**4.705** recorded) against the **7.307** (**6.924** recorded) that riser
+  asks, so that step is not a step those legs may take there, and the body is thrown its
+  face-hedge -- an arc sized on the ground short of the face, of which there is none, so
+  the ask falls to its own floor of **0.12 m** and the shortest arc these legs give,
+  **0.958 m/s**, is **9** of the **10** launches that window records. That is the material
+  control now: the headroom and the riser are identical both times and only the material
+  decides whether the room counts. The control that used to make that point -- one block over the head, nothing in
+  front of the feet -- stopped separating the two materials once the launch was sized by
+  what is in front of the legs: such a block leaves **0.57 m** and an errand arc never
+  gets that body more than **0.161 m** off its floor, so a ceiling an arc passes half a
+  metre under is a roof to nothing, trunk or crown, and the two rigs of that pair, one
+  body and one draw, agree in every figure the rig takes (**11** frames in the column,
+  **10** arcs, **110** airborne frames, **6.18 m**). A height by itself makes no roof.
+- **A body in the middle of an arc is not walked into the columns it flies over.** A face
+  above the height the fall still left in its vertical rate could take it to is neither
+  ground it stands on nor a wall it is meeting, so the columns are not asked of it and
+  the arc is finished; the arc's own apex bounded the look-ahead at push-off, and a face
+  beyond that arc is met by that arc's landing and the frame after it. The frame that
+  found it: a body's centre crossing the face of a step it had never been thrown at, on an
+  arc of **0.958 m/s**, **0.022 m** of ground and **0.971 m** of height in the one frame.
+  The `pops` guard -- any frame that moves a body more than **0.9 m** -- read **1** such
+  frame in the wood rig and now reads **0** in all seven. What crossing a step costs is
+  now **one** frame with a corner through the riser, **0.119 m** past the face, where it
+  was **38** frames and **0.198 m**; at a two-metre wall the body's own rectangle is
+  inside the bank in **0** frames, and a wall the legs cannot size is met with *shorter*
+  arcs (**2.492**, **1.533**, **1.415** against the **2.533** of open ground), never
+  longer ones -- the same brace, read from the side of the ground.
+- **A step is sized to the step, and a shore is ground.** At a one-metre riser either
+  body of the frog gives exactly one launch that is not its own everyday one: **6.924**
+  through the animal, **6.922** through the body worn from it, **0.002** apart, inside the
+  **7.4** the row states, with the animal lifted in **0** frames. With nothing built, or
+  at a bank of two metres, no arc of either body leaves the ground harder than that body's
+  own everyday launch -- **2.533** for the animal pottering at **0.42** of its row's rate,
+  **4.035** for a body driven at the row's **1.8 m/s** -- and a block of water laid over
+  the shelf changes nothing about any of it (**249** of the window spent in water, held up
+  in **0**), because the water over a shore is over the back and the feet are on the
+  bottom. The two films agree with the rigs: `strip climbwild` and `strip climb` read
+  `push 6.924` and `push 6.922` at the same bank.
+
+- **A launch named as the reason for something has to be a number a rig prints, and one
+  of mine was not.** The trunk side of that passage was written up here and in docs/03 s3
+  and in the roof comment as a body left with "the **0.958 m/s** that room leaves". The
+  figure is real; the reason written under it is not. The span rig now prints every launch
+  both passage bodies give (`stepArcs`) beside the arithmetic of the room and the riser
+  (`roomLaunch`): the room is **0.57 m** and leaves **5.088** (**4.705** recorded), the
+  step asks **7.307** (**6.924** recorded) -- the room's launch is *under* the step's,
+  which is the whole of why the step is refused there -- and what that window gives is
+  **0.958** nine times over, which is `launchForGround` read on the **0.12 m** floor of
+  the ground ask (the same record calls it `minArc`), plus one hedge of **1.533**. Two
+  checks hold that now: the room's launch must sit under the step's ask and above every
+  launch that window gave, and the modal launch of that window must be the arc sized on
+  that floor rather than anything the ceiling sized. Under the crown, the largest launch
+  of that same body is the step's own, to the millimetre a second.
+
+The suite carries the arithmetic as well as the readings: the launch of a body asked for
+height must be the row's number (`**5.617**` for the frog's `6.0`, `**7.917**` for the
+person's `8.3`) and must reach `arcApex` of it (**0.73 m**, **1.43 m**); the launch of a
+body driven along the ground must be the one `launchForGround` sizes for the ground its
+ask wants (**4.035** for **1.62 m** of ground; **2.875** for the **0.82 m** a frog
+pottering at **1.22 m/s** wants) and may not exceed the row; the two `under` rigs --
+one body, one draw, a block of another material between them -- must agree in every
+figure; and the passage must be left under one material and not the other.
+
+- **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the
+  commit message has no non-ASCII; `docs-sync.js` ends 全部一致。 and `docs-drift.js`
+  detects every injected drift; `bash game/test/all.sh` **10/10** twice on this tree with
+  `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**. No worldgen, no map and no
+  save anchor moved: the world of the last round is the world of this one.
+
+What this round leaves open is the user's own queue, in the order they gave it, recorded
+under **25**: the minimap paints the authored square and nothing past it; the main
+island's shores are too steep to walk up, which is what "no landing place" means; and
+after those a sea turtle -- wings-for-flippers, faster in water than the frog's **4.6**,
+no skin-drying clock on land, slower than **1.8** on it -- the island nearest this one to
+be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
+is currently empty of everything but frogs.
+
+### Two rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
 State at time of writing, then:
 the sea. The water the last round opened out is no longer an empty field: it holds
 islands, and it holds more of them the nearer they lie to the island this square sits
@@ -2410,7 +2492,7 @@ finished.
 
 
 
-### The round before this one: the map stops being the world and becomes a square of ground with an address (f1f6970)
+### Three rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
 State at time of writing: this round is one commit, and it changes what the world
 *is*. The map stops being the world and becomes a square of ground with an
 address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
@@ -2563,7 +2645,7 @@ round deliberately refused to invent one.
 Read the standing contract below first: it decides whether any of this counts as
 finished.
 
-### Two rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+### Four rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
 State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
@@ -2652,7 +2734,7 @@ the contour probes is still unmeasured). One new one, 22's own seam: **the hand 
 in third person -- the marker now shows only where the key acts, which is what made
 that one distance and that origin visible.
 
-### Three rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### Five rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -2775,7 +2857,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Four rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Six rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -2949,7 +3031,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Five rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Seven rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and

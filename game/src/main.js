@@ -171,7 +171,7 @@
     loadBar.style.width = (game.progress * 100) + '%';
     loadTxt.textContent = N.t('start.gen', { p: Math.round(game.progress * 100) });
     if (!game.ready) return requestAnimationFrame(boot);
-    ui.buildMinimap();
+    ui.clearMinimap();   // the map window is ground, not a picture of the boot-time square
     loadTxt.textContent = N.t('start.ready');
     if (AUTO) {
       started = true;

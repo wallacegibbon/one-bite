@@ -221,6 +221,13 @@
       this.column = null;          // (x, z, put): what a column of ground is made of, at any address
       this.far = new Map();        // ckey -> { cx, cz, vox, mesh }
       this.farDirty = new Set();
+      /* ckey -> how many times the ground at that chunk address has been written.
+         The mesh's own dirty flags answer "is the geometry behind" and are cleared
+         when it catches up; a second reader -- the HUD's map, which holds ground it
+         painted a while ago and wants to know whether it is still ground -- needs
+         the count, not the flag. Only chunks whose ground was actually written get
+         an entry, so the map of them is as small as what the player has dug. */
+      this.edits = new Map();
       /* How far out from the lens ground is held. The answer is the air's: the
          haze is 1 - exp(-(den*d)^2), and the clearest air this world ever states
          is den 0.0075 per metre (game.js, the day without glare), so at 231 m
@@ -375,6 +382,10 @@
     markChunk(cx, cz) {
       if (this.inChunkGrid(cx, cz)) this.dirty[cz * this.cx + cx] = 1;
       else { const k = this.ckey(cx, cz); if (this.far.has(k)) this.farDirty.add(k); }
+      /* The count behind the map's question -- is the ground I painted an hour ago
+         still that ground -- as opposed to the mesh's, which is cleared when the
+         geometry catches up. See World.edits. */
+      this.edits.set(this.ckey(cx, cz), (this.edits.get(this.ckey(cx, cz)) || 0) + 1);
     }
     anyDirty() {
       for (let ci = 0; ci < this.dirty.length; ci++) if (this.dirty[ci]) return true;

@@ -10278,40 +10278,33 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and the game keeps no first-person hand to draw, and no body record names one',
     ownLens.noHandPath && ownLens.noHandField, ownLens);
 
-  /* 11p. The minimap paints the lake as water. The HUD map is a 160 x 160 canvas
-     built once from the world: for every column it asks what that column shows to
-     a lens straight above it, and paints the colour of that block, with the
-     water's own palette and a shade that follows the depth of the water. The
-     scan asked for the highest **solid** block, and water is not solid -- the
-     block row says so, and everything else in the game believes it -- so the
-     scan walked down through the whole lake and stopped at the lakebed. Every
-     one of the valley's **2,958** wet columns was painted with the colour of its
-     own floor (Mirrorlake's sand and mud: 112/104/74, 148/137/98), the lake read
-     as a dry pit in the middle of the green, and the water palette the same
-     function holds was never reached by a single pixel. The depth run was wrong
-     the same way: it counted **up** from wherever the scan had stopped, which
-     asks the sky how much water is above the lake and always answers one.
-     Measured over the whole map: **0** of 2,958 wet columns painted as water
-     before, **2,816** after. The other **121** have something solid standing
-     over the water -- the sunken tower, the keep, a tree -- and **21** more sit
-     under a POI dot, which is painted over the base and is warm by itself.
-     The land is the control: a dry column is painted with the colour of the
-     block on top of it, and the shading scales all three channels by one number,
-     so the order between red and blue cannot change -- **0** dry columns may
-     come out blue-dominant where their own block is red-dominant. */
+  /* 11p. The map paints the ground as what it shows from above. The dial is one
+     pixel per cell of ground, and a column is read by asking what it shows to a
+     lens straight above it. That ask used to stop only at a **solid** block, and
+     water is not solid -- the block row says so, and everything else in the game
+     believes it -- so the scan walked down through the whole lake and stopped at
+     the lakebed: every wet column was painted with the colour of its own floor
+     (Mirrorlake's sand and mud: 112/104/74, 148/137/98), the lake read as a dry
+     pit in the middle of the green, and the water palette the same function holds
+     was never reached by a single pixel. The depth run was wrong the same way: it
+     counted **up** from wherever the scan had stopped, which asks the sky how much
+     water is above the lake and always answers one. Measured over the authored
+     square: **wet** columns, of which **open** are open water the map paints as
+     water, **hidden** have something standing over the water, and **openWarm** of
+     the open ones come out warmer than blue. The land is the control: a dry column
+     is painted with the colour of the block on top of it, and the shading scales
+     all three channels by one number, so the order between red and blue cannot
+     change -- **dryWrong** dry columns come out blue-dominant where their own
+     block is red-dominant, out of **dry**.
+     The reading is one function now, `UI.mmSample`, because the second thing the
+     map has to get right is WHICH columns the dial asks for: the step below. */
   const mmPaint = await step('theMinimapPaintsTheLakeAsWater', () => {
     const N = window.FRUTARIA, W = window.game.world, ui = window.ui;
-    /* the base is built once, at boot, against the world as it was then; build
-       it again here so the step measures the code against the world as it is */
-    ui.buildMinimap();
-    const S = ui.mmBase.width, D = ui.mmBase.height;
-    const img = ui.mmBase.getContext('2d').getImageData(0, 0, S, D).data;
-    const px = (x, z) => { const i = (z * S + x) * 4; return [img[i], img[i + 1], img[i + 2]]; };
+    /* the authored square: the ground the map used to be a single picture of */
+    const S = W.w, D = W.d;
+    const px = (x, z) => ui.mmSample(x, z);
     const B = N.BLOCKS;
-    /* the POI dots are painted over the base, and they are warm: a marker
-       sitting over open water is not the map calling the lake dry */
-    const marked = (x, z) => N.POIS.some(q => Math.hypot(q.x - x, q.z - z) <= 2.5);
-    let wet = 0, open = 0, hidden = 0, skipped = 0, openWarm = 0;
+    let wet = 0, open = 0, hidden = 0, openWarm = 0;
     let dry = 0, dryWrong = 0;
     const deep = [], shallow = [];
     for (let z = 0; z < D; z++) for (let x = 0; x < S; x++) {
@@ -10323,7 +10316,6 @@ What was measured before any of this was fixed, over 180 frames of walking
       if (surf >= 0) {
         wet++;
         if (topSolid >= surf) { hidden++; continue; }   // something stands over the water
-        if (marked(x, z)) { skipped++; continue; }
         open++;
         if (warm) openWarm++;
         let depth = 0;
@@ -10331,7 +10323,6 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (depth >= 6) deep.push(p); else if (depth <= 2) shallow.push(p);
       } else {
         dry++;
-        if (marked(x, z)) continue;
         const bd = B[W.get(x, topSolid, z)] || {};
         const c = bd.ct || bd.c || [0, 0, 0];
         if (c[0] > c[2] && !warm) dryWrong++;
@@ -10340,7 +10331,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const mean = (a, k) => a.length ? +(a.reduce((s, v) => s + v[k], 0) / a.length).toFixed(1) : null;
     const lum = p => 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2];
     const lumOf = a => a.length ? +(a.reduce((s, v) => s + lum(v), 0) / a.length).toFixed(1) : null;
-    return { wet, open, hidden, skipped, openWarm, dry, dryWrong,
+    return { wet, open, hidden, openWarm, dry, dryWrong,
       deepN: deep.length, shallowN: shallow.length,
       deepLum: lumOf(deep), shallowLum: lumOf(shallow),
       deepRed: mean(deep, 0), shallowRed: mean(shallow, 0),
@@ -10350,12 +10341,241 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the valley has a lake big enough to measure on the map',
     !mmPaint.error && mmPaint.wet > 1000 && mmPaint.open > 800, mmPaint);
   check('every column the water is the top of is painted as water, not as its own floor',
-    mmPaint.openWarm === 0, mmPaint);
+    mmPaint.open + mmPaint.hidden === mmPaint.wet && mmPaint.openWarm === 0, mmPaint);
   check('and the depth of the water is counted down into it, not up into the sky',
     mmPaint.deepN > 100 && mmPaint.shallowN > 100 &&
     mmPaint.shallowRed - mmPaint.deepRed >= 20 && mmPaint.deepBlue > mmPaint.deepRed, mmPaint);
   check('the land is still painted with the colour of what stands on it',
     mmPaint.dry > 10000 && mmPaint.dryWrong === 0, mmPaint);
+
+  /* 11p2. And it paints the ground wherever the player is standing, not only the
+     square the map was authored in. The dial is 172 px across and shows one cell
+     per pixel, so it asks for a window of ground 172 cells wide. The map it drew
+     was one canvas of `world.w` x `world.d` -- the authored square -- painted once
+     at boot and slid under the player. Past that square the world keeps answering:
+     `World.get` builds the column at any address, and since the sea was given
+     ground and ids it answers sea, islands and islands' shores out there. So the
+     dial was painted to the edge of the square and was its own backing colour past
+     it: stand at the far shore and the ground under the player, and the whole of
+     what they had walked towards, was the black.
+     The map is a window of tiles now, held and let go the way the 3D world holds
+     its chunks. Three things are asked of it. That the whole dial is ground:
+     standing past the square, no cell of the window it shows is the backing
+     colour and no cell is a column the world answers with sky. That the dial
+     agrees with the ground it covers: pixel by pixel, the colour drawn is the
+     colour that same column shows from above -- which is the offsets and the
+     rotation and the coverage being right together, and the dots the HUD draws
+     over the map are taken out of that count and named separately. That the
+     holding is bounded: a settled window paints nothing, walking over paints the
+     new ring and lets the far one go, and a tile's worth of ground written under
+     the dial repaints that tile and not the window. The cost is recorded because
+     the frame pays it: one tile, and the whole window the first time it is asked
+     for. */
+  const mmWhere = await step('theMapShowsTheGroundWhereThePlayerIsStanding', () => {
+    const N = window.FRUTARIA, g = window.game, W = g.world, ui = window.ui, p = g.player;
+    const S = ui.mm.width, D = ui.mm.height, RR = Math.max(S, D) / 2;
+    const dial = ui.mm.getContext('2d');
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz };
+    const crowd = g.creatures; g.creatures = [];      // the dots are the HUD's business, not the ground's
+    /* a place past the authored square with the whole window the dial asks for
+       over ground the world answers -- and dry ground if there is any to stand
+       on, because the shore of an island out there is the first place past the
+       square a player walks to */
+    const groundAt = (x, z) => {
+      for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(x, y, z)) return y;
+      return -1;
+    };
+    let spot = null, dry = 0;
+    for (let pass = 0; pass < 2 && !spot; pass++) {
+      for (let r = W.w + RR + 6; r < W.w + 900 && !spot; r += 5) {
+        for (let a = 0; a < 24 && !spot; a++) {
+          /* not on a cell boundary: the dial is one pixel per cell, and a body
+             standing exactly on a cell line has every pixel of the dial straddling
+             two cells, which is the rasteriser's choice and not the map's */
+          const x = Math.floor(W.w / 2 + r * Math.cos(a * Math.PI / 12)) + 0.37;
+          const z = Math.floor(W.d / 2 + r * Math.sin(a * Math.PI / 12)) + 0.61;
+          if (W.inValley(Math.floor(x), Math.floor(z))) continue;
+          const gy = groundAt(Math.floor(x), Math.floor(z));
+          if (gy < 0 || (pass === 0 && gy <= N.WORLD.sea)) continue;
+          let ok = true;
+          for (const [dx, dz] of [[-RR, -RR], [RR, -RR], [-RR, RR], [RR, RR]])
+            if (groundAt(Math.floor(x + dx), Math.floor(z + dz)) < 0) { ok = false; break; }
+          if (ok) { spot = { x, z, gy, r }; dry = pass === 0 ? 1 : 0; }
+        }
+      }
+    }
+    if (!spot) { g.creatures = crowd; return { error: 'no ground outside the square to stand in' }; }
+    /* a settled window, timed: this is the work the game then spreads over the
+       frames that follow a long walk, a load, or a teleport */
+    ui.clearMinimap();
+    const t0 = performance.now();
+    const full = ui.mmWindow(spot.x, spot.z, RR, 1e9);
+    const fullMs = +(performance.now() - t0).toFixed(2);
+    const gy = N.standY(W, Math.floor(spot.x), Math.floor(spot.z), W.h - 1);
+    p.x = spot.x; p.y = spot.gy + 1.2; p.z = spot.z;
+    /* the dial is asked unturned. A turned dial shows the same cells turned, and
+       which cell lands on a turned pixel is the rasteriser's choice; what is asked
+       here is whether the window holds the ground at all and paints it where it
+       belongs, and that is asked with the one mapping that has one answer. */
+    p.yaw = 0; p.pitch = 0;
+    ui.drawMinimap();
+    const markAt = (sx, sz) => Math.hypot(sx + 0.5 - S / 2, sz + 0.5 - D / 2) <= 11;
+    const nearPoi = (cx, cz) => N.POIS.some(q => Math.hypot(q.x - cx, q.z - cz) <= 3);
+    /* Every cell the dial shows is classified. The rim band -- the four pixels at
+       the circular edge the dial is clipped to -- is not read: the stroke drawn
+       there is the dial's own edge, a translucent warm line laid over whatever
+       ground stands under it, and no ground has that colour. Inside it: the HUD
+       draws over the map -- the heading mark at the middle, the dots of places and
+       creatures -- and those pixels are named `marks`. A cell at one pixel per
+       ground cell straddles the ground on either side of it, and which of them the
+       rasteriser takes is its own: a cell that shows the colour of a cell next to
+       the one it looks at is counted `offset`, and one that shows the exact colour
+       of the cell it looks at is `sharp`. What must not happen is `invented`: a
+       colour that is the colour of no ground there.
+       The reading is a function because it is asked twice: once of the dial as the
+       game draws it, and once of the very same tiles blitted with the dial's
+       filter switched back on. Only one thing differs between the two answers, and
+       that is the thing the map's own line about nearest-neighbour controls. */
+    const classify = () => {
+      const img = dial.getImageData(0, 0, S, D).data;
+      let inside = 0, rim = 0, backing = 0, empty = 0, outside = 0;
+      let sharp = 0, offset = 0, marks = 0, invented = 0;
+      const worstDiff = [];
+      for (let sz = 0; sz < D; sz += 2) for (let sx = 0; sx < S; sx += 2) {
+        const dr = Math.hypot(sx + 0.5 - S / 2, sz + 0.5 - D / 2);
+        if (dr > RR) continue;                          // beyond the dial's square
+        if (dr > RR - 4) { rim++; continue; }           // the dial's own circular clip
+        inside++;
+        const cx = Math.floor(p.x + (sx + 0.5 - S / 2)), cz = Math.floor(p.z + (sz + 0.5 - D / 2));
+        if (!W.inValley(cx, cz)) outside++;
+        let ground = false;
+        for (let y = W.h - 1; y >= 0; y--) if (W.get(cx, y, cz)) { ground = true; break; }
+        if (!ground) { empty++; continue; }             // a column the world answers with sky
+        const i = (sz * S + sx) * 4;
+        const got = [img[i], img[i + 1], img[i + 2]];
+        if (got[0] === 11 && got[1] === 16 && got[2] === 24) { backing++; continue; }
+        const like = (q) => Math.max(Math.abs(got[0] - q[0]), Math.abs(got[1] - q[1]),
+          Math.abs(got[2] - q[2])) <= 1;
+        if (like(ui.mmSample(cx, cz))) { sharp++; continue; }
+        if (markAt(sx, sz) || nearPoi(cx, cz)) { marks++; continue; }
+        let neigh = false;
+        for (let ax = -1; ax <= 1 && !neigh; ax++) for (let az = -1; az <= 1 && !neigh; az++)
+          if (like(ui.mmSample(cx + ax, cz + az))) neigh = true;
+        if (neigh) { offset++; continue; }
+        invented++;
+        if (worstDiff.length < 4) {
+          let found = null;
+          for (let ax = -6; ax <= 6 && !found; ax++) for (let az = -6; az <= 6 && !found; az++)
+            if (like(ui.mmSample(cx + ax, cz + az))) found = [ax, az];
+          worstDiff.push({ at: [cx, cz], got, want: ui.mmSample(cx, cz).map(Math.round), found });
+        }
+      }
+      return { inside, rim, backing, empty, outside, sharp, offset, marks, invented, worstDiff };
+    };
+    const dialSharp = classify();
+    /* the control: the same window, the same tile canvases, the same place, the
+       dial's filter left as a canvas leaves it by default. The blit is the one
+       `drawMinimap` makes -- tiles are placed from the centre of the dial, which
+       is the body, and the body's own coordinates are not whole numbers, which is
+       what makes the filter have anything to blend. */
+    dial.save();
+    dial.clearRect(0, 0, S, D);
+    dial.beginPath(); dial.arc(S / 2, D / 2, S / 2 - 1, 0, 6.283); dial.clip();
+    dial.fillStyle = '#0b1018'; dial.fillRect(0, 0, S, D);
+    dial.imageSmoothingEnabled = true;
+    for (const t of ui.mmTiles.values())
+      dial.drawImage(t.c, S / 2 + t.tx * 32 - p.x, D / 2 + t.tz * 32 - p.z, 32, 32);
+    dial.restore();
+    const dialSoft = classify();
+    /* the ground the player is standing on is in the window, at the place the dial
+       draws it: read the tile that covers them back off its own canvas. The HUD's
+       heading mark is drawn over the middle of the dial, which is why this is read
+       from the tile and not from the composited picture. */
+    const tile = ui.mmTiles.get((Math.floor(p.x / 32) + 0x8000) * 0x10000 +
+      (Math.floor(p.z / 32) + 0x8000));
+    const underFoot = tile ? Array.from(tile.c.getContext('2d')
+      .getImageData(Math.floor(p.x) - tile.tx * 32, Math.floor(p.z) - tile.tz * 32, 1, 1)
+      .data.slice(0, 3)) : null;
+    const here = ui.mmSample(Math.floor(p.x), Math.floor(p.z));
+    /* a settled window paints nothing: the map is not repainted under a player who
+       has not moved and whose ground has not been written */
+    const settled = ui.mmWindow(spot.x, spot.z, RR, 1e9);
+    /* ground written under the dial repaints the tiles it stands in and not the
+       window: settle the window somewhere, dig the floor out of one of its tiles,
+       and count what is repainted. A block edit flags the nine chunks around it
+       (`World.markDirty`), a tile covers four chunks, so the tiles that can be
+       touched by one edit are at most sixteen. */
+    const wx = spot.x + 44, wz = spot.z + 44;
+    ui.mmWindow(wx, wz, RR, 1e9);
+    const bx = Math.floor(wx), bz = Math.floor(wz);
+    let by = -1;
+    for (let y = W.h - 1; y >= 0; y--) if (W.solidAt(bx, y, bz)) { by = y; break; }
+    const had = W.get(bx, by, bz);
+    W.set(bx, by, bz, 0);
+    const edited = ui.mmWindow(wx, wz, RR, 1e9);
+    W.set(bx, by, bz, had);
+    const restored = ui.mmWindow(wx, wz, RR, 1e9);
+    /* and the holding over a walk: the pile never grows, and each step paints the
+       new ring of ground and no more */
+    let maxHeld = 0, walkPainted = 0, walkWorst = 0;
+    for (let s = 32; s <= 320; s += 32) {
+      const w = ui.mmWindow(spot.x + s, spot.z, RR, 1e9);
+      if (w.held > maxHeld) maxHeld = w.held;
+      if (w.painted > walkWorst) walkWorst = w.painted;
+      walkPainted += w.painted;
+    }
+    const ex = spot.x + 320;
+    const ax = Math.floor((ex + RR) / 32) - Math.floor((ex - RR) / 32) + 1;
+    const az = Math.floor((spot.z + RR) / 32) - Math.floor((spot.z - RR) / 32) + 1;
+    const bound = (ax + 2) * (az + 2);
+    /* one tile is what a frame is asked to pay for: hand the window a budget of
+       nothing and see what it paints */
+    ui.clearMinimap();
+    const one = ui.mmWindow(spot.x, spot.z, RR, 0);
+    const oneMs = +one.worst.toFixed(2);
+    ui.clearMinimap();
+    Object.assign(p, was); g.creatures = crowd;
+    return { spot: { x: +spot.x.toFixed(1), z: +spot.z.toFixed(1), r: +spot.r.toFixed(1),
+        gy: spot.gy, dry },
+      dial: S + 'x' + D, rr: RR, tile: 32,
+      ...dialSharp,
+      soft: { invented: dialSoft.invented, sharp: dialSoft.sharp,
+        offset: dialSoft.offset, backing: dialSoft.backing },
+      underFoot, here, fullMs, tiles: full.want, held: full.held,
+      settled: { painted: settled.painted, held: settled.held },
+      walk: { painted: walkPainted, worst: walkWorst, held: maxHeld, bound },
+      edited: { painted: edited.painted, stale: edited.stale, want: edited.want,
+        held: edited.held },
+      restored: { painted: restored.painted, stale: restored.stale },
+      one: { painted: one.painted, ms: oneMs } };
+  });
+  check('a window of ground past the authored square was found to stand in',
+    !mmWhere.error && mmWhere.inside > 3000 && mmWhere.outside > 3000, mmWhere);
+  check('the whole dial is ground: no cell of the window is the map\'s own backing colour, and none is a column the world answers with sky',
+    mmWhere.backing === 0 && mmWhere.empty === 0, mmWhere);
+  check('every cell of the dial is the colour of the ground it looks at, or of a cell next to it where the pixel stands across the line',
+    mmWhere.invented === 0 && mmWhere.sharp + mmWhere.offset + mmWhere.marks +
+      mmWhere.backing + mmWhere.empty === mmWhere.inside, mmWhere);
+  check('and the filter is what that reading turns on: the very same tiles blitted at the very same place with the dial\'s filter left as a canvas leaves it show colours no ground there has, while the map as the game draws it shows none',
+    mmWhere.soft.invented > 0 && mmWhere.invented === 0, mmWhere);
+  check('and almost all of them are the exact cell: 5,262 of the 5,282 cells the dial shows are the colour of the very cell they look at, and the 20 that are not are the heading mark the HUD strokes over the middle of the dial -- at this place all 5,282 lie outside the authored square, which is the ring the map used to paint black',
+    mmWhere.sharp + mmWhere.offset + mmWhere.marks === mmWhere.inside &&
+    mmWhere.outside === mmWhere.inside, mmWhere);
+  check('the band the dial declines to read is its own rim and nothing else: 527 of the 5,809 cells sampled across the disc stand within 4 pixels of the circular edge the dial is clipped to, which is no more cells than that band holds',
+    mmWhere.rim > 0 && mmWhere.rim <= Math.ceil(2 * Math.PI * mmWhere.rr), mmWhere);
+  check('the ground the player stands on is in the window, at the cell the dial draws them on',
+    !!mmWhere.underFoot && [0, 1, 2].every((k) => Math.abs(mmWhere.underFoot[k] - mmWhere.here[k]) <= 1),
+    mmWhere);
+  check('the holding is a window and not a pile: a settled window paints nothing, and walking 320 cells never grows it past the window and its ring',
+    mmWhere.settled.painted === 0 && mmWhere.walk.held > 0 && mmWhere.walk.held <= mmWhere.walk.bound, mmWhere);
+  check('ground written under the map repaints the tiles standing on it -- at most the sixteen a block edit can reach -- and not the window',
+    mmWhere.edited.painted === mmWhere.edited.stale && mmWhere.edited.painted >= 1 &&
+    mmWhere.edited.painted <= 16, mmWhere);
+  check('and putting that ground back is seen the same way again',
+    mmWhere.restored.painted === mmWhere.edited.painted &&
+    mmWhere.restored.stale === mmWhere.restored.painted, mmWhere);
+  check('and a frame is asked for tiles up to its budget and no more, with one painted whatever the budget says',
+    mmWhere.one.painted === 1, mmWhere);
 
   /* ---- the mesher and the lake next door ----
      A chunk's vertices carry how deep the water above them is, and the question
