@@ -91,19 +91,30 @@ body you wear does: **1.8 m/s** on land, a launch of **6.0 m/s** that reaches
 **0.73 m** over the feet about every **0.9 s**, **4.6 m/s** through water, a turn
 of **0.9** rad/s. Measured, not asserted: `test/play.js` puts the body worn from a
 frog and one of the valley's own frogs through the same actions and reads both
-against the row — the rate they leave the ground with **5.617 m/s** for both (the
-row's 6.0 less the one frame that spends gravity), the apex **0.73 m** for both,
-and **1.80 m/s** and **4.58 m/s** across ground and through water against the row's 1.8
-and 4.6. The share of a crossing spent off the ground is **not** one of the
-matching numbers — 32% of the frames for the body, 36% for the animal — because
-that share counts the arcs a measuring window happens to catch, and one window
-caught two and the other three. The body you start in is a record of the same shape —
+against the row. The row's own launch is what a body spends when it asks for
+height with nothing in front of it: **5.617 m/s** and **0.73 m** over the feet for a
+body wearing the frog (the row's 6.0 less the one frame that spends gravity),
+**7.917 m/s** and **1.43 m** for the body you start in, against its record's 8.3. A
+body *driven* along the ground sizes those same legs to the ground its ask wants
+instead — **4.035 m/s** and **0.39 m** for one held at the row's land rate,
+**2.5-2.9 m/s** for the animal left to potter its own errand — and it is that law,
+not one number, that the step asks (03 §3). **1.80 m/s** and **4.58 m/s** come back
+across ground and through water against the row's 1.8 and 4.6. The share of a
+crossing spent off the ground is **not** one of the matching numbers — 39% of the
+frames for a body held at the row's rate, 22% for the animal pottering — because
+that share counts the arcs a measuring window happens to catch. The body you start in is a record of the same shape —
 `game/data/player.js`, 4.7 m/s, a launch of 8.3 m/s, a turn of 1.6 — and it is
 measured against its own numbers the same way, so making the animal honest moved
 nobody: a person still crosses at 4.7 m/s. `game/test/shots.js` films the same
 claim: the `hop` strip and the `animal` strip run one window of 2.2 s over the same
 corridor, one through a body worn from a frog and one through the animal itself,
-and both films come back with an arc of 0.73 m and a launch of 5.617 m/s.
+and what each film reports is the launch that body's own ask sizes — **4.035 m/s**
+and **0.39 m** over the floor for the body held at the row's land rate,
+**2.79 m/s** and **0.19 m** for the animal told to go and left to its own pace —
+which is what the gait step computes for those two asks (**4.035**, and **2.875**
+for a frog pottering at **1.22 m/s**). The share of frames spent off the ground is
+reported and not matched: 23.3-46.7% across the runs of the one film and
+20.4-23.3% across the other.
 
 **A lift went with them, and it belonged to the box and not to the legs.**
 `step` used to sit on the table above: the height a body was raised over a face
@@ -114,20 +125,28 @@ it: the field never once carried a body up a step, and everything it did buy was
 a box rising by itself — 0.124 m at a bank of one metre, which is the wobble at
 the water's edge that the movement chapter counts and stops. It is gone, from
 this table and from both records. What a body has is the launch its own row
-states, and a launch has a reach: **1.50 m** above its own feet for the body you
-start in, **1.09 m** at the fullest extension of a frog's legs (03 §3). Which
+states, and a launch has a reach, asked of the height the flight delivers rather
+than of the parabola: **1.43 m** above its own feet for the body you start in,
+**1.03 m** at the fullest extension of a frog's legs (`arcApex(7.4, dt)` less the
+0.10 m a body needs over a riser to be standing on it rather than level with its
+face) (03 §3). Which
 steps that puts in front of which body is a difference between two animals, and
 it is meant to be one.
 That launch is what the legs spend on level ground, and one number cannot answer a
 step in front of the feet: the same row states the fullest extension of those same
 legs (`max: 7.4`) and spends it only at a step, sized to that step and no higher —
-the law, the reach it gives (**1.09 m**) and the measurements at a built bank are in
+the law, the reach it gives (**1.03 m**) and the measurements at a built bank are in
 03 §3, and the short form here is that at a one-metre riser either body of the frog
-gives exactly one launch that is not 5.617, **6.73** for both of them agreeing to
-**0.02**, and gets the ground under its feet a metre up with the animal *lifted* in
-**0** frames, while at a two-metre bank and with nothing built every launch of either
-body is 5.617. `test/shots.js strip climbwild` and `strip climb` film those two
-bodies at that bank.
+gives exactly one launch that is not its own everyday one, and that launch is
+**6.924 m/s** through the animal and **6.922 m/s** through the body worn from it —
+one launch, the two bodies agreeing to **0.002**, inside the **7.4** the row states —
+and it gets the ground under its feet a metre up with the animal *lifted* in
+**0** frames. At a two-metre bank, and with nothing built in front of it, no arc of
+either body leaves the ground harder than that body's own everyday launch:
+**2.533** for the animal pottering an errand, **4.035** for a body driven at the
+row's land rate — and a face only ever makes an arc shorter, never longer.
+`test/shots.js strip climbwild` and `strip climb` film those two bodies at that
+bank: `push 6.924` and `push 6.922`.
 
 All seven fields on the frog form are read by the code. `game/test/reach.js`
 re-asks that question on every run -- nine keys on the form record in all, the

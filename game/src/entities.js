@@ -123,16 +123,27 @@
   function launchOf(L) { return L.jump !== undefined ? L.jump : (L.hop ? L.hop.up : 0); }
 
   /* The top a launch reaches, in metres over the feet, and the same law read
-     backwards. This is the analytic arc -- the one a launch of `up` reaches with
-     nothing taken off for the frame it is spent in -- which is 5 cm over what
-     either body of this valley actually gets, and deliberately asked that way:
-     a roof or a step that passes it is one the arc clears, never one it hits.
-     What the step of the one body in the valley that hops looks like from the
-     other end -- how hard the legs have to push to land on a step -- is only
-     ever asked with this read backwards, so the two directions of the same law
-     are written next to each other. */
-  function arcOf(up) { return up * up / (2 * GRAVITY); }
-  function launchForArc(arc) { return Math.sqrt(2 * GRAVITY * arc); }
+     backwards. This is the height the frame-stepped flight of the body actually
+     reaches -- the same integration the bodies below run, gravity taken off in
+     the frame before the one the height is written in, so the top is `up x dt/2`
+     under what the parabola states (6 cm at this animal's fullest launch). Every
+     ask that is asked of a height is asked of THIS number, the same as every ask
+     that is asked of ground is asked of `arcGround` below: a step sized from the
+     parabola is a step the body is a hand's width too low to get onto, and a
+     roof sized from the parabola is a roof it does not need to duck. */
+  function arcApex(up, dt) {
+    const k = Math.max(0, Math.floor(up / (GRAVITY * dt)));   // frames of rising
+    return k * up * dt - GRAVITY * dt * dt * k * (k + 1) / 2;
+  }
+  function launchForApex(apex, dt) {
+    if (!(apex > 0)) return 0;
+    let lo = Math.sqrt(2 * GRAVITY * apex) * 0.5, hi = Math.sqrt(2 * GRAVITY * apex) * 3;
+    for (let i = 0; i < 24 && hi - lo > 1e-4; i++) {
+      const m = (lo + hi) / 2;
+      if (arcApex(m, dt) < apex) lo = m; else hi = m;
+    }
+    return Math.abs(arcApex(lo, dt) - apex) <= Math.abs(arcApex(hi, dt) - apex) ? lo : hi;
+  }
 
   /* A step is climbed with the legs a body has, and a body that hops has one
      kind of leg: it either leaves the ground or it does not. For a body that
@@ -147,29 +158,142 @@
      above the ground it is standing on. Neither number is a second kind of jump:
      the arc is the same arc, and the row of one animal says both, because the
      body worn from that animal's fruit climbs with the same legs.
-     STEP_CLEAR is why a launch is asked for a little more arc than the step
-     needs: the half-frame a launch spends falling before it is integrated is
-     `v*dt/2` of arc it does not reach (5 cm at this animal's everyday launch,
-     6 at its fullest), and a body that arrives at a step top exactly level with
-     its own feet is a body standing on nothing. A riser above the fullest
-     extension less that is not a step at all: it is a wall, and both bodies of
-     an animal that hops are stopped by it in the same way. */
+     STEP_CLEAR is the room a body needs above a step top to be STANDING on it
+     rather than arriving exactly level with its face, and it is asked of the
+     height the flight delivers (`arcApex`), not of the parabola's. A riser above
+     the fullest extension less that is not a step at all: it is a wall, and both
+     bodies of an animal that hops are stopped by it in the same way. */
   const STEP_CLEAR = 0.10;
-  function hopReach(hop) { return hop && hop.max ? arcOf(hop.max) - STEP_CLEAR : 0; }
+  function hopReach(hop, dt) { return hop && hop.max ? arcApex(hop.max, dt) - STEP_CLEAR : 0; }
   /* 0 for "the everyday launch, or no launch at all -- this is not a step the
      legs can take": the caller already has `hop.up` and asks for the difference. */
-  function hopLaunch(hop, rise) {
+  function hopLaunch(hop, rise, dt) {
     if (!hop) return 0;
-    if (rise <= arcOf(hop.up) - STEP_CLEAR) return hop.up;
-    return rise <= hopReach(hop) ? launchForArc(rise + STEP_CLEAR) : 0;
+    if (rise <= arcApex(hop.up, dt) - STEP_CLEAR) return hop.up;
+    return rise <= hopReach(hop, dt) ? launchForApex(rise + STEP_CLEAR, dt) : 0;
   }
-  /* How far a leap carries a body along the ground: the seconds it is off the
-     ground at that launch, at the speed it is travelling through the air. A step
-     is only taken if the leap that takes it lands on the far side of the face,
-     which is what bounds the look-ahead below -- a frog does not throw itself at
-     a bank three metres away, and at that distance the answer is to hop closer
-     first, which is what it is doing anyway. */
-  function leapTravel(up, speed) { return speed > 0 ? speed * (2 * up / GRAVITY) : 0; }
+  /* ---------------- the arc: one reading, both bodies ----------------
+     A body whose record says its legs are an arc covers ground in arcs and
+     nowhere else. There are three ways a body of that shape moves, a frame is
+     in exactly one of them, and which one it is is a fact about the frame and
+     not a blend of two:
+       - Its feet are on the ground and its legs are not extended: it stands,
+         and it covers nothing. This is the half that was missing, and it is the
+         half the game shows a player: a body whose position is advanced by
+         something other than its own legs while those legs are folded is a body
+         sliding along on frozen legs. `models.js` gives this animal's parts no
+         stride at all (`anim:'walk', stride:0`), because there is no walk cycle
+         for it to have -- the legs it has are the arc -- so the only honest way
+         for it to cover ground is the one that costs those legs a movement.
+       - The legs have thrown it. In the air there is nothing to push against,
+         so the rate it left the ground with is the rate it keeps until it
+         arrives, in both directions. The row states the launch as the rate
+         *up* -- that is the number every height here is asked with (`arcOf`,
+         `hopReach`, the roof below) -- and a body that is going somewhere
+         leaves the ground at that same rate along the ground: 45 degrees, the
+         flattest take-off that still reaches the height the row states. So the
+         ground the arc reaches is `arcGround` -- the legs' own, and nothing to
+         do with how fast the body was already going -- measured in the frames
+         this body has, which is what the launch is sized with: see the flight
+         below. The answer used to be `speed x air time`, which made the arc
+         the air's and not the legs': a body standing still could not reach the
+         step in front of it at all, and a body already moving could not stop.
+       - The water is holding it up. The water carries the body at the rate its
+         row swims at and no leg is involved. Which frames those are is asked of
+         the column and not of the body's height -- `waterHoldsUp`, read as
+         `carried` by both bodies below -- and the same answer that excuses the
+         legs from the step gate excuses them from the ground: a body the water
+         is not holding up is a body standing on its feet, at the shore or at
+         the bottom of a one-block shelf, and it goes the way its feet go.
+     What the legs are asked FOR is what the body is asking for. `period` is a
+     cadence: the seconds from one push-off to the next, the air inside it,
+     because up there is nothing to push against. An animal crossing ground at
+     `want` metres a second and pushing off every `period` wants `want x period`
+     metres from the arc, and `launchForGround` is the launch whose flight covers
+     exactly that: small hops when it is pottering, big ones when it is running,
+     and over a whole number of cycles it covers the rate its row states -- which
+     is what lets a `speed` in a creature row be a promise the animal keeps
+     rather than a rate its body is slid along at while its legs are folded.
+     Between two arcs the feet are down for the rest of the cycle and nothing
+     else: no part of it is subtracted twice, and no part of it is added.
+     `hop.up` caps it -- the fullest launch the legs give with nothing in front
+     of them. A step in front asks the launch for a height instead (`hopLaunch`,
+     `hop.max`) and a roof overhead asks it for less (`roofLaunch`). A body with
+     nothing it is asking for has no arc, and a body the legs cannot throw
+     anywhere stands up out of the way instead of shivering along. */
+  const MIN_HOP_GROUND = 0.12;   // metres: below this the legs are only holding the body up
+  const ARC_PROBE = 0.15;        // metres: how the ground in front is walked back
+  /* The flight a body of these legs performs. The parabola the launch states is
+     `2 up / g` of air and `2 up^2 / g` of ground; a body whose height is stepped
+     at `dt`, and which is taken back by the ground the frame the parabola would
+     touch it, spends two of those frames on the ground instead -- the frame it
+     pushes off on, where the legs give the height and the ground rate is not
+     taken up until the movement at the top of the next frame, and the frame it
+     lands on. So its flight is `ceil(2 up / g dt) - 2` frames and not the
+     parabola's `2 up / g dt`: two to three frames of the arc's own rate, which
+     at 60 frames a second is 0.13 m off the 3.13 m the everyday launch of these
+     legs would have covered and 0.20 m off the 4.76 m the fullest extension
+     would have. The share is the same at either end, so nothing about the animal
+     changes with the frame rate; what changes is whether the row's rate is the
+     one the body keeps. `flightFrames` counts that flight in the frames this
+     body has and `arcGround` is the ground it covers; the launch is SIZED with
+     these numbers and the ground is SPENT with these numbers, which is what makes
+     the ground a body covers over a cycle of its own cadence the rate its row
+     states at any frame rate rather than the rate the parabola would have given
+     it at some other one. The parabola is their limit as the frame goes to
+     nothing. */
+  function flightFrames(up, dt) { return Math.max(0, Math.ceil(2 * up / (GRAVITY * dt)) - 2); }
+  function arcGround(up, dt) { return flightFrames(up, dt) * up * dt; }
+  /* The rate the legs throw a body along the ground with: their own rate when
+     the body is going somewhere, and nothing when it is not. A push key with no
+     direction in it is a body asking for height, and it gets the arc straight
+     up. */
+  function arcCarry(up, want) { return want > 0 ? up : 0; }
+  /* The ground an arc covers at the rate its legs threw it along the ground with,
+     over the flight that launch performs. This is the ground the push-off OWES,
+     and it is paid only by ground the body actually covered: see `arcLeft` in
+     both bodies below, and the brace paragraph above `hopLaunchNow`. */
+  function arcSpan(up, carry, dt) { return carry * flightFrames(up, dt) * dt; }
+  /* The launch whose arc covers a given stretch of ground: the inverse of
+     `arcGround`. Below `MIN_HOP_GROUND` of ground the legs are only holding the
+     body up, and there is no arc to count.
+     The frame count is a step, so there is no closed form; `arcGround` is
+     monotone in `up` all the same, so the launch is bisected for it. A jump of
+     one frame at either side of the step is the closest any launch gets, and
+     either side is asked for the same ground, so the answer is whichever side of
+     the jump lands nearer the ground that was asked for. */
+  function launchForGround(ground, dt) {
+    if (!(ground >= MIN_HOP_GROUND)) return 0;
+    /* at most a frame's flight of extra frames, and at least the parabola's own
+       answer, are what a launch covering `ground` can be */
+    let lo = Math.sqrt(GRAVITY * ground / 2) * 0.5, hi = Math.sqrt(GRAVITY * ground / 2) * 3;
+    for (let i = 0; i < 24 && hi - lo > 1e-4; i++) {
+      const m = (lo + hi) / 2;
+      if (arcGround(m, dt) < ground) lo = m; else hi = m;
+    }
+    return Math.abs(arcGround(lo, dt) - ground) <= Math.abs(arcGround(hi, dt) - ground) ? lo : hi;
+  }
+  /* The launch the legs give for the body's own ask: `want` metres a second over
+     the seconds between push-offs is the ground an arc has to cover for the
+     animal's rate to be the rate its row states, and `launchForGround` is the
+     launch that covers it. `hop.up` caps it -- the fullest the legs give with
+     nothing in front of them -- and `cap`, when the caller has one, caps it
+     further: the ground that is actually there to land on. */
+  function cruiseLaunch(hop, want, period, dt, cap) {
+    if (!hop || !(want > 0) || !(period > 0)) return 0;
+    return launchForGround(Math.min(want * period, cap === undefined ? Infinity : cap,
+      arcGround(hop.up, dt)), dt);
+  }
+  /* The launch that fits under a roof: the highest arc whose top stays clear of
+     the lowest underside over the columns the arc is spent over. A frog in a low
+     passage does not stop and does not fold itself into the beam: it takes a
+     low hop. Below `MIN_HOP_GROUND` of ground there is no hop that fits and the
+     body stands up out of the way until the roof goes. */
+  function roofLaunch(hop, roomUp, dt) {
+    if (!hop || !(roomUp > 0)) return 0;
+    const up = launchForApex(Math.max(0, roomUp - 0.05), dt);
+    return arcGround(up, dt) < MIN_HOP_GROUND ? 0 : up;
+  }
   /* The step in front of a body: the first face of ground above its own feet
      along the way it is heading, and how far off that face is. Read from the
      feet it has, so a body in the middle of an arc reads the same ground as the
@@ -186,51 +310,163 @@
     }
     return null;
   }
-  /* The launch the legs give right now: the everyday one, or the fuller one when
-     the step in front is within them and the leap would land on it. 0 says the
-     step is beyond the legs -- a wall, and the caller's law for a wall. */
-  function hopLaunchNow(hop, w, x, y, z, ux, uz, half, speed) {
-    if (!hop) return 0;
-    const full = Math.max(hop.up, hop.max || hop.up);
-    const face = riseAhead(w, x, z, y, ux, uz, leapTravel(full, speed), full);
-    if (!face) return hop.up;
-    const up = hopLaunch(hop, face.rise);
-    if (!up) return 0;
-    if (face.d + half > leapTravel(up, speed)) return hop.up;
-    return up;
+  /* The launch the legs give right now, and the ground rate they throw it along
+     with -- `{up, carry}`, or null when there is no ground for an arc to land on
+     (a wall, and the caller's law for a wall).
+     With open ground it is the launch the body's own ask wants by its next
+     push-off (`cruiseLaunch`): a pottering animal hops short and a running one
+     hops long, and neither is thrown the escape leap for no reason, and the
+     ground rate is the legs' own (`arcCarry`).
+     With a step in front of them that they can land on it is the launch that
+     reaches that height (`hopLaunch`) and the same rate along the ground the legs
+     give it (`arcCarry`): one push, one arc, at the angle one push gives,
+     whatever the arc is for.
+     A body standing against a face it could land on top of is stopped by it, not
+     defeated by it, and the difference is between the ground an arc was OWED and
+     the ground it has PAID. The face takes back the ground: the resolver of the
+     body you wear stops the move at the first cell that would put the box inside,
+     and the ground gate of the animal refuses the place with no ground to land
+     on. Neither takes back the push. While the legs are still extending against
+     the ground under the body, the rate they gave is there the frame the body is
+     above the top of the face, and the body crosses the edge then -- so the
+     ground an arc was launched with (`arcSpan`) is spent only by ground the body
+     actually covered, frame by frame, in both bodies: see `arcLeft` here and in
+     `Creature.update`. Measured before that rule, at a bank of one metre with a
+     body worn from a frog standing against it: the same launch given three times
+     in three seconds, the face taking the rate back at 0.28 m of height each
+     time, and the body coming down at the foot of its own bank three times --
+     three arcs that each paid the face for ground the face never let them have.
+     `cap`, when the caller has one, is the ground that is actually there to land
+     on: the animal's own step gate asked that question of the body's rectangle a
+     few hundred lines earlier in this same frame (see `arcFit` in
+     Creature.update), and the body worn from that animal asks it of the columns
+     its own heading passes over (see `arcFit` in Player.update). An arc cannot
+     land on ground that is not there. A body
+     with a wall along its side is heading a few degrees into it, and the ground
+     it was asked for ends with its own shoulders inside the wall; asked at the
+     wanted arc alone it takes no arc at all and stands pressed against the face
+     for the rest of the afternoon, and asked with the cap it hedges the arc the
+     way it hedges the step when it is walking, and goes along the wall. The wall
+     rig of test/play.js is what keeps that honest.
+     The look-ahead that finds a face is asked over the ground THIS launch covers,
+     `arcGround(plain, dt)`, and not over the ground the fullest extension could
+     cover: a face that far off is ground the body is standing its way to, not
+     ground it is about to land on. A wall at the end of the next arc is met by
+     that arc's landing and the frame after it, when the face IS inside the next
+     arc's ground and the wall law answers. Nothing is lost by this: a body never
+     begins an arc that collides, because the arc it begins is the one the
+     look-ahead was asked over. */
+  function hopLaunchNow(hop, w, x, z, y, ux, uz, want, period, dt, cap, roomUp, front) {
+    if (!hop) return null;
+    /* Two different asks, and one of them is not about ground at all. A body
+       going somewhere asks the legs for the ground its ask wants by the next
+       push-off (`cruiseLaunch`), capped by the ground there actually is to land
+       on (`cap`). A body asking only for height -- the push key held with
+       nowhere to go -- asks the legs for all of the extension they give with
+       nothing in front of them, and gets the arc straight up. A body that was
+       asked neither is not pushing off at all. */
+    const asked = want > 0 ? cruiseLaunch(hop, want, period, dt, cap) : hop.up;
+    /* The room over the body's own head is asked here, next to the ground, and
+       not put as a lid on an arc that has already been chosen. The order is the
+       law: a roof that takes height out of an arc takes the ground that arc
+       covers with it, and an arc lowered onto the face of the step it was sized
+     for is an arc that ends inside the rock. Measured on a frog in a passage
+     with a ceiling one cell over its floor and a step closing the end -- the
+     ceiling leaves 0.57 m of headroom, the step asks 1.0 m of rise -- the arc
+     the lid allowed (0.52 m of rise) put the body on top of the step anyway:
+     the ground under a body mid-arc that turns out to be above its feet is the
+     ground it lands on, and the arc never needed to reach it. Ask the room with
+     the ground and the launch the room leaves is the cap the legs work under,
+     and a step that asks more than that is not a step this body can take. */
+    const roofCap = roomUp === undefined ? Infinity : roofLaunch(hop, roomUp, dt);
+    const plain = Math.min(asked, roofCap);
+    if (!(plain > 0)) return null;
+    const face = riseAhead(w, x, z, y, ux, uz, arcGround(plain, dt),
+      Math.max(hop.up, hop.max || hop.up));
+    if (!face) return { up: plain, carry: arcCarry(plain, want) };
+    /* The height the step asks of the legs, and the rate they give with it: the
+       rate is their own whatever the arc is for, and the launch never asks more
+       than the fullest extension the row states. A riser beyond that extension
+       is not a step: for a body on an errand it is a wall, and the caller's law
+       for a wall answers it; for a body only asking for height it is nothing,
+       because a body told to jump jumps. */
+    const up = hopLaunch(hop, face.rise, dt);
+    /* A riser beyond the fullest extension of these legs is not a step: for a
+       body on an errand it is a wall. It is answered with the arc the body's own
+       ask wants, which the cap above has already shortened to the ground there
+       actually is -- so the body comes up to a face it cannot climb instead of
+       stopping a whole arc short of it and standing there. For a body only
+       asking for height the face is nothing: a body told to jump jumps. */
+    if (!up) return { up: plain, carry: arcCarry(plain, want) };
+    if (!(want > 0)) return { up: Math.min(up, roofCap), carry: 0 };
+    // height asked for, and no ground with it
+    /* The room takes the step: the arc the step asks does not fit under it, and
+       the body takes the arc its ask wants, which the ground above already
+       settled has a landing for. It comes up to the face and stands there --
+       the same answer a wall the legs cannot size gets. */
+    if (up > roofCap) {
+      /* The room takes the step. The arc the ask wants has its landing on the far
+         side of this face -- the ground above settled that -- but the arc the room
+         leaves cannot reach that far up, and a body set down on ground above the
+         top of its own arc has been lifted, not landed. So the arc is asked for
+         the ground that stops short of the face instead: the same hedge the walk
+         gate makes at a wall, made here with the face in hand. Short of the face
+         means short of the face of the body's own box, which is what `front`
+         carries: an arc that leaves the point the feet stand on a hand's width
+         shy of the face while the shoulders are through it is the same body
+         inside the rock, and it was found a cell higher in one frame -- the
+         shape the `pops` guard of test/play.js exists for. */
+      const short = launchForGround(Math.max(MIN_HOP_GROUND,
+        face.d - (front || 0) - ARC_PROBE), dt);
+      const upShort = Math.min(plain, short);
+      return { up: upShort, carry: arcCarry(upShort, want) };
+    }
+    return { up, carry: arcCarry(up, want) };
   }
-  /* Whether the arc a body is about to push off into has the sky over it. The
-     roof is not the cell over the body's head: an arc goes forward as far as it
-     goes up -- `speed * up / g` metres of ground before its top -- so a launch
-     read only over the column a body stands in lets it hop out of open sky into
-     a column whose beam is over its head while it stands and through its body at
-     the top of the arc. Measured on one frog walked at a trunk block two cells
-     over a shelf at 24: 14 of its 480 frames with its head 0.16 m inside that
-     block and its nearest wood at 0.31 m, having launched in the open column next
-     door -- 26 airborne frames spent inside the column that block stands over,
-     and not one push-off from it. So the roof is the lowest underside over the
-     columns the arc is spent over: one column ahead for each metre the arc will
-     have travelled by its top, and the cells the body's own box reaches into at
-     push-off, because the centre can stand a hand's width past the edge of a low
-     ceiling with half the body still under it.
+  /* How much sky the arc a body is about to push off into has over its head, in
+     metres above the highest point of that body. Negative says the roof is
+     already inside it.
+     The roof is not the cell over the body's head: an arc goes forward as far
+     as it goes up -- the legs' own rate carries it `up*up/g` metres of ground
+     before its top -- so a launch read only over the column a body stands in
+     lets it hop out of open sky into a column whose beam is over its head while
+     it stands and through its body at the top of the arc. Measured on one frog
+     walked at a trunk block two cells over a shelf at 24: 14 of its 480 frames
+     with its head 0.16 m inside that block and its nearest wood at 0.31 m,
+     having launched in the open column next door -- 26 airborne frames spent
+     inside the column that block stands over, and not one push-off from it. That is
+     the reading from before this law; the same rig answers 0 frames with any part of
+     the body inside wood at the height of its own body -- 61 frames in the column
+     the block stands over, 17 of them airborne, one push-off in it, 6.9 m of ground
+     covered -- and a block that far over the head of a body whose errand arcs top
+     0.161 m is a roof to neither material, of trunk or of crown. What asks this law
+     today is the passage rig of `test/play.js`, a low ceiling over three cells with
+     a step closing the end; docs/03 s3 has the readings both ways. So
+     the roof is the lowest underside over the columns the arc is spent over: one
+     column ahead for each metre the arc will have travelled by its top, and the
+     cells the body's own box reaches into at push-off, because the centre can
+     stand a hand's width past the edge of a low ceiling with half the body
+     still under it.
      Leaves are excused by the material table and a trunk is not: a body under a
      crown hops, and a body under a beam does not (see `N.FOLIAGE` in world.js).
      The one thing the two bodies in this file cannot share is the list of cells
      a body stands across -- an animal stands in a rectangle turned by its own
      heading, and the body you wear stands in the axis-aligned box its record
      gives it -- so each of them hands that list over and the rest of the law is
-     one reading. A body that cannot clear the roof it is under does not load its
-     legs for the jump it is not going to make: the wind-up is held to the same
-     answer, and it goes the way it goes wherever the ground is open. */
-  function arcRoofClear(w, x, y, z, tall, fx, fz, spd, up, cols) {
+     one reading. What the answer is used for is one thing too: the launch is
+     lowered to the highest arc the room has (`roofLaunch`), and where the room
+     has no arc worth taking the legs are not loaded for one at all -- the
+     wind-up is held to the same answer, and the body stands up out of the way
+     until the roof goes. */
+  function arcRoofRoom(w, x, y, z, tall, fx, fz, carry, up, cols) {
     const cx = Math.floor(x), cz = Math.floor(z), over = Math.floor(y) + 1;
-    const span = Math.max(1, Math.ceil((spd || 0) * up / GRAVITY));
+    const span = Math.max(0, Math.ceil((carry || 0) * up / GRAVITY));
     let roof = roofY(w, cx, cz, over, w.h, N.FOLIAGE);
     for (let k = 1; k <= span; k++)
       roof = Math.min(roof, roofY(w, cx + Math.round(fx * k), cz + Math.round(fz * k),
         over, w.h, N.FOLIAGE));
     for (const c of cols) roof = Math.min(roof, roofY(w, c[0], c[1], over, w.h, N.FOLIAGE));
-    return roof - y >= arcOf(up) + tall;
+    return roof - y - tall;
   }
 
   /* ============================ player ============================ */
@@ -301,6 +537,12 @@
          off the physics, so a body that does not hop never animates as if it did. */
       this.airAmt = 0; this.crouch = 0; this.squash = 0;
       this.hopT = 0; this.wind = 0;
+      /* The ground an arc was launched with, and how much of it is still owed: a
+         push-off owes `arcSpan` metres of ground, and only ground the body
+         actually covered pays for it. The same two numbers the animal's own body
+         carries (`arcV`/`arcLeft` in `Creature.update`) and the same rule -- see
+         the brace above `hopLaunchNow`. */
+      this.arcX = 0; this.arcZ = 0; this.arcV = 0; this.arcLeft = 0;
       /* how far the water is holding this body up, eased 0..1. The vertical
          branch decides it every frame; the draw is the only thing that reads it
          back, and it is what tells a body built for water whether its legs are
@@ -507,6 +749,25 @@
          rather than from the view. See uWaterY in engine.js. */
       this.wSurf = wSurf;
       const canBreathe = f.breatheAir === false;
+      /* The ground under this body in its own column, and whether the water of
+         that column is what is carrying this body. It is asked of the column and
+         not of the body's height or of its breath: the depth at which water has
+         enough of a body in it to hold one up is a fact about the water
+         (`waterHoldsUp`, the same two-block line the animals' step gate, the dive
+         floor and the 183 one-block columns of Mirrorlake's shore are all read
+         with), and the three things it decides here are one question -- what the
+         body's speed is, whether the body steers by bending a course through the
+         fluid or by pushing on the ground with its feet, and whether a leg that
+         is not extended means the body stands. A body standing on a bottom the
+         water is only a metre deep over is on its feet; a body at the surface of
+         a deep column is not.
+         The buoyancy below is a narrower question -- whether the water holds the
+         body up on its own when the body stops moving, which belongs to a body
+         that breathes water and not to one that drowns in it -- and it is this
+         answer with that one condition added. */
+      const bedTop = this.inWater ? standY(W, cx, cz, this.y) : -1;
+      const carried = this.inWater && waterHoldsUp(wSurf, bedTop);
+      const heldUp = canBreathe && carried;
 
       // ---- breathing ----
       if (this.headWater && !canBreathe) {
@@ -561,7 +822,7 @@
          same one the step-up and the water's hold use. */
       const onFoot = this.grounded || this.y - standY(W, cx, cz, this.y) < 0.02;
       let speed = L.speed * (sprint ? L.sprint : 1);
-      if (this.inWater) speed = L.swimSpeed;
+      if (carried) speed = L.swimSpeed;
       // a body that hops is thrown forward by the hop; it does not bleed speed
       // in the air the way a body that merely fell off a ledge does
       if (!this.grounded && !this.inWater) speed *= (L.hop ? 1 : 0.92);
@@ -593,10 +854,15 @@
          whose corners the easing had merely softened.
          A body on foot is deliberately not in this branch: feet grip the
          ground, and the player's turning on foot is the game's answer to the
-         mouse, not an animal's answer to momentum. */
+         mouse, not an animal's answer to momentum.
+         The gate is `carried` and not `inWater`, which is the same correction
+         the animals' step gate made at the shore of Mirrorlake: the water's way
+         of moving a body belongs to a body the water is holding up, and a body
+         standing on a bottom the water is a metre deep over has feet, and goes
+         the way its feet go. */
       const arc = L.turn || 0;
       const hd0 = Math.hypot(this.vx, this.vz) > 0.05 ? Math.atan2(this.vx, -this.vz) : this.faceYaw;
-      if (arc > 0 && this.inWater) {
+      if (arc > 0 && carried) {
         let spd = Math.hypot(this.vx, this.vz);
         // at rest there is no course to bend: a body that starts from nothing
         // starts in the direction it is pushing, the way an animal pushes off
@@ -617,8 +883,27 @@
         spd += ((len > 0 ? speed : 0) - spd) * N.ease(len > 0 ? 2.4 : 1.2, dt);
         this.vx = Math.sin(hd) * spd;
         this.vz = -Math.cos(hd) * spd;
+      } else if (L.hop) {
+        /* A body whose record says its legs are an arc has one way of covering
+           ground, and nothing that is not those legs may change the rate it is
+           doing it at.
+           With its feet on the ground the legs are folded and the body stands:
+           the ground it covers comes from arcs, so driving it along at its cruise
+           with its legs idle is the shape this animal was reported for -- a body
+           sliding forward on legs that never moved. `models.js` gives this body
+           no stride (`anim:'walk', stride:0`) because there is no walk for it to
+           have; the walk clock above leaves it unset for the same reason. The
+           ask is not lost: it is what the push-off below is sized with, and the
+           body leaves the ground at that rate, so the ground a whole number of
+           arcs covers is the rate the row states.
+           In an arc nothing can push -- there is no ground under the body and,
+           for a body built this way, no water either -- so the rate it left the
+           ground with is the rate it keeps until it lands, and the push-off is
+           the only thing here that sets it. A body that walked off a ledge keeps
+           the rate it had for the same reason. */
+        if (this.grounded) { this.vx = 0; this.vz = 0; }
       } else {
-        const accel = this.grounded ? 34 : (L.hop ? 18 : 12);
+        const accel = this.grounded ? 34 : 12;
         this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt / Math.max(speed, 1));
         this.vz += (dz * speed - this.vz) * Math.min(1, accel * dt / Math.max(speed, 1));
       }
@@ -652,23 +937,22 @@
          kicks with: see `turn` in `partAngles`. */
       const bend = spd > 0.3 ? N.angleDelta(hd0, hd1) / Math.max(dt, 0.001) : 0;
       this.bend = Math.abs(bend) < BEND_DEAD ? 0 : bend;
-      const lean = this.inWater
+      const lean = carried
         ? Math.max(-0.45, Math.min(0.45, Math.atan(bend * spd / LEAN_G)))
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
       /* ---- is the water deep enough to hold this body up at all? ----
-         `waterHoldsUp`, asked of this column: the film of it standing over the
-         surface this body's feet would stand on. A lake is a body of water the
-         animal floats in; a one-block shore shelf is a bottom it stands on and
-         pushes off from, and 183 columns of Mirrorlake are that shelf. Read once
-         a frame for a body that is in water, and asked of the place rather than
-         of the distance from the body to its own surface, for the reason argued
-         where that law stands. The ground of the column is kept as `bedTop`
+         `waterHoldsUp`, `carried` and `bedTop` were answered once, up where the
+         cruising speed is decided -- the film of the column standing over the
+         surface this body's feet would stand on, asked of the place rather than
+         of the distance from the body to its own surface. A lake is a body of
+         water the animal floats in; a one-block shore shelf is a bottom it
+         stands on and pushes off from, and 183 columns of Mirrorlake are that
+         shelf. A body must not be told it is swimming by one rule and handed
+         the ground under its feet by another; `bedTop` is kept from there
          because the floor of a dive is asked of it below, and the cell
          convention needs no restating here: the law takes two heights. */
-      const bedTop = this.inWater ? standY(W, cx, cz, this.y) : -1;
-      const heldUp = canBreathe && this.inWater && waterHoldsUp(wSurf, bedTop);
 
       // ---- vertical ----
       if (this.inWater && (heldUp || !this.grounded)) {
@@ -797,109 +1081,260 @@
            and is 5 cm over the arc either body actually reaches: a roof that
            passes the gate is a roof the arc clears, never one it hits. */
         const pushOff = (v) => { this.vy = v - GRAVITY * dt; this.grounded = false; };
+        /* One push, one arc: the legs give their extension up and their own rate
+           along the ground, and they now OWED the ground that arc covers --
+           `arcSpan`, the same number the animal's own body carries in `arcLeft`.
+           It is paid for only by ground the body actually covered: the
+           displacement below re-asserts the rate on every frame of the flight and
+           takes off only what the body moved, so a face that stops the body takes
+           back the ground and not the push, and the frames it spends spend none of
+           the debt. A body pressed against a bank it could land on top of rises
+           along the face and crosses the edge the frame it is above the top,
+           instead of coming down at the foot of it over and over. */
+        const pushArc = (arc) => {
+          this.arcX = aimX(); this.arcZ = aimZ();
+          this.arcV = arc.carry;
+          this.arcLeft = arcSpan(arc.up, arc.carry, dt);
+          this.vx = this.arcX * this.arcV; this.vz = this.arcZ * this.arcV;
+        };
         /* The launch the legs give this frame, which for a body that hops is
-           not one number. On flat ground it is `hop.up`, the everyday launch,
-           and every measurement of the stride stands as it was measured. In
-           front of a step it is the fuller extension the row states (`hop.max`),
-           sized to land on that step and no more -- and it is asked of the same
-           law the animal's own body asks a few hundred lines below, from the same
-           row, so the frog you wear climbs a bank the way the frog on the bank
-           does. A riser above that extension is not sized at all: it is a wall,
-           and the body stops at it, which is what it has always done.
+           not one number and is never a rate the body was already going at.
+           With a step in front that they can land on they give the extension the
+           row states, sized to land on that step and no more (`hop.max`); with
+           open ground they give the one the body's own ask wants by its next
+           push-off, which is what makes a body walking gently hop gently and a
+           body running hop long, and what makes the ground it covers over a
+           whole number of arcs the rate its row states. Both are asked of the
+           same law the animal's own body asks a few hundred lines below, from
+           the same row, so the frog you wear climbs a bank the way the frog on
+           the bank does and hops the way that frog hops. A riser above the
+           fullest extension is not sized at all: it is a wall, and the body
+           stops at it, which is what it has always done.
            Nothing here is asked of a body that is off the ground, or of one the
            water is holding up: a step is taken with feet, and a body the water
            carries has none under it. A body standing in shallow water is a body
            with feet -- the same animal, the same bank, one metre from the place
            where it jumps -- and it sizes the step in front of it there too, which
            is what the animal's own body does at the lake's shore. And the roof
-           over the arc is asked: see `skyFor` below, which is the same reading
-           the animal's own body asks of the same material table. */
+           over the arc is asked, in metres of sky, and the launch is lowered to
+           the highest arc the room has: see `roomFor` below. */
         const aimX = () => (len > 0 ? dx : Math.sin(this.faceYaw));
         const aimZ = () => (len > 0 ? dz : -Math.cos(this.faceYaw));
-        const legsFor = (hop) => {
-          if (!hop || !this.grounded || heldUp) return launchOf(L);
-          return hopLaunchNow(hop, W, this.x, this.y, this.z, aimX(), aimZ(),
-            this.size()[0] / 2, speed) || launchOf(L);
+        /* What the body is asking to travel at, and 0 when it is not asking to
+           travel at all: the ask is what an arc is sized with, and a body that
+           is being held still or carried by the water is not asking the ground
+           for a hop. */
+        const ask = len > 0 ? speed : 0;
+        /* How far this body's box reaches ahead of the point it is moved about,
+           along the way it is facing. This box is square along the ground
+           (`size()`), so the answer is its half-width whichever way it faces;
+           the animal's own body answers the same question with `hl + oz`, its
+           rectangle being turned by its heading. Either way the reason is the
+           same: an arc is asked for ground the FEET can stand on, and feet a
+           hand's width short of a face while the shoulders are through it is the
+           same body inside the rock a cell higher. */
+        const frontOf = () => this.size()[0] / 2;
+        /* The ground the next arc can land on, walked back from the ground the
+           ask wanted -- the same hedge the animal's own step gate makes a few
+           hundred lines below (`arcFit` in Creature.update), and the same
+           answer: an arc cannot land on ground that is not there, so the body
+           takes the largest arc that has a landing. This body asks it of the
+           ground law its own step gate uses (`rockAt`/`standY`, the reach of
+           its own legs), not of its collision box: the box is asked of the
+           whole way by the resolver below, which stops a move at the first cell
+           it would put it inside, and the two questions are different ones. Without
+           this a body whose legs are its only way along the ground freezes an
+           arc short of a face it cannot climb -- the launch the ask wanted has
+           no landing, so no launch is given at all, and the body stands where
+           the last arc left it: measured, 0.46 m off a wall the hand was
+           reaching for. With it the arcs get shorter as the face comes nearer
+           and the body comes up against it. */
+        const arcFit = (hop, span) => {
+          if (!(span > 0)) return 0;
+          const ux = aimX(), uz = aimZ(), cell = Math.floor(this.y + 0.05);
+          const hw = this.size()[0] / 2;
+          const wallAt = (bx, bz) => {
+            if (!rockAt(W, bx, cell, bz)) return false;      // no riser: level ground, or ground below
+            return standY(W, bx, bz, this.y) - this.y > hopReach(hop, dt);
+          };
+          const landable = (x, z) => {
+            /* every column the body's own box covers -- the same rectangle the
+               resolver stops the body with below, and the same one the animal's
+               step gate asks (`stand` in Creature.update). Asked of the centre
+               column alone, a body is allowed to stand with its shoulders inside
+               a wall, flush against the face: and a body with its face against a
+               face has nowhere left to put the forward half of the arc that
+               climbs it. */
+            for (let bx = Math.floor(x - hw); bx <= Math.floor(x + hw); bx++)
+              for (let bz = Math.floor(z - hw); bz <= Math.floor(z + hw); bz++)
+                if (wallAt(bx, bz)) return false;
+            return true;
+          };
+          for (let s = span; s >= MIN_HOP_GROUND; s -= ARC_PROBE)
+            if (landable(this.x + ux * s, this.z + uz * s)) {
+              /* The probe's step is how the search is made, not what the ground
+                 is: refined between the landing that answered and the one a step
+                 further that refused, it is the ground that is actually there.
+                 Left coarse, the body stopped a probe's width short of the face
+                 it was walking to -- 0.46 m off a wall its own box stands 0.25 m
+                 from -- and the last part of the way was missing for no reason
+                 the world gives. */
+              let lo = s, hi = s + ARC_PROBE;
+              for (let k = 0; k < 6 && hi - lo > 0.01; k++) {
+                const m = (lo + hi) / 2;
+                if (landable(this.x + ux * m, this.z + uz * m)) lo = m; else hi = m;
+              }
+              return lo;
+            }
+          return 0;
         };
-        /* Whether the arc those legs would give has the sky over it -- the same
-           ask, over the same material table and the same reach of arc, that the
-           animal's own body makes a few hundred lines below (`arcRoofClear`).
-           It is asked only of a body whose record states a `hop`, because that is
-           the body the animal's answer belongs to: the animal will not load its
-           legs for a jump it cannot finish and walks instead, and the body worn
-           from that animal is the same animal. A person's `jump` is not asked: a
-           body that was never an animal keeps the answer its own record gives it.
-           The cells a body stands across are the one part the two cannot share:
-           this box is square along the ground, and the animal's is a rectangle
-           turned by its own heading. */
-        const skyFor = (hop, up) => {
-          if (!hop) return true;
-          const half = this.size()[0] / 2;
+        const capFor = (hop) => {
+          if (!hop || !(ask > 0)) return undefined;
+          const span = arcGround(cruiseLaunch(hop, ask, hop.period, dt), dt);
+          const fit = arcFit(hop, span);
+          return fit < span ? fit : undefined;
+        };
+        const keyFor = (hop) => {
+          if (!hop || !this.grounded || heldUp)
+            return { up: launchOf(L), carry: arcCarry(launchOf(L), ask) };
+          return hopLaunchNow(hop, W, this.x, this.z, this.y, aimX(), aimZ(),
+            ask, hop.period, dt, capFor(hop), undefined, frontOf()) || { up: 0, carry: 0 };
+        };
+        const legsFor = (hop) => {
+          if (!hop || !this.grounded || heldUp) return null;
+          return hopLaunchNow(hop, W, this.x, this.z, this.y, aimX(), aimZ(),
+            ask, hop.period, dt, capFor(hop), undefined, frontOf());
+        };
+        /* How much sky the arc those legs would give has over the body's head --
+           the same ask, over the same material table and the same reach of arc,
+           that the animal's own body makes a few hundred lines below
+           (`arcRoofRoom`). It is asked only of a body whose record states a
+           `hop`, because that is the body the animal's answer belongs to: the
+           animal takes a lower arc when the room has one and stands up out of
+           the way when it does not, and the body worn from that animal is the
+           same animal. A person's `jump` is not asked: a body that was never an
+           animal keeps the answer its own record gives it. The cells a body
+           stands across are the one part the two cannot share: this box is
+           square along the ground, and the animal's is a rectangle turned by its
+           own heading. */
+        const roomFor = (hop, arc) => {
+          if (!hop || !arc || !(arc.up > 0)) return arc;
+          const half = frontOf();
           const cols = [];
           for (let bx = Math.floor(this.x - half); bx <= Math.floor(this.x + half); bx++)
             for (let bz = Math.floor(this.z - half); bz <= Math.floor(this.z + half); bz++)
               cols.push([bx, bz]);
-          return arcRoofClear(W, this.x, this.y, this.z, this.size()[1],
-            aimX(), aimZ(), speed, up, cols);
+          const room = arcRoofRoom(W, this.x, this.y, this.z, this.size()[1],
+            aimX(), aimZ(), arc.carry, arc.up, cols);
+          /* The room is asked before the arc is chosen, not as a lid on an arc
+             already chosen. A roof that takes height out of an arc takes the
+             ground that arc covers with it, and the step that arc was sized for
+             stops being a step the body can take: an arc lowered onto a face
+             lands on it, because the ground under a body mid-arc that turns out
+             to be above its feet is the ground it lands on (see `hopLaunchNow`).
+             So the arc is asked again with the room in it, and the second answer
+             is the one the legs get. Where the room takes nothing -- the usual
+             case, and the whole reason this is a second ask and not always a
+             second ask -- the arc stands as it was. */
+          if (room >= arcApex(arc.up, dt)) return arc;
+          if (!this.grounded || heldUp) return arc;
+          return hopLaunchNow(hop, W, this.x, this.z, this.y, aimX(), aimZ(),
+            ask, hop.period, dt, capFor(hop), room, frontOf()) || { up: 0, carry: 0 };
         };
         if (inp.jump && this.grounded) {
           /* The push key asks for this body's own launch -- 8.3 m/s for the body
-             you start in, 6.0 for the frog you are wearing -- and for a body
-             whose record says `hop` that number is the same one the animal
-             launches itself with (`launchOf`: a hopper states its launch once, as
-             the hop, because the push key and the hop are the same legs). The
-             worn body used to launch at `8.3 x 1.3` -- 1.31 m by the arc law,
-             1.38 m measured on the film -- against the 0.78 m the animal's own
-             launch asks for: a 0.5 m animal thrown higher than the animal is
-             long. There is no second number to reconcile any more.
-             A body with one pair of legs has one answer to the push key and to
-             its own hop, and that includes what the legs are asked to reach: the
-             key at the foot of a step is the step the animal would take, so both
-             go through `legsFor`, and both are asked the same question about the
-             roof over them -- a frog under a low ceiling does not spring into it,
-             pushed there by a key or not. The body still goes: a body whose arc
-             is refused keeps being driven along the ground at its own cruise,
-             which is what the animal does under the same ceiling. */
-          const up = legsFor(L.hop);
-          if (skyFor(L.hop, up)) {
-            pushOff(up);
+             you start in, and for a body whose record says `hop` the launch of
+             the animal it is worn from: `launchOf`, because a hopper states its
+             launch once, as the hop, the push key and the hop being the same
+             legs. What the legs are asked to *reach* is the same question in both
+             cases: the key at the foot of a step is the step the animal would
+             take, so both go through `keyFor`, and both are asked the same
+             question about the roof over them and take the highest arc the room
+             has -- a frog under a low ceiling does not spring into it, pushed
+             there by a key or not.
+             And a body whose legs are an arc leaves the ground at the rate it
+             left it *up* along the ground as well, in the direction it is going:
+             one push, one arc, and no horizontal rate that the legs did not give
+             (`arcCarry`). A key with no direction in it is a body asking for
+             height, and it gets the arc straight up. A body that was never an
+             animal keeps its own record's answer to both: its `jump` is not
+             sized to a step, not lowered to a roof, and not thrown forward. */
+          const arc = roomFor(L.hop, keyFor(L.hop));
+          if (arc && arc.up > 0) {
+            if (hop) pushArc(arc);
+            pushOff(arc.up);
+            /* One cycle to the next push-off, counted from this one. The air is
+               inside it, not deducted from it: the arc's flight is already part
+               of the ground this launch was sized to cover, and the rest of the
+               cycle is the feet on the ground. Deducting the air here as well
+               counted the same seconds twice and took the cycle below what the
+               row states.
+               The animal's own draw on the cycle -- the `jitter` a wild body
+               asks its cadence with -- is not here: this body is being steered,
+               and a cadence the person holding the keys cannot feel coming is a
+               body that cannot be aimed at a gap. */
             if (hop) this.hopT = hop.period;
           }
-        } else if (hop && this.grounded) {
+        } else if (hop) {
           /* A body whose data says `hop` does not walk on land: it hops. The
              launch is an impulse and the arc is gravity's, so the animation and
              the displacement are the same event instead of two separate stories.
              Both of the numbers the animal owns come from the animal's row: the
-             launch, and `period`, the seconds its feet stay down between hops --
-             which for the frog is 0.9, the cadence the valley's own frogs are
-             timed at, where the worn body used to have 0.22 and hopped four
-             times as often as the animal it was wearing.
-             The kick is a nudge toward the body's own cruise, not an addition, or
-             every hop would add to the last one and the body would accelerate
-             away; and it is that cruise and not a multiple of it, because a wild
-             body's forward speed through a hop is its cruise and the body you
-             wear is the same animal. The countdown only runs with feet on the
-             ground: a frog that lands stands, loads, and pushes off again. */
-          if (len > 0) {
-            /* The everyday launch on level ground, the fuller one for the step in
-               front -- see `legsFor` above, which is the same ask the animal's own
-               body makes of its row -- and the same answer about the roof over it:
-               the wind is held to it, so the legs do not load for a hop the arc
-               has no sky for, and a frog worn under a low ceiling walks out the
-               way the frog it is worn from does. */
-            const up = legsFor(hop);
-            const sky = skyFor(hop, up);
+             legs and what they are asked to reach, and `period` -- which for the
+             frog is 0.9, the cadence the valley's own frogs are timed at, where
+             the worn body used to have 0.22 and hopped four times as often as the
+             animal it was wearing. A cadence is counted push-off to push-off, and
+             the air is inside it: nothing can be pushed against up there. So the
+             countdown the next push-off waits for is the whole of it, and the
+             ground that whole cycle covers is the ground the launch was sized to
+             cover -- which is what makes the ground a whole number of arcs covers
+             the rate the row states.
+             So the countdown runs through the flight and is not paused by it.
+             Gated on the feet instead, it counted the same seconds twice -- once
+             as the flight the launch was sized for and once as time the body was
+             not standing -- and the body worn from a frog stood for 1.28 s
+             between push-offs while its row states 0.9, covering its ground at
+             1.27 m/s against the 1.8 its row states. Only the push-off needs
+             feet: `legsFor` answers 0 for a body that has none under it, and the
+             legs do not load for an arc it cannot make.
+             What the body travels at is not a separate number either: it is what
+             an arc of that launch and that cadence covers, which is why the
+             launch is sized from the ask and not given outright (see
+             `cruiseLaunch`). */
+          if (heldUp) { this.hopT = 0; this.wind = 0; this.arcV = 0; this.arcLeft = 0; }
+          else if (!(ask > 0.2)) {
+            /* Nothing asked, nothing pushed off. An arc is the ground an ask
+               wants by the next push-off; with no keys there is no ground wanted,
+               and a body left standing on a one-block shore shelf hopped on the
+               spot -- its feet on the ground in 42% of those frames, its height
+               swinging 0.47 m -- which is a body nobody can stand still. The
+               animal's own body answers the same ask the same way
+               (`if (hop && ask > 0.2)` in `Creature.update`): a body with no
+               errand stands. What this does not touch is a body ASKED for height
+               and not for ground: the push key with nowhere to go still gets the
+               whole extension of the legs, straight up (see `keyFor`). */
+            this.hopT = 0; this.wind = 0;
+          }
+          else {
+            /* The launch the ask wants on level ground, the fuller one for the
+               step in front -- `legsFor` is the same ask the animal's own body
+               makes of its row -- and the same answer about the roof over it: the
+               wind is held to it, so the legs do not load for an arc the room
+               would take out of them, and a body under a roof it cannot hop
+               under stands at it instead of coiled ready for a jump it will not
+               make. */
+            const arc = roomFor(hop, legsFor(hop));
             this.hopT -= dt;
-            this.wind = sky ? Math.min(1, this.wind + dt / 0.16) : 0;
-            if (this.hopT <= 0 && sky) {
-              pushOff(up);
-              const k = speed;
-              this.vx += (dx * k - this.vx) * 0.6;
-              this.vz += (dz * k - this.vz) * 0.6;
+            this.wind = arc && arc.up > 0 ? Math.min(1, this.wind + dt / 0.16) : 0;
+            if (this.hopT <= 0 && arc && arc.up > 0) {
+              pushArc(arc);
+              pushOff(arc.up);
+              /* the whole cycle to the next push-off, air included -- see the
+                 push-off above, and the cadence paragraph above that */
               this.hopT = hop.period;
               this.wind = 0;
             }
-          } else { this.hopT = 0; this.wind = 0; }
+          }
         }
         // the wind-up: the legs load while the feet are on the ground
         this.crouch = hop ? this.wind : 0;
@@ -930,6 +1365,16 @@
       const vyBefore = this.vy;                 // the speed it arrives at the ground with
       this.grounded = false;
       let moved = 0;
+      /* The frame a face stops spends none of the ground an arc owes (see
+         `pushArc` above and the brace above `hopLaunchNow`): the rate the legs
+         gave is put back every frame of the flight -- the resolver below takes it
+         back for the frames the body cannot use it -- and the debt is reduced by
+         the ground the body actually covered, not by the ground it was going to.
+         Nothing else may set a body that is in the air along the ground either:
+         the branch above excuses a body whose legs are an arc from the walk, so
+         this is the only rate an arc has. */
+      if (this.arcLeft > 0) { this.vx = this.arcX * this.arcV; this.vz = this.arcZ * this.arcV; }
+      const arcFromX = this.x, arcFromZ = this.z;   // ground covered pays the arc's debt
       const steps = Math.max(1, Math.ceil((Math.hypot(this.vx, this.vz) * dt) / 0.25));
       /* There is no lift here, and there used to be one: when the move was
          blocked the box was raised by up to `step` -- 0.55 m for the body a
@@ -960,6 +1405,9 @@
         moved += (Math.abs(this.vx) + Math.abs(this.vz)) * sdt;
       }
       this.moveAmt = moved;
+      /* What the arc still owes is paid down by ground, not by frames. */
+      if (this.arcLeft > 0)
+        this.arcLeft = Math.max(0, this.arcLeft - Math.hypot(this.x - arcFromX, this.z - arcFromZ));
       /* Feet that are on a surface are standing on it.
          `axis` reports contact only for a move it had to stop, and a body is
          parked 0.0005 m off the face it last hit, and the cell below is only
@@ -981,6 +1429,11 @@
          so a body that walked off
          a step is airborne again within a frame or two. */
       if (!this.grounded && this.vy <= 0 && this.colAt(this.x, Math.floor(this.y - 0.02), this.z)) this.grounded = true;
+      /* The ground takes the rate back: the legs that gave the arc are what stop
+         it, and with the arrival the pushing ends, so whatever ground the arc
+         still owed is owed no longer. The animal's own body ends its `arcLeft` at
+         the same moment, for the same reason. */
+      if (this.grounded) { this.arcV = 0; this.arcLeft = 0; }
       // what the animation is allowed to know
       // eased, not snapped: a body resting on the ground flickers out of
       // `grounded` for a frame at a time, and a pose that hiccups with it looks
@@ -995,6 +1448,15 @@
       const heldWant = (this.inWater && heldUp && !this.grounded) ? 1 : 0;
       this.held += (heldWant - this.held) * Math.min(1, dt * 6);
       if (!this.grounded) this.crouch = 0;
+      /* The landing's squash is spent, not stored: the frame the feet arrive is
+         the frame the body is at its flattest, and the frames after it are the
+         legs standing back up. Letting the decay run first, as it does here,
+         leaves the arriving frame carrying the whole figure and every later frame
+         a little less of it; running it after took a quarter of the figure off
+         the one frame it belongs to -- measured, a body worn from a frog
+         arriving at 4.02 m/s drew 0.020 instead of the 0.073 its own arrival
+         rate states. */
+      this.squash = Math.max(0, this.squash - dt * 3.2);
       if (this.grounded && !wasGrounded) {
         this.squash = Math.min(0.3, Math.max(0, -vyBefore) / 55);
         /* and the ground arrests the body's turn the way it arrests its fall.
@@ -1005,7 +1467,6 @@
            the nose carried its toes 5 cm under it. */
         this.tilt = 0;
       }
-      this.squash = Math.max(0, this.squash - dt * 3.2);
 
       /* There is no boundary to be pushed back from. The world is an island in
          water that goes on, and what stops a body going further is the body: its
@@ -1202,14 +1663,31 @@
      The arc that does not fit is not launched at all now, which is what the law
      beside it already said a frog under a low roof does: it walks. And it is the
      material that decides it, not the height, which is only visible where the
-     block stands: counted in the column the block is over, that frog spends 29
-     airborne frames under a crown of leaves at the same height and launches 1 arc
-     in it, and 0 frames and 0 arcs under a trunk -- while with this table not
-     asked the trunk reads 29 frames and 1 arc, the crown's own numbers exactly.
-     Counted over the whole eight seconds the two of them differ by 12 airborne
-     frames and no arc at all, because the hopper walks out of the column and
-     hops about down the shelf; a control counted over the whole eight seconds
-     reads the height and not the material. */
+     block stands -- and only where the height is what decides. Counted in the
+     column the block stands over, with nothing in front of the body's feet, that
+     control now reads the same for both materials, because the launch has begun to
+     be sized by what is in front of the legs: such a block leaves
+     0.57 m of headroom over this 0.43 m body and an arc of these legs never gets
+     that body more than 0.161 m off its floor on an errand of its own, so a ceiling
+     an arc passes half a metre under is a roof to nothing -- crown and trunk, one
+     body, one draw, one geometry, agreeing in every figure the rig takes (11 frames
+     in that column, 10 arcs, 110 airborne frames, 6.18 m of ground). What does
+     separate them is a passage: three cells with that ceiling over them, rock walls
+     either side, and a step of a metre closing the end, so the only way out is an
+     arc and the only thing that decides whether these legs can give it is the room
+     over the body's own head. Under the crown that body takes the launch the step
+     asks -- 6.924 m/s, the 7.307 of `launchForApex(1.10, dt)` less the frame that
+     spends gravity -- stands on the step, and is gone (81 frames up there, 418 of
+     the window spent more than a metre from where it started, 7.36 m of ground
+     covered). Under the same geometry of trunk it never gets a foot on that step,
+     spends every one of the window's 480 frames in the column the block stands
+     over, and covers 0.43 m: the room leaves 5.088 m/s (4.705 recorded) and the step
+     asks 7.307 (6.924 recorded), so that step is not a step these legs may take
+     there, and the body is thrown its face-hedge instead -- an arc sized on the
+     ground short of the face, of which there is none, so the ask falls to its floor
+     of 0.12 m and the shortest arc these legs give, 0.958 m/s, is nine of the ten
+     launches that window records. The headroom and the riser are identical both
+     times; only the material decides whether the room counts. */
   function roofY(w, x, z, from, top, soft) {
     const allow = soft || N.TREE_BLOCK;
     for (let y = from; y < w.h; y++)
@@ -1456,6 +1934,13 @@
       // hops integrates a fall out of this field on its very first frame.
       this.vy = 0;
       this.airAmt = 0; this.crouch = 0; this.squash = 0; this.hopT = Math.random() * 1.2; this.wind = 0;
+      /* and the horizontal half of an arc: the rate the legs threw this body
+         along the ground with at their last push-off, the heading they threw it
+         along, and the ground of that arc still left to fly. They are kept on the
+         body because they are the body's own momentum, and nothing but the
+         ground, a face, or the water can change them. Born at rest: a body that
+         has not pushed off has never had one. */
+      this.arcV = 0; this.arcYaw = 0; this.arcLeft = 0;
       // and the fourth: the draw needs to know whether this body is moving
       // through water, because a body built for water kicks instead of walking
       this.inWater = false;
@@ -1688,6 +2173,35 @@
          column: a body that was not built for the lake stands in it whatever the
          depth of it, and nothing holds it up. */
       const waterHolds = (bed) => this.isAmphibian() && inWater && waterHoldsUp(wSurf, bed);
+      /* Which of the three ways a body of this shape moves this frame, answered
+         once, before anything that depends on the answer. There is the water of
+         the column, when that water is deep enough to hold a body of this kind
+         up; an arc the body's own legs gave; and its own feet. The first is a
+         fact about the column and about the species, and it decides the cruising
+         speed, the step gate and the stroke alike. The second is kept on the
+         body as `arcV`, the horizontal rate the legs threw it with at the last
+         push-off: in the air there is nothing to push against, so that rate is
+         the body's until the ground takes it back or the water does -- it is
+         momentum, not a wish, and it came from the row. The third is what is
+         left, and for a body whose record says its legs are an arc it means
+         standing still: such a body has no walk (see the arc law at the top of
+         this file, and `anim:'walk', stride:0` in models.js), and sliding it
+         along at its cruise with those legs folded is the shape the game was
+         reported for. */
+      const bedHere = standY(world, Math.floor(this.x), Math.floor(this.z), this.y);
+      const carried = this.isAquatic() || waterHolds(bedHere);
+      const hop = sp.hop || null;
+      const inArc = this.arcV > 0;
+      /* What the ground in front of this body's NEXT arc answers, in metres of
+         ground: null until it has been asked, then the largest span at or below
+         the arc the body was asking for whose landing this body's own rectangle
+         can stand on -- 0 when no landing fits at all. The step gate below is
+         the only thing that can answer it, because the step gate is where this
+         body's ground law lives (`can`, `stand`, the rectangle from
+         `bodyCells`); the hop gate a few hundred lines later is where the arc
+         gets its launch. They are one question -- where can this body's next arc
+         land -- so it is asked once a frame and carried between the two. */
+      let arcFit = null;
       const yaw0 = this.yaw;       // before steering, so the turn rate is measurable
       /* Which other bodies this one is already inside, and how deep. A step into
          a place another body's trunk holds is refused the way a wall is refused,
@@ -1741,16 +2255,28 @@
       };
       const dx = tgtX - this.x, dz = tgtZ - this.z;
       const d = Math.hypot(dx, dz);
-      let spd = 0;
+      /* `ask` is the rate the animal wants to travel at; `spd` is the rate it is
+         covering ground at, which is what the body is drawn at, what the lean is
+         read from, and what a body standing on its feet has no other way of
+         having. For a body whose legs are an arc the two differ on purpose: the
+         arcs carry the ground and the standing between them is the rest of the
+         cycle, and `cruiseLaunch` sizes the arc so that the two agree over a
+         whole number of cycles. */
+      let ask = 0, spd = 0;
       if (this.vy < -0.5) { this.climbTo = null; this.climbRate = 0; }   // off the ledge: the fall decides
-      if (d > 0.8) {
+      if (d > 0.8 || inArc) {
         /* The table gives a speed on foot and, for the bodies that have one, a
-           speed in the water (docs/03 s3). */
-        const cruise = (inWater && sp.swimSpeed) ? sp.swimSpeed : (sp.speed || 3);
+           speed in the water (docs/03 s3), and which of them a frame is asked
+           with is what `carried` answers: the water's figure for a body the water
+           is holding up, the figure on foot for a body standing on the bottom of
+           a one-block shore shelf -- 183 columns of Mirrorlake where the animal
+           was swimming along at a speed its body was not using and its legs were
+           not either. */
+        const cruise = carried ? (sp.swimSpeed || sp.speed || 3) : (sp.speed || 3);
         const base = this.state === 'flee' || this.state === 'chase' ? cruise * 1.7 : cruise * 0.42;
         /* times the pace the body spends it at (see `pace` in the constructor):
            the species sets the speed, the body sets the tempo */
-        spd = sleeping ? 0 : base * this.pace;
+        ask = sleeping ? 0 : base * this.pace;
         /* The animal goes where it is going, and the course bends. `turn` is
            the most radians a second the species adds to its heading at its own
            cruising speed, and above that speed the arc it holds gets wider
@@ -1758,15 +2284,24 @@
            swing about. This is the rule the player's own body obeys
            (Player.update); a frog crossing the lake is the same kind of body. What it replaces was an ease toward
            the target bearing at 4 a second, measured: a frog in the water came
-           about 90 degrees in 0.57 s. */
+           about 90 degrees in 0.57 s.
+           A body in the middle of an arc is not in this at all: turning needs
+           something to push sideways against, and a body in the air has neither
+           feet nor water under it. It holds the heading it left the ground with
+           and arrives where that heading was pointing, which is what an arc is;
+           the errand is steered to again the frame its feet are back down. */
+        const arc = sp.turn || 0;
         const tgtYaw = Math.atan2(dx, -dz);
         const dy = N.angleDelta(this.yaw, tgtYaw);
-        const arc = sp.turn || 0;
-        // the same two limits as the player's body: the species' own rate, and
-        // a correction proportional to how far off course the animal is
-        const rate = arc > 0 ? Math.min(arc * Math.min(1, cruise / Math.max(spd, 0.01)), 2.2 * Math.abs(dy)) : Math.abs(dy);
-        const bend = Math.min(Math.abs(dy), rate * dt);
-        this.yaw += dy > 0 ? bend : -bend;
+        if (inArc) {
+          this.yaw = this.arcYaw;
+        } else {
+          // the same two limits as the player's body: the species' own rate, and
+          // a correction proportional to how far off course the animal is
+          const rate = arc > 0 ? Math.min(arc * Math.min(1, cruise / Math.max(ask, 0.01)), 2.2 * Math.abs(dy)) : Math.abs(dy);
+          const bend = Math.min(Math.abs(dy), rate * dt);
+          this.yaw += dy > 0 ? bend : -bend;
+        }
         /* An animal that is close to where it is going, and off course, cannot
            get there at the speed it is travelling. The arc of a turn is the
            speed over the rate: at 0.92 m/s a body that can bend its
@@ -1799,7 +2334,16 @@
            tower's outline becomes a survey of the lake. */
         const err = Math.abs(dy);
         const reach = Math.max(err < 1.5708 ? Math.sin(err) : 1, 0.05);
-        if (arc > 0) spd = Math.min(spd, arc * d / (2 * reach));
+        if (arc > 0) ask = Math.min(ask, arc * d / (2 * reach));
+        /* And what the body is covering ground at this frame, which is the only
+           figure the rest of this block, the draw and the lean may use: the rate
+           its legs gave it if it is in an arc; the rate it is asking for if the
+           water is carrying it or its own legs are a walk; and nothing at all if
+           its feet are on the ground and its legs are an arc it is not spending
+           this frame. `ask` is not thrown away -- the arc the body pushes off
+           into is sized from it, and the ground those arcs cover over a cycle is
+           the rate the animal's row states. */
+        spd = inArc ? this.arcV : ((carried || !hop) ? ask : 0);
         /* The edge of the valley is folded into the step before anything asks
            whether the step can be taken, not applied to the body afterwards. A
            clamp that runs after the test tests one column and lands the body in
@@ -1948,12 +2492,16 @@
                the height a frog's own body occupies used to come to 0.52 m centre
                to centre of the nearest wood cell, which is its nose 0.19 m inside a
                trunk it had been refused -- the gate had already refused that column,
-               and it stands in it 0 frames either way -- and now comes to **0.69 m**,
-               which is that body's own half-length with the face of the block at the
-               same place, and it goes round either way. What it costs is the
-               deciding: 35 of its 480 frames standing still at the face instead of
-               1, and a shorter way round -- the same animal on the same errand
-               travelling 5.28 m instead of 5.68 m. */
+               and it stands in it 0 frames either way -- and now comes to **0.742 m**,
+               which is that body standing at the face of the block with its own
+               half-length out, and it goes round either way: 3.86 m of ground
+               covered, 280 of its 480 frames more than a metre away from that
+               column. What it costs is the deciding, and that figure is reported and
+               not asked: 396 of the frames move it less than two millimetres, which
+               for a hopper is the ground between its arcs rather than a body frozen
+               at a wall. What is asked is that it keeps travelling -- more than 3 m
+               in every rig on open ground -- and that nothing is thrown across the
+               shelf: 0 frames in any rig move a body more than 0.9 m in one. */
             for (const [bx, bz] of bodyCells(this, x, z)) {
               const gy = standY(world, bx, bz, this.y);
               if (gy - this.y >= LIFT_REACH) return false;
@@ -1983,12 +2531,10 @@
                 cell, exactly what the gate for a body in the air asks, and it is
                 asked of this body's own height, which is what keeps the answer about
                 the body rather than about the block: the same block one cell higher,
-                over the walker's head, is walked under (29 frames in that column, 0 of
-                them inside, in every build), and the block that lies inside a
-                person's body is open ground to a 0.43 m frog, which walks into that
-                column 80 of its 480 frames -- 81 in the build that reads the ceiling
-                of a hop over the body's own cell only -- while a block at that
-                frog's own feet cell is refused it too. Asking the same span from the
+                over the walker's head, is walked under (61 of the rig's 480 frames in
+                that column, 0 of them inside, of trunk or of crown alike), and the
+                block one cell higher -- open air to the body either way -- is walked
+                through (85 frames in that column). Asking the same span from the
                 height the body happens to be at, rather than from the surface of the
                 column it is asked about, was measured too: it keeps these bodies out
                 of the wood and takes the walk with it, the walker standing still 180 of
@@ -2046,24 +2592,16 @@
              a wall, and the body goes round a wall the way it goes round any
              other.
              Which body that is is asked of the row and not of the species: the
-             record is what says a body's legs are an arc. */
-          const hopRow = sp.hop || null;
-          /* Not "is this body in water", which is what this asked, but "is
-             anything but its feet carrying it" -- the same question the altitude
-             block below asks, and it has a different answer at the shore than
-             the first one does. A frog wading the one-block shelf of Mirrorlake
-             (183 columns of it) is in the water and is not held up by it: its
-             feet are on the bottom, and an animal with feet at the foot of a bank
-             takes that bank the way it takes every other bank, which for this one
-             is a hop. Being lifted up it on straight legs was the same animal
-             crawling, one metre from the place where it jumps.
-             A body the water *is* holding up keeps the lift, and keeps it only in
-             appearance: it is not on its feet, so the step it is offered is never
-             spent -- the altitude below moves it through the water instead -- and
-             it comes out of the lake by swimming up over the shelf it then stands
-             on, which is the law that block keeps for the shore. */
-          const legs = hopRow && !waterHolds(standY(world, Math.floor(this.x),
-            Math.floor(this.z), this.y));
+             record is what says a body's legs are an arc. And the water half of
+             it is the answer `carried` gave at the top of this block, asked once
+             there so that nothing here can be told it is swimming by one rule and
+             lifted up a bank like a crate by another: a frog wading the one-block
+             shelf of Mirrorlake (183 columns of it) is in the water and is not
+             held up by it, its feet are on the bottom, and an animal with feet at
+             the foot of a bank takes that bank the way it takes every other bank,
+             which for this one is a hop. Being lifted up it on straight legs was
+             the same animal crawling, one metre from the place where it jumps. */
+          const legs = hop && !carried;
 
           /* A body is on its feet unless something is carrying it down. Reading
              it off the height instead -- "the body is above the surface of its own
@@ -2089,15 +2627,13 @@
             if (!rockAt(world, bx, cell, bz)) return 0;
             return standY(world, bx, bz, this.y);
           };
-          /* Where this body may go: 0 for "walk there", a height for "raise the
-             feet onto that surface first, where it stands", null for "that is a
-             wall". A body cannot raise itself through a ceiling, so a step with
-             rock over it is a wall and not a step. */
-          const can = (x, z) => {
+          /* The ground part of the question, without the neighbour part: 0 for
+             "walk there", a height for "raise the feet onto that surface first,
+             where it stands", null for "that is a wall". A body cannot raise
+             itself through a ceiling, so a step with rock over it is a wall and
+             not a step. */
+          const ground = (x, z) => {
             if (!stand(x, z)) return null;
-            /* A neighbour's own trunk is as much an obstacle as a bank is, and
-               the contour below takes the body round it the same way. */
-            if (crowded(x, z)) return null;
             const r = riser(x, z);
             if (!r) return 0;
             /* A body that is being carried down does not climb the step it drifts
@@ -2111,11 +2647,134 @@
                asked of its own legs instead -- see `legs` above -- so a step of
                1.3 m, which a lifted body climbs, is a wall to a frog and the
                contour below takes it round. */
-            if (legs && r - this.y > hopReach(hopRow)) return null;
+            if (legs && r - this.y > hopReach(hop, dt)) return null;
+            /* A body in the middle of an arc may only be put where THAT arc
+               reaches. `hopReach` is the fullest extension these legs are
+               capable of: it is the right question for legs deciding what to
+               push off into, and the wrong one for a body already in the air,
+               whose arc was sized on the frame it pushed off and nothing in the
+               air re-sizes it. Measured in the passage the span rig builds -- a
+               ceiling one cell over the floor, a step of a metre closing the end,
+               and a room that leaves 5.088 m/s against the 7.307 that step asks, so
+               the legs are left with the 0.958 m/s of an arc sized on the 0.12 m
+               floor of the ground ask -- the frame the body's centre crossed the
+               face moved it 0.022 m along the ground and 0.971 m up in the same
+               frame: that lift is the `pops` guard's own reading, and it now reports
+               0 such frames in all seven rigs of that test. Before the branch below
+               the ground under a body mid-arc that turned out to be above its feet
+               was taken as ground it lands on, and the arc never needed to reach it.
+               Asked of the arc -- the top this body can still come to from where
+               it is, its own height plus the height the rate it still has can
+               carry it, and after the top there is no rate left to carry it --
+               the face takes the ground back and the body stays at the foot of
+               it, which is the one thing the branch below already says a body
+               that arrives at a face it cannot land on does. */
+            if (inArc && r > this.y + (this.vy > 0 ? this.vy * this.vy / (2 * GRAVITY) : 0)) return null;
             if (rockAt(world, Math.floor(this.x), Math.floor(r + 0.05), Math.floor(this.z))) return null;
             return r;
           };
-          const go = can(mx, mz);
+          /* Where this body may be put: the ground answer and the neighbour
+             answer together. A neighbour's own trunk is as much an obstacle as a
+             bank is, and the contour below takes the body round it the same way. */
+          const can = (x, z) => {
+            const g = ground(x, z);
+            if (g === null) return null;
+            if (crowded(x, z)) return null;
+            return g;
+          };
+          /* And the whole of the way to a place, not only its end. A body's box is
+             carried along the path, so a face in the middle of it is a face: asked
+             only at the end -- which is the ground an arc wants to land on, and the
+             right thing to ask there -- a frog at the corner of a wall three cells
+             long took forty-four arcs of no ground at all, because every one of
+             them ended clear of the wall's end while its own shoulder was through
+             the wall a metre before that. The path is walked in the same steps the
+             arc is walked back in (`ARC_PROBE`), the neighbours are asked only at
+             the end -- the places along the way are asked many times a frame and
+             other bodies are moving through them -- and a way with a face in the
+             middle of it is the same refusal a face at the end is, which is what
+             sends the animal round instead of into it. */
+          const along = (x, z) => {
+            const vx = x - this.x, vz = z - this.z;
+            const len = Math.hypot(vx, vz);
+            /* Two parts of the way are not this question. A body standing inside
+               rock for some other reason -- another body shoving it, a tree grown
+               down on it, the edge of the valley folding it -- is not refused
+               every place it could go: the first step of the way is excused and it
+               walks out. The same shape as the `deep` answer above for a body
+               inside another body. And the near `half` of the way -- the depth of
+               the body along the heading -- is inside the place the body ends up,
+               which `can` is asked of the end point below: refusing it stops a
+               body a whole body-depth short of a face it is allowed to stand
+               against, and a person walked at a tree trunk was held 0.15 m off it
+               by nothing but the size of the step this loop samples at. */
+            const sunk = ground(this.x, this.z) === null;
+            const half = this.hl;
+            for (let s = ARC_PROBE; s < len - 1e-6; s += ARC_PROBE) {
+              if (s <= half + 1e-6 || (s <= ARC_PROBE + 1e-6 && sunk)) continue;
+              if (ground(edge(this.x + vx * (s / len), world.w),
+                         edge(this.z + vz * (s / len), world.d)) === null) return null;
+            }
+            return can(x, z);
+          };
+          /* Where this body's own body reaches, so which ground has to answer for
+             it. A body that walks reaches `spd * dt` this frame and the branch
+             below puts it there. A body whose legs are an arc has no step to
+             take: the only ground it can have is the ground its next arc covers
+             -- `ask x period`, the metreage `cruiseLaunch` sizes the launch to,
+             less whatever of that arc it has already flown -- and its legs, not
+             this branch, put it there. Asking the question at `spd * dt` asks it
+             at the body's own feet, which are always somewhere it can stand:
+             measured on a wild frog set down at the foot of a 3.2 m face, `go`
+             answered "walk" in all 1800 frames of a watch and the animal never
+             learned the wall was there. The span is the arc's, so the answer is
+             about the ground the animal can have. */
+          const arcUp = legs ? cruiseLaunch(hop, ask, hop.period, dt) : 0;
+          const span = inArc ? this.arcLeft : (legs ? arcGround(arcUp, dt) : spd * dt);
+          const px = edge(this.x + Math.sin(this.yaw) * span, world.w);
+          const pz = edge(this.z - Math.cos(this.yaw) * span, world.d);
+          /* The ground the body was asking to reach, asked of the whole way to it:
+             a body may not be put inside rock anywhere along the path, and a face
+             part of the way along it is as much a wall as a face at the end. This
+             is the one question -- the same one the body you wear gets from its
+             collision resolver, which stops a move at the first cell it would put
+             the box inside. */
+          const go = along(px, pz);
+          /* The ground the next arc can actually land on. When the ground at the
+             end of the arc the body was asked for is refused, the animal does not
+             stand still and does not refuse to move: it takes the largest arc
+             that fits, the same way it takes the largest step that fits when it
+             is walking. Walking the span back asks the same question of the same
+             ground law, a little closer each time, and stops at the first landing
+             the whole way to which answers. At a wall along its side -- heading a
+             few degrees into it, as an animal on an errand across a wall always
+             is -- this is the difference between crawling along the face and
+             standing at it, and the wall rig of test/play.js is what keeps that
+             honest. Nothing fits only when the ground the legs could reach at all
+             is refused: that is a wall, and the branch below answers it.
+             A body already in an arc has no next arc to size -- the arc it is in
+             was launched at the ground that was there, and nothing in the air can
+             change it -- so it asks nothing. */
+          if (legs && !inArc) {
+            const fitsAt = (s) => along(edge(this.x + Math.sin(this.yaw) * s, world.w),
+              edge(this.z - Math.cos(this.yaw) * s, world.d)) !== null;
+            arcFit = go === null ? 0 : span;
+            for (let s = span - ARC_PROBE; arcFit === 0 && s >= MIN_HOP_GROUND; s -= ARC_PROBE) {
+              if (fitsAt(s)) {
+                /* The probe's step is how the search is made, not what the ground
+                   is: refined between the landing that answered and the one a step
+                   further that refused, the answer is the ground that is actually
+                   there -- the same refinement the body worn from this animal
+                   makes of its own hedge (`arcFit` in Player.update). */
+                let lo = s, hi = s + ARC_PROBE;
+                for (let k = 0; k < 6 && hi - lo > 0.01; k++) {
+                  const m = (lo + hi) / 2;
+                  if (fitsAt(m)) lo = m; else hi = m;
+                }
+                arcFit = lo; break;
+              }
+            }
+          }
           /* The step the body is walking towards, and how far off it is: the
              first column along the heading whose surface is above its feet. */
           const stepAhead = () => {
@@ -2131,7 +2790,26 @@
              the step it was on its way up. */
           const worth = (r) => r && r > this.y + 0.02 && r - this.y <= LIFT_REACH &&
             !rockAt(world, Math.floor(this.x), Math.floor(r + 0.05), Math.floor(this.z));
-          if (go === 0) {
+          /* A body in the middle of an arc is on its way to the ground its
+             push-off was sized for, and a step inside that ground IS the ground
+             it is landing on. The arc's own rate carries it over the edge -- that
+             is what the launch was sized to reach -- so the frame advances the
+             body at the arc's rate and spends that much of the ground the
+             push-off owed. Nothing else here may move a body that is in the air:
+             the ground it was asking for is asked of the whole way to it, and a
+             body in an arc whose look-ahead saw the step stopped dead a body-span
+             short of the edge it was about to land on, rising in place and
+             landing back where it pushed off.
+             The ground owed is spent only by ground covered. A frame that a face
+             stops spends none of it, and the landing ends the debt -- the same
+             rule the body you wear runs through its own resolver (see the brace
+             above `hopLaunchNow`, and `arcLeft` in `Player.update`). */
+          if (inArc && go !== null) {
+            this.x = mx; this.z = mz;
+            this.arcLeft = Math.max(0, this.arcLeft - spd * dt);
+            this.climbTo = null; this.climbRate = 0;
+          }
+          else if (go === 0) {
             this.x = mx; this.z = mz;
             /* A step is begun before the face of it. A body that only learns about
                a step when its nose is against the riser has to stop walking to
@@ -2171,24 +2849,62 @@
             if (legs) { this.climbTo = null; this.climbRate = 0; }
             else { this.climbTo = go; this.climbRate = 3; }
           }
+          else if (inArc) {
+            /* A body in the middle of an arc has arrived at a face it cannot land
+               on, and it does nothing here -- that is the whole of the law. There
+               is no way round for it to take: turning needs something to push
+               sideways against, and a body in the air has neither feet nor water
+               under it, which is the same reason its heading is held two paragraphs
+               above. The face takes back the ground the arc was going to cover and
+               not the push that owed it: the rate the legs gave is still there the
+               frame the body is above the top of the face, and the frames the face
+               spends spend none of the ground owed. So the body drops down the
+               face, the landing ends the debt, and the frame after it the contour
+               below is asked again and the animal goes round on its feet. */
+          }
           else {
             /* The way is a wall. An animal does not sit down in front of one and
-               wait to be somewhere else: it goes round. Of the four steps it can
-               take, the one that stands and points most the way it wants to go
-               is the one it takes -- the contour of the obstacle rather than a
-               fresh errand -- and the heading follows the step, so the next
-               frame tries the wall again from further along it and walks off
-               when the wall ends. Giving up was the whole of the old behaviour,
-               and it is the last resort here: measured on the walkers of the
-               northern ridge, the step in front of them was rejected 2024 times
-               in 2400 frames and they spent 81% of the afternoon standing still. */
+               wait to be somewhere else: it goes round. Of the steps it can take,
+               the one that stands and points most the way it wants to go is the
+               one it takes -- the contour of the obstacle rather than a fresh
+               errand -- and the heading follows the step, so the next frame tries
+               the wall again from further along it and walks off when the wall
+               ends. Giving up was the whole of the old behaviour, and it is the
+               last resort here: measured on the walkers of the northern ridge,
+               the step in front of them was rejected 2024 times in 2400 frames
+               and they spent 81% of the afternoon standing still.
+               What "the steps it can take" means belongs to the body, and it is
+               the same question as the one above: a body that walks is asked
+               about the ground `spd * dt` covers, and a body whose legs are an
+               arc is asked about the ground an arc covers, because that is the
+               only ground it can have. A body of the second kind takes no step
+               here -- its ground comes from its legs at the next push-off -- so
+               of the eight ways about it takes the one whose ground its arc lands
+               on and spends this frame turning to face it, at the rate its row
+               allows it to turn anywhere else. That is what the arc then follows:
+               the launch below reads the ground along the heading, so the wall is
+               gone round a hop at a time. Asked at the body's own feet instead --
+               which is what `spd * dt` of zero does -- every way about reads as
+               its own standing place, the heading aims at nothing, and the animal
+               stands at the face for the rest of the afternoon: measured, a wild
+               frog set down at the foot of a 3.2 m face covered 0 m in 30 s.
+               Eight ways for that body and four for a walker, for the reason the
+               swimming contour two branches above gives: four that follow the grid
+               are enough round a wall, because a wall is made of the grid, but a
+               body is turned any way at all, and the shortest way out of one is
+               very often a corner of the grid that leads straight back in. */
             const bx = tgtX - this.x, bz = tgtZ - this.z;
             const bl = Math.hypot(bx, bz) || 1;
+            const reach = legs ? span : spd * dt;
+            const ways = legs ? [[1, 0], [-1, 0], [0, 1], [0, -1],
+                                 [0.7071, 0.7071], [0.7071, -0.7071],
+                                 [-0.7071, 0.7071], [-0.7071, -0.7071]]
+                              : [[1, 0], [-1, 0], [0, 1], [0, -1]];
             let best = null, bestDot = -2;
-            for (const [ox, oz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-              const nx = edge(this.x + ox * spd * dt, world.w);
-              const nz = edge(this.z + oz * spd * dt, world.d);
-              const c = can(nx, nz);
+            for (const [ox, oz] of ways) {
+              const nx = edge(this.x + ox * reach, world.w);
+              const nz = edge(this.z + oz * reach, world.d);
+              const c = along(nx, nz);
               /* A wall is not a way round, and for a body that climbs with a hop
                  a step is neither: the way round a bank is the flat ground beside
                  it, and the step it wants is the one it is already facing. */
@@ -2196,18 +2912,38 @@
               /* going round a step costs less than climbing it, so a step is
                  climbed only when nothing walkable points the way at all */
               const dot = (ox * bx + oz * bz) / bl - (c ? 0.35 : 0);
-              if (dot > bestDot + 1e-6) { bestDot = dot; best = [nx, nz, c]; }
+              if (dot > bestDot + 1e-6) { bestDot = dot; best = [nx, nz, c, ox, oz]; }
             }
             if (best && bestDot > -0.7) {
-              const sx = best[0] - this.x, sz = best[1] - this.z;
-              if (best[2]) { this.climbTo = best[2]; this.climbRate = 3; }
-              else { this.x = best[0]; this.z = best[1]; this.climbTo = null; this.climbRate = 0; }
-              /* The heading follows the step, at the same rate the animal is
-                 allowed to turn anywhere else: it is going round the obstacle,
-                 not sliding sideways along it with its nose still at the errand. */
-              const e = N.angleDelta(this.yaw, Math.atan2(sx, -sz));
-              const back = Math.min(Math.abs(e), (sp.turn || 2) * dt);
-              this.yaw += e > 0 ? back : -back;
+              if (legs) {
+                /* No ground is taken here; only the heading. The legs give the
+                   ground at the next push-off, along this heading.
+                   The turn is taken from the heading the body had when the frame
+                   began (`yaw0`), not from the heading this frame's steering left
+                   it with. A body has one heading, not two, and the direction the
+                   errand was steering at is the direction with no ground in it --
+                   that is what brought this branch about -- so that steering is
+                   not a second turn to be added on top of this one. Measured at a
+                   wall nine cells long with the two added: the errand's bearing
+                   lay 0.74 rad into the face and the contour asked for the way
+                   along it, each at the row's own turn rate, and they cancelled --
+                   the heading sat at 0.08 rad through 60 frames, no arc had any
+                   ground, and the animal stood at the face. From `yaw0` the turn
+                   belongs to the ground that is there. */
+                const e = N.angleDelta(yaw0, Math.atan2(best[3], -best[4]));
+                const back = Math.min(Math.abs(e), (sp.turn || 2) * dt);
+                this.yaw = yaw0 + (e > 0 ? back : -back);
+              } else {
+                const sx = best[0] - this.x, sz = best[1] - this.z;
+                if (best[2]) { this.climbTo = best[2]; this.climbRate = 3; }
+                else { this.x = best[0]; this.z = best[1]; this.climbTo = null; this.climbRate = 0; }
+                /* The heading follows the step, at the same rate the animal is
+                   allowed to turn anywhere else: it is going round the obstacle,
+                   not sliding sideways along it with its nose still at the errand. */
+                const e = N.angleDelta(this.yaw, Math.atan2(sx, -sz));
+                const back = Math.min(Math.abs(e), (sp.turn || 2) * dt);
+                this.yaw += e > 0 ? back : -back;
+              }
             } else { this.tx = this.x; this.tz = this.z; this.pause = 0.5; }
           }
           this.x = Math.max(7, Math.min(world.w - 7, this.x));
@@ -2216,8 +2952,11 @@
         /* One turn budget a frame, whoever spent it. Going round an obstacle
            bends the heading as well as steering at the errand does, and the two
            added: a body pressed against a cliff came about at twice the rate
-           its row allows (measured 3.2 rad/s against a row of 1.6). */
-        if (arc > 0) {
+           its row allows (measured 3.2 rad/s against a row of 1.6). A body in an
+           arc is not in this: its heading was not spent this frame, it was given
+           back to it at push-off, and the budget would take the arc's own
+           straight line away from it. */
+        if (arc > 0 && !inArc) {
           const budget = arc * dt;
           const off = N.angleDelta(yaw0, this.yaw);
           if (Math.abs(off) > budget) this.yaw = yaw0 + (off > 0 ? budget : -budget);
@@ -2237,7 +2976,7 @@
          most time watching. */
       const bend = spd > 0.3 ? N.angleDelta(yaw0, this.yaw) / Math.max(dt, 0.001) : 0;
       this.bend = Math.abs(bend) < BEND_DEAD ? 0 : bend;   // signed: see Player.update
-      const lean = inWater
+      const lean = carried
         ? Math.max(-0.45, Math.min(0.45, Math.atan(bend * spd / LEAN_G)))
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
@@ -2353,10 +3092,10 @@
             Math.floor(this.y) + 1, world.h, N.TREE_BLOCK);
           gyH = Math.min(gyH0, roofOwn - this.tall - 0.05);
         }
-        // which bodies have an arc is what the row says; the water read below is
-        // the same one the step gate asked (see `hopRow`, `legs` and
-        // `waterHolds` above)
-        const hop = sp.hop || null;
+        // which bodies have an arc is what the row says, and `hop` is the same
+        // reading the step gate asked with `legs` above; the water read below is
+        // the same `carried`/`waterHolds` answer, asked here of the ground the
+        // body's own feet would find in the column it is in
         /* the cell convention, one below the surface: this asks how many blocks
            of water stand over the surface this body's feet would find (see
            `liquidSurfaceAt` in world.js), and the answer is the same two-block
@@ -2417,6 +3156,13 @@
           const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;
           this.y += Math.abs(step) >= Math.abs(want) ? want : step;
           this.vy = 0; this.airAmt = 0; this.crouch = 0;
+          /* The water has this body now. An arc it was in the middle of is over:
+             the water takes the rate the legs gave the same way it takes every
+             other rate, and the stroke below is what carries the body from here.
+             A body that comes out of the water onto a shelf does the opposite --
+             it stands up, and the next arc is sized from what it is asking for on
+             its feet. */
+          this.arcV = this.arcLeft = 0;
         } else {
           /* On land a frog does not slide: it hops. Before this the height of an
              amphibian was lerped onto the ground every frame, which meant the
@@ -2426,40 +3172,51 @@
              gravity's, and the landing is where the squash comes from. The
              countdown only runs with feet on the ground, so a frog that lands
              stands, loads and pushes off again. */
-          if (hop && this.speed > 0.2) {
+          if (hop && ask > 0.2) {
             this.hopT -= dt;
-            /* A hop is an arc, and an arc has a top: `up*up/2g` over the feet,
-               0.78 m for a launch of 6 m/s under this world's gravity, over a
-               body that stands 0.43 m tall. The launch used to be asked nothing
-               about what was over the body's head. The five frogs of Mirrorlake
-               walk in and out of the hollow shaft of the sunken tower, where the
-               floor of the cavity they stand in is brick at 11 and the tower's
-               glass is at 13: a metre of room. Measured, one of them pushed off
-               there and rose 0.27 m in a single frame into the glass, and was
-               then lifted out of the wall at 0.1 m a frame for 28 frames -- which
-               is what the day soak of the valley caught one run in six. A frog
-               under a low roof walks; that is what a frog does. And its legs do
-               not load for a jump it is not going to make: a frog coiled under a
-               ceiling for a minute is a frog that looks ready to spring and never
-               springs.
-               What the roof is, and how far ahead of the body it is asked -- the
-               cells the arc is spent over, the material table's excuse for
-               leaves, the cells the body's own box stands across -- is one law
-               for both bodies of this file and it stands at `arcRoofClear`. The
-               ask below is its only two callers. */
+            /* An arc has a top, and the top is the height THIS frame rate
+               delivers (`arcApex` above), not the parabola's: 0.73 m over the feet
+               for the launch one pair of legs gives with nothing in front of them,
+               1.13 m at the fullest extension those same legs state, over a body
+               that stands 0.43 m tall. Two things are asked about it.
+               A ROOF. The five frogs of Mirrorlake walk in and out of the hollow
+               shaft of the sunken tower, where the floor of the cavity they stand
+               in is brick at 11 and the tower's glass is at 13: a metre of room.
+               Measured, one of them pushed off there and rose 0.27 m in a single
+               frame into the glass, and was then lifted out of the wall at 0.1 m
+               a frame for 28 frames -- which is what the day soak of the valley
+               caught one run in six. A frog under a low roof does not stop and is
+               not folded into the beam: it takes the highest arc the room has,
+               which is what a frog under a low roof does. And where the room has
+               no arc worth taking, its legs do not load for one: a frog coiled
+               under a ceiling for a minute is a frog that looks ready to spring
+               and never springs. What the roof is -- the cells the arc is spent
+               over, the material table's excuse for leaves, the cells the body's
+               own box stands across -- is one law for both bodies of this file and
+               it stands at `arcRoofRoom`; the ask below is its only caller besides
+               the body worn from this animal.
+               The GROUND IN FRONT. On open ground the launch is the one the
+               animal's own ask wants by its next push-off -- which is what makes a
+               pottering frog hop small and a fleeing one hop big, and what makes
+               the ground they cover over a cycle of their own cadence the rate
+               their row states. In front of a bank it is the fuller extension the
+               row states, sized so the arc lands on the far side of the face. The
+               body the player wears from this animal's fruit asks the same helpers
+               from the same row a few hundred lines above, which is what "one
+               animal, one record" means for a step as much as for a speed -- and
+               it asks the same question about the roof, so neither body loads its
+               legs for an arc the other would not make. */
             const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw);
-            /* The step in front of the feet, and the launch the legs give for it.
-               On level ground this is `hop.up` exactly as it was, and the animal's
-               stride, its cadence and the films of it are unchanged; in front of a
-               bank it is the fuller extension the row states, sized so the arc
-               lands on the far side of the face. The body the player wears from
-               this animal's fruit asks the same helper from the same row a few
-               hundred lines above, which is what "one animal, one record" means
-               for a step as much as for a speed -- and it asks `arcRoofClear`
-               below from the same reading too, so neither body loads its legs for
-               a jump the other would not make. */
-            const up = hopLaunchNow(hop, world, this.x, this.y, this.z, fx, fz,
-              this.hl, this.speed || 0) || hop.up;
+            /* How far the body's own box reaches ahead of the point it is drawn
+               about, along the way it is facing: the box is `hl` long and sits
+               `oz` forward of that point (`bodyCells`). An arc is asked for
+               ground the FEET can stand on, and feet a hand's width short of a
+               face while the shoulders are through it is the same body inside the
+               rock a cell higher -- found there in one frame, which is what the
+               `pops` guard of test/play.js is for. */
+            const front = this.hl + this.oz;
+            let arc = hopLaunchNow(hop, world, this.x, this.z, this.y, fx, fz,
+              ask, hop.period, dt, arcFit, undefined, front);
             /* The cells the body's box reaches into at push-off, not only the
                column its centre stands in: the centre can be a hand's width over
                the edge of a low ceiling with the column it stands in reading open
@@ -2472,11 +3229,40 @@
                the ceiling for a frame; the standing watch caught it once in eight
                runs. */
             const cols = bodyCells(this, this.x, this.z);
-            const room = arcRoofClear(world, this.x, this.y, this.z, this.tall, fx, fz,
-              this.speed || 0, up, cols);
-            this.wind = room ? Math.min(1, this.wind + dt / 0.18) : 0;
-            if (this.hopT <= 0 && room && this.y <= gyH + 0.02) {
-              this.vy = up;
+            const room = arc ? arcRoofRoom(world, this.x, this.y, this.z, this.tall, fx, fz,
+              arc.carry, arc.up, cols) : 0;
+            /* The room over the head is asked before the arc is chosen, and the
+               arc is then asked again with the room in it -- not lowered onto an
+               arc already chosen, which takes the ground out of it and leaves it
+               ending inside the face it was sized for. See `hopLaunchNow`. Where
+               the room takes nothing, which is the ordinary case, the arc stands
+               as it was and nothing is asked twice. */
+            if (arc && room < arcApex(arc.up, dt))
+              arc = hopLaunchNow(hop, world, this.x, this.z, this.y, fx, fz,
+                ask, hop.period, dt, arcFit, room, front);
+            const fits = arc ? arc.up : 0;
+            const carry = arc ? arc.carry : 0;
+            this.wind = fits > 0 ? Math.min(1, this.wind + dt / 0.18) : 0;
+            if (this.hopT <= 0 && fits > 0 && this.y <= gyH + 0.02) {
+              /* One push, one arc: the legs give `fits` up and `carry` along the
+                 ground, along the heading the body is holding, and that heading is
+                 held to the landing because nothing in the air can push it
+                 sideways. `arcLeft` is the ground that arc covers: `carry` over
+                 the flight `fits` performs at this frame rate -- the same two
+                 numbers the launch and the aim were sized from above, so the
+                 ground spent and the ground asked for are one number.
+                 `hopT` is the whole of the cycle to the next push-off: the arc's
+                 flight is inside that countdown, not deducted from it, and the
+                 feet are down for the rest of it and nothing else. Those two
+                 numbers are the whole of what makes the animal's rate the rate its
+                 row states: `launchForGround` sizes the launch so that the ground
+                 of one arc is the ask times `period`, and the animal's own draw on
+                 the cadence multiplies the cycle and the arc of the same cycle
+                 together, so the draw cannot change the rate the row states. */
+              this.vy = fits;
+              this.arcV = carry;
+              this.arcYaw = this.yaw;
+              this.arcLeft = arcSpan(fits, carry, dt);
               this.hopT = hop.period * (0.75 + Math.random() * 0.55);
               this.wind = 0;
             }
@@ -2501,12 +3287,17 @@
              snap -- a frog that swam into the lake's bank was put 1.5 m up in a
              single frame (90 m/s) because the surface there was above its feet
              and the code moved it there in one step. */
-          if (gyH > this.y + 0.02) {
+          if (gyH > this.y + 0.02 && !inArc) {
             /* Onto a step at a rate, not as a fraction of what is left: the
                fraction is an elevator that starts fast and spends the last few
                centimetres creeping (0.15 m in the first frame, 0.008 m in the
                twentieth), and a body that is climbing a step is putting one foot
-               up and pulling itself after it, which is a steady speed. */
+               up and pulling itself after it, which is a steady speed.
+               A body in the middle of an arc is not climbing a step: the ground
+               under it became the top of the bank while its feet were still below
+               it, and easing it up from there is the lift on straight legs that
+               the row it hops with forbids. Its own rate is integrated and the
+               landing is the arc arriving at that ground. */
             const want = gyH - this.y;
             const step = this.climbTo !== null ? Math.min(want, (this.climbRate || 3) * dt)
                                               : want * Math.min(1, dt * 9);
@@ -2530,6 +3321,15 @@
             const airWant = this.y > gyH + 0.02 ? 1 : 0;
             this.airAmt += (airWant - this.airAmt) * Math.min(1, dt * (airWant ? 7 : 11));
             this.crouch = this.y <= gyH + 0.02 ? this.wind : 0;
+            /* The ground takes the rate back. A body that has arrived and has no
+               vertical rate of its own has landed, and the legs that gave the
+               arc are what stop it: the horizontal rate goes to 0 with the
+               vertical one, and the body stands. (This asks the vertical rate as
+               well as the height because the smallest arc these legs take rises
+               less than the 2 cm in the line above over its first frame, and a
+               law that ended that arc in its first frame would be a law against
+               small frogs.) */
+            if (this.vy <= 0 && this.y <= gyH + 0.02) this.arcV = this.arcLeft = 0;
           }
         }
       }
@@ -2690,8 +3490,12 @@
       const vRate = (this.y - y0) / Math.max(dt, 0.001);
       /* Every body the water carries has a nose to point now. The valley once
          exempted one: a bell that pulses has no nose to point, and tilting one
-         is a lampshade tipping over. The exemption went with the bell. */
-      const carried = inWater;
+         is a lampshade tipping over. The exemption went with the bell.
+         `carried` is the answer this file's one water question gave at the top of
+         this step -- the water of the column, deep enough to hold a body of this
+         kind up -- and not `inWater`: a frog wading a one-block shore shelf is on
+         its feet and a body on its feet stays level, which is the same sentence
+         the player's own tilt reads. */
       const tiltWant = carried && this.speed > 0.3
         ? Math.max(-0.6, Math.min(0.6, Math.atan2(-vRate, Math.max(this.speed, 0.5))))
         : 0;

@@ -789,6 +789,7 @@ const { sim } = require('./simwait');
       for (let i = 0; i < 40; i++) p.update(1 / 60, inp, g);          // settle onto the surface
       const y0 = p.y, x0 = p.x, z0 = p.z;
       let apex = 0, arcs = 0, air = 0, up = false, crouch = 0, squash = 0, push = 0;
+      let slide = 0, prevFeet = false, lx = p.x, lz = p.z;
       const n = Math.round(secs * 60);
       for (let i = 0; i < n; i++) {
         p.update(1 / 60, inp, g);
@@ -799,9 +800,20 @@ const { sim } = require('./simwait');
            (gravity moves the body 0.006 m and nothing is collided with that
            frame), so "off the ground" here means actually above the surface */
         if (p.y > y0 + 0.06) { if (!up) { arcs++; up = true; } air++; } else up = false;
+        /* And the defect this rig exists for: a body slid along on its feet with
+           its legs folded. Two frames running with feet on dry ground and ground
+           covered between them is that exactly -- for a body whose record says
+           its legs are an arc there is no third way to cover ground, so this
+           figure must be nil, and the ground it does cover must all be inside
+           the arcs counted above. The frame a landing arrives on is not in this:
+           the body is still in its arc there, which is why both frames have to
+           have been on the ground. */
+        const feet = p.grounded && !p.inWater;
+        if (feet && prevFeet) slide += Math.hypot(p.x - lx, p.z - lz);
+        prevFeet = feet; lx = p.x; lz = p.z;
       }
       return { apex: +apex.toFixed(2), dist: +Math.hypot(p.x - x0, p.z - z0).toFixed(2),
-        push: +push.toFixed(3),
+        push: +push.toFixed(3), slide: +slide.toFixed(3),
         arcs, airPct: +(air / n * 100).toFixed(0), crouch: +crouch.toFixed(2), squash: +squash.toFixed(2) };
     };
     // one press of the jump key, from stillness: the arc the key is worth
@@ -809,6 +821,12 @@ const { sim } = require('./simwait');
       p.form = form; p.formT = 9999; p.formMax = 9999;
       p.x = spot.x; p.y = spot.y; p.z = spot.z; p.yaw = 0;
       p.vx = p.vy = p.vz = 0; p.grounded = false; p.air = p.maxAir(); p.airAmt = 0; p.squash = 0;
+      /* The cadence is held off through the settle and any ground an earlier
+         sub-rig's arc still owed is cleared: what is asked here is what one press
+         of the key is worth, and a body that gave a hop of its own accord inside
+         the settle would leave the window opening in the middle of an arc -- the
+         height measured would be one arc's and the launch another's. */
+      p.hopT = 9; p.arcV = 0; p.arcLeft = 0;
       for (let i = 0; i < 40; i++) p.update(1 / 60, {}, g);
       const y0 = p.y;
       let apex = 0, hang = 0, off = false, push = 0;
@@ -825,7 +843,7 @@ const { sim } = require('./simwait');
       }
       return { apex: +apex.toFixed(2), hang: +hang.toFixed(2), push: +push.toFixed(3) };
     };
-    const human = walk(null, 3), frogWalk = walk('frogpear', 3);
+    const human = walk(null, 2.7), frogWalk = walk('frogpear', 2.7);
     const jumpHuman = jump(null), jumpFrog = jump('frogpear');
     /* and the same for an animal: an amphibian used to have its height lerped
        onto the ground every frame, which pinned it there however it moved */
@@ -836,14 +854,29 @@ const { sim } = require('./simwait');
     npc.x = spot.x; npc.z = spot.z; npc.y = gy + 1; npc.vy = 0;
     npc.state = 'wander'; npc.pause = 99; npc.tx = spot.x; npc.tz = spot.z - 12; npc.yaw = 0; npc.alarm = 0;
     const away = { x: -999, y: 0, z: -999, form: null, formDef: {} };
+    const npcPace = npc.pace;      // this body's own tempo: what its ask is scaled by
     let rise = 0, hops = 0, airF = 0, up = false, sq = 0, push = 0;
+    let slide = 0, prevFeet = false, lx = npc.x, lz = npc.z, lastHop = -1;
+    const gaps = [];
     for (let i = 0; i < 240; i++) {
       npc.update(1 / 60, away, g.world, g);
       rise = Math.max(rise, npc.y - (gy + 1)); sq = Math.max(sq, npc.squash);
       push = Math.max(push, npc.vy);
-      if (npc.y > gy + 1.05) { if (!up) { hops++; up = true; } airF++; } else up = false;
+      if (npc.y > gy + 1.05) { if (!up) { hops++; if (lastHop >= 0) gaps.push(i - lastHop); lastHop = i; up = true; } airF++; }
+      else up = false;
+      /* the same "slid along on its feet" measure as the body above, asked of
+         the ground under the animal at the frame it was standing on */
+      const nx = Math.floor(npc.x), nz = Math.floor(npc.z);
+      const gyN = ground(nx, nz);
+      const feet = gyN >= 0 && npc.y <= gyN + 0.02 && g.world.liquidSurfaceAt(nx, nz) < 0;
+      if (feet && prevFeet) slide += Math.hypot(npc.x - lx, npc.z - lz);
+      prevFeet = feet; lx = npc.x; lz = npc.z;
     }
-    const npcFrog = { rise: +rise.toFixed(2), push: +push.toFixed(3), hops, airPct: +(airF / 240 * 100).toFixed(0), squash: +sq.toFixed(2) };
+    const npcFrog = { rise: +rise.toFixed(2), push: +push.toFixed(3), hops, slide: +slide.toFixed(3),
+      cycleMean: gaps.length ? +(gaps.reduce((a, b) => a + b, 0) / gaps.length / 60).toFixed(2) : null,
+      cycleMin: gaps.length ? +(Math.min.apply(null, gaps) / 60).toFixed(2) : null,
+      cycleMax: gaps.length ? +(Math.max.apply(null, gaps) / 60).toFixed(2) : null,
+      airPct: +(airF / 240 * 100).toFixed(0), squash: +sq.toFixed(2) };
     Object.assign(npc, wasN);
     Object.assign(p, was);
     /* One record per body, and every measurement below asked of the record of
@@ -856,47 +889,107 @@ const { sim } = require('./simwait');
        bodies spend that frame the same way now, so one number answers for both. */
     const G = 23, dt = 1 / 60;
     const arcOf = v => v * v / (2 * G) - v * dt / 2;
+    /* The flight law src/entities.js states, re-derived here: a body whose
+       height is stepped at `dt` spends two of its parabola's frames on the
+       ground -- the one it pushes off on and the one it lands on -- so the ground
+       its arc covers is `flightFrames x up x dt`, and the launch for a wanted
+       stretch of ground is the one that covers it. It is written out again in
+       this file on purpose: a check that called the code it is checking would
+       only prove the code agrees with itself. */
+    const flightFrames = (u) => Math.max(0, Math.ceil(2 * u / (G * dt)) - 2);
+    const arcGround = (u) => flightFrames(u) * u * dt;
+    const launchFor = (ground) => {
+      let lo = Math.sqrt(G * ground / 2) * 0.5, hi = Math.sqrt(G * ground / 2) * 3;
+      for (let i = 0; i < 24 && hi - lo > 1e-4; i++) {
+        const m = (lo + hi) / 2;
+        if (arcGround(m) < ground) lo = m; else hi = m;
+      }
+      return Math.abs(arcGround(lo) - ground) <= Math.abs(arcGround(hi) - ground) ? lo : hi;
+    };
     const frog = N.CREATURE_BY_ID.frog, humanRow = N.HUMAN_FORM;
+    /* the two asks the two bodies are moving at: the body a person holds forward
+       is asked at its row's cruise, the animal on an errand of its own at
+       0.42 of it, at the tempo this body keeps (`pace`, drawn per body in the
+       constructor); each launch is the one that covers that ask over the row's
+       own cadence */
+    const cyc = frog.hop.period;
+    const cruise = launchFor(frog.speed * cyc);
+    const pottering = launchFor(frog.speed * 0.42 * npcPace * cyc);
     return { spot, human, frog: frogWalk, jumpHuman, jumpFrog, npcFrog,
-      row: { land: frog.speed, launch: frog.hop.up, period: frog.hop.period,
+      secs: 2.7, cycles: +(2.7 / cyc).toFixed(2),
+      row: { land: frog.speed, launch: frog.hop.up, period: cyc,
         humanLand: humanRow.speed, humanLaunch: humanRow.jump },
       arc: +arcOf(frog.hop.up).toFixed(3), humanArc: +arcOf(humanRow.jump).toFixed(3),
-      /* what a launch has to leave the ground with, once the frame's own gravity
-         is taken off it: the same number for both bodies, to the millimetre */
+      /* what each body's own ask is worth, in the launch, the height and the
+         ground of the arc it sizes -- and the push-off rate the body should be
+         measured leaving the ground with, one frame of gravity below the launch */
+      cruise: { launch: +cruise.toFixed(3), arc: +arcOf(cruise).toFixed(3),
+        ground: +arcGround(cruise).toFixed(3), push: +(cruise - G * dt).toFixed(3) },
+      pottering: { launch: +pottering.toFixed(3), arc: +arcOf(pottering).toFixed(3),
+        ground: +arcGround(pottering).toFixed(3), push: +(pottering - G * dt).toFixed(3),
+        pace: +npcPace.toFixed(3) },
       push: +(frog.hop.up - G * dt).toFixed(3), humanPush: +(humanRow.jump - G * dt).toFixed(3) };
   });
   check('a flat open clearing was found to measure on', gait.spot !== undefined, gait);
+  /* A body whose record says `hop` has two ways to cover ground and no third: it
+     stands, or its legs throw it. `slide` is the ground covered between two frames
+     of standing on dry ground, which is the whole of what was reported -- a
+     frog's body moving along while its legs were folded -- and it is nil for
+     both bodies of this animal, while the ground they do cover is inside arcs
+     (`arcs`) at the row's own cadence (`cycleMean`). */
   check('a frog crosses the ground in arcs, not in a slide',
-    gait.frog.arcs >= 2 && Math.abs(gait.frog.apex - gait.arc) < 0.1, gait);
-  check('the legs load before a hop and take the landing after it', gait.frog.crouch > 0.5 && gait.frog.squash > 0.02, gait.frog);
+    gait.frog.arcs >= 3 && gait.frog.slide < 0.02 && gait.frog.airPct > 20 &&
+    gait.npcFrog.hops >= 3 && gait.npcFrog.slide < 0.02, gait.frog, gait.npcFrog);
+  check('the legs load before a hop and take the landing after it',
+    gait.frog.crouch > 0.5 && gait.frog.squash > 0.05 && gait.npcFrog.squash > 0.02, gait.frog, gait.npcFrog);
   /* "A hop is not a discount on walking: it covers the same ground" -- that is
      what this check used to say, and it compared a frog-shaped body's ground with
      a person's and required them to agree within 3 m. The sentence only makes
      sense if the body worn from an animal was expected to travel like a person,
      and it held because the fruit's record multiplied the human's 4.7 m/s by 0.9.
      Both bodies are asked of their own row now, which is the same question a
-     wild body is asked, and the answer the frog gives is the animal's. */
+     wild body is asked, and the answer the frog gives is the animal's -- measured
+     over a whole number of its own cycles, because a cycle is what the row states
+     and the ground of a cycle is what its speed means. */
   check('the body worn from a frog crosses the ground at the frog\'s own cruise, which is what its row states',
-    Math.abs(gait.frog.dist / 3 - gait.row.land) < 0.2, gait);
+    Math.abs(gait.frog.dist / gait.secs - gait.row.land) < 0.2, gait);
   check('and the body you start in still crosses it at its own: making the animal honest did not move the person',
-    Math.abs(gait.human.dist / 3 - gait.row.humanLand) < 0.2, gait);
+    Math.abs(gait.human.dist / gait.secs - gait.row.humanLand) < 0.2, gait);
   check('a human does not hop', gait.human.arcs === 0 && gait.human.apex < 0.2, gait.human);
-  /* One launch, asked of both bodies. The worn body from a press of the key, the
-     valley's own animal in the middle of hopping for itself: the rate each leaves
-     the ground with is the row's `hop.up` less the one frame of gravity a
-     push-off spends falling, and the two measurements come out the same number to
-     the millimetre. Their heights follow from it -- 0.73 m each -- where the two
-     records used to put the worn body 1.31 m up (1.38 measured) and the animal
-     0.78. The animal's height is held to a looser bound than the body you wear
-     because it is measured over a corridor it chose, and one arc there is a
-     corridor's business, not the launch's. */
-  check('a frog worn as a body and the frog itself are thrown by one launch',
-    Math.abs(gait.jumpFrog.push - gait.push) < 0.01 && Math.abs(gait.npcFrog.push - gait.push) < 0.01 &&
-    Math.abs(gait.jumpFrog.apex - gait.arc) < 0.06 && Math.abs(gait.npcFrog.rise - gait.arc) < 0.12, gait);
+  /* One law, both bodies, and the ask each body is actually moving at.
+     A press of the push key asks the legs for height: both bodies are then
+     thrown at the row's `hop.up` less the one frame of gravity a push-off spends
+     falling, to the millimetre, and both reach `arc` high. A body *going*
+     somewhere asks the legs for ground: the worn body is asked at the row's
+     cruise and the animal on its own errand at 0.42 of it at its own tempo, and
+     the launch, the height and the ground of the arc each of them takes is the
+     one that ask over the row's cadence sizes. Requiring one number from both
+     bodies -- which is what this check used to require -- was the wrong claim: it
+     held only while every hop was the everyday one, before the arc was sized at
+     all. A pottering frog hops small and a running one hops long; that is the
+     row being true, not two rows. */
+  check('a frog worn as a body and the frog itself are thrown by one law, at the ask each is moving at',
+    Math.abs(gait.jumpFrog.push - gait.push) < 0.01 &&
+    Math.abs(gait.jumpFrog.apex - gait.arc) < 0.06 &&
+    Math.abs(gait.frog.push - gait.cruise.push) < 0.15 &&
+    Math.abs(gait.frog.apex - gait.cruise.arc) < 0.06 &&
+    Math.abs(gait.npcFrog.push - gait.pottering.push) < 0.3 &&
+    Math.abs(gait.npcFrog.rise - gait.pottering.arc) < 0.12, gait);
   check('and the body you start in is thrown by its own record, not borrowed from an animal',
     Math.abs(gait.jumpHuman.push - gait.humanPush) < 0.01 &&
     Math.abs(gait.jumpHuman.apex - gait.humanArc) < 0.06, gait);
-  check('a frog in the valley leaves the ground', gait.npcFrog.rise > 0.3 && gait.npcFrog.hops >= 2, gait.npcFrog);
+  /* The cadence is the row's and the tempo is the animal's: `hopT` is set from
+     `hop.period` multiplied by a draw of 0.75 to 1.30 that each body makes for
+     itself, so that a herd does not hop in one clapping line. What the row owns
+     is the band and its centre -- so the band is what is asked, of every single
+     cycle and of the mean, and not one number to the hundredth: a wild body has
+     four or five cycles in a window like this, and the draw it was given is not
+     a defect in the row. */
+  check('a frog in the valley leaves the ground, at its row\'s cadence',
+    gait.npcFrog.rise > 0.05 && gait.npcFrog.hops >= 3 &&
+    gait.npcFrog.cycleMin >= gait.row.period * 0.75 - 0.02 &&
+    gait.npcFrog.cycleMax <= gait.row.period * 1.30 + 0.02 &&
+    Math.abs(gait.npcFrog.cycleMean - gait.row.period) < gait.row.period * 0.30, gait.npcFrog);
 
   /* 10k. the lens is the hand. The watching camera used to trail the aim, so
      while you were turning the mouse the body ran off in a direction the screen
@@ -3788,19 +3881,36 @@ What was measured before any of this was fixed, over 180 frames of walking
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch };
     const frog = g.creatures.find(c => c.sp.id === 'frog');
     if (!frog) return { error: 'no frog in the roster' };
-    /* the lean body must be in the water for the whole turn: a column of open
-       water, at least two cells deep over a bed, with two more columns of the
-       same water to the east, so the quarter turn stays under the film. */
+    /* the lean body must be in the water for the whole turn: open water at
+       least two cells deep over a bed, and the same water over every column the
+       turn can reach -- see the search below, which is asked that way. */
     const surf = (x, z) => W.liquidSurfaceAt(x, z);
     const deep = (x, z) => {
       const s = surf(x, z);
       return s >= 12 && W.liquidAt(x, s - 1, z) && W.liquidAt(x, s - 2, z) ? s : -1;
     };
+    /* The whole area the drive can cover, not the three columns beside the
+       start. The drive holds a target due east from a body facing north and runs
+       0.67 s of it: at the row's own wander rate that body covers 1.3 m, so a
+       patch of the same water three cells in every direction is what keeps the
+       turn under the film. Asked at three columns to the east instead, the
+       search found (46.5,101.5) -- a place whose water is two cells deep, and
+       the turn walks north out of it into a column the water has left. There the
+       water stops holding the body up, its feet are on the bottom, and the next
+       thing it does is hop: 14 frames of that quarter turn were an arc, and an
+       arc holds the heading it left the ground with, so the turn came about
+       0.40 rad instead of the 0.6 the row's rate gives. Nothing is wrong with
+       that body -- a frog standing in shallow water hops, which is the law the
+       bank rigs ask -- and everything is wrong with the claim that the body this
+       step measures "must be in the water for the whole turn". */
     let spot = null;
     for (let x = 8; x < W.w - 8 && !spot; x++) for (let z = 8; z < W.d - 8 && !spot; z++) {
       const s = deep(x, z);
-      if (s > 0 && deep(x + 1, z) === s && deep(x + 2, z) === s)
-        spot = { x: x + 0.5, z: z + 0.5, surf: s };
+      if (s <= 0) continue;
+      let same = true;
+      for (let dx = -3; dx <= 3 && same; dx++) for (let dz = -3; dz <= 3 && same; dz++)
+        if (deep(x + dx, z + dz) !== s) same = false;
+      if (same) spot = { x: x + 0.5, z: z + 0.5, surf: s };
     }
     if (!spot) { Object.assign(p, was); return { error: 'no open water deep enough' }; }
     /* and dry ground for the same body on foot: the lean is a thing the water
@@ -7355,10 +7465,19 @@ What was measured before any of this was fixed, over 180 frames of walking
      crown, and none of either under a trunk -- the crown is not a roof to it, the
      trunk is. And with the material table not asked, that trunk reads 29 frames
      and 1 arc: the crown's own numbers exactly, which is the height being read
-     and not the material. Counted over the whole eight seconds the two of them
-     differ by 12 airborne frames and no arc at all, because the hopper walks out
-     of the column and hops about down the shelf, which is why the control is
-     counted where the block is.
+     and not the material. Those are the measurements the roof ask of the material
+     table was written from, and they were taken of a body that threw the row's
+     fullest extension at nothing, which is what a hop was before a hop was an
+     arc. Asked of the arc these legs actually want, that control no longer
+     separates, and the reason is the arc law: the block is one cell over the head
+     of a body with nothing in front of it, which leaves 0.57 m of headroom, and
+     the arc its legs want on an errand of their own tops 0.161 m. A ceiling an
+     arc passes half a metre under is a roof to nothing, of trunk or of crown --
+     and the two `under` rigs below are one body to the centimetre, 11 frames in
+     the column the block stands over, 10 arcs, 110 frames off the floor of it,
+     6.18 m of ground, which is what the rig now asks of them. The control of
+     material moved to where a ceiling IS what decides: a low-ceilinged passage
+     with a step closing the end of it. See the paragraph above the checks.
      Three halves, and each of them is needed by a rig of its own: with the span
      alone missing, the body walked at the block in its own feet cell stands
      inside it; with the material table missing from the ceiling, the frog
@@ -7431,35 +7550,74 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     const crowdNear = crowdWas.filter((c) => Math.abs(c.x - x) <= 5 && Math.abs(c.z - z) <= 5).length;
     const rigs = [];
+    // every launch given in a passage rig, tagged with the material of its ceiling
+    const stepArcLog = [];
     for (const sp of [hopper.sp]) {
-      /* Five ways the same block is put in front of the same body.
+      /* Seven ways the same block is put in front of the same body.
          `through`: the body starts 2.5 m on one side and is handed an errand out
          the other, which is the walk gate being asked about a column.
          `under`: the body starts in the column itself, with the block over its
          head, which is where the room for an arc is decided -- a body that is
          already under a roof is the one whose launch has to answer for it.
-         The last rig is the same block at the same height made of leaves:
-         the control that says the roof is asked of the material table and not of
-         the height. */
+         The last two of the `under` pair are the same block at the same height
+         made of leaves: the control that says the roof is asked of the material
+         table and not of the height. That control has to be asked where a roof
+         IS a roof, which is what the two `step` rigs below are for: see the
+         paragraph above the checks. */
       const plan = [[1, TRUNK, 'through'], [2, TRUNK, 'through'], [3, TRUNK, 'through'],
-        [2, TRUNK, 'under'], [2, LEAF, 'under']];
+        [2, TRUNK, 'under'], [2, LEAF, 'under'],
+        /* the same body in the same passage: a low ceiling of the block over the
+           three cells it stands and walks in, walls either side, and a step
+           closing the end. The arc that step asks of these legs tops 1.10 m,
+           against the 0.57 m of headroom the block leaves, so the ceiling is the
+           whole question -- and with walls either side there is no way round it.
+           This is the only geometry in which a block one cell over a body's head
+           is a roof rather than nothing at all, and so the only one the material
+           control can be asked in. */
+        [2, TRUNK, 'step'], [2, LEAF, 'step']];
       for (const [off, mat, mode] of plan) {
         const beam = gy + off, beamWas = W.get(x, beam, z);
         if (beamWas !== 0) { rigs.push({ kind: sp.id, off, mat, mode, beam, error: 'beam cell not clear', beamWas }); continue; }
         const ax = x + 0.5, az = z + 0.5;
+        /* the step in front of the body, and the room over its head. One cell of
+           step and one block of ceiling do not decide anything: a step a metre
+           wide is walked round, and the body was up on it in 98 of the 480 frames
+           of the trunk window and 97 of the crown window -- the material never
+           came into it. So this is a passage: a low ceiling over the three cells
+           the body stands and walks in, rock walls on either side of it, and the
+           step closing the end of it. The only way out of that passage is the
+           step, and the only thing that decides whether the legs can give the arc
+           the step asks is the room above the body's own head -- which is a
+           question about the material of the ceiling, and the only difference
+           between the two rigs is that material. */
+        const built = [];
+        const put = (cx, cy, cz, id) => {
+          built.push([cx, cy, cz, W.get(cx, cy, cz)]); W.set(cx, cy, cz, id);
+        };
+        if (mode === 'step') {
+          const ground = W.get(x, gy, z);
+          for (let dx = -2; dx <= 0; dx++) put(x + dx, gy + 2, z, mat);     // the ceiling
+          for (let dx = -2; dx <= 0; dx++) {
+            put(x + dx, gy + 1, z - 1, ground); put(x + dx, gy + 1, z + 1, ground);
+          }
+          for (let dz = -1; dz <= 1; dz++) {
+            put(x + 1, gy + 1, z + dz, ground); put(x - 3, gy + 1, z + dz, ground);
+          }
+        }
         /* the same draw for the same height of block, every run and whatever the
            block is made of: an animal picks where to go with Math.random, and a
            premise that moves between runs is not a premise. The crown rig and the
            wood rig above it are therefore the same animal on the same errand, and
            the only difference between the two of them is the material. */
-        seed(77001 + off * 13 + (mode === 'under' ? 300 : 0));
-        const body = new N.Creature(sp, mode === 'under' ? ax : ax - 2.5, gy + 1, az);
+        seed(77001 + off * 13 + (mode === 'under' || mode === 'step' ? 300 : 0));
+        const startsIn = mode === 'under' || mode === 'step';
+        const body = new N.Creature(sp, startsIn ? ax : ax - 2.5, gy + 1, az);
         /* the rig aims it. Which way a body happens to be looking when the frame
            starts is not the law under test, and left to its own draw the body
            spends the eight seconds wandering away from the column it was handed
            an errand through. */
         body.yaw = Math.PI / 2;
-        body.tx = mode === 'under' ? ax + 3.5 : ax + 2.5;
+        body.tx = startsIn ? ax + 3.5 : ax + 2.5;
         body.tz = az; body.homeX = ax; body.homeZ = az;
         body.pause = 0; body.alarm = 0; body.dry = 0;
         /* the under rig is the one that asks what an arc does to the roof
@@ -7473,7 +7631,7 @@ What was measured before any of this was fixed, over 180 frames of walking
            came back clean for a body that had never once been under the
            block when an arc was launched. The arc is due on the first frame
            of the rig, where the body is. */
-        if (mode === 'under') body.hopT = 0.01;
+        if (startsIn) body.hopT = 0.01;
         const tallOf = body.tall;
         /* during the rig the valley holds this body and nobody else: what is under
            test is one body and the blocks, and a rig whose answer also depends on
@@ -7510,10 +7668,11 @@ What was measured before any of this was fixed, over 180 frames of walking
           frames: 0, beamWood: 0, onFeet: 0, air: 0, airIn: 0, hops: 0, hopsIn: 0, wasUp: 0,
           inside: 0, feetIn: 0, headIn: 0, deep: 0,
           inRock: 0, path: 0, atColumn: 0, underBeam: 0, pops: 0, stands: 0, gone: 0, closest: 9,
+          onStep: 0, arcs: [],
           yEnd: 0, stateEnd: '' };
         for (let i = 0; i < 480; i++) {
           const px = body.x, pz = body.z, py = body.y;
-          body.tx = mode === 'under' ? ax + 3.5 : ax + 2.5; body.tz = az; body.pause = 0;
+          body.tx = startsIn ? ax + 3.5 : ax + 2.5; body.tz = az; body.pause = 0;
           body.update(1 / 60, P, W, g);
           A.frames++;
           const dd = Math.hypot(body.x - px, body.z - pz);
@@ -7525,14 +7684,27 @@ What was measured before any of this was fixed, over 180 frames of walking
           if (Math.abs(body.y - N.terrainY(W, bx, bz, Math.floor(body.y + 0.6))) < 0.05) A.onFeet++;
           else A.air++;                                       // off the floor it stands on: an arc
           const inCol = bx === x && bz === z;
-          /* an arc is a rise off the floor this body stands on, and the question the
-             material control asks is whether the arc was launched in the column with
-             the block over it: a body that walks out of that column and hops about
-             down the shelf tells us nothing about the room that column leaves. */
-          if (body.y - (gy + 1) > 0.25) {
-            if (!A.wasUp) { A.hops++; if (inCol) A.hopsIn++; }
-            A.wasUp = 1;
-          } else A.wasUp = 0;
+          /* an arc is a push-off: the frame the legs give a launch, read the same
+             way every other rig in this file reads one (`vy` crossing from still
+             to more than half a metre a second). It is not read as a height above
+             the floor, which is what this counter used to be: the smallest arc
+             these legs can give on an errand of their own tops 0.161 m, so a
+             threshold of 0.25 m counted 0 arcs for a body that launched 9 in the
+             window (docs/03 s3). */
+          const up = body.vy > 0.5;
+          if (up && !A.wasUp) { A.hops++; if (inCol) A.hopsIn++; A.arcs.push(+body.vy.toFixed(3)); }
+          A.wasUp = up;
+          /* the top of the step built in front of the body, when a step was built:
+             the ground under its feet a cell above the shelf. This is the read the
+             material control takes now. */
+          /* standing on top of the step: the ground under its own feet a whole
+             cell above the shelf, asked the same way the `onFeet` count above
+             asks the ground under its feet. Not `standY`: that answers the top of
+             the highest solid block in the column, and in a passage with a
+             ceiling it reads the ceiling as ground -- 111 frames of "standing on
+             the step" for a body that never once left the floor. */
+          const surfY = N.terrainY(W, bx, bz, Math.floor(body.y + 0.6));
+          if (mode === 'step' && surfY >= gy + 1.95 && Math.abs(body.y - surfY) < 0.05) A.onStep++;
           if (inCol && Math.abs(body.y - N.terrainY(W, bx, bz, Math.floor(body.y + 0.6))) >= 0.05) A.airIn++;
           if (inCol) { A.atColumn++; if (Math.floor(body.y + tallOf) < beam) A.underBeam++; }
           let hit = -1;
@@ -7557,14 +7729,19 @@ What was measured before any of this was fixed, over 180 frames of walking
           A.stateEnd = body.state + (W.liquidAt(bx, by, bz) ? '+water' : '') +
             (body.inWater ? '+in' : '') + (body.held ? '+held' : '');
         }
+        if (mode === 'step') {
+          stepArcLog.push((mat === LEAF ? 'leaf:' : 'trunk:') + A.arcs.join(' '));
+        }
         Math.random = rnd;
         rigs.push({ kind: body.sp.id, off, mat, mode, beam, beamWas, tall: +tallOf.toFixed(2),
           frames: A.frames, beamWood: A.beamWood, onFeet: A.onFeet,
           air: A.air, hops: A.hops, airIn: A.airIn, hopsIn: A.hopsIn, inside: A.inside, feetIn: A.feetIn,
           headIn: A.headIn, deep: +A.deep.toFixed(2), inRock: A.inRock, path: +A.path.toFixed(2),
           atColumn: A.atColumn, underBeam: A.underBeam, pops: A.pops, stands: A.stands, gone: A.gone,
+          onStep: A.onStep, peak: A.arcs.length ? Math.max.apply(null, A.arcs) : 0,
           closest: +A.closest.toFixed(3), yEnd: +A.yEnd.toFixed(2), atEnd: A.stateEnd });
         W.set(x, beam, z, beamWas);
+        built.forEach(([cx, cy, cz, prev]) => W.set(cx, cy, cz, prev));
         g.creatures = crowdWas; g.herdCentres = herdWas;
         Object.assign(P, was); g.time = timeWas; g.updateEnv();
       }
@@ -7582,6 +7759,9 @@ What was measured before any of this was fixed, over 180 frames of walking
     /* the rigs the body starts inside the column of: the ones where a hop's room
        is decided, wood or crown */
     const underRigs = rigs.filter((r) => r.mode === 'under' && r.mat);
+    /* the material control, where a roof is a roof: the same body, the same step,
+       the same block one cell over its head, once of trunk and once of a crown */
+    const stepRigs = rigs.filter((r) => r.mode === 'step');
     /* the rigs where the block stands inside the body's own span: `off` counts
        cells over the surface the body stands on, and a body standing on that
        surface occupies [1, 1 + tall] cells above it, so the block is in the body
@@ -7600,6 +7780,74 @@ What was measured before any of this was fixed, over 180 frames of walking
       pops: rigs.reduce((s, r) => s + r.pops, 0), deep: Math.max(...rigs.map((r) => r.deep)),
       nearWood: rigs.filter((r) => inSpan(r) && r.closest < 1).length, driven,
       underAt: underRigs.map((r) => r.atColumn),
+      /* the two `under` rigs are one body on one draw with a block of another
+         material over it: anything that separates them is the material */
+      underSame: underRigs.length === 2 && underRigs.every((r) =>
+        r.airIn === underRigs[0].airIn && r.hops === underRigs[0].hops &&
+        r.atColumn === underRigs[0].atColumn &&
+        Math.abs(r.path - underRigs[0].path) < 0.01) ? 1 : 0,
+      /* what the material control reads: the largest launch each of the two
+         bodies gave in the passage, and the frames each spent standing on the
+         step its end closes */
+      leafPeak: Math.max.apply(null, stepRigs.filter((r) => r.mat === LEAF).map((r) => r.peak).concat([0])),
+      trunkPeak: Math.max.apply(null, stepRigs.filter((r) => r.mat === TRUNK).map((r) => r.peak).concat([0])),
+      leafStep: stepRigs.filter((r) => r.mat === LEAF).reduce((s, r) => s + r.onStep, 0),
+      trunkStep: stepRigs.filter((r) => r.mat === TRUNK).reduce((s, r) => s + r.onStep, 0),
+      stepY: stepRigs.map((r) => (r.mat === LEAF ? 'leaf:' : 'trunk:') + r.yEnd),
+      stepAir: stepRigs.map((r) => (r.mat === LEAF ? 'leaf:' : 'trunk:') + r.airIn),
+      /* every launch each passage body gave, in the frames it gave them: the
+         claim that a body at a face its own ceiling takes away pushes off only in
+         hedges -- short arcs sized to the ground that stops short of the face, and
+         never the launch the step asks -- is a claim about these numbers, and it is
+         read here rather than from a bench tool. */
+      stepArcs: stepArcLog,
+      /* the launch the room over the body's head leaves, restated here from the
+         same arithmetic the bodies run: the ceiling is one cell over the floor and
+         the body stands `tall` of it, and the room caps the launch at the largest
+         whose frame-stepped top fits under it. The face arcs above are asked
+         against THIS, not against a figure copied out of a bench tool. */
+      roomLaunch: (function () {
+        const dt = 1 / 60, room = 1 - hopper.tall;      // a cell of ceiling over the floor
+        const apexOf = (u) => {
+          const k = Math.max(0, Math.floor(u / (23 * dt)));
+          return k * u * dt - 23 * dt * dt * k * (k + 1) / 2;
+        };
+        const want = Math.max(0, room - 0.05);
+        const inv = (apex) => {
+          let a = 0.1, b = 14;
+          for (let i = 0; i < 40 && b - a > 1e-4; i++) {
+            const m = (a + b) / 2;
+            if (apexOf(m) < apex) a = m; else b = m;
+          }
+          return (a + b) / 2;
+        };
+        const up = inv(want);
+        /* and the floor of the ground ask: `MIN_HOP_GROUND` in entities.js is the
+           least ground an arc is sized on, and the shortest arc these legs give is
+           the one sized on exactly that. A body at a face with no ground short of
+           it is thrown that one. */
+        const agOf = (u) => Math.max(0, Math.ceil(2 * u / (23 * dt)) - 2) * u * dt;
+        let a2 = 0.05, b2 = 8;
+        for (let i = 0; i < 40 && b2 - a2 > 1e-4; i++) {
+          const m = (a2 + b2) / 2;
+          if (agOf(m) < 0.12) a2 = m; else b2 = m;
+        }
+        const minUp = (a2 + b2) / 2;
+        return { room: +room.toFixed(2), apex: +want.toFixed(2), up: +up.toFixed(3),
+          recorded: +(up - 23 * dt).toFixed(3),
+          // the shortest arc these legs give: sized on the 0.12 m floor of the ground
+          // ask, not on the room -- a face with no ground short of it gets this one
+          minUp: +minUp.toFixed(3), minArc: +(minUp - 23 * dt).toFixed(3),
+          // and the launch the step closing the end asks: a metre of riser plus the
+          // 10 cm of standing room (`STEP_CLEAR` in entities.js)
+          stepUp: +inv(1.0 + 0.10).toFixed(3),
+          stepRecorded: +(inv(1.0 + 0.10) - 23 * dt).toFixed(3) };
+      })(),
+      /* the same two bodies asked the other question the passage answers: did
+         they get out of it at all. `gone` is the frames of the window spent more
+         than 1.2 m from the column the body started in. */
+      stepGone: { leaf: stepRigs.filter((r) => r.mat === LEAF).reduce((s, r) => s + r.gone, 0),
+        trunk: stepRigs.filter((r) => r.mat === TRUNK).reduce((s, r) => s + r.gone, 0) },
       air: rigs.map((r) => r.air), hops: rigs.map((r) => r.hops),
       airIn: rigs.map((r) => r.airIn), hopsIn: rigs.map((r) => r.hopsIn),
       leafAir: leafRigs.reduce((s, r) => s + r.air, 0), leafHops: leafRigs.reduce((s, r) => s + r.hops, 0),
@@ -7615,7 +7863,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       woodId: TRUNK, leafId: LEAF };
   });
   check('a flat shelf and the short hopper were found to measure on, the beam cell was clear air, and the crown rig had its matching wood rig',
-    !spanLaw.error && spanLaw.rigs.length === 5 && !spanLaw.twinMissing, spanLaw);
+    !spanLaw.error && spanLaw.rigs.length === 7 && !spanLaw.twinMissing, spanLaw);
   check('the block stayed the material it was set as, wood or crown, so "never inside it" is not paid for by the block going away',
     spanLaw.woodFrames === spanLaw.frames, spanLaw);
   check('the body was driven at the wood: every rig with a wood block in its own span came up against it, so "0 frames inside" is not paid for by a body that never got there',
@@ -7627,13 +7875,103 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the wood did not become a wall to a body that fits under it: the body still walks in the column it starts under, of wood or of crown, and every rig with the block a full cell over the body still goes through that column',
     spanLaw.underAt.length === 2 && spanLaw.underAt.every((n) => n > 0) &&
     spanLaw.rigs.filter((r) => r.mode === 'through' && r.off >= 3).every((r) => r.atColumn > 0), spanLaw);
-  check('the wood did not become a wall the body is pinned against: every rig keeps travelling',
-    spanLaw.rigs.every((r) => r.path > 3), spanLaw);
+  /* Every rig on open ground keeps travelling: the block did not become a wall
+     the body is pinned against. The two passage rigs are not asked this and must
+     not be -- their walls were built so that there is NOTHING to go round, and
+     the one way out is the step at the end of them, which the ceiling over it
+     either lets those legs take or does not. That is asked two checks below, and
+     under a trunk the answer is a body that does not get out. */
+  check('the wood did not become a wall the body is pinned against: every rig on open ground keeps travelling',
+    spanLaw.rigs.filter((r) => r.mode !== 'step').every((r) => r.path > 3), spanLaw);
+  /* Refused the block at the height of its own body, the body goes round it: it
+     is not thrown across the shelf (`pops` 0 in every rig) and it gets clear of
+     it -- in the rig where the block stands inside its own span it spends 280 of
+     the 480 frames more than a metre away from that column, and the check above
+     asks that it keeps covering ground at all.
+     What used to be asked next to that, `stands` -- frames in which the body
+     moved less than two millimetres -- is a number the arc law sets now, and it
+     never was a measure of freezing. A body on an errand of its own gives 8 arcs
+     in these 8 seconds; each of them is 0.25 s of flight inside a 0.9 s cycle
+     (docs/03 s3), so its feet are down, and its own ground is covered by the
+     arcs rather than by a slide, in the other 72% of the frames. The body at the
+     wall reports 396 standing frames and still covers 3.86 m. That figure is
+     reported, not asked: a body that is genuinely pinned would report 480 and no
+     ground at all, which is what the travelling ask above catches. */
   check('refused the block at its own height it goes round it rather than freezing at it, and nothing is thrown across the shelf',
-    spanLaw.rigs.every((r) => r.pops === 0 && r.stands < r.frames * 0.5) &&
+    spanLaw.rigs.every((r) => r.pops === 0) &&
     spanLaw.rigs.filter((r) => r.mode === 'through' && r.mat === spanLaw.woodId && r.off === 1).every((r) => r.gone > 100), spanLaw);
-  check('the roof is asked of the material table and not of the height: the same block made of leaves lets this hopper an arc inside that column and the trunk lets it none',
-    spanLaw.twinAirIn === 0 && spanLaw.leafAirIn > 20 && spanLaw.leafHopsIn > spanLaw.twinHopsIn, spanLaw);
+  /* The material control, asked where a ceiling is what decides.
+     The `under` pair above no longer separates the two materials, and the reason
+     belongs to the arc law and not to the roof one: a block one cell over the
+     head of a body with nothing in front of it leaves 0.57 m of headroom (a cell
+     less the 0.43 m this body stands), and the arc these legs want on an errand
+     of their own tops 0.161 m. A ceiling an arc passes half a metre under is a
+     roof to nothing, of trunk or of crown, and the two of those rigs -- one
+     body, one draw, one geometry, one block of another material -- come back the
+     same in every figure this rig takes. That is the heading of this step read
+     from the other side: the height is not what makes a roof, and a height by
+     itself makes nothing.
+     So the control is asked where the room IS the question and there is nothing
+     to go round: a passage three cells long with a ceiling one cell over the
+     floor, walls either side of it, and a step of a metre closing the end. What
+     the two bodies do there separates completely. Under the crown the body pushes
+     off at 6.92 m/s -- the launch that step asks, 7.31 less the frame it is
+     spent in -- stands on top of it five frames later, spends 81 of the window's
+     480 frames up there and is out: 418 frames more than a metre from the column
+     it started in, and 7.36 m of ground covered. Under the same geometry of trunk
+     it never gets a foot on the step -- 0 frames of the window -- spends all 480
+     of them inside the column the block stands over, covers 0.43 m, and the
+     largest launch of the whole eight seconds is 1.53 m/s; every arc pushed off
+     at the face is the 0.96 m/s the room leaves. The arithmetic is the same
+     either side of the material: the ceiling leaves 0.57 m of headroom, the step
+     asks 1.0 m of rise, and one arc cannot both top 1.0 m and stay under 0.57 m.
+     Under a trunk that body is at the foot of a face its own ceiling took away,
+     which is the same answer the roof law gives a room with no arc in it.
+     This is also where the mid-arc face law is asked of the ground law. The
+     frame this rig recorded before that law existed -- the body's centre crossing
+     the face of the step on an arc of 0.96 m/s, 0.022 m of ground and 0.971 m of
+     height in the one frame, and the body standing on a step it had never been
+     thrown at -- is what the `pops` guard above counts, and every rig now comes
+     back with none of those. */
+  check('the roof is asked of the material table and not of the height: the same step under the same block is given the arc that climbs it under the crown and not under the trunk, and the passage is left under one material and not the other',
+    spanLaw.leafPeak > 6.5 && spanLaw.trunkPeak < 5 &&
+    spanLaw.leafStep > 0 && spanLaw.trunkStep === 0 &&
+    spanLaw.stepGone.leaf > 300 && spanLaw.stepGone.trunk === 0, spanLaw);
+  check('and a block that leaves more headroom than the arc its legs want needs is a roof to neither material: those two rigs are one body',
+    spanLaw.underSame === 1, spanLaw);
+  /* Why the trunk passage reads the launches it does. The room over the body's head
+     is one cell less the body -- 0.57 m -- and the launch it leaves is the largest
+     whose frame-stepped top fits under it: **5.09 m/s**, recorded as **4.71** once
+     the frame it is spent in takes off `g dt`. The step closing the end asks
+     **7.31** (`launchForApex(1.10, dt)`: a metre of riser and the 10 cm of standing
+     room), recorded as **6.92**, which is more than that room has: under a trunk the
+     step is not a step those legs may take *there*, and the body is thrown the arc it
+     hedges at the face instead -- sized on the ground that stops short of the face,
+     which at that face is nothing, so the ask falls to its own floor of 0.12 m and
+     these legs' shortest arc, **0.958 m/s**, is what nine of the ten launches in that
+     window are. Under a crown there is no room at all: the 6.92 is given, the step is
+     stood on, and the body is gone. So the ask is that the ceiling, and not this
+     body's own legs, is what excludes the step -- the launch the room leaves sits
+     between the step's ask and the whole of that window, and the window is pinned to
+     the floor of the ground ask rather than to the room. */
+  const stepArcsOf = (m) => (spanLaw.stepArcs || [])
+    .filter((s) => s.indexOf(m + ':') === 0)
+    .map((s) => s.slice(m.length + 1).trim().split(/\s+/).filter(Boolean).map(Number))
+    .reduce((a, b) => a.concat(b), []);
+  const stepArcMax = (m) => Math.max.apply(null, stepArcsOf(m).concat([0]));
+  const stepArcMode = (m) => {
+    const t = {};
+    for (const v of stepArcsOf(m)) t[v] = (t[v] || 0) + 1;
+    return Object.keys(t).sort((a, b) => t[b] - t[a] || +b - +a)[0];
+  };
+  check('and under the trunk it is the ceiling that excludes the step, not the body: the room leaves less than the step asks, and every launch in that window is under even the room\'s own',
+    !!spanLaw.roomLaunch && spanLaw.roomLaunch.up < spanLaw.roomLaunch.stepUp &&
+    spanLaw.roomLaunch.up > 2 && stepArcMax('trunk') < spanLaw.roomLaunch.recorded,
+    spanLaw);
+  check('and those launches are the shortest these legs give, sized on the floor of the ground ask at a face with no ground short of it -- not on the room',
+    +stepArcMode('trunk') === +spanLaw.roomLaunch.minArc, spanLaw);
+  check('and the crown window is the one that takes the step: its largest launch is the launch that step asks, to the millimetre a second',
+    Math.abs(stepArcMax('leaf') - spanLaw.roomLaunch.stepRecorded) <= 0.002, spanLaw);
   check('none of them ended up inside rock or water either',
     spanLaw.inRock === 0, spanLaw);
 
@@ -9282,10 +9620,14 @@ What was measured before any of this was fixed, over 180 frames of walking
      a step of a metre and against a bank of two. And with nothing built there
      the body simply walks: it was on the ground in **89%** of the frames of a
      shorter run, swinging the same 0.124 m, and it is on the ground in every
-     one of them now with a swing of 0. A hopping body is not measured for
-     standing: a frog at the same bank is off the ground in 40% of frames
-     because hopping is what its own record says it does on land, and what is
-     asked of it is that its feet come back down, which they do.
+     one of them now with a swing of 0. A hopping body is not measured against
+     that: a frog at the same bank has its feet on the ground in 55% of the
+     frames of its window and the whole of it off the ground in the other 45,
+     which is the cycle its own row states rather than a body pressed at a face
+     and bounced (docs/03 s3), and what is asked of it is that the bank is not
+     climbed on legs it does not lift with -- `groundTop` 0, `climbFrames` 0, and
+     0.161 m gained, which is the height of an arc and not the top of a bank of
+     two metres.
      A body whose only way up is its legs climbs a step with them, and the bank
      is asked of both bodies of one animal. A hopper used to be lifted like a
      walker: the wild frog went up a bank of two metres in two lifts of a metre
@@ -9296,15 +9638,22 @@ What was measured before any of this was fixed, over 180 frames of walking
      of the same legs only where the ground it wants to stand on is above the
      ground it is standing on, sized to land on that step and no higher.
      Measured on one shelf with one bank built in it, the same bank for every
-     body and every run: with nothing built, or at a bank of two metres, every
-     arc of either body leaves the ground at **5.62 m/s** -- the row's everyday
-     launch less the frame it is spent in -- and the ground under its feet never
-     changes. At a bank of one metre each body takes exactly one sized arc,
-     **6.73 m/s**, and the ground under its feet goes from the shelf to the top
-     of the bank; the sized launch of the two bodies agrees to **0.002**, and
-     neither asks more than the fullest extension the row states. The wild body
-     is never lifted: `climbTo` is set in **0** of the 420 frames of that
-     window, at the bank it climbs and at the bank it does not.
+     body and every run: with nothing built, or at a bank of two metres, no arc
+     of either body is harder than that body's own everyday launch -- 2.533 m/s
+     for the wild animal pottering an errand at 0.42 of its row's rate, which is
+     0.76 m/s and 0.68 m of ground per arc, and 4.035 for the body worn from it,
+     which a hand on the keys drives at the row's whole land speed of 1.8 m/s and
+     1.62 m of ground per arc -- and the ground under its feet never changes.
+     Those are the launches each body's own ask sizes, not the row's `up` of 6.0,
+     and the two of them are not one number: what is one law is what the step
+     does to them. At a bank of one
+     metre each body takes exactly one arc above its own everyday one, 6.924 and
+     6.922 -- the launch that step asks of these legs, 7.31 and 7.30 less what
+     the frame each is spent in takes off -- and the ground under its feet goes
+     from the shelf to the top of the bank; the two bodies of one animal agree to
+     **0.002**, and neither asks more than the fullest extension the row states
+     (7.4). The wild body is never lifted: `climbTo` is set in **0** frames, at
+     the bank it climbs and at the bank it does not.
      What that body is drawn with is asked too, and this is the row that says a
      body is not a point to the world it walks in. The rectangle the model draws
      -- the body's own half-length and half-width about the centre its boxes sit
@@ -9315,13 +9664,17 @@ What was measured before any of this was fixed, over 180 frames of walking
      come back with **0** frames a centimetre through the face and a deepest
      corner of **0.001** and **0.005 m** -- the body standing at the face of the
      wall, not through it. What is not asked here is a different thing: a body on
-     its way over an edge it *can* climb has its front through the face for the
-     frames the crossing takes -- a corner inside the bank in **38** frames at a
-     bank of one metre, **36** of them a centimetre or more through the face, up to
-     **0.198 m**, and **9** and **8** frames up to **0.225 m** at the same bank
-     under water -- and
-     those rows are the same to the frame with this law in or out, because an arc
-     that ends on a step is asked by the step, not by the wall. */
+     its way over an edge it *can* climb has a corner through the face for the
+     frame the crossing takes -- **one** frame at a bank of one metre, **0.119 m**
+     of it past the face, and **one** frame at the same bank with a shore of water
+     in front of it, **0.118 m**. That is the whole of what crossing a step costs
+     now. The same row used to report **38** frames with a corner inside the bank,
+     **36** of them a centimetre or more past the face and up to **0.198 m**, and
+     **9** and **8** frames up to **0.225 m** under water, because a body in the
+     middle of an arc was walked into the column of a face its own arc could not
+     reach and then stood there for the rest of the errand; the ask at the end of
+     `ground` in entities.js is what answers it, and the `pops` guard of the wood
+     rig above is what keeps it honest. */
   const wall = await step('aBodyWalkedIntoABankStandsOnItsFeet', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
     /* the row of the animal this step is about, and the two launches its legs
@@ -9567,13 +9920,21 @@ What was measured before any of this was fixed, over 180 frames of walking
     /* the third one has nothing built: the same body on the same shelf with
        nothing in front of it, which is the control that says the rule above did
        not stop a body walking */
+    const WILD = 7;                 // the wild body's window; see the note above
     for (const [h, secs, shore] of [[2, 3, false], [1, 3, false], [0, 1.5, false],
                                     [1, 3, true], [2, 3, true]]) {
       build(h, shore);
-      const per = {};
+      /* The length of each window is published with what it counted, because the
+         windows are not the same length and a count from one is not comparable
+         with a count from another: the worn body walks at 4.7 m/s and would walk
+         off the 13-cell shelf in three seconds with nothing built to stop it,
+         while at a bank it is stopped and three seconds is what the face asks
+         for. What is comparable is the rate. */
+      const per = { secs: Object.assign({ frog: WILD },
+        { human: secs, frogpear: secs }) };
       for (const form of [null, 'frogpear'])
         per[form || 'human'] = run(form, secs);
-      per.frog = runWild(7);
+      per.frog = runWild(WILD);
       res[(shore ? 'wet' : 'bank') + h] = per;
     }
     cells.forEach((c, i) => W.set(c[0], c[1], c[2], was[i]));
@@ -9607,10 +9968,26 @@ What was measured before any of this was fixed, over 180 frames of walking
      numbers the row states, that the two bodies of one animal agree to the
      centimetre, and that the step be the whole of the extra height. */
   const at = (bank, k) => (wall[bank] && wall[bank][k] && wall[bank][k].arcs) || [];
-  const everyday = Math.max.apply(null,
-    at('bank0', 'frog').concat(at('bank0', 'frogpear')));
-  const sized = (bank, k) => at(bank, k).filter(v => v > everyday + 0.5);
+  /* The everyday launch, read from the control bank with nothing built, is asked
+     of each body separately. It is not one number the two share: it is the launch
+     each body's own ask sizes -- the wild animal potters at a fraction of its
+     row's rate on an errand of its own, and the body worn from it is driven at
+     the row's whole cruise by a hand on the keys -- so a single figure taken from
+     both was a statement about the rig, not about the animal. What is one law is
+     the *step*: the one launch that is not a body's own everyday one, and what it
+     is sized by. */
+  const everydayOf = (k) => Math.max.apply(null, at('bank0', k));
+  const sized = (bank, k) => at(bank, k).filter(v => v > everydayOf(k) + 0.5);
   const peak = (a) => Math.max.apply(null, a);
+  /* Arcs a second. The windows are not the same length -- the worn body is
+     walked for 1.5 s with nothing in front of it, because at 4.7 m/s three
+     seconds of that walks it off the 13-cell shelf the bank is built in, and for
+     3 s at a bank that stops it -- so a count from one is not the same quantity
+     as a count from the other, and only the rate is asked. A window catches a
+     whole number of arcs, and whether the last one falls inside its edge is luck,
+     so the ask carries one arc of the window it was counted in. */
+  const arcsPerSec = (bank, k) => (wall[bank] && wall[bank].secs && wall[bank].secs[k] ?
+    at(bank, k).length / wall[bank].secs[k] : 0);
   check('a step within its legs is climbed with those legs, by either body of the animal that owns them',
     !!wall.bank1 && wall.bank1.frog.groundTop >= 0.95 &&
     wall.bank1.frogpear.groundTop >= 0.95 && wall.bank1.frog.climbFrames === 0, wall);
@@ -9618,31 +9995,44 @@ What was measured before any of this was fixed, over 180 frames of walking
     !!wall.row && ['frog', 'frogpear'].every(k => sized('bank1', k).length === 1 &&
       peak(sized('bank1', k)) < wall.row.max) &&
     Math.abs(peak(sized('bank1', 'frog')) - peak(sized('bank1', 'frogpear'))) <= 0.02, wall);
-  check('with no step within its legs nothing is sized: every arc of either body is the everyday launch, at a wall as on open ground',
-    ['frog', 'frogpear'].every(k => at('bank0', k).length > 1) &&
+  /* Nothing is sized where there is no step to size: at the two-metre wall, as
+     on open ground, no arc of either body leaves the ground harder than that
+     body's own everyday launch. What the face does change is the ground, and the
+     animal's own hedge answers it -- the largest arc that has a landing -- so the
+     arcs near a wall are the SHORTER ones, never the longer. That is the same
+     sentence from either side: a step is asked for height, a wall is asked for
+     the ground that is there. */
+  check('with no step within its legs nothing is sized: at a wall as on open ground no arc leaves the ground harder than that body\'s everyday launch',
+    ['frog', 'frogpear'].every(k => at('bank0', k).length > 1 && at('bank2', k).length > 0) &&
     ['bank0', 'bank2'].every(b => ['frog', 'frogpear'].every(k =>
-      at(b, k).every(v => Math.abs(v - everyday) <= 0.02))), wall);
-  /* The face of a wall the legs cannot size, asked of both bodies. The animal
-     has always known it: the window that catches 8 arcs of it on open ground
-     catches 3 at this bank, and every one of those is the everyday launch -- it
-     does not throw itself at a face it cannot get over, it stands there and
-     walks along it. The body worn from that animal answered the same face with 3
-     arcs and its feet on the ground in 60% of the frames, which are the numbers
-     it has in the open, because the sky over an arc was only ever read out of
-     the animal's head and not out of this body's (OPEN-ISSUES 15). One law
-     reads it now, and the same window records 1 arc and 83% standing. What is
-     asked is the direction of those numbers, not their values: an arc is not
-     more plentiful at a face than in the open, and the feet are no less at home
-     there than in the open. */
+      at(b, k).every(v => v <= everydayOf(k) + 0.02))), wall);
+  /* The face of a wall the legs cannot size, asked of both bodies. In the open,
+     with nothing built, the wild body's window catches 8 arcs at 1.14 a second
+     and the body worn from it 2 arcs at 1.33 a second; every one of them is that
+     body's everyday launch. At the two-metre wall the same two windows catch 7
+     arcs at 1.00 a second and 4 arcs at 1.33 a second -- no more plentiful at
+     the face than in the open -- and the wild body's are NOT the same launches:
+     three of them come off at 2.492, 1.533 and 1.415 against the everyday 2.533,
+     because the ground those arcs were asked to cover is not all there and the
+     hedge takes the arc down to the ground that is (see the brace at
+     `hopLaunchNow`). A body at a wall takes SHORTER arcs, never longer ones:
+     that is the same law as the sized arc at a bank of one metre, read from the
+     side of the ground instead of the side of the height. The feet follow: the
+     worn body stands on the ground in 55% of the frames of that window against
+     53% in the open, and the animal is never lifted (`climbFrames` 0, asked
+     above). What is asked here is the direction of those numbers, not their
+     values. */
   check('and a wall the legs cannot size is met on foot by both bodies, not thrown at',
-    ['frog', 'frogpear'].every(k => at('bank2', k).length <= at('bank0', k).length) &&
+    ['frog', 'frogpear'].every(k => at('bank0', k).length > 1 && at('bank2', k).length > 0) &&
+    ['frog', 'frogpear'].every(k => !!wall.bank2 && !!wall.bank0 &&
+      arcsPerSec('bank2', k) <= arcsPerSec('bank0', k) + 1 / wall.bank2.secs[k]) &&
     !!wall.bank2 && !!wall.bank0 && wall.bank2.frogpear.gndPct >= wall.bank0.frogpear.gndPct, wall);
   check('and the step is the whole of the extra height: above it a body hops no higher than anywhere else',
     ['frog', 'frogpear'].every(k => !!wall.bank1 && !!wall.bank0 &&
       wall.bank1[k].gained <= 1 + wall.bank0[k].gained + 0.02), wall);
   check('and no body is left inside the bank, or the bank inside the world',
     wall.restored && ['bank2', 'bank1', 'bank0'].every(k =>
-      Object.keys(wall[k]).every(f => wall[k][f] === null || wall[k][f].boxIn === 0)), wall);
+      ['human', 'frogpear', 'frog'].every(f => wall[k][f] === null || wall[k][f].boxIn === 0)), wall);
   /* The same shelf with one block of water over it, which is the depth of every
      shore of this valley (183 columns of Mirrorlake alone): the water is over
      this animal's back and its feet are still on the bottom. Two of its bodies

@@ -7,106 +7,108 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one commit, and it puts land in
-the sea. The water the last round opened out is no longer an empty field: it holds
-islands, and it holds more of them the nearer they lie to the island this square sits
-on -- 越靠近中心岛越密集, 越远的地方岛越稀疏, the words the decision came in -- and
-there is no line where they stop.
+State at time of writing: this round is one commit, and it changes how a jump is
+measured. A body whose legs are an arc was sized by the parabola -- launch squared over
+twice the gravity -- and the parabola is what the flight tends to as the frame goes to
+nothing, not what these frames do. So the whole of the movement code now asks the same
+question the integration answers, frame by frame: `arcApex` is the top the launch
+reaches and `arcGround` the ground it covers, and the launch a height or a stretch of
+ground asks of a pair of legs (`launchForApex`, `launchForGround`) is that law read
+backwards. One pair of legs, one ask, one law, and every number in this file and in
+docs/03 s3 is that second form -- the rate read at the frame the legs give it, which is
+the row's number less the **0.383 m/s** the frame spends on gravity before a height is
+ever written.
 
-The rule is arithmetic, because only arithmetic keeps a world fixed for every player
-and every session while still carrying a gradient. An Archimedean spiral out of
-(80,80) carries **7** islands a turn and gains **60 m** of radius a turn, so the turns
-stand **377 m** apart radially; every centre is pulled up to **40 m** along its own
-radius -- under half the gap between turns, so two turns can never trade places -- and
-no foot is ever allowed within **24 m** of this island's shore or of another island's
-foot, because the water between two grounds is the channel that makes them two
-islands. An island's id is its **ordinal along the spiral** (ordinal **0** is the
-island this square already is) and its place is computed *from* that ordinal, never
-the other way round; the same question is answered from the other end too, since
-`islesNear(x,z)` names the islands standing at an address from the address alone,
-which is all a chunk of ground needs in order to be built. What kind an island is is
-stated in the only two numbers a shore has -- how far its foot reaches and how high
-its crown stands over the water line -- in five kinds from a **22 m** sandbar to a
-**165 m** ridge, the mix changing with the distance. The island itself is one pile of
-ground raised out of the floor it stands in, shaped `1 - smoothstep(d / foot)`: no
-step, no wall, no ring, so no island leaves a cliff standing in the sea, and a
-shoreline appears wherever the dome crosses the water by itself. The material table
-answers what it is made of, and puts snow on the crowns above y34 by its own height
-rule: nothing about islands is written into the material table or the snow line.
+Three things came out of that, and each is asked by a rig of its own; a fourth is a
+number those rigs were asked to account for and did not.
 
-Measured at the seed the game opens with, over the first **70** ordinals -- as far out
-as the game streams ground on its own, and no further:
+- **The room over a body's head is asked with the ground in front of it, not as a lid
+  afterwards.** A roof that takes height out of an arc takes the ground that arc covers
+  with it, and an arc lowered onto the face of the step it was sized for ends inside the
+  rock. Measured in a passage -- three cells with a ceiling one cell over the floor, rock
+  walls either side, a step of a metre closing the end, so the only way out is an arc:
+  **0.57 m** of headroom against a riser asking **1.0 m**: under a ceiling of leaves the
+  body takes the launch that step asks (**7.31 m/s**, recorded as **6.924**), stands on
+  the step, and is out -- **81** frames up there, **418** of the window spent more than a
+  metre from where it started, **7.36 m** of ground covered. Under the same geometry of
+  trunk it never gets a foot on the step (**0** frames), spends all **480** inside the
+  column the block stands over, and covers **0.43 m**: the room over its head leaves
+  **5.088** (**4.705** recorded) against the **7.307** (**6.924** recorded) that riser
+  asks, so that step is not a step those legs may take there, and the body is thrown its
+  face-hedge -- an arc sized on the ground short of the face, of which there is none, so
+  the ask falls to its own floor of **0.12 m** and the shortest arc these legs give,
+  **0.958 m/s**, is **9** of the **10** launches that window records. That is the material
+  control now: the headroom and the riser are identical both times and only the material
+  decides whether the room counts. The control that used to make that point -- one block over the head, nothing in
+  front of the feet -- stopped separating the two materials once the launch was sized by
+  what is in front of the legs: such a block leaves **0.57 m** and an errand arc never
+  gets that body more than **0.161 m** off its floor, so a ceiling an arc passes half a
+  metre under is a roof to nothing, trunk or crown, and the two rigs of that pair, one
+  body and one draw, agree in every figure the rig takes (**11** frames in the column,
+  **10** arcs, **110** airborne frames, **6.18 m**). A height by itself makes no roof.
+- **A body in the middle of an arc is not walked into the columns it flies over.** A face
+  above the height the fall still left in its vertical rate could take it to is neither
+  ground it stands on nor a wall it is meeting, so the columns are not asked of it and
+  the arc is finished; the arc's own apex bounded the look-ahead at push-off, and a face
+  beyond that arc is met by that arc's landing and the frame after it. The frame that
+  found it: a body's centre crossing the face of a step it had never been thrown at, on an
+  arc of **0.958 m/s**, **0.022 m** of ground and **0.971 m** of height in the one frame.
+  The `pops` guard -- any frame that moves a body more than **0.9 m** -- read **1** such
+  frame in the wood rig and now reads **0** in all seven. What crossing a step costs is
+  now **one** frame with a corner through the riser, **0.119 m** past the face, where it
+  was **38** frames and **0.198 m**; at a two-metre wall the body's own rectangle is
+  inside the bank in **0** frames, and a wall the legs cannot size is met with *shorter*
+  arcs (**2.492**, **1.533**, **1.415** against the **2.533** of open ground), never
+  longer ones -- the same brace, read from the side of the ground.
+- **A step is sized to the step, and a shore is ground.** At a one-metre riser either
+  body of the frog gives exactly one launch that is not its own everyday one: **6.924**
+  through the animal, **6.922** through the body worn from it, **0.002** apart, inside the
+  **7.4** the row states, with the animal lifted in **0** frames. With nothing built, or
+  at a bank of two metres, no arc of either body leaves the ground harder than that body's
+  own everyday launch -- **2.533** for the animal pottering at **0.42** of its row's rate,
+  **4.035** for a body driven at the row's **1.8 m/s** -- and a block of water laid over
+  the shelf changes nothing about any of it (**249** of the window spent in water, held up
+  in **0**), because the water over a shore is over the back and the feet are on the
+  bottom. The two films agree with the rigs: `strip climbwild` and `strip climb` read
+  `push 6.924` and `push 6.922` at the same bank.
 
-| | |
-|---|---|
-| raised as ground | **70** of 70; none had to be cut down for want of room; closest two feet **178.9 m** apart |
-| kinds | **15** sandbars, **16** reefs, **23** thickets, **11** isles, **5** ridges |
-| per km², by km band | **3.50 / 2.02 / 1.21 / 0.82** -- the gradient the rule exists for, falling as 1/r |
-| the nearest of them | centre **389 m** from (80,80); **210 m** of open water past this island's shore |
-| how far open sea is from land | sampled on rings to 1.5 km (**5,088** points): median **171 m** from a foot, furthest **476 m** -- one fruit is **966 m** out and back, so nothing in that reach is a crossing a body cannot make |
-| what stands on it | nothing: over the footprint of the nearest island a body could stand on (**15,421** columns) **0** cells are tree, fruit or plant |
-| what it costs | `landH` went from **0.24-0.44** to **0.7-1.0 µs** a column in open water and **1.2-1.6 µs** where an island stands under it (**0.2-0.4 ms** for a 256-column chunk; the spread is how many island records an address lies near, and the in-game figure for an island's own chunks is **1.17-1.56**). It was **2.7-4.1 µs** before the positions and records were cached, before each island's floor was asked once instead of per column, and before the turn window was cut from eight turns to the three that can reach a point |
+- **A launch named as the reason for something has to be a number a rig prints, and one
+  of mine was not.** The trunk side of that passage was written up here and in docs/03 s3
+  and in the roof comment as a body left with "the **0.958 m/s** that room leaves". The
+  figure is real; the reason written under it is not. The span rig now prints every launch
+  both passage bodies give (`stepArcs`) beside the arithmetic of the room and the riser
+  (`roomLaunch`): the room is **0.57 m** and leaves **5.088** (**4.705** recorded), the
+  step asks **7.307** (**6.924** recorded) -- the room's launch is *under* the step's,
+  which is the whole of why the step is refused there -- and what that window gives is
+  **0.958** nine times over, which is `launchForGround` read on the **0.12 m** floor of
+  the ground ask (the same record calls it `minArc`), plus one hedge of **1.533**. Two
+  checks hold that now: the room's launch must sit under the step's ask and above every
+  launch that window gave, and the modal launch of that window must be the arc sized on
+  that floor rather than anything the ceiling sized. Under the crown, the largest launch
+  of that same body is the step's own, to the millimetre a second.
 
-- **Both halves are asked, not asserted.** `node-smoke.js` asks the rule as pure
-  arithmetic: another world of another seed answers different (**0** of **70** leaked),
-  the same ordinal asked again in a fresh array answers the same (**0** moved), every
-  island is found from its own address (**70** of **70**), no feet overlap and none
-  reaches this island's shore (**178.9 m** and **210 m** against a **24 m** bound),
-  every crown breaks the water by exactly the height its kind states, **0** columns are
-  left raised past a foot, and the density falls band by band. `play.js` asks the same
-  ground as a world: the island's disc streams whole (**0** holes, **709** chunks), a
-  body stands on it for 120 frames with its feet down in **100%** of them, walks 13 m
-  of it outside the authored array, and after the ground is let go (**813** chunks) it
-  is asked for again and hashes the same. `docs-sync.js` now reads **12** claims out of
-  02 §1.2 -- the rule's constants, the kinds table, every number in the measured table,
-  the range the air gives up its contrast at, and the trip a fruit buys -- and measures
-  them itself rather than trusting this file.
-- **A streaming bug the new test found, and fixed.** `stream()` walked its rings from
-  `r = 1`, so the lens' own chunk was never meshed. A body that *walks* into a place has
-  its own chunk in the previous ring, so this hid; a body that is *put* there -- a save
-  restored, a lens started out at sea -- had its ground filled and never meshed, and
-  stood on ground it could not see. The rig's island disc came back with one hole, at
-  the middle, and the ring is complete now.
-- **A check this round wrote and then corrected: the cost claim was the wrong claim.**
-  The island step first held "a call stays inside one frame" (`worstWarmCallMs < 16`). It
-  went red at **30 ms** with the other suites ahead of it and read **10.5 ms** the same
-  step run on its own, with the game's code unchanged in between -- and looking at what
-  `stream()` actually guarantees, that bound was never the code's to keep: it reads the
-  clock *before* starting a chunk and never inside one, so a call spends the budget the
-  game hands it (6 ms) and may overrun by exactly the one chunk it had begun, and on top
-  of that a loaded browser puts whatever it likes. The check now holds the unit the
-  streamer cannot interrupt -- one chunk, rule and geometry together, measured on the nine
-  chunks an island actually stands on: **2.2-2.4 ms** worst against the **16 ms** a frame is,
-  and **1.17-1.56 µs** a column against the **4** held -- and *reports* the call's own
-  time instead of bounding it. The fill-call count is reported the same way in 07 (it
-  came out **181** run alone and **354** under a suite for the same disc). The same
-  reasoning applies to the older `worstCallMs < 12` in the west-walk step, which has
-  stayed green so far and was left alone rather than adjusted on a guess.
-- **Two things the probes learned about this codebase, recorded rather than fixed.**
-  `generate()` twice into one `World` does not reproduce a valley: planting asks the
-  cell it chose and moves on when something already stands there, so the second pass
-  draws a different set of numbers (seed 20261008 hashes 1271637568 built once,
-  3338319353 built twice into the same array). Every "same world again" test therefore
-  builds a fresh array. And `islandTrees`/`islandFruit` are not functions in this
-  codebase: trees and bushes are set down inside `generate()` and nothing plants while
-  ground streams, which is the mechanical reason the sea was bare and the reason the
-  census above reads zeros.
-- **What was not built, on purpose.** There is no `homeIsland(id)`. There *is* an id:
-  `game.js` makes one in `init()` (`IDEN.idPrefix` + `IDEN.idBytes` random base-36
-  characters, `p-k3f9a2` in shape), the save stores it, `load()` puts it back, and
-  `stashes[].owner` already keys cellar-tree ownership on it -- docs/03 §6 documents that layer. What does not
-  exist is a rule turning such an id into an ordinal, and a second player to need one:
-  an id drawn afresh for every new game would move a "home" island every new game, so
-  the home island stays derivable and unbuilt rather than invented. No animal, tree or
-  fruit was placed out there: that is design waiting for issue 24 and for the fruit
-  table, which holds one fruit.
+The suite carries the arithmetic as well as the readings: the launch of a body asked for
+height must be the row's number (`**5.617**` for the frog's `6.0`, `**7.917**` for the
+person's `8.3`) and must reach `arcApex` of it (**0.73 m**, **1.43 m**); the launch of a
+body driven along the ground must be the one `launchForGround` sizes for the ground its
+ask wants (**4.035** for **1.62 m** of ground; **2.875** for the **0.82 m** a frog
+pottering at **1.22 m/s** wants) and may not exceed the row; the two `under` rigs --
+one body, one draw, a block of another material between them -- must agree in every
+figure; and the passage must be left under one material and not the other.
 
-What this round leaves open: issues 1-24 stand exactly as written, and **25** is half
-closed by this round -- the ground and its ids are shipped, what lives on them is not.
-Two seams this round opened and did not close are named there: the minimap still paints
-the authored square and nothing else, now that there is something out there worth
-painting; and the home island stays a derivation, because nothing maps the id a save
-already carries to an ordinal.
+- **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the
+  commit message has no non-ASCII; `docs-sync.js` ends 全部一致。 and `docs-drift.js`
+  detects every injected drift; `bash game/test/all.sh` **10/10** twice on this tree with
+  `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**. No worldgen, no map and no
+  save anchor moved: the world of the last round is the world of this one.
+
+What this round leaves open is the user's own queue, in the order they gave it, recorded
+under **25**: the minimap paints the authored square and nothing past it; the main
+island's shores are too steep to walk up, which is what "no landing place" means; and
+after those a sea turtle -- wings-for-flippers, faster in water than the frog's **4.6**,
+no skin-drying clock on land, slower than **1.8** on it -- the island nearest this one to
+be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
+is currently empty of everything but frogs.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -2256,6 +2258,26 @@ each one would otherwise be rediscovered:
   there, blank paper is now a map lying rather than a map being modest: `mmBase` in
   `game/src/ui.js` reads columns x/z 0..160. A world with no edge needs a different
   question -- how far am I from the island I started on -- and that is design.
+**The queue the user gave, in their order (this round, recorded so it is not lost).**
+
+1. The main island needs a gentle shore. In their words: 主岛是不是得有一个平缓的地方，
+   不然都没法上岛 -- "isn't the main island due a平缓 place, otherwise there is no
+   getting up onto the island". Mechanically this is a slope question in `worldgen.js`:
+   no test today measures the slope of any shore, and the worldgen anchors in
+   `docs-sync.js` (**70** of **70** ordinals raised, **178.9 m** closest feet, **389.0 m**
+   to the nearest centre, **210.0 m** of open water, the **15/23/16/11/5** kind census)
+   are all re-measured by any change to `isleLift`/`ISLE_TYPES`, so the answer has to be
+   a rule and the numbers have to move with it, in one commit.
+2. The minimap stops lying about the world outside the authored square: it blists past
+   the main island because it paints one **160x160** base image and nothing else.
+3. Then the sea turtle, and the sea being peopled: it swims by moving its front
+   flippers up and down the way a bird's wings move; `swimSpeed` above the frog's
+   **4.6**; no skin-drying clock on land; land speed under **1.8**; the island nearest
+   this one to be a **sand isle** carrying the turtle's fruit grown in sand; the main
+   island keeps only the frog's fruit; and animals in the sea at all -- now in their
+   words: 现在海里面啥动物都没有，太冷清了 ("right now there is no animal in the sea at
+   all, it is too empty").
+
 - **The block table has a hole at id 16.** Unchanged from last round: the cloud block
   was deleted with the wall, `N.BLOCKS[16]` is `undefined`, and two helpers index the
   table unguarded. Latent, not live; it should still not be left to luck.
@@ -2280,6 +2302,112 @@ something the game already has; nothing in it does yet.
 > lives. Kept because these paragraphs name the measurements behind issues 1-11;
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
+
+### The round before this one: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+State at time of writing, then:
+the sea. The water the last round opened out is no longer an empty field: it holds
+islands, and it holds more of them the nearer they lie to the island this square sits
+on -- 越靠近中心岛越密集, 越远的地方岛越稀疏, the words the decision came in -- and
+there is no line where they stop.
+
+The rule is arithmetic, because only arithmetic keeps a world fixed for every player
+and every session while still carrying a gradient. An Archimedean spiral out of
+(80,80) carries **7** islands a turn and gains **60 m** of radius a turn, so the turns
+stand **377 m** apart radially; every centre is pulled up to **40 m** along its own
+radius -- under half the gap between turns, so two turns can never trade places -- and
+no foot is ever allowed within **24 m** of this island's shore or of another island's
+foot, because the water between two grounds is the channel that makes them two
+islands. An island's id is its **ordinal along the spiral** (ordinal **0** is the
+island this square already is) and its place is computed *from* that ordinal, never
+the other way round; the same question is answered from the other end too, since
+`islesNear(x,z)` names the islands standing at an address from the address alone,
+which is all a chunk of ground needs in order to be built. What kind an island is is
+stated in the only two numbers a shore has -- how far its foot reaches and how high
+its crown stands over the water line -- in five kinds from a **22 m** sandbar to a
+**165 m** ridge, the mix changing with the distance. The island itself is one pile of
+ground raised out of the floor it stands in, shaped `1 - smoothstep(d / foot)`: no
+step, no wall, no ring, so no island leaves a cliff standing in the sea, and a
+shoreline appears wherever the dome crosses the water by itself. The material table
+answers what it is made of, and puts snow on the crowns above y34 by its own height
+rule: nothing about islands is written into the material table or the snow line.
+
+Measured at the seed the game opens with, over the first **70** ordinals -- as far out
+as the game streams ground on its own, and no further:
+
+| | |
+|---|---|
+| raised as ground | **70** of 70; none had to be cut down for want of room; closest two feet **178.9 m** apart |
+| kinds | **15** sandbars, **16** reefs, **23** thickets, **11** isles, **5** ridges |
+| per km², by km band | **3.50 / 2.02 / 1.21 / 0.82** -- the gradient the rule exists for, falling as 1/r |
+| the nearest of them | centre **389 m** from (80,80); **210 m** of open water past this island's shore |
+| how far open sea is from land | sampled on rings to 1.5 km (**5,088** points): median **171 m** from a foot, furthest **476 m** -- one fruit is **966 m** out and back, so nothing in that reach is a crossing a body cannot make |
+| what stands on it | nothing: over the footprint of the nearest island a body could stand on (**15,421** columns) **0** cells are tree, fruit or plant |
+| what it costs | `landH` went from **0.24-0.44** to **0.7-1.0 µs** a column in open water and **1.2-1.6 µs** where an island stands under it (**0.2-0.4 ms** for a 256-column chunk; the spread is how many island records an address lies near, and the in-game figure for an island's own chunks is **1.17-1.56**). It was **2.7-4.1 µs** before the positions and records were cached, before each island's floor was asked once instead of per column, and before the turn window was cut from eight turns to the three that can reach a point |
+
+- **Both halves are asked, not asserted.** `node-smoke.js` asks the rule as pure
+  arithmetic: another world of another seed answers different (**0** of **70** leaked),
+  the same ordinal asked again in a fresh array answers the same (**0** moved), every
+  island is found from its own address (**70** of **70**), no feet overlap and none
+  reaches this island's shore (**178.9 m** and **210 m** against a **24 m** bound),
+  every crown breaks the water by exactly the height its kind states, **0** columns are
+  left raised past a foot, and the density falls band by band. `play.js` asks the same
+  ground as a world: the island's disc streams whole (**0** holes, **709** chunks), a
+  body stands on it for 120 frames with its feet down in **100%** of them, walks 13 m
+  of it outside the authored array, and after the ground is let go (**813** chunks) it
+  is asked for again and hashes the same. `docs-sync.js` now reads **12** claims out of
+  02 §1.2 -- the rule's constants, the kinds table, every number in the measured table,
+  the range the air gives up its contrast at, and the trip a fruit buys -- and measures
+  them itself rather than trusting this file.
+- **A streaming bug the new test found, and fixed.** `stream()` walked its rings from
+  `r = 1`, so the lens' own chunk was never meshed. A body that *walks* into a place has
+  its own chunk in the previous ring, so this hid; a body that is *put* there -- a save
+  restored, a lens started out at sea -- had its ground filled and never meshed, and
+  stood on ground it could not see. The rig's island disc came back with one hole, at
+  the middle, and the ring is complete now.
+- **A check this round wrote and then corrected: the cost claim was the wrong claim.**
+  The island step first held "a call stays inside one frame" (`worstWarmCallMs < 16`). It
+  went red at **30 ms** with the other suites ahead of it and read **10.5 ms** the same
+  step run on its own, with the game's code unchanged in between -- and looking at what
+  `stream()` actually guarantees, that bound was never the code's to keep: it reads the
+  clock *before* starting a chunk and never inside one, so a call spends the budget the
+  game hands it (6 ms) and may overrun by exactly the one chunk it had begun, and on top
+  of that a loaded browser puts whatever it likes. The check now holds the unit the
+  streamer cannot interrupt -- one chunk, rule and geometry together, measured on the nine
+  chunks an island actually stands on: **2.2-2.4 ms** worst against the **16 ms** a frame is,
+  and **1.17-1.56 µs** a column against the **4** held -- and *reports* the call's own
+  time instead of bounding it. The fill-call count is reported the same way in 07 (it
+  came out **181** run alone and **354** under a suite for the same disc). The same
+  reasoning applies to the older `worstCallMs < 12` in the west-walk step, which has
+  stayed green so far and was left alone rather than adjusted on a guess.
+- **Two things the probes learned about this codebase, recorded rather than fixed.**
+  `generate()` twice into one `World` does not reproduce a valley: planting asks the
+  cell it chose and moves on when something already stands there, so the second pass
+  draws a different set of numbers (seed 20261008 hashes 1271637568 built once,
+  3338319353 built twice into the same array). Every "same world again" test therefore
+  builds a fresh array. And `islandTrees`/`islandFruit` are not functions in this
+  codebase: trees and bushes are set down inside `generate()` and nothing plants while
+  ground streams, which is the mechanical reason the sea was bare and the reason the
+  census above reads zeros.
+- **What was not built, on purpose.** There is no `homeIsland(id)`. There *is* an id:
+  `game.js` makes one in `init()` (`IDEN.idPrefix` + `IDEN.idBytes` random base-36
+  characters, `p-k3f9a2` in shape), the save stores it, `load()` puts it back, and
+  `stashes[].owner` already keys cellar-tree ownership on it -- docs/03 §6 documents that layer. What does not
+  exist is a rule turning such an id into an ordinal, and a second player to need one:
+  an id drawn afresh for every new game would move a "home" island every new game, so
+  the home island stays derivable and unbuilt rather than invented. No animal, tree or
+  fruit was placed out there: that is design waiting for issue 24 and for the fruit
+  table, which holds one fruit.
+
+What this round leaves open: issues 1-24 stand exactly as written, and **25** is half
+closed by this round -- the ground and its ids are shipped, what lives on them is not.
+Two seams this round opened and did not close are named there: the minimap still paints
+the authored square and nothing else, now that there is something out there worth
+painting; and the home island stays a derivation, because nothing maps the id a save
+already carries to an ordinal.
+
+Read the standing contract below first: it decides whether any of this counts as
+finished.
+
 
 
 ### The round before this one: the map stops being the world and becomes a square of ground with an address (f1f6970)

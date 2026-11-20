@@ -87,8 +87,11 @@
                   the same field `swimSpeed`, and it is called that here too:
                   one record shape, read by one code path.
        jump       the launch the push key gives the feet, m/s. 8.3 reaches
-                  1.50 m under this world's gravity (up*up/2g) over a body that
-                  stands 1.8 m tall. An animal that hops states the same thing
+                  1.43 m over its feet -- `arcApex` in src/entities.js, the top
+                  the flight of this world's frames actually draws; the
+                  parabola's 1.50 m is what the same launch would reach as the
+                  frame goes to nothing, and it is not the number any step or
+                  roof is asked with. An animal that hops states the same thing
                   as `hop.up`, and the body worn from it is launched by that.
        turn       the most radians a second this body can add to its heading at
                   its own cruising speed -- the same field the animal rows carry.

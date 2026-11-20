@@ -31,7 +31,10 @@
    *   that row -- and the body you start in is a record of the same shape, in
    *   data/player.js -- so the body you wear and the animal you wear are moved
    *   by one record, and wearing a frog is moving like a frog: at 1.8 m/s on
-   *   land, at 4.6 through water, 0.78 m off the ground. The old row carried
+   *   land, at 4.6 through water, and 0.73 m off the
+   * ground when it is asked for height with nothing in front of it (`arcApex`: the
+   * flight these frames perform, not the parabola's 0.78 m; an arc driven along the
+   * ground is sized to the ground its ask wants and tops far less, 03 §3). The old row carried
    *   `speed 0.9 / jump 1.3 / swim 1.1 / hop { up: 0.72, kick: 1.25 }` as
    *   multipliers on the human body's numbers, which made a worn frog cross
    *   ground at 4.23 m/s and throw itself 1.31 m: a 0.5 m animal at a person's

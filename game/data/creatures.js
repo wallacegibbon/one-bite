@@ -34,16 +34,26 @@
       habitat: ['mirrorlake', 'glowglade', 'starfall'], active: 'both',
       /* `hop` is two launches of one pair of legs, and the second is only ever
          asked for when the ground in front is higher than the ground under the
-         feet. `up` 6.0 is the hop it gives without a reason: 0.73 m off the
-         ground as either body, measured on the film, at a cycle of `period`
-         seconds -- 36% of the stride off the ground, which is this animal's
-         gait. `max` 7.4 is the same legs fully extended: 1.13 m, and that is
-         the whole of what it can reach, which is why the valley's one-metre
-         terraces and Mirrorlake's one-block shore are steps this animal climbs
-         and a bank of 1.2 m is a wall it goes round. Neither number is a second
-         kind of jump: the arc is gravity's either way (src/entities.js,
-         `hopLaunchNow`), and the body worn from this animal's fruit is launched
-         by these two numbers and no others. */
+         feet. `up` 6.0 is the launch the legs give with nothing in front of them
+         and no ground asked for: 0.73 m over its feet as either body of the
+         animal (`arcApex` in src/entities.js -- the flight this body's frames
+         perform, not the parabola's). `max` 7.4 is the same legs fully extended:
+         1.13 m over its feet, and that is the whole of what these legs reach. It
+         is stated above the valley's one-metre terraces and one-block shores on
+         purpose: what a step costs these legs is the top of the face plus the
+         10 cm of standing room above it (`STEP_CLEAR` in src/entities.js), so a
+         one-metre block is a step the animal climbs and a bank of 1.2 m is a
+         wall it goes round. The arc that climbs a step is the same flat arc and
+         no steeper: a body standing at the foot of a face it could land on top of
+         is stopped by it, not defeated by it, because the face takes back the
+         ground the arc was going to cover and not the push that owed it -- the
+         brace above `hopLaunchNow`, spent through `arcLeft` in both bodies.
+         Neither number is a second kind
+         of jump: the arc is gravity's either way (`hopLaunchNow`), the launch an
+         animal takes with ground to cover is sized from its own ask and not from
+         these, and the body worn from this animal's fruit is thrown by these two
+         numbers and no others. test/play.js measures the arc of each body at each
+         ask, and the step at a bank built one and two blocks high. */
       locomotion: 'amphibian', speed: 1.8, swimSpeed: 4.6, turn: 0.9, hop: { up: 6.0, max: 7.4, period: 0.9 }, alert: 12, herd: 8,
       /* the ring the water keeps a frog of this species in: while the body is in
          the water its errands run round the landmark its habitat's zone names
