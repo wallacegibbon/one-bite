@@ -592,6 +592,106 @@ console.log('水方块', water);
     bad.length ? '!! ' + bad.join('; ') : 'OK');
   if (bad.length) process.exitCode = 1;
 }
+/* What an island is made of. A kind used to state only the shape of a shore --
+   how far the foot reaches, how high the crown stands -- and left its material
+   to the height table: sand at and near the water line, soil under the crown,
+   rock under that. For ground the land made, that is the truth. But a bar is a
+   heap of sand the sea laid down and a reef is a rock it left standing: what
+   they are made of is not a consequence of how high they happen to be. Measured
+   on the tree before a kind stated its ground, over the 70 ordinals the reach
+   holds: of the 15 sandbars 9 wore grass at their crown over soil and 6 sand,
+   and all 16 reefs wore grass over soil -- a hill of earth standing in the sea,
+   no different in the ground from an island. So a kind states the material of
+   its pile and of its crown, and three things are held here: that the record
+   says what the chapter's words say, that the crown cell of every island is the
+   material its kind names, and that from under that crown down to the row the
+   sea floor ends at the pile is one material throughout. Every column inside the
+   foot of every island whose kind states a pile is walked out of the cells the
+   world actually holds; for a kind that states none, the crown and the ground
+   about it are walked instead, and there the height table's grass over soil over
+   rock is the whole truth. One exception is not an island's rule at all: the sea
+   lays a skin of its own sand at and near the water line of any shore in this
+   world, and that skin comes first, so a rock shelf has sandy shallows round it
+   for the same reason a hill of sand has a beach. */
+{
+  const SEA = F.WORLD.sea, TYPES = F.ISLE_TYPES, bad = [];
+  const NAME = { 1: '草地', 2: '泥土', 3: '石头', 4: '沙', 5: '水', 15: '雪', 24: '山岩' };
+  /* What the map document says the piles are, written here and not read out of
+     the game's table. Read the expectation from the table and the check cannot
+     fail: on this tree, turning a sandbar's crown from sand into grass moved the
+     printed tally (grass x823, sand x1917) and the check still passed, because
+     it was asking the world to agree with the number that had just been changed.
+     So the claim is held twice: the game's table says what the words say, and the
+     cells the world holds are that material. A bar is a heap of sand the sea
+     laid; a reef is a rock it left standing; and three of the kinds state no
+     pile at all -- ground that never went under, so the height table's grass over
+     soil over rock is the whole truth about them. */
+  const SAYS = { sandbar: { pile: 4, crown: 4 }, reef: { pile: 3, crown: 3 },
+    thicket: null, isle: null, ridge: null };
+  for (const k of Object.keys(SAYS)) {
+    const want = SAYS[k], has = TYPES[k].ground;
+    if (want && (!has || has.pile !== want.pile || has.crown !== want.crown))
+      bad.push(`${k} 的岛基/顶是 ${JSON.stringify(has)}，地图说的是 ${JSON.stringify(want)}`);
+    if (!want && has) bad.push(`${k} 带着岛基 ${JSON.stringify(has)}，地图里它没有岛基`);
+  }
+  const islands = {}, asked = {}, crownTally = {};
+  let columns = 0;
+  const at = (isle, x, z) => {
+    const under = F.islandUnder(x, z);
+    if (!under) { bad.push(`岛 ${isle.id} 脚下 ${x},${z} 没有岛基`); return; }
+    // where two domes overlap the higher one answers, and that column is its own island's
+    if (under.isle.id !== isle.id) return;
+    const says = SAYS[isle.type];
+    const h = F.landHeight(x, z);
+    const near = h <= SEA + 1;                 // the water line lays its own sand here
+    columns++;
+    asked[isle.type] = (asked[isle.type] || 0) + 1;
+    const top = w.get(x, h, z);
+    if (h > SEA) {
+      const t = (crownTally[isle.type] = crownTally[isle.type] || {});
+      t[top] = (t[top] || 0) + 1;
+    }
+    const wantTop = near ? 4 : says ? says.crown : (h > 34 ? 15 : 1);
+    if (top !== wantTop)
+      bad.push(`岛 ${isle.id}（${isle.type}）顶 ${x},${z} y${h} 是 ${NAME[top]}，要 ${NAME[wantTop]}`);
+    // the pile: one material, from under the crown down to the row the floor ends at
+    const floor = Math.max(2, Math.round(F.seaFloorHeight(x, z)));
+    for (let y = h - 1; y > floor; y--) {
+      const b = w.get(x, y, z);
+      if (near && y > h - 4) {
+        if (b !== 4) bad.push(`岛 ${isle.id}（${isle.type}）水面处的皮 ${x},${y},${z} 是 ${NAME[b]}，要 沙`);
+        continue;
+      }
+      const want = says ? says.pile : (y > h - 4 ? 2 : 3);
+      if (b !== want)
+        bad.push(`岛 ${isle.id}（${isle.type}）${x},${y},${z} 是 ${NAME[b]}，要 ${NAME[want]}`);
+    }
+  };
+  for (let n = 1; n <= 70; n++) {
+    const isle = F.isleRecord(n);
+    if (isle.r <= 0) continue;
+    islands[isle.type] = (islands[isle.type] || 0) + 1;
+    if (SAYS[isle.type]) {
+      // every column the foot covers
+      const R = Math.ceil(isle.r), cx = Math.floor(isle.x), cz = Math.floor(isle.z);
+      for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) {
+        const x = cx + dx, z = cz + dz;
+        if (Math.hypot(x + 0.5 - isle.x, z + 0.5 - isle.z) < isle.r) at(isle, x, z);
+      }
+    } else {
+      // a kind that states none: the height table's own ground, at the crown and round it
+      const cx = Math.floor(isle.x), cz = Math.floor(isle.z);
+      for (const [dx, dz] of [[0, 0], [6, 0], [-6, 0], [0, 6], [0, -6]]) at(isle, cx + dx, cz + dz);
+    }
+  }
+  console.log('外海岛屿材质',
+    Object.keys(TYPES).map(k => `${k} 座${islands[k] || 0}` +
+      (TYPES[k].ground ? ` 基${NAME[TYPES[k].ground.pile]}/顶${NAME[TYPES[k].ground.crown]}` : ' 高度表') +
+      ` 查${asked[k] || 0}柱 顶` + Object.entries(crownTally[k] || {}).map(([b, c]) => `${NAME[b]}x${c}`).join('/')).join(' | '),
+    `${columns} 柱`,
+    bad.length ? '!! ' + bad.slice(0, 4).join('; ') + `（共 ${bad.length} 处不对）` : 'OK');
+  if (bad.length) process.exitCode = 1;
+}
 
 /* The shore is the ground a body walks up out of the sea. The rule that used to
    cap the ground past the island's shore at two metres under the surface

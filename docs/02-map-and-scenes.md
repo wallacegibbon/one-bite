@@ -138,17 +138,21 @@ and the arithmetic is an Archimedean spiral out of (80,80):
   same question is answered from the other end as well: the islands standing at an
   address are found from the address alone, which is all a chunk of ground needs in
   order to be built;
-- what kind of island it is is stated in the only two numbers a shore has: how far its
-  foot reaches, and how high its crown stands over the water line. The mix of kinds
-  changes with the distance — the near turns are sand and reef, the far ones are land.
+- what kind of island it is is stated in three numbers. Two of them are the shape of
+  a shore: how far its foot reaches, and how high its crown stands over the water
+  line. The third is what the pile is made of, and it was missing until it was
+  measured: with only the height table to go on, **9** of the **15** sandbars in the
+  reach wore grass at their crown and all **16** of its reefs wore grass over soil, so
+  a rock shelf and a hill of earth were the same ground. The mix of kinds changes with
+  the distance — the near turns are sand and reef, the far ones are land.
 
 | kind | foot radius | crown above the water line | the ground it is |
 |---|---|---|---|
-| sandbar | 22-45 m | 1.2-2.4 m | a shoal of sand the sea uncovers at its top |
-| reef | 30-70 m | 2.5-4.5 m | a rock shelf with a lip all round it |
-| thicket | 50-95 m | 5-9 m | low land, grass over soil |
-| isle | 70-125 m | 8-14 m | land with a hill on it |
-| ridge | 100-165 m | 14-24 m | a hill the sea has cut the top of; high enough that the material table puts snow on it by its own height rule (a crown above y34), which is why no snow is written anywhere |
+| sandbar | 22-45 m | 1.2-2.4 m | sand from the floor the sea raised it out of to its crown; bare sand, with a skin of the sea's own sand at the water line |
+| reef | 30-70 m | 2.5-4.5 m | rock from that floor to its crown, with the sea's sand at the water line: a shelf, not a hill of earth |
+| thicket | 50-95 m | 5-9 m | a piece of land that never went under: grass over soil, as the height table runs it |
+| isle | 70-125 m | 8-14 m | a piece of land that never went under: grass over soil, with a hill on it |
+| ridge | 100-165 m | 14-24 m | a piece of land that never went under: grass over soil, cut the top of; high enough that the material table puts snow on it by its own height rule (a crown above y34), which is why no snow is written anywhere |
 
 The island itself is one pile of ground raised out of the floor it stands in, shaped
 `1 − smoothstep(d ÷ foot)`: flat enough at the crown to be the island's own ground,
@@ -158,8 +162,13 @@ the kind states, to the metre the ground is built in, and a shoreline appears wh
 the dome crosses the water by
 itself — a sandbar shows a few metres of sand and a ridge most of its own footprint,
 which is the whole difference between them. What the ground is *made of* is the same
-table as everywhere else: sand at and near the water line, rock under three metres,
-soil between, water above.
+table as everywhere else — sand at and near the water line, rock under three metres,
+soil between, water above — with one thing added to it, because the height table cannot
+say it: a kind that states a pile lays that pile from the row its floor ends at up to
+its crown. A bar is therefore sand through and through and a reef is rock through and
+through, while the sea's skin of sand at the water line lies on both of them exactly as
+it lies on this island's beaches. A kind that states no pile is a piece of land the sea
+never went over, and it takes the height table as it always did.
 
 Measured at the seed the game opens with, over the first 70 islands of the spiral
 (which reaches about 4 km out), asked both of the rule and of the built world:

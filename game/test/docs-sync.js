@@ -711,9 +711,11 @@ for (const L of LANGS) {
   const frogWalk = N.CREATURE_BY_ID.frog.speed, frogSwim = N.CREATURE_BY_ID.frog.swimSpeed;
   const oneFruit = Math.round(frogDur * frogSwim / 2), threeFruit = oneFruit * 3;
 
-  /* the two numbers a kind of island is: the chapter prints them as a table and the
-     rule keeps them in a table, so the table is compared rather than a sentence */
+  /* what a kind of island is: the chapter prints it as a table and the rule keeps
+     it in a table, so the table is compared rather than a sentence -- the two
+     numbers of its shape, and the material its pile and crown are built of */
   let isleTableBad = 0;
+  const MATERIALWORD = { 4: /\bsand\b/, 3: /\brock\b|\bstone\b/ };
   for (const L of LANGS) {
     const rows = tableAfter(readIn(L, L.files.zones), '| kind | foot radius | crown above the water line |');
     if (!rows) { bad(`${L.tag} 02 island kinds table`, 'missing', 'one row per kind'); isleTableBad++; continue; }
@@ -724,10 +726,30 @@ for (const L of LANGS) {
       const m1 = r[1].match(/(\d+)-(\d+)/), m2 = r[2].match(/([\d.]+)-([\d.]+)/);
       if (!m1 || +m1[1] !== t.r[0] || +m1[2] !== t.r[1]) { bad(`${L.tag} 02 ${r[0]} foot`, r[1], `${t.r[0]}-${t.r[1]} m`); isleTableBad++; }
       if (!m2 || +m2[1] !== t.crest[0] || +m2[2] !== t.crest[1]) { bad(`${L.tag} 02 ${r[0]} crown`, r[2], `${t.crest[0]}-${t.crest[1]} m`); isleTableBad++; }
+      /* and what it is made of. A kind used to state only its shape and leave the
+         material to the height table, which made 9 of the 15 sandbars hills of
+         earth under grass and all 16 reefs the same. A bar is a heap of sand the
+         sea laid and a reef is a rock it left standing, so the record names the
+         blocks and this chapter names them in words: the word for the block the
+         pile and the crown are built of has to be in the cell, and a kind that
+         states no ground has to be described as the ground the height table
+         makes. test/node-smoke.js walks the cells those blocks end up in; without
+         this comparison the column could say anything at all. */
+      const cell = r[3];
+      if (cell === undefined) { bad(`${L.tag} 02 ${r[0]} ground`, 'the table has no column for what the ground is', 'what the pile is made of'); isleTableBad++; }
+      else if (t.ground) {
+        for (const b of new Set([t.ground.pile, t.ground.crown])) {
+          const re = MATERIALWORD[b];
+          if (!re) { bad(`${L.tag} 02 ${r[0]} ground block`, b, 'a material this chapter and this check have a word for'); isleTableBad++; }
+          else if (!re.test(cell)) { bad(`${L.tag} 02 ${r[0]} ground`, cell.slice(0, 60), `the word for block ${b} (its pile/crown material)`); isleTableBad++; }
+        }
+        if (/\bsoil\b/.test(cell)) { bad(`${L.tag} 02 ${r[0]} ground`, 'the cell offers soil, which is what a pile raised by the sea is not', 'the pile material and the sea\'s sand at the water line'); isleTableBad++; }
+      } else if (!/grass over soil/.test(cell)) { bad(`${L.tag} 02 ${r[0]} ground`, cell.slice(0, 60), 'grass over soil: ground the height table made, with no pile stated'); isleTableBad++; }
     }
   }
-  if (!isleTableBad) good(`02 the kinds the sea builds, and the two numbers each is made of: ` +
-    Object.keys(N.ISLE_TYPES).map(k => `${k} foot ${N.ISLE_TYPES[k].r[0]}-${N.ISLE_TYPES[k].r[1]} m, crown ${N.ISLE_TYPES[k].crest[0]}-${N.ISLE_TYPES[k].crest[1]} m`).join('; '));
+  if (!isleTableBad) good(`02 the kinds the sea builds, and the three numbers each is made of: ` +
+    Object.keys(N.ISLE_TYPES).map(k => `${k} foot ${N.ISLE_TYPES[k].r[0]}-${N.ISLE_TYPES[k].r[1]} m, crown ${N.ISLE_TYPES[k].crest[0]}-${N.ISLE_TYPES[k].crest[1]} m, ` +
+      (N.ISLE_TYPES[k].ground ? `pile block ${N.ISLE_TYPES[k].ground.pile}, crown block ${N.ISLE_TYPES[k].ground.crown}` : 'no pile: the height table')).join('; '));
 
     const crateRow = (p) => { for (let y = SZ.h - 1; y > 0; y--) if (at(p.x, y, p.z) === DOOR) return y; return -1; };
   const H = (label, cnRe, cnWant, enRe, enWant) => ({ label, cnRe, cnWant, enRe, enWant });

@@ -571,16 +571,30 @@
        same looking-up as a real one. */
     minFoot: 15
   };
-  /* What the kinds of island are, in the only two numbers a shore has: how far
-     the foot of it reaches, and how high its crown stands over the water line.
-     A sandbar is ametre and a half of sand that the sea uncovers at the top of
-     a tide; a ridge is a hill the sea has cut the top of, high enough that the
-     material table puts snow on it by its own height rule (h > 34), which is why
-     no snow is written here. The mix of kinds changes with the distance: the
-     near turns are shallow sand and reef, the far ones are land. */
+  /* What the kinds of island are, in three numbers. Two of them are the shape
+     of a shore: how far the foot of it reaches, and how high its crown stands
+     over the water line. A sandbar is a metre and a half of sand that the sea
+     uncovers at the top of a tide; a ridge is a hill the sea has cut the top
+     of, high enough that the material table puts snow on it by its own height
+     rule (h > 34), which is why no snow is written here. The mix of kinds
+     changes with the distance: the near turns are shallow sand and reef, the
+     far ones are land.
+     The third number is what the pile is made of, and it was missing. The
+     material table reads height only -- sand at and near the water line, soil
+     under the crown, rock under that -- and for ground the land made that is
+     the truth, but a bar is a heap of sand the sea laid down and a reef is a
+     rock it left standing: what they are made of is not a consequence of how
+     high they happen to be. Measured on the tree before this field existed,
+     over the 70 ordinals the reach holds: of the **15** sandbars **9** wore
+     grass at their crown and 6 sand, and all **16** reefs wore grass over soil
+     -- a rock shelf and a hill of earth, indistinguishable in the ground. So a
+     kind states its pile and its crown as blocks, and `columnInto` lays that
+     material from the floor the pile was raised out of to its crown. A kind
+     that states no ground is a piece of land that never went under: thicket,
+     isle and ridge take the height table exactly as they always did. */
   const ISLE_TYPES = {
-    sandbar: { r: [22, 45], crest: [1.2, 2.4] },
-    reef: { r: [30, 70], crest: [2.5, 4.5] },
+    sandbar: { r: [22, 45], crest: [1.2, 2.4], ground: { pile: 4, crown: 4 } },
+    reef: { r: [30, 70], crest: [2.5, 4.5], ground: { pile: 3, crown: 3 } },
     thicket: { r: [50, 95], crest: [5, 9] },
     isle: { r: [70, 125], crest: [8, 14] },
     ridge: { r: [100, 165], crest: [14, 24] }
@@ -749,26 +763,36 @@
      shore appears wherever the dome crosses the water line by itself: a low
      sandbar is dry over a small part of its footprint and a ridge over most of
      its own, which is the difference between them. */
-  function isleLift(x, z) {
-    let add = 0;
+  function islePile(x, z) {
+    /* The island whose pile stands over this address, and how far that pile lifts
+       the ground here. One pass, and the answer is carried: the height needs it,
+       the material needs it, and what grows on the ground needs it -- asking the
+       same question three times at one column would cost three searches of the
+       spiral. Where two domes overlap, the higher pile answers, as `isleLift`
+       always did. */
+    let best = null;
     for (const isle of islesNear(x, z)) {
       const d = Math.hypot(x + 0.5 - isle.x, z + 0.5 - isle.z);
       if (d >= isle.r) continue;
-      add = Math.max(add, (SEA + isle.crest - isle.bed) * (1 - ss(0, 1, d / isle.r)));
+      const lift = (SEA + isle.crest - isle.bed) * (1 - ss(0, 1, d / isle.r));
+      if (!best || lift > best.lift) best = { isle, lift };
     }
-    return add;
+    return best;
   }
 
-  /* The height of the ground at any address in the world. Inside the shore this
-     is exactly the terrain the map was built from -- the blend starts at that
-     height, so there is no step and no seam where the array ends. */
-  function landH(x, z) {
+  /* One address, asked once. What comes back is the floor the sea graded, the
+     island pile standing in that floor if there is one, and the height of the
+     ground that leaves. The floor and the pile come back with the height because
+     a column is not only how tall it is: what it is made of is a question about
+     the pile it belongs to, and where that pile begins is where the floor ends. */
+  function groundAt(x, z) {
     const s = beyond(x, z);
-    if (s <= 0) return terrainH(x, z);
+    if (s <= 0) { const h = terrainH(x, z); return { floor: h, pile: null, h }; }
     // the same floor the save and the tests ask for: one blend, restated nowhere
-    let v = seaFloorAt(landRawH(x, z), s, x, z);
-    const lift = isleLift(x, z);
-    v += lift;
+    const floor = seaFloorAt(landRawH(x, z), s, x, z);
+    const pile = islePile(x, z);
+    const lift = pile ? pile.lift : 0;
+    let v = floor + lift;
     /* whole metres: a column of this world is a stack of metre cells, and a
        height of 7.56 puts water at cell 8.56, which is nowhere. The blend is
        continuous and the ground it describes is a slope made of steps. The only
@@ -779,20 +803,39 @@
        line falls wherever that slope crosses it: that line is the beach, and it
        is not something a second rule gets to place. */
     if (lift > 0) v = Math.min(v, SEA + 30);
-    return Math.max(3, Math.round(v));
+    return { floor, pile, h: Math.max(3, Math.round(v)) };
   }
+
+  /* The height of the ground at any address in the world. Inside the shore this
+     is exactly the terrain the map was built from -- the blend starts at that
+     height, so there is no step and no seam where the array ends. */
+  function landH(x, z) { return groundAt(x, z).h; }
+
   /* What a column of ground is made of, at any address. One table for the whole
      world: sand at and near the water line, rock under three metres, soil
      between, water above the ground up to the surface. A seabed is therefore the
-     same material as a lakebed, and the shore of an island is not a case. */
+     same material as a lakebed, and the shore of an island is not a case.
+     Above that table, and only where an island's dome stands, the island's kind
+     names the material the pile is: from the row its floor ends at, a bar is
+     sand and a reef is rock all the way up. The order the two are asked in is
+     not arbitrary. The sea's own skin of sand at and near the water line comes
+     first, because it is what the water does to any shore in this world -- the
+     authored island's beaches are made that way -- and a rock shelf has a sandy
+     shallows round it for the same reason a hill of sand has a beach. Below
+     that skin the pile's own material runs, to its crown. */
   function columnInto(x, z, put) {
-    const h = landH(x, z);
+    const g = groundAt(x, z);
+    const h = g.h;
     const nearWater = h <= SEA + 1;
+    const ground = g.pile && (ISLE_TYPES[g.pile.isle.type] || {}).ground;
+    const pileFrom = ground ? Math.round(g.floor) + 1 : 0;
     for (let y = 0; y <= h; y++) {
       let b = 3;
-      if (y === h) b = nearWater ? 4 : (h > 34 ? 15 : (dist(x, z, GROVE.x, GROVE.z) < GROVE.r ? 23 : 1));
-      else if (y > h - 4) b = nearWater ? 4 : 2;
+      if (y === h) b = nearWater ? 4 : ground ? ground.crown
+        : (h > 34 ? 15 : (dist(x, z, GROVE.x, GROVE.z) < GROVE.r ? 23 : 1));
+      else if (y > h - 4) b = nearWater ? 4 : ground ? ground.pile : 2;
       else if (y < 3) b = 24;
+      else if (ground && y >= pileFrom) b = ground.pile;
       put(x, y, z, b);
     }
     for (let y = h + 1; y <= SEA; y++) put(x, y, z, 5);
@@ -900,6 +943,10 @@
   N.islePosition = islePos;
   N.isleRecord = isleAt;
   N.islesNear = islesNear;
+  /* the pile standing over an address and how far it lifts the ground there: the
+     height asks it and the material asks it, and anything else that has to know
+     whether a piece of ground is an island's own asks it here, not by walking. */
+  N.islandUnder = islePile;
   N.seaFloorHeight = seaFloorH;
   // overwritten by generate(); the fallback is Lanternrow's road, facing west
   N.spawn = { x: 136.5, y: 22.05, z: 128.5, yaw: -Math.PI / 2 };

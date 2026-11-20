@@ -56,6 +56,10 @@ const DRIFTS = [
   ['02-map-and-scenes.md', 'surface is **y23–36** (mean 30', 'surface is **y23–37** (mean 30', 'ridge surface band'],
   // the sea's islands: the rule's constants and the counts of what it built
   ['02-map-and-scenes.md', '| sandbar | 22-45 m | 1.2-2.4 m |', '| sandbar | 22-45 m | 1.2-3.4 m |', 'the crown a kind of island states'],
+  // what the piles are made of: a kind states its material now, the chapter names
+  // it in words, and test/node-smoke.js walks the cells those blocks end up in
+  ['02-map-and-scenes.md', '| reef | 30-70 m | 2.5-4.5 m | rock from that floor to its crown', '| reef | 30-70 m | 2.5-4.5 m | soil from that floor to its crown', 'what a reef is made of'],
+  ['02-map-and-scenes.md', '| isle | 70-125 m | 8-14 m | a piece of land that never went under: grass over soil', '| isle | 70-125 m | 8-14 m | a piece of land that never went under: bare sand', 'what a kind that states no pile is made of'],
   ['02-map-and-scenes.md', 'its seven centres actually stand **389-778 m** out', 'its seven centres actually stand **389-798 m** out', 'where the first turn of the spiral actually stands'],
   ['02-map-and-scenes.md', '**70** of 70 ordinals', '**71** of 70 ordinals', 'how many of the spiral\'s ordinals stand as ground'],
   ['02-map-and-scenes.md', '| kinds | 15 sandbars, 16 reefs', '| kinds | 14 sandbars, 16 reefs', 'what kinds the mix built'],
