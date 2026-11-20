@@ -74,9 +74,13 @@ and the arithmetic is an Archimedean spiral out of (80,80):
 - an island's id is its **ordinal along the spiral** — ordinal **0** is the island this
   square sits on — and its place is computed *from* the ordinal, never the other way
   round. The same island is therefore met again from any direction and in any later
-  session, and a player's own id would pick out one of them as a home island from the
-  same arithmetic, with no table kept anywhere — and nothing asks that question yet,
-  because no player id exists in this codebase (03 §6). The
+  session, and the id this save already carries would pick one of them out as a home
+  island from the same arithmetic, with no table kept anywhere. Nothing asks that
+  question yet: the id is made by the game when a game starts (`init`, `p-` plus six random
+  characters; the save carries it back, and cellar trees are already owned by it — 03 §6), and no rule
+  has been written for what such an id should pick, so a home island drawn from it would
+  move with every new game. That is a decision about what a home island is for, not an
+  oversight. The
   same question is answered from the other end as well: the islands standing at an
   address are found from the address alone, which is all a chunk of ground needs in
   order to be built;

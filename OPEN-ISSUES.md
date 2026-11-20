@@ -91,17 +91,22 @@ as the game streams ground on its own, and no further:
   codebase: trees and bushes are set down inside `generate()` and nothing plants while
   ground streams, which is the mechanical reason the sea was bare and the reason the
   census above reads zeros.
-- **What was not built, on purpose.** There is no `homeIsland(userId)`: no player or user
-  id exists anywhere in the code to derive one from (the record of the last round shows
-  what a real id would have to answer), so the home island stays derivable and unbuilt
-  rather than invented. No animal, tree or fruit was placed out there: that is design
-  waiting for issue 24 and for the fruit table, which holds one fruit.
+- **What was not built, on purpose.** There is no `homeIsland(id)`. There *is* an id:
+  `game.js` makes one in `init()` (`IDEN.idPrefix` + `IDEN.idBytes` random base-36
+  characters, `p-k3f9a2` in shape), the save stores it, `load()` puts it back, and
+  `stashes[].owner` already keys cellar-tree ownership on it -- docs/03 §6 documents that layer. What does not
+  exist is a rule turning such an id into an ordinal, and a second player to need one:
+  an id drawn afresh for every new game would move a "home" island every new game, so
+  the home island stays derivable and unbuilt rather than invented. No animal, tree or
+  fruit was placed out there: that is design waiting for issue 24 and for the fruit
+  table, which holds one fruit.
 
 What this round leaves open: issues 1-24 stand exactly as written, and **25** is half
 closed by this round -- the ground and its ids are shipped, what lives on them is not.
 Two seams this round opened and did not close are named there: the minimap still paints
 the authored square and nothing else, now that there is something out there worth
-painting; and the home island stays a derivation, because there is no player id.
+painting; and the home island stays a derivation, because nothing maps the id a save
+already carries to an ordinal.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -2239,11 +2244,14 @@ each one would otherwise be rediscovered:
   valley's zones (issue 24 is the same wall). What each kind should carry, and whether a
   body would ever cross an arm of the sea for it, is the design question -- the ground
   and the ids are ready for the answer.
-- A home island for a player's own id is derivable and is **not** built. No player or
-  user id exists anywhere in `game/src`, and the id `game.js` makes is random per
-  session and reset on a wipe, so a per-player starting island would either be not
-  reproducible or would need an identity service (07 §3.6, "No identity service"). The
-  honest form of this half stays: derive it when there is an id, do not invent one now.
+- A home island for a player's own id is derivable and is **not** built. An id does
+  exist -- `game.js` makes it in `init()` (`p-` + `IDEN.idBytes` random base-36
+  characters), the save stores it and `load()` restores it, and `stashes[].owner` already
+  keys cellar-tree ownership on it -- but it is the game's own, made afresh for each new game
+  and not issued by anything, so a "home" island derived from it would move with every
+  new game; there is no second player either (07 §3.6, "No identity service"; 03 §6
+  documents the three identity layers). The open half is therefore a design question --
+  what is a home island *for*, and should it survive a new game -- not a missing field.
 - **The minimap paints the authored square and nothing else.** With real ground out
   there, blank paper is now a map lying rather than a map being modest: `mmBase` in
   `game/src/ui.js` reads columns x/z 0..160. A world with no edge needs a different
