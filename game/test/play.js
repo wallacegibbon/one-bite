@@ -4974,7 +4974,23 @@ What was measured before any of this was fixed, over 180 frames of walking
      given while the veil was copied straight off the block row. For an eye with
      nothing worn the two were already the same number, which is why no rig in
      this file ever saw it: every water rig shoots bare. The last two shots
-     therefore wear the frog, and the last of them asks the environment. */
+     therefore wear the frog, and the last of them asks the environment.
+     A third thing the same frame says, and the reason the charge is asked of a
+     different distance since: the sea does keep its colour to its own horizon,
+     and a lens standing on the floor of it still met a pale strip along the eye
+     line. The frame's ground stops at the ring of ground the world holds round
+     the lens -- `World.keep` chunks -- but that ring is whole chunks cut on a
+     disc, so where it stops depends on which way the eye looks: measured for a
+     lens standing on the sea floor, the surface its eye line meets is drawn at
+     244 m in one bearing and is gone at 237 m in the next. The far plane stops
+     the geometry later than both. Past the last face there is nothing for the
+     ray to reach and the whole of the road the frame stands for is liquid, so
+     the walk is asked at the edge that is ground in every direction -- one chunk
+     width short of the held ring, which is the nearest a hole in that ring can
+     stand -- and not at the far plane. The last shots stand a lens on the
+     floor of that sea, level, and draw it four ways: as the frame is drawn
+     now, with the charge asked of the far plane alone, with the wave left on
+     the water's face, and with both -- the defect, drawn. */
   const openSea = await step('theSeaKeepsItsOwnColourToItsOwnHorizon', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
@@ -5090,7 +5106,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (l > 200) hi++;
       }
       lums.sort((a, b) => a - b);
-      return { n, meanLum: +(sum / n).toFixed(1), maxLum: Math.round(max),
+      return { n, ref: Math.round(ref), meanLum: +(sum / n).toFixed(1), maxLum: Math.round(max),
         p50: Math.round(lums[Math.floor(n * 0.5)]),
         p99: Math.round(lums[Math.floor(n * 0.99)]), blueMinusRed: +(br / n).toFixed(1),
         brighterThanWater: over, over200: hi };
@@ -5146,10 +5162,56 @@ What was measured before any of this was fixed, over 180 frames of walking
     const splitFrame = frame();
     g.env.veil = veilWas;
     const split = read(splitFrame, 'above');
+    /* 8. a lens standing on the floor of that sea, level, wearing nothing: the
+       deeper a lens sits, the wider the fan of directions whose surface lies out
+       past the edge of the frame's ground. Above its eye line every ray of this
+       frame ends at the surface, so every one of those pixels has to be the
+       water's colour -- the strip along the eye line is the only place in the
+       frame where a sky can stand. What sits a metre below the lens is the floor
+       of the sea, lit by the sun through a metre of water: it is sand, and it is
+       not what this is asking about. */
+    p.form = null; p.formT = 0;
+    const deepUnder = Math.min(spot.depth - 1, 9);
+    const deep = put(spot.surface - deepUnder, 0);
+    const deepAbove = read(frame(), 'above');
+    /* 9. the same lens, the same frame, with the charge asked of the far plane
+       alone -- what the code did until this round. */
+    const edgeWas = g.env.groundEdge;
+    g.env.groundEdge = 1e9;
+    const deepFarFrame = frame();
+    g.env.groundEdge = edgeWas;
+    const deepFarAbove = read(deepFarFrame, 'above');
+    /* 10. and the same lens again with the wave put back on the water's own
+       face -- the other half of what this frame showed. A ray along the eye
+       line of a lens 7 m under the sea climbs 3 cm per metre; the wave moves
+       the surface 8 cm up and down about every 9 m of it. So that ray meets the
+       surface three or four times within a few metres, and since the face adds
+       what it throws back rather than replacing what it hides, each meeting
+       lays the water's colour over the last one. */
+    const paneWas = g.R.drawMesh;
+    const waveOn = function (m, model, opts) {
+      return paneWas.call(this, m, model,
+        opts && opts.pane ? Object.assign({}, opts, { wave: true }) : opts);
+    };
+    g.R.drawMesh = waveOn;
+    const wavedFrame = frame();
+    g.R.drawMesh = paneWas;
+    const deepWaved = read(wavedFrame, 'above');
+    /* 11. both at once: the frame exactly as this round's code found it -- the
+       charge asked of the far plane and the wave left on the face. That is the
+       picture a body standing on the floor of an open sea was shown, and the
+       count the chapter quotes is read off this one and not off a desk probe. */
+    g.R.drawMesh = waveOn;
+    g.env.groundEdge = 1e9;
+    const beforeFrame = frame();
+    g.env.groundEdge = edgeWas;
+    g.R.drawMesh = paneWas;
+    const deepBefore = read(beforeFrame, 'above');
     return back({ spot, water: { row: W.liquidVeil(), lum: Math.round(luma(W.liquidVeil())),
         blueMinusRed: Math.round((W.liquidVeil()[2] - W.liquidVeil()[0]) * 255) },
       sea, skin, upLens, washed, under, below, off, offAll, dry, up, washedBelow,
-      mirror, split, held: W.far.size });
+      mirror, split, deep, deepUnder, edge: g.env.groundEdge, deepAbove, deepFarAbove,
+      deepWaved, deepBefore, held: W.far.size });
   });
   check('the sea keeps its own colour to its own horizon: nothing under the eye line is brighter than the water',
     !openSea.error && openSea.below.brighterThanWater === 0 && openSea.below.over200 === 0 &&
@@ -5205,6 +5267,41 @@ What was measured before any of this was fixed, over 180 frames of walking
     openSea.off.brighterThanWater > openSea.below.brighterThanWater + 3000 &&
     openSea.off.maxLum > openSea.below.maxLum + 100 && openSea.off.p99 > 190 &&
     openSea.off.over200 > 3000 && openSea.off.meanLum > openSea.below.meanLum, openSea);
+
+  /* A lens standing on the floor of that sea, level, has no sky anywhere in its
+     frame: every direction it can see is water at one end or the other. What it
+     met instead was a line along its eye line, and that line has two causes,
+     each drawn by its own shot here. The nearer one is the edge of the ground:
+     the frame holds ground out to a ring of `World.keep` chunks, cut on a disc
+     out of whole chunks, so along one bearing the sea's surface is drawn to 244 m
+     and along the next it is gone at 237 m; asked of the far plane, as the code
+     did, the directions in between answered with the sky. The other is the wave:
+     the face is asked how hard a ray meets it and which way it points, never how
+     it is tilted, so a lens inside the liquid was made to cross a surface it is
+     shaded as a plane three or four times in a few metres, and every crossing
+     added the water's colour over the last one -- a dotted line, twice the
+     colour of the water it stands in, at the eye line of a lens standing on the
+     floor of an open sea. */
+  check('a lens on the floor of that sea keeps its colour above its eye line too: of the 252,000 pixels of that half, 0 are brighter than the water it stands in and the brightest reads 55 against a water at 53',
+    openSea.deep && openSea.deepAbove && openSea.deep.lensUnder === openSea.deepUnder &&
+    openSea.deepAbove.brighterThanWater === 0 && openSea.deepAbove.over200 === 0 &&
+    openSea.deepAbove.maxLum <= openSea.deepAbove.ref + 6, openSea);
+  check('the edge the liquid is walked to is the edge the frame is certain of, not the far plane: the same lens asked of the far plane alone leaves 517 pixels brighter than its water above its eye line, the brightest 198',
+    openSea.deepFarAbove && openSea.edge === 224 &&
+    openSea.deepFarAbove.brighterThanWater > 300 &&
+    openSea.deepFarAbove.brighterThanWater > openSea.deepAbove.brighterThanWater + 300 &&
+    openSea.deepFarAbove.maxLum > openSea.deepAbove.ref + 100, openSea);
+  check('a lens inside the liquid is shown the interface its own numbers describe: with the wave left on that face the same frame meets the surface again and again, 961 pixels over its water and 107 at the brightest of them',
+    openSea.deepWaved && openSea.deepAbove &&
+    openSea.deepWaved.brighterThanWater > openSea.deepAbove.brighterThanWater + 300 &&
+    openSea.deepWaved.maxLum > openSea.deepAbove.maxLum + 30, openSea);
+  /* Both halves together are the frame this round's code was handed: the charge
+     asked of the far plane and the wave left on the water's face. The step draws
+     it so that the figure the chapter quotes for what a body standing on the
+     floor of an open sea was shown is a number the suite prints. */
+  check('the frame this round found is drawn by the step, not remembered from a probe: with both halves of the defect in it that half of the frame keeps 1,403 pixels over the water it stands in and 198 at the brightest of them',
+    openSea.deepBefore && openSea.deepBefore.brighterThanWater > openSea.deepAbove.brighterThanWater + 300 &&
+    openSea.deepBefore.maxLum > openSea.deepAbove.ref + 100, openSea);
 
   /* How far under the water a surface is belongs to the surface, not to the
      point its shading is read at. The mesher asked the world "how deep is this

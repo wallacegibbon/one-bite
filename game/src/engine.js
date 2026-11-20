@@ -441,7 +441,7 @@
      colour that leaves, and how deep the lens sits under that liquid's surface.
      The same numbers the world's faces and the motes are drawn with. */
   uniform vec3 uHazeK, uFogCol;
-  uniform float uInWater, uLensUnder, uFar;
+  uniform float uInWater, uLensUnder, uEdge;
   float hash(vec3 p){ p = fract(p*0.3183099 + vec3(0.71,0.113,0.419)); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
   void main(){
     vec3 d = normalize(vDir);
@@ -483,16 +483,17 @@
        reads 53 (the step in game/test/play.js that draws this frame twice).
        What stands between this lens and that nothing is the liquid, and the
        liquid runs on past where the frame stops asking about ground: the ray
-       walks it to the far plane, and the same absorption that eats a lakebed
-       eats this.
-       The one direction that pays nothing is the one that reaches this liquid's
-       own surface inside the drawn range. The face drawn there already carries
-       the water the light climbs out of (vPan, in the world shader), and
-       charging it here as well would count the same water twice -- which is why
-       a lens under a lake can still read the moon through its skin. */
+       walks it to the edge of what is drawn, and the same absorption that eats
+       a lakebed eats this. That edge is the nearer of the far plane and the
+       ground the frame is certain of -- one chunk width short of the ring it
+       holds, not the far plane and not the ring's own radius, which is a ring
+       of whole chunks cut on a disc and stops at 237 m one way and 244 m the
+       next. Asked of the far plane instead, as it was, a lens standing on the
+       floor of that sea met 517 pixels brighter than its own water along its
+       eye line, the brightest 198. */
     if (uInWater > 0.5) {
       float meet = d.y > 0.0 ? uLensUnder / max(d.y, 1e-4) : 1e9;
-      if (meet > uFar) col = mix(col, uFogCol, 1.0 - exp(-uHazeK * uFar));
+      if (meet > uEdge) col = mix(col, uFogCol, 1.0 - exp(-uHazeK * uEdge));
     }
     gl_FragColor = vec4(col, 1.0);
   }`;
@@ -682,7 +683,11 @@
       gl.uniform1f(P.u.uInWater || (P.u.uInWater = gl.getUniformLocation(P.p, 'uInWater')), e.inWater || 0);
       gl.uniform1f(P.u.uLensUnder || (P.u.uLensUnder = gl.getUniformLocation(P.p, 'uLensUnder')),
         e.inWater ? Math.max(0, (e.waterY || 0) - this.cam.y) : 0);
-      gl.uniform1f(P.u.uFar || (P.u.uFar = gl.getUniformLocation(P.p, 'uFar')), e.far);
+      /* How far the frame's ground goes: the nearer of the far plane and the
+         ring of ground held round the lens. Past both nothing is drawn at all,
+         and the liquid the lens stands in is still in front of it. */
+      gl.uniform1f(P.u.uEdge || (P.u.uEdge = gl.getUniformLocation(P.p, 'uEdge')),
+        Math.min(e.far, e.groundEdge === undefined ? e.far : e.groundEdge));
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
     }

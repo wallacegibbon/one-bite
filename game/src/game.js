@@ -448,7 +448,20 @@
         veil: inWater ? fogCol : W.liquidVeil(),
         liqK: W.liquidAbsorb(),
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
-        far: 260
+        far: 260,
+        /* Where the frame's ground is certain to stop. The world holds ground
+           round the lens out to `keep` chunks (its own square is always drawn),
+           but that ring is whole chunks cut on a disc: along one bearing the
+           last chunk reaches past `keep` chunk widths and along another a hole
+           opens short of it. Measured for a lens standing on the floor of the
+           open sea: the surface its eye line meets is at 237 m one way and 244
+           m the next, and the frame painted sky at one and water at the other.
+           So the question is asked at the edge that is ground in every
+           direction -- one chunk width short of the held ring, which is the
+           nearest a hole in that ring can stand. Past that the liquid is walked
+           to the edge and no further, whatever the far plane does: the far plane
+           stops the geometry, not the water. */
+        groundEdge: (W.keep - 1) * W.cs
       };
     }
 
@@ -1329,8 +1342,28 @@
          un-culling it costs nothing in blending and adds no geometry. */
       const drawWater = (cx, cz, m) => {
         if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) return;
-        R.drawMesh(m, IDENT, { pane: 1, wave: true, noCull: true });
-        R.drawMesh(m, IDENT, { pane: 2, wave: true, noCull: true });
+        /* The wave is a fact about a surface a lens is *looking at from outside*.
+           Nothing in the water's own shading asks it: the face is asked how hard
+           the ray meets it and which way it points, never how it is tilted, so
+           the geometry is displaced and the shading is that of a plane. For a
+           lens standing in the liquid that disagreement is what the eye sees: a
+           ray along its own eye line climbs 3 cm per metre over a surface the
+           vertex wave moves 8 cm up and down about every 9 m of it (the two
+           sines in the world's vertex shader), so that ray meets the surface
+           three or four times inside a few metres, and since the face adds what
+           it throws back rather than replacing what it hides, each meeting lays
+           the water's colour over the last one. Measured at a lens standing on
+           the floor of the open sea: 961 pixels along its eye line over the
+           colour of the water it stands in, the brightest at 107 against that
+           water's 53 -- a dotted line, twice the colour of the sea, at the
+           height of its own eye (game/test/play.js draws that lens with and
+           without the wave, and with and without the edge).
+           A mirror at that angle is one surface, and it hides the ones behind
+           it. So the wave is left to the lenses it is drawn for, and a lens
+           inside the liquid is shown the interface its own numbers describe. */
+        const wv = !env.inWater;
+        R.drawMesh(m, IDENT, { pane: 1, wave: wv, noCull: true });
+        R.drawMesh(m, IDENT, { pane: 2, wave: wv, noCull: true });
       };
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const m = W.chunks[cz * W.cx + cx];
