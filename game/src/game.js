@@ -433,8 +433,19 @@
         emisKeep, waterK, waterY, hazeK, hazeOn, inWater,
         /* The one colour a veil of this liquid paints over the view. The haze
            the lens is inside and the surface the lens looks through are the same
-           stuff, so they get the same colour out of the same block row. */
-        veil: W.liquidVeil(),
+           stuff, so they get the same colour out of the same block row -- and
+           one more thing is the same about them: both are that water seen at the
+           end of a long road, so whatever the eye itself does to a far distance
+           (the night-built eye washed out by the sun, above) is in both or in
+           neither. It was in one and not the other: 4 m under an open sea at
+           noon, wearing that eye, the water under the eye line read a median of
+           81 and that water's own mirror above it 56 -- one horizon painted
+           across a frame that has none. The step in game/test/play.js asks both
+           halves of the same frame and holds them within 8 of each other; for an
+           eye with nothing worn they were equal already, which is why no rig had
+           seen it. Out of the water the lens is in a different stuff, and the
+           air's answer stays the air's. */
+        veil: inWater ? fogCol : W.liquidVeil(),
         liqK: W.liquidAbsorb(),
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
         far: 260

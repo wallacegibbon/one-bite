@@ -437,6 +437,11 @@
   varying vec3 vDir;
   uniform vec3 uZenith, uHorizon, uSunDir, uSunCol, uGround;
   uniform float uNight, uTime;
+  /* What the liquid the lens is standing in eats, per metre and per colour, the
+     colour that leaves, and how deep the lens sits under that liquid's surface.
+     The same numbers the world's faces and the motes are drawn with. */
+  uniform vec3 uHazeK, uFogCol;
+  uniform float uInWater, uLensUnder, uFar;
   float hash(vec3 p){ p = fract(p*0.3183099 + vec3(0.71,0.113,0.419)); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
   void main(){
     vec3 d = normalize(vDir);
@@ -469,6 +474,25 @@
       float sp = 0.5 + 2.0 * hash(g + vec3(0.0, 0.5, 0.0));
       float star = step(0.9965, h) * (0.6 + 0.4*sin(uTime * sp + ph));
       col += vec3(star) * starLit * smoothstep(0.02, 0.35, d.y);
+    }
+    /* A lens standing in a liquid has no sky in front of it. This quad is not a
+       thing in the world: it is the frame's answer for "nothing was drawn
+       here", and out in open sea that answer was the sky at its brightest --
+       measured at noon through 4 m of sea and 260 m along it: 3,702 pixels over
+       the water's own colour, its 99th percentile at 204, against a water that
+       reads 53 (the step in game/test/play.js that draws this frame twice).
+       What stands between this lens and that nothing is the liquid, and the
+       liquid runs on past where the frame stops asking about ground: the ray
+       walks it to the far plane, and the same absorption that eats a lakebed
+       eats this.
+       The one direction that pays nothing is the one that reaches this liquid's
+       own surface inside the drawn range. The face drawn there already carries
+       the water the light climbs out of (vPan, in the world shader), and
+       charging it here as well would count the same water twice -- which is why
+       a lens under a lake can still read the moon through its skin. */
+    if (uInWater > 0.5) {
+      float meet = d.y > 0.0 ? uLensUnder / max(d.y, 1e-4) : 1e9;
+      if (meet > uFar) col = mix(col, uFogCol, 1.0 - exp(-uHazeK * uFar));
     }
     gl_FragColor = vec4(col, 1.0);
   }`;
@@ -650,6 +674,15 @@
       gl.uniform3fv(P.u.uSunCol || (P.u.uSunCol = gl.getUniformLocation(P.p, 'uSunCol')), e.sunCol);
       gl.uniform1f(P.u.uNight || (P.u.uNight = gl.getUniformLocation(P.p, 'uNight')), e.night);
       gl.uniform1f(P.u.uTime || (P.u.uTime = gl.getUniformLocation(P.p, 'uTime')), e.time);
+      /* The liquid the lens stands in, asked of the environment exactly as the
+         motes ask it -- one reading, one set of numbers. Out of the water every
+         one of them is zero and this quad is bit for bit the sky it was. */
+      gl.uniform3fv(P.u.uHazeK || (P.u.uHazeK = gl.getUniformLocation(P.p, 'uHazeK')), e.hazeK || [0, 0, 0]);
+      gl.uniform3fv(P.u.uFogCol || (P.u.uFogCol = gl.getUniformLocation(P.p, 'uFogCol')), e.fogCol);
+      gl.uniform1f(P.u.uInWater || (P.u.uInWater = gl.getUniformLocation(P.p, 'uInWater')), e.inWater || 0);
+      gl.uniform1f(P.u.uLensUnder || (P.u.uLensUnder = gl.getUniformLocation(P.p, 'uLensUnder')),
+        e.inWater ? Math.max(0, (e.waterY || 0) - this.cam.y) : 0);
+      gl.uniform1f(P.u.uFar || (P.u.uFar = gl.getUniformLocation(P.p, 'uFar')), e.far);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
     }

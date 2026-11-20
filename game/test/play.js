@@ -4938,6 +4938,274 @@ What was measured before any of this was fixed, over 180 frames of walking
     lakebedView.armDeep.near.blue < lakebedView.armDown.near.blue - 15 &&
     lakebedView.armDeep.near.meanLum < lakebedView.armDown.near.meanLum - 8, lakebedView);
 
+  /* A lens standing in the sea is inside the sea all the way to its horizon.
+     Measured at noon, 4 m under a flat sea 131 m past the edge of the authored
+     square: with the law off, the half of the frame at or below the eye line
+     holds 3,702 pixels over the water's own colour, 3,393 of them over 200/255,
+     and its 99th percentile sits at 204 -- while that water itself reads 53. With
+     the law on the same half has none of them and nothing over 53. The mean is
+     not where this lives: 51.8 to 53.9. The player's own frame, read out of the
+     PNG it was reported with (1906x576, the same lens, the night-built eye worn
+     in daylight), says the same thing in its own units: every row under the eye
+     line is capped at luminance 83 and the band over it runs to 205-214.
+     Nothing was drawn there. The sky quad is not a thing in the world: it is the
+     frame's answer for "nothing was drawn here", and it was the brightest thing
+     the sky has -- the horizon band, 184/209/235 off the day table. A ray under
+     the sea that points at or below the eye line never meets that sea's surface,
+     and the floor of an open sea lies 8 m down and flat, so it is not reached
+     inside the 260 m the frame asks about either. The sky showed through four
+     metres of sea and two hundred and sixty metres of it. The water had no say
+     over that pass because the water is asked of fragments -- the haze of the
+     world's own, the leg up of the faces, the walk of the motes -- and a quad
+     standing for the far distance is none of those.
+     The law the fix states is the chapter's own: the liquid between a lens and
+     what it is looking at eats the ray, and out there the liquid runs on past
+     the point where the frame stops asking about ground. The one direction that
+     pays nothing is the one that reaches this liquid's own surface inside the
+     drawn range: the face drawn there already carries the water the light climbs
+     out of, and charging the quad for it as well would count the same water
+     twice -- which is what the shots at a lens over the skin and a lens under it
+     looking up hold open.
+     A second answer fell out of measuring the first one. With the band gone the
+     frame was cut instead by a line at the eye line: for an eye built for the
+     dark and worn in the sun, a median of 81 of the water's own distance under
+     that line and 56 of the same water's own mirror above it. One stuff, one
+     road, one eye, two numbers -- because the haze carries the wash that eye is
+     given while the veil was copied straight off the block row. For an eye with
+     nothing worn the two were already the same number, which is why no rig in
+     this file ever saw it: every water rig shoots bare. The last two shots
+     therefore wear the frog, and the last of them asks the environment. */
+  const openSea = await step('theSeaKeepsItsOwnColourToItsOwnHorizon', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, formT: p.formT, formMax: p.formMax, third: g.thirdPerson, time: g.time,
+      mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady,
+      creatures: g.creatures, drops: g.drops };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, formT: was.formT, formMax: was.formMax });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+      g.creatures = was.creatures; g.drops = was.drops;
+      return r;
+    };
+    p.form = null; g.mode = 'play'; g.thirdPerson = false;
+    g.time = N.DAY_LEN * (13 / 24);
+
+    const topOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) return y + 1; return -1; };
+    const floorOf = (x, z) => { const s = topOf(x, z); if (s < 0) return -1;
+      for (let y = s; y >= 0; y--) if (W.solidAt(x, y, z)) return y + 1; return -1; };
+    /* Open sea, the nearest of it to the island: eight metres of flat water over
+       the lens's head and at least two hundred metres in every direction, and no
+       ground standing up anywhere near. Nearest, because the ground out there is
+       filled by address and the nearer a lens is the more of that ring the run
+       has already walked. */
+    let spot = null, best = 1e9;
+    for (let z = -320; z <= 520; z += 7) for (let x = -320; x <= 520; x += 7) {
+      if (!(x < -8 || x > 167 || z < -8 || z > 167)) continue;      // out past the square
+      const out = Math.max(Math.max(x - 159, -x), Math.max(z - 159, -z));
+      if (out < 120 || out >= best) continue;
+      const s = topOf(x, z), b = floorOf(x, z);
+      if (s < 0 || b < 0 || s - b < 8 || s - b > 12) continue;
+      let land = 1e9;
+      for (let dz = -60; dz <= 60; dz += 6) for (let dx = -60; dx <= 60; dx += 6) {
+        const bb = floorOf(x + dx, z + dz);
+        if (bb >= 0 && bb >= s - 2) land = Math.min(land, Math.hypot(dx, dz));
+      }
+      if (land < 120) continue;
+      const y = s - 4;
+      let clear = true;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (let d = 1; d <= 280 && clear; d++)
+          if (W.solidAt(Math.floor(x + dx * d), y, Math.floor(z + dz * d))) clear = false;
+        if (!clear) break;
+      }
+      if (!clear) continue;
+      best = out;
+      spot = { x: x + 0.5, z: z + 0.5, surface: s, floor: b, depth: s - b, out: Math.round(out) };
+    }
+    if (!spot) return back({ error: 'no open sea the frame can stand in' });
+
+    /* The lens this rig asks for is the one the game itself shoots in first
+       person: the eye, no distance in front of it. `shootCamera` eases the
+       distance and the field of view toward what the view asks for, and a rig
+       that never runs a frame never lets them arrive -- the lens then sits up to
+       a whole third-person shot in front of the eye, on a different column of
+       the world, and for a lens looking up it sits below the sea floor. So the
+       shot is set, not eased, and the eye the frame was drawn at is reported. */
+    const put = (lensY, pitch) => {
+      g.camReady = true; g.cam.d = 0; g.cam.fov = p.fov();
+      p.x = spot.x; p.z = spot.z; p.vx = p.vy = p.vz = 0;
+      p.yaw = 0; p.pitch = pitch;
+      /* the eye this body wears, asked of the body as it stands here: a person
+         and the frog the same lens later wears are not the same height, and a
+         lens asked for at 4 m under the surface has to be 4 m under it in both */
+      p.y = lensY;
+      p.y = lensY - (p.eyePos() - p.y);
+      g._camFrame = g.shootCamera(p);
+      g.creatures = []; g.drops = []; g.hover = null;
+      /* a lens put down out at sea has no ring of ground behind it: the world
+         fills what the frame will ask about, nearest first, and the game keeps
+         asking until a ring has no hole in it. Skip this and the frame holds no
+         geometry at all, which proves nothing about water. */
+      const chx = Math.floor(p.x / W.cs), chz = Math.floor(p.z / W.cs);
+      let left = 1, guard = 0;
+      while (left > 0 && guard++ < 400) left = W.stream(gl, chx, chz, 6);
+      g.updateEnv();
+      return { lensY: +lensY.toFixed(2), eye: +p.eyePos().toFixed(2),
+        lens: g._lens ? +g._lens.y.toFixed(2) : null,
+        lensUnder: g._lens ? (g.env.inWater ? +(g.env.waterY - g._lens.y).toFixed(2) : 0) : null,
+        waterY: g.env.waterY, inWater: g.env.inWater, hazeOn: g.env.hazeOn,
+        hazeK: g.env.hazeK.map(v => +v.toFixed(3)), far: g.env.far,
+        fogCol: g.env.fogCol.map(v => +v.toFixed(3)), veil: g.env.veil.map(v => +v.toFixed(3)) };
+    };
+    const frame = () => {
+      g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { w, h, px };
+    };
+    const luma = (c) => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * 255;
+    /* `below` is the half of the frame every ray of which points at or below the
+       eye line, `above` the half that points above it -- with the lens level
+       those are the two halves of the frame, and the line between them is exactly
+       where the defect was. The reference is the colour the environment hands
+       this lens for this liquid, whatever eye is worn: the claim is that the water
+       keeps that colour all the way out. */
+    const read = (s, part) => {
+      const ref = luma(g.env.fogCol);
+      const half = Math.floor(s.h / 2);
+      const y0 = part === 'above' ? half : 0, y1 = part === 'below' ? half : s.h;
+      let n = 0, sum = 0, max = -1, br = 0, over = 0, hi = 0;
+      const lums = [];
+      for (let y = y0; y < y1; y++) for (let x = 0; x < s.w; x++) {
+        const i = (y * s.w + x) * 4;
+        const l = 0.2126 * s.px[i] + 0.7152 * s.px[i + 1] + 0.0722 * s.px[i + 2];
+        n++; sum += l; lums.push(l); br += s.px[i + 2] - s.px[i];
+        if (l > max) max = l;
+        if (l > ref + 12) over++;
+        if (l > 200) hi++;
+      }
+      lums.sort((a, b) => a - b);
+      return { n, meanLum: +(sum / n).toFixed(1), maxLum: Math.round(max),
+        p50: Math.round(lums[Math.floor(n * 0.5)]),
+        p99: Math.round(lums[Math.floor(n * 0.99)]), blueMinusRed: +(br / n).toFixed(1),
+        brighterThanWater: over, over200: hi };
+    };
+
+    // 1. 4 m under a flat sea, level, and 2. that half of it on its own
+    const sea = put(spot.surface - 4, 0);
+    const underFrame = frame();
+    const under = read(underFrame, 'all');
+    const below = read(underFrame, 'below');
+    /* 3. the same lens, the same frame, with the sky pass told nothing about the
+       water. That is the whole of what this law does, and it is reached through
+       one pair of uniforms: switched off at the sky alone, the haze on the
+       world's own faces, the leg up on the water's faces and the walk on the
+       motes stay exactly as they were. The defect is drawn here rather than
+       remembered from the day it was noticed. */
+    const skyWas = g.R.drawSky;
+    g.R.drawSky = function () {
+      const keep = this.env.inWater; this.env.inWater = 0;
+      skyWas.call(this); this.env.inWater = keep;
+    };
+    const offFrame = frame();
+    g.R.drawSky = skyWas;
+    const off = read(offFrame, 'below');
+    const offAll = read(offFrame, 'all');
+    // 3. the same place 30 cm above the skin, level: the sky has to stay a sky
+    const skin = put(spot.surface + 0.3, 0);
+    const dry = read(frame(), false);
+    // 4. and 5. under the skin again, looking up at it: the sun is still there
+    const upLens = put(spot.surface - 4, 1.2);
+    const up = read(frame(), false);
+    /* 6. the eye the complaint was made with: the fruit that builds an eye for
+       the dark, wearing it in the sun. It asks the environment what colour it
+       hands this lens for the water it stands in and what colour it hands the
+       same water's own surface -- they must be one number, because they are one
+       stuff at the end of one road -- and then it asks the frame both halves of
+       the line that number is drawn along. */
+    p.form = 'frogpear'; p.formT = 9999; p.formMax = 9999;
+    g.ensureModel(N.FRUIT_BY_ID.frogpear.creature);
+    const washed = put(spot.surface - 4, 0);
+    const washedFrame = frame();
+    const washedBelow = read(washedFrame, 'below');
+    const mirror = read(washedFrame, 'above');
+    /* 7. the same frame, the same eye, with the mirror put back off the eye and
+       onto the block row -- which is what the code did until this round -- so the
+       split is drawn here rather than remembered: one eye, one frame, the water
+       at one colour under the eye line and its own mirror at another above it.
+       The middle of the mirror is the measure, not its brightest pixel: a pane
+       throwing back a sun is a glint, and a glint is not a colour. */
+    const rowVeil = W.liquidVeil();
+    const veilWas = g.env.veil;
+    g.env.veil = rowVeil;
+    const splitFrame = frame();
+    g.env.veil = veilWas;
+    const split = read(splitFrame, 'above');
+    return back({ spot, water: { row: W.liquidVeil(), lum: Math.round(luma(W.liquidVeil())),
+        blueMinusRed: Math.round((W.liquidVeil()[2] - W.liquidVeil()[0]) * 255) },
+      sea, skin, upLens, washed, under, below, off, offAll, dry, up, washedBelow,
+      mirror, split, held: W.far.size });
+  });
+  check('the sea keeps its own colour to its own horizon: nothing under the eye line is brighter than the water',
+    !openSea.error && openSea.below.brighterThanWater === 0 && openSea.below.over200 === 0 &&
+    openSea.below.maxLum <= openSea.water.lum + 6, openSea);
+  check('the band that cut that frame in half is gone: the half of it the sky used to own is the water\'s colour to its last pixel',
+    openSea.below && openSea.below.n > 200000 && openSea.below.p99 <= openSea.water.lum + 4 &&
+    openSea.under.over200 < 2000, openSea);
+  check('and the floor is still down there: the half below the eye line is a sea, not a sheet painted the same colour',
+    openSea.below && openSea.below.blueMinusRed < openSea.water.blueMinusRed - 2, openSea);
+  check('the same place 30 cm above the skin keeps its whole sky: this is a lens inside a liquid, not a darkening pass',
+    openSea.dry && openSea.dry.maxLum > 240 && openSea.dry.p99 > 200 && openSea.dry.meanLum > 110, openSea);
+  check('a lens under the skin looking up still has the sun through it: the water is not counted twice on the way out',
+    openSea.up && openSea.up.meanLum > 55 && openSea.up.p99 > 70 && openSea.up.maxLum > 80, openSea);
+  check('the eye and the water: what the environment hands a lens inside a liquid and what it hands that liquid\'s own surface is one colour, whichever eye is worn',
+    openSea.sea && openSea.washed &&
+    openSea.sea.veil.join() === openSea.sea.fogCol.join() &&
+    openSea.washed.veil.join() === openSea.washed.fogCol.join() &&
+    openSea.washed.fogCol[0] > openSea.sea.fogCol[0], openSea);
+  check('an eye with nothing worn is handed the block row itself, so the reference the bounds above are set against is the row',
+    openSea.sea && openSea.sea.fogCol.join() === openSea.water.row.join(), openSea);
+  check('and a lens out of the water is handed the air for the air and the water for the water, which are not the same number',
+    openSea.skin && openSea.skin.inWater === 0 &&
+    openSea.skin.veil.join() === openSea.water.row.join() &&
+    openSea.skin.fogCol.join() !== openSea.skin.veil.join(), openSea);
+  check('the frame the washed-out eye draws keeps the same rule below its eye line',
+    openSea.washedBelow && openSea.washedBelow.brighterThanWater === 0 &&
+    openSea.washedBelow.over200 === 0, openSea);
+  /* The mirror a lens looks through is the same water the lens stands in, so it
+     carries what that eye is given: the middle of it sits at the colour of the
+     water under the eye line, not at the block row's raw colour. Put back the way
+     it was read and the split is there -- 81 under the line, 56 above it, one
+     eye, one frame. */
+  check('the surface that same eye looks through is the colour that eye is given: a median of 85 above the eye line against 81 of the water it stands in, and 56 with the mirror read off the block row',
+    openSea.mirror && openSea.split && openSea.washedBelow &&
+    Math.abs(openSea.mirror.p50 - openSea.washedBelow.p50) < 8 &&
+    openSea.split.p50 <= openSea.water.lum + 6 &&
+    openSea.mirror.p50 - openSea.split.p50 > 20, openSea);
+  check('every lens this rig drew is the eye it asked for, standing 4 m under a surface 4 m over its head, with no eased distance in front of it',
+    openSea.sea && openSea.skin && openSea.upLens && openSea.washed &&
+    [openSea.sea, openSea.skin, openSea.upLens, openSea.washed].every(l =>
+      Math.abs(l.lens - l.lensY) < 0.02 && Math.abs(l.eye - l.lensY) < 0.02) &&
+    [openSea.sea, openSea.upLens, openSea.washed].every(l =>
+      l.inWater === 1 && l.lensUnder === 4 && l.hazeOn === 1) &&
+    openSea.skin.inWater === 0 && openSea.skin.hazeOn === 0, openSea);
+  /* The law switched off at the sky alone, on the very frame the bounds above are
+     set against. This is the defect, drawn by this rig rather than remembered from
+     the day it was noticed. The mean hardly moves -- 51.8 to 53.9 -- because a
+     horizon band is a few thousand pixels out of a quarter of a million; every
+     measure of the band itself is what moves. */
+  check('the same frame with the law off at the sky alone is the band itself: 3,702 pixels over the water\'s colour, its 99th percentile 204, brightest 206, over a water that reads 53',
+    openSea.off && openSea.offAll &&
+    openSea.off.brighterThanWater > 3000 &&
+    openSea.off.brighterThanWater > openSea.below.brighterThanWater + 3000 &&
+    openSea.off.maxLum > openSea.below.maxLum + 100 && openSea.off.p99 > 190 &&
+    openSea.off.over200 > 3000 && openSea.off.meanLum > openSea.below.meanLum, openSea);
+
   /* How far under the water a surface is belongs to the surface, not to the
      point its shading is read at. The mesher asked the world "how deep is this
      point under the water above it", which is a question about a column of

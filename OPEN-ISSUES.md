@@ -7,113 +7,107 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one commit, and it changes what a shore is.
-The main island's ground used to run out into the sea over a wall: the rule capped the
-ground past the shore at two metres under the surface and blended the land towards that
-cap, which flattened the blend from its first metre. Read through a walk from open water
-inland -- the same walk this round's rig walks -- that rule presented a riser taller than
-a metre on **120 of 120** bearings, every one of them over four metres, a median of **11 m**
-and **13 m** at the worst, ten to thirteen metres of ground inside three metres of walk,
-and the steepest 20 m window at **0.65 m of ground per m**; the sea floor lay at **y 7-12**.
-The user's words for it were 主岛是不是得有一个平缓的地方，不然都没法上岛 -- "isn't the main
-island owed a gentle place, otherwise there is no getting up onto the island".
+State at time of writing: this round is one commit, and it answers a frame. What came
+back from the desktop was a screenshot (`~/Pictures/Screenshots/Screenshot from
+2026-11-20 21-35-11.png`, 1906x576, kept outside the repo): a body in a frog's shape
+standing in the open sea, lens level, and across the middle of the picture a pale
+near-white band with a jagged lower edge, fine ripple lines over it, ordinary murk
+under it. Read with a pixel pass rather than looked at, that picture states the fault
+exactly: **every row under the eye line is capped at luminance 83** -- the colour the
+haze leaves for the eye that was worn, because there the frame *does* draw the sea's
+floor -- while the band over it runs to **205-214**; the only pixels in the whole frame
+over 120 are the **30,423** of the band, and the band's hard lower edge sits at y=300 --
+twelve pixels under the picture's middle, which is where the eye line of a lens turned a
+fraction of a degree down lies.
 
-A shore is now stated as the one number a shore is made of: how steep. `COAST.grade`
-**0.25** is the steepest slope any shore in this world runs, and `shoreRun(h)` derives the
-run a drop needs from it (`max(apron, 1.5 * drop / grade)`: a `smoothstep` over a run R is
-steepest at its middle, at 1.5 * drop / R); `COAST.apron` **70 m** is the least such a run
-may take; `COAST.smooth` **40 m** is the reach over which the sea works the land's own fine
-relief away, because a shore that keeps it is a cliff standing in the water (measured with
-it left in, **88 of 120** bearings presented a two-metre step on the way up); the seabed's
-own noise fades in only past the end of the run, so a shore ends in ground. The height of
-the ground past the shore is no longer capped at all: its two ends are the island's own
-ground and that island's sea floor, both stated by rules, and the water line falls where
-that slope crosses it -- which is the beach, and is not something a second rule gets to
-place.
+Nothing had been drawn under that band. The sky quad is not a thing in the world: it is
+the frame's answer for "nothing was drawn here", and it was the only thing answering
+there, for two reasons and neither of them a bug. A ray at or below the eye line of a
+flat sea never meets that sea's surface -- the mesher puts a water face only where water
+meets air, and the surface of a flat sea lies at the eye line's height and never under
+it. And an open sea's floor is flat and 8 m down, so it is not reached inside the
+**260 m** the frame asks about either. So the day sky's own horizon, `[0.72, 0.82, 0.92]`
+off the day table, was standing in for four metres of sea and two hundred and sixty
+metres more of it. The water is asked of fragments everywhere in the renderer -- the haze
+on the world's own faces, the leg back up on the panes, the walk of the motes -- and a
+quad standing for the far distance is none of those, so it was asked nothing.
 
-- **What the shore measures now** (`game/test/node-smoke.js`, 120 bearings walked from open
-  water inland): the tallest step anywhere on a shore **1 m** -- the world's own minimum
-  riser, and exactly what a body climbs with the launch its record states; the steepest 20 m
-  window **0.400 m of ground per m**, held to **0.45** (the shore's own 0.25 with the
-  island's relief still on it: an island's shore cannot be gentler than the island); the sea
-  floor **y 4-9**, so 5-10 m of water over it, never shoal enough to be land and never deep
-  enough to stop being ground; the water's edge **172-221 m** from the centre; **11-19 m** of
-  height from that water to the island's own ground.
-- **What a body does with it** (`game/test/play.js`, the complaint asked as it was made): the
-  rig takes the hardest shore the island has -- the bearing that makes a body climb furthest
-  from the water to its own shore line, chosen by `shoreWater`/`coastRadius` and not from a
-  remembered coordinate -- stands a body in the deepest water a body walks in (one metre over
-  the ground it stands on; at two the water carries it, which is the question 03 §3 answers
-  and is asked of elsewhere), and walks it inland with the push key held the way a player
-  holds it up a bank. It got up: bearing 36 degrees, ground **y13** under a metre of water
-  **201 m** out, **47 m of ground and 12.18 m of height in 729 frames** (12.2 s), over **20
-  take-offs** every one of which but the first follows a frame with feet on the ground (**19**
-  such frames), each arc's top **1.297 m** over the ground it left against the **1.429 m** the
-  record reaches, its longest run off the ground **42 frames** against the **44** one such arc
-  lasts, no frame lifting it more than **0.132 m** against the **0.138** one frame of its own
-  launch is, inside a block in **0** frames and through the ground in **0**.
-- **The channel between islands is measured to the water now, not to the shore line.** With
-  the shore a slope rather than a wall, "how much open water lies between this island and
-  that one" has one honest answer: the water, from where the sea stands. `docs-sync.js` asks
-  it that way and its anchor moved with it: **210.0 m -> 169.0 m** of open water between this
-  island's edge and the nearest island's foot (the **24 m** `ISLES.keep` the rule holds, and
-  the **178.9 m** closest pair of feet, did not move: no island moved, only the measure of the
-  gap). docs/02 §1.1-1.2 and docs/07 §3.1-3.2 restate the same figures, including the old
-  chapter's "six metres of water over the seabed", which was a guess about a floor that is now
-  measured.
+- **The fix states the chapter's law and adds no mechanism to it.** The same
+  `fogK: [1.40, 0.40, 0.15]` and the same colour the motes are washed with are handed to
+  the sky pass (`uHazeK / uFogCol / uInWater / uLensUnder / uFar`, read off `env` with
+  the identical expression `drawParticles` uses) and the quad mixes to the water's colour
+  over `1 - exp(-fogK * far)`: out there the liquid runs on past the point where the
+  frame stops asking about ground, so the far plane is the only distance such a ray
+  walks. The one direction that pays nothing is the one that reaches *this* liquid's own
+  surface inside the drawn range: the pane drawn there already carries the leg back up,
+  and charging the quad for that same water again is what the exclusion exists to stop.
+- **What the new step measures** (`game/test/play.js`,
+  `theSeaKeepsItsOwnColourToItsOwnHorizon`: a 900x560 frame at noon, at a place found by
+  search -- open sea, 8 m deep, **131 m** past the edge of the authored square, no ground
+  standing up within 120 m, a level ray clear 280 m in all four directions -- lens 4 m
+  under, level, no bodies and no drops in the frame). The same frame drawn twice. With
+  nothing the water does asked of the sky pass, the half of the frame at or below the eye
+  line holds **3,702** pixels over the water's own colour, **3,393** of them over
+  200/255, its 99th percentile at **204** and its brightest at **206**; with the law on,
+  **0** and **0**, p99 **53**, brightest **53** -- the colour that water is
+  (`[0.06, 0.24, 0.32]`, luminance **53**). The mean moves **51.8 -> 53.9**, and that is
+  printed on purpose because it says where the defect is *not*: a horizon band is
+  1.5% of a half-frame, so every bound here measures the band, not the frame. The frame
+  is still a sea and not a wash: blue over red **+61.5** below the eye line against the
+  row's own **+66**, which is the water eating red and not a colour painted over pixels.
+  Controls, all of them unchanged from before the fix: the same place **30 cm over** the
+  skin keeps its whole sky (mean **139.7**, brightest **255**, **16,228** pixels over
+  200), and a lens 4 m under it looking up at 1.2 rad still has the sun through the
+  surface (mean **67.6**, brightest **87**).
+- **The second finding, which had been hiding in the suite.** With the band gone, the
+  frame was cut by a line at the eye line instead: an eye built for the dark and worn in
+  the sun read the water under that line at a median of **81** and that same water's own
+  mirror above it at **56** -- the block row's raw **53**, with the sun's glints on it.
+  The haze carries what the eye is given; the veil was copied off the row. They are one
+  stuff at the end of one road, so `env.veil` now reads the environment's `fogCol`
+  whenever the lens is standing in the liquid, and the step asks both halves of one
+  frame: **85** above the line against **81** under it. For an eye with nothing worn the
+  two numbers were equal already, which is why no rig ever saw it -- every water rig in
+  this file shoots bare. Out of the water they are allowed to differ, and the step holds
+  that too: the same lens 30 cm over the skin is handed `[0.573, 0.715, 0.899]` for the
+  air and the row's `[0.06, 0.24, 0.32]` for the water it is looking at.
+- **Five things this round got wrong on the way, all of them about the rig and not the
+  game.** (1) It first omitted `g._camFrame = g.shootCamera(p)`, so every frame it read
+  had been drawn from whatever lens the previous step left behind -- the "dry" control
+  came back with a brightest pixel of 217 and the looking-up frame with a mean of 161,
+  neither of which is a thing the sea does. (2) `shootCamera` *eases* `cam.d` and
+  `cam.fov` toward what the view asks; a rig that never runs a frame never lets them
+  arrive, so a "first-person" lens sits up to a whole third-person shot in front of the
+  eye -- on a different column of the world, and for an upward lens *below the sea
+  floor*. The shot has to be set (`g.cam.d = 0`, `g.cam.fov = p.fov()`, `g.camReady =
+  true`), not eased, and the lens actually used has to be reported. (3) The eye has to be
+  asked of the body at the moment the lens is set -- `p.y = lensY - (p.eyePos() - p.y)`
+  -- because a frog's eye sits about 1.1 m lower than the person's, and a lens asked for
+  at "4 m under the surface" is not that in both bodies. (4) A check asserted
+  `lensUnder === -0.3` for a lens standing in air, where `env.waterY` is 0 and the
+  reading is meaningless; the honest assertion is `inWater === 0`. (5) The first bounds
+  on the law-off control reached for the frame's mean and missed completely (51.8 against
+  53.9) -- the same mistake as quoting a mean anywhere else in this file: a band is not a
+  mean, and the bounds now say so.
+- **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the
+  commit message carries no non-ASCII; `docs-sync.js` reports no disagreement and
+  `docs-drift.js` detects every injected drift; `bash game/test/all.sh` **10/10** three
+  times on this tree -- twice before the last wording pass and once on the tree as it
+  stands -- each run followed by `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**.
+  The new step is `theSeaKeepsItsOwnColourToItsOwnHorizon` in `game/test/play.js`, and it
+  costs about **2.3 s** of the play step's runtime.
 
-Four things this round got wrong, and the first is of the kind this file warned about twice.
+No block was written this round, so the authored array's hash pin (**1271637568**, read
+out of seed 20261008 before any island rule) is untouched, and every figure above lives
+in the ground past the square -- which is where open sea is.
 
-- **A test that measured with the wrong reading, and so reported a world that was not there.**
-  The new rig's depth-under-water helper called `terrainY(W, x, y+2, z)` -- the argument order
-  is `(w, x, z, from)` -- so it asked a column that is nowhere and subtracted the ground *cell*
-  rather than the surface the feet stand on: it printed **2 m** of water over a body standing
-  where the sea is **1 m** deep, and the check that asked for one metre went red. The fix is to
-  ask what the body itself asks (`liquidSurfaceAt` of the column minus `standY` at its own
-  feet), which is the same pair of readings `waterHoldsUp` decides with, and the number then
-  agrees with the ground the body is put on.
-- **Checks that asserted a story instead of a law.** The first version held the jump key for
-  the whole climb -- which makes a body bunny-hop -- and then required its feet to be down for
-  **40%** of the frames: it was down for **19** of **729**, so that check could never have
-  passed for any body. Another compared the **12.18 m** the whole climb gained against the
-  **1.429 m** of a single arc. Both were true observations about a body hopping up a beach and
-  false claims about what was being tested; they now ask the arc per hop and the airborne run
-  per arc, which is what the law actually says.
-- **A refactoring that broke a bit-exactness pin.** Splitting the terrain into `shapeH +
-  reliefH` so the sea could subtract the relief looked like the clean shape and is not: the
-  village and orchard flattening (`h = h*(1-w) + 20*w`) and the keep's `h = Math.max(h, ...)`
-  are not additive, so the sum is a different world -- the authored array read **1489510912**
-  against the pinned **1271637568**, and the spawn's sightline fell to **2** cells of
-  clearance. The final form keeps the land's arithmetic exactly where it was and subtracts the
-  relief from the blended result; the pin holds, and the walk up the island is the new ground.
-- **A rig that borrowed an animal out of the flock was measuring that animal's afternoon.**
-  The severed-trunk step rig (issue 21) took `g.creatures.find(...)` -- a frog the valley
-  happens to hold -- and stood it at a step it had found. In two runs of this round's suite
-  that body never crossed: **0 m** of ground covered in **300** frames, its highest point
-  **0.13 m** over the grass it was put on -- the check going red on a law that had not
-  moved. It is not this round's world: the authored array is pinned bit for bit
-  (**1271637568**) and nothing before that rig reads ground past the square. It is the rig,
-  and the previous tree says so plainly: the same rig, same column, same aim, reported the
-  crossing at **frame 5** in one run and at **frame 49** in another. How many frames the
-  flock lives between two steps of the suite is decided by the machine, and which body a
-  `find` returns and what phase of its own hop cycle it stands in are unseeded draws. The
-  rig now makes its own body with `N.Creature` under a draw it owns -- the fix the wood rig
-  beside it was rebuilt to, for the same reason -- and reports the crossing at **frame 64**,
-  run after run.
-
-- **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the commit
-  message has no non-ASCII; `docs-sync.js` ends 全部一致。 and `docs-drift.js` detects every
-  injected drift; `bash game/test/all.sh` **10/10** twice on this tree with
-  `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**. The authored array's hash pin
-  (**1271637568**, read out of seed 20261008 before any island rule) still holds: every figure
-  this round moved is in the ground past the square, which is where the shore rule lives.
-
-What this round leaves open is the user's own queue, in the order they gave it, recorded under
-**25**: a sea turtle -- wings-for-flippers, faster in water than the frog's **4.6**, no
-skin-drying clock on land, slower than **1.8** on it -- the island nearest this one to be a
-sand isle carrying the turtle's fruit in sand, the main island keeping only the frog's, and
-animals in the sea at all, which is currently empty of everything but frogs. The shore half of
-that queue is closed by this round.
+What this round leaves open is the user's own queue, in the order they gave it, recorded
+under **25**: a sea turtle -- wings-for-flippers, faster in water than the frog's **4.6**,
+no skin-drying clock on land, slower than **1.8** on it -- the island nearest this one to
+be a sand isle carrying the turtle's fruit in sand, the main island keeping only the
+frog's, and animals in the sea at all, which is currently empty of everything but frogs.
+The shore half of that queue was closed last round; this round made the sea legible to a
+lens standing in it, which is what any of the rest will be looked at with.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -2218,7 +2212,7 @@ put on, and `game/test/docs-sync.js` measures the chapter's numbers itself):
 | raised as ground | **70** of 70 ordinals; none cut down for want of room; closest two feet **178.9 m** apart |
 | kinds | **15** sandbars, **16** reefs, **23** thickets, **11** isles, **5** ridges |
 | per km², by km band | **3.50 / 2.02 / 1.21 / 0.82** -- the gradient the rule exists for |
-| the nearest of them | centre **389 m** from (80,80), **169 m** of open water past this island's water's edge (the measure, and this number, moved with the shore rule: it is taken to where the sea stands now, not to the shore line -- see the round's record at the top of this file) |
+| the nearest of them | centre **389 m** from (80,80), **169 m** of open water past this island's water's edge (the measure, and this number, moved with the shore rule: it is taken to where the sea stands now, not to the shore line -- see the body of commit fe8ee39) |
 | how far open sea is from land | **5,088** points sampled on rings to 1.5 km: median **171 m** from a foot, furthest **476 m** -- against the **966 m** one fruit buys out and back |
 | what stands on it | **0** cells of tree, fruit or plant over the **15,421** columns of the nearest footprint big enough to stand on; its materials are the material table's own (grass over soil over sand over the mountain rock the sea floor is paved with) |
 | what a body does there | stands on it with its feet down in **100%** of 120 frames, walks **13 m** of it outside the authored array with **0** frames falling, and the ground comes back cell for cell the same after **813** chunks were let go |
@@ -2269,23 +2263,23 @@ each one would otherwise be rediscovered:
   **387** cells out.
 **The queue the user gave, in their order (this round, recorded so it is not lost).**
 
-1. **Done this round.** The main island was owed a gentle shore. In their words:
+1. **Done last round (fe8ee39).** The main island was owed a gentle shore. In their words:
    主岛是不是得有一个平缓的地方，不然都没法上岛 -- "isn't the main island owed a gentle
    place, otherwise there is no getting up onto the island". It was a slope question in
    `worldgen.js`, exactly as this item guessed, and it is now a rule: the shore's grade,
    the run a drop needs from it, the reach over which the sea grades the land's relief
    away, and the water line falling where that slope crosses it. The rule and every
    measured figure -- the wall it replaced, what a shore is now, and a body walked up the
-   hardest one it has -- are at the top of this file. The worldgen anchors in
+   hardest one it has -- are in the body of that commit. The worldgen anchors in
    `docs-sync.js` moved as expected, and one of them moved because the measure was wrong
    rather than because the world did: the open water between this island and the nearest
    is now taken to where the sea stands (**210.0 m -> 169.0 m**), while the rest held
    (**70** of **70** ordinals raised, **178.9 m** closest feet, **389.0 m** to the nearest
    centre, the **15/23/16/11/5** kind census) because no island moved.
-2. **Done the round before this one.** The minimap stops lying about the world outside the
+2. **Done two rounds ago (29cd91e).** The minimap stops lying about the world outside the
    authored square: it went black past the main island because it painted one **160x160**
    base image and nothing else. It paints a window of ground round the body now -- the
-   record is in "the round before this one" below.
+   record is in "two rounds back" below.
 3. **Next.** The sea turtle, and the sea being peopled: it swims by moving its front
    flippers up and down the way a bird's wings move; `swimSpeed` above the frog's
    **4.6**; no skin-drying clock on land; land speed under **1.8**; the island nearest
@@ -2297,6 +2291,11 @@ each one would otherwise be rediscovered:
    `game/data/fruits.js`, a flipper stroke beside `swimPose`/`STROKE` in
    `game/src/models.js`, and a habitat rule for the sea -- animal placement is bounded by
    the valley's zones today, which is the same wall as issue 24.
+   One thing had to be true before any of it could be looked at from a boat or from
+   inside: the sea being legible to a lens standing in it. That was taken up this round
+   -- a lens under an open sea now keeps that sea's own colour out to its own horizon,
+   and the water's mirror and the water's distance are one colour per eye -- and it is
+   recorded at the top of this file.
 
 - **The block table has a hole at id 16.** Unchanged from last round: the cloud block
   was deleted with the wall, `N.BLOCKS[16]` is `undefined`, and two helpers index the
@@ -2323,7 +2322,7 @@ something the game already has; nothing in it does yet.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### The round before this one: the map becomes a window of ground round the body (29cd91e)
+### Two rounds back: the map becomes a window of ground round the body (29cd91e)
 
 State at time of writing, then: this round is one commit, and it changes what the minimap is.
 It was a picture: one canvas of the authored square, 160x160 cells, painted once at boot, and
@@ -2400,7 +2399,7 @@ turtle's fruit in sand, the main island keeping only the frog's, and animals in 
 which is currently empty of everything but frogs. The minimap half of that queue is closed by
 this round.
 
-### Two rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
+### Three rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
 State at time of writing, then:
 A body whose legs are an arc was sized by the parabola -- launch squared over
 twice the gravity -- and the parabola is what the flight tends to as the frame goes to
@@ -2504,7 +2503,7 @@ no skin-drying clock on land, slower than **1.8** on it -- the island nearest th
 be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
 is currently empty of everything but frogs.
 
-### Three rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+### Four rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
 State at time of writing, then:
 the sea. The water the last round opened out is no longer an empty field: it holds
 islands, and it holds more of them the nearer they lie to the island this square sits
@@ -2611,7 +2610,7 @@ finished.
 
 
 
-### Four rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
+### Five rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
 State at time of writing: this round is one commit, and it changes what the world
 *is*. The map stops being the world and becomes a square of ground with an
 address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
@@ -2764,7 +2763,7 @@ round deliberately refused to invent one.
 Read the standing contract below first: it decides whether any of this counts as
 finished.
 
-### Five rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+### Six rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
 State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
@@ -2853,7 +2852,7 @@ the contour probes is still unmeasured). One new one, 22's own seam: **the hand 
 in third person -- the marker now shows only where the key acts, which is what made
 that one distance and that origin visible.
 
-### Six rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### Seven rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -2976,7 +2975,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Seven rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Eight rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -3150,7 +3149,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Eight rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Nine rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and
