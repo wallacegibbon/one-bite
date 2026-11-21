@@ -1910,15 +1910,16 @@ const { sim } = require('./simwait');
      The star hash floors the unit direction by 160 and multiplies the cell's
      coordinates far past the range a mediump float is only required to hold,
      so on a strict GPU the hash degrades and the stars clump into a dense
-     regular dot grid that fills the night -- seen on a real device at 00:50
+     regular dot grid that fills the night -- seen on a real device at night
      over Mirrorlake, where the suite's software backend reads mediump at full
      range and never shows it, so neither the laws nor the watch could see it
      either. The sky shader asks for highp now (engine.js, FS_SKY); this step
      pins the scatter itself, so a change that fills the frame with bright
-     cells is caught where the frame is read. Measured at 00:50, 30 m over the
-     open lake, 77 degrees up with the moon out of the frame: 0.20% of the
-     frame is a star's brightness and the largest bright patch is 46 pixels,
-     one star cell stretched at the frame's edge. A collapsed grid is most of
+     cells is caught where the frame is read. Measured at 02:51 (the step's own
+     clock, `g.time = 50`), 30 m over the
+     open lake, 77 degrees up with the moon out of the frame: 0.161% of the
+     frame is a star's brightness and the largest bright patch is 30 pixels,
+     one star cell. A collapsed grid is most of
      the frame; a sky with no stars is none of it. */
   const starField = await step('nightSkyIsAScatterNotACarpet', () => {
     const g = window.game, N = window.FRUTARIA, gl = g.R.gl, p = g.player;
@@ -1975,15 +1976,18 @@ const { sim } = require('./simwait');
      shared one phase and one speed, so the whole sky brightened and dimmed in
      unison: the human saw all the stars light up and fade at once. Phase and
      speed now come from two more full-range hashes of the cell (engine.js,
-     FS_SKY): the phase uniform on the circle, the speed a fifth to a quarter
+     GLSL_SKY -- the one sky both the frame's background and the water's own
+     face compile): the phase uniform on the circle, the speed a fifth to a quarter
      of a turn per second, so the stars twinkle on their own clocks while the
      mask is untouched and the scatter above stays the same scatter. Measured
      at the scatter law's lens (30 m over the lake, 77 degrees up, the moon out
-     of the frame) at four game times one second apart: in every step 749..823
-     star pixels brightened while 726..808 dimmed at the same time, all 1686
-     star pixels that ever lit swung more than 30 of luminance across the four
-     seconds, and no star moved from its place. A single phase again sends one
-     side of every step to zero. */
+     of the frame) at four game times one second apart: in every step 597..631
+     star pixels brightened while 527..596 dimmed at the same time, and all
+     1603 star pixels that ever lit swung more than 30 of luminance across the
+     four seconds. A single phase again sends one
+     side of every step to zero. Under the surface the same clocks are held by
+     `theSameWindowHoldsTheMoonAndTheStars`, which holds the sky still and moves
+     only the phase. */
   const twinkle = await step('starsTwinkleOnTheirsOwnClocks', () => {
     const g = window.game, W = g.world, gl = g.R.gl, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vy: p.vy, form: p.form,
@@ -5772,6 +5776,491 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   check('the surface is drawn by a program of its own: the world\'s program holds no place for the surface\'s questions, and the surface\'s program holds all eight',
     faceProgram.separate && faceProgram.rows.every(r => !r.world && r.face), faceProgram);
+
+  /* 1.5s. The window holds the night as well as the day. The bend that puts the
+     sun inside a 48.6 degree cone is the same bend for every direction above the
+     water, so the moon and every star belong to it: a window that showed the
+     moon and not the stars next to it would be showing a different sky, and the
+     stars are what say the whole sky is there and not a bright disc painted on a
+     dark one.
+     The rig is the daylight one, at the same lake and the same lens 30 cm under
+     it, at 20:00: the sun stands 39.9 degrees below the horizon, so the night is
+     complete (the day/night curve answers 1.0) and the moon -- which is the
+     sun's own direction with its sign taken -- stands 39.9 degrees up. The face
+     under a lens inside the liquid is drawn flat (game.js, drawWater: the wave
+     is held back from a lens under the surface because such a lens meets the
+     same interface several times and this frame cannot tell one crossing from
+     the next), so what is measured is the flat law with nothing wobbling in it.
+     Three reads at that one lens, and a fourth with the clock moved and the sun
+     left where the frame was shot with it:
+       A. the window as the game draws it;
+       B. the same face asked of air (the index 1, the water and its absorption
+          untouched): the stars and the moon then sit at the angles they stand at
+          instead of the angles the bend puts them at;
+       C. the same lens at 07:00, where the clock still says 37% night while the
+          sun stands 29 degrees up: no star may be in the window, because the
+          gate that keeps stars out of a daylight sky is asked of the sky
+          function the window shares, and it is that hour's gate;
+       D. the window again at three clocks one game-second apart with the
+          environment not re-derived, so the sun, the moon and the water's face
+          stand exactly where A left them and only the stars' own clocks move.
+     What has to be true:
+       1. the moon is in the window at the angle the law states for a thing
+          standing 50.1 degrees off the vertical -- 35.1 degrees -- and it is the
+          one large bright thing there: every other bright mass is a star cell,
+          which is the bound the daylight sky's own star scatter already pins.
+          The same face asked of air holds that moon at 50.1 instead, outside the
+          cone, as a larger and dimmer disc: the fold takes 1.70 off every angle
+          at that point, and lays its sky down inside the shader instead of in
+          front of the water;
+       2. the stars are in it out to the cone and not past it: past 48.6 degrees
+          the frame is the colour of the water the lens stands in;
+       3. they are the same stars. Every star the straight lens finds and every
+          star the bent lens finds is looked for in the other frame by the sky
+          direction it would have to be the same star at, and matched pairs agree
+          with the law to well under a degree; the ones that are not paired are
+          named (out of that frame's angles, behind this lake's shore, lit there
+          but spread past the star test), not waved away. The window is not a
+          second night sky: it is that one, turned -- and turned, so the same
+          cells arrive over half as many pixels each;
+       4. the stars in the window brighten and dim on their own clocks, some up
+          and some down in the same second, which is what per-star phase means;
+       5. at a daylight clock none of them are in it at all. */
+  const nightWindow = await step('theSameWindowHoldsTheMoonAndTheStars', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, gl = R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, formT: p.formT, formMax: p.formMax, head: p.headWater,
+      third: g.thirdPerson, time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env,
+      hover: g.hover, camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady,
+      creatures: g.creatures, drops: g.drops, parts: g.particles ? g.particles.n : 0 };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, formT: was.formT,
+        formMax: was.formMax, headWater: was.head });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+      g.creatures = was.creatures; g.drops = was.drops;
+      if (g.particles) g.particles.n = was.parts;
+      return r;
+    };
+    p.form = null; g.mode = 'play'; g.thirdPerson = false;
+    g.creatures = []; g.drops = []; g.hover = null;
+    if (g.particles) g.particles.n = 0;
+    g.time = N.DAY_LEN * (20 / 24);
+    g.updateEnv();
+    const topOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) return y + 1; return -1; };
+    const floorOf = (x, z) => { const s = topOf(x, z); if (s < 0) return -1;
+      for (let y = s; y >= 0; y--) if (W.solidAt(x, y, z)) return y + 1; return -1; };
+    let spot = null, best = 0;
+    for (let z = 0; z < 160; z += 2) for (let x = 0; x < 160; x += 2) {
+      const s = topOf(x, z), b = floorOf(x, z);
+      if (s !== N.WORLD.sea + 1 || b < 0 || s - b < 4) continue;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        let run = 0;
+        for (let d = 1; d <= 200; d++) {
+          const px2 = Math.floor(x + dx * d), pz2 = Math.floor(z + dz * d);
+          if (topOf(px2, pz2) !== s || W.solidAt(px2, s - 1, pz2)) break;
+          run = d;
+        }
+        if (run > best) { best = run; spot = { x: x + 0.5, z: z + 0.5, surface: s, floor: b,
+          depth: s - b, dx, dz, run }; }
+      }
+    }
+    if (!spot) return back({ error: 'no open water to look up through at night' });
+    const put = (lensY, pitch, yaw) => {
+      g.camReady = true; g.cam.d = 0; g.cam.fov = p.fov();
+      p.x = spot.x; p.z = spot.z; p.vx = p.vy = p.vz = 0; p.pitch = pitch; p.yaw = yaw;
+      p.y = lensY - (p.eyePos() - p.y);
+      g._camFrame = g.shootCamera(p);
+      g.creatures = []; g.drops = []; g.hover = null;
+      const chx = Math.floor(p.x / W.cs), chz = Math.floor(p.z / W.cs);
+      let left = 1, guard = 0;
+      while (left > 0 && guard++ < 400) left = W.stream(gl, chx, chz, 6);
+      g.updateEnv();
+      return { lensY: +lensY.toFixed(2), eye: +p.eyePos().toFixed(2), pitch: +pitch.toFixed(3),
+        yaw: +yaw.toFixed(3), inWater: g.env.inWater,
+        lensUnder: g.env.inWater ? +(g.env.waterY - g._lens.y).toFixed(2) : 0,
+        ior: g.env.liqIor, night: +g.night.toFixed(2),
+        sunY: +g.env.sunDir[1].toFixed(3), fov: g._camFrame.fov };
+    };
+    const shot = () => {
+      g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { w, h, px };
+    };
+    /* Every pixel's ray: its angle off the vertical, its azimuth, and the unit
+       direction itself, which is the only key two frames taken through the same
+       lens but turned differently can share. Rays at or below the eye line are
+       left unnumbered: they never meet this face. */
+    const rays = (s, at) => {
+      const tanY = Math.tan(at.fov * Math.PI / 360), tanX = tanY * (s.w / s.h);
+      const th = new Float32Array(s.w * s.h).fill(-1);
+      const dir = new Float32Array(s.w * s.h * 3);
+      for (let y = 0; y < s.h; y++) {
+        const uy = (y + 0.5) / s.h * 2 - 1;
+        for (let x = 0; x < s.w; x++) {
+          const ux = (x + 0.5) / s.w * 2 - 1;
+          let dx = R.fwd[0] + R.right[0] * ux * tanX + R.up[0] * uy * tanY;
+          let dy = R.fwd[1] + R.right[1] * ux * tanX + R.up[1] * uy * tanY;
+          let dz = R.fwd[2] + R.right[2] * ux * tanX + R.up[2] * uy * tanY;
+          const L = Math.hypot(dx, dy, dz); dx /= L; dy /= L; dz /= L;
+          const a = Math.acos(Math.max(-1, Math.min(1, dy))) * 180 / Math.PI;
+          const i = y * s.w + x;
+          if (a <= 90) { th[i] = a; dir[i * 3] = dx; dir[i * 3 + 1] = dy; dir[i * 3 + 2] = dz; }
+        }
+      }
+      return { th, dir, w: s.w, h: s.h };
+    };
+    const lumaOf = (px, i) => 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+    /* A star: a pixel well above the dark sky and well above its eight
+       neighbours, which is the test the daylight sky's own star steps use, so
+       the same thing is being counted above the water and under it. The moon's
+       disc is not a star by it: it is a broad disc, and no pixel of it stands
+       40 above the mean of the ring around it. */
+    const STAR_L = 110, STAR_EDGE = 40;
+    const read = (s, at) => {
+      const { th, dir, w, h } = rays(s, at);
+      const L = new Float32Array(w * h);
+      for (let i = 0, j = 0; j < s.px.length; i++, j += 4) L[i] = lumaOf(s.px, j);
+      const spikes = [], bands = new Map(), bright = [];
+      let pastMax = -1, starPx = 0;
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        if (th[i] < 0) continue;
+        if (th[i] >= 51 && L[i] > pastMax) pastMax = L[i];
+        if (L[i] < STAR_L) continue;
+        starPx++;
+        bright.push([dir[i * 3], dir[i * 3 + 1], dir[i * 3 + 2]]);
+        let nb = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if (dx || dy) nb += L[i + dy * w + dx];
+        }
+        if (L[i] - nb / 8 <= STAR_EDGE) continue;
+        spikes.push({ i, th: th[i], d: [dir[i * 3], dir[i * 3 + 1], dir[i * 3 + 2]], l: L[i] });
+        const k = Math.floor(th[i] / 6) * 6;
+        bands.set(k, (bands.get(k) || 0) + 1);
+      }
+      /* the bright masses that are not stars: the moon is a disc and stars are
+         cells, and the size of the largest one says which is in the frame. The
+         threshold sits above the night sky and below the moon in either frame:
+         a window lays the sky down inside the shader, where the moon's own
+         colour multiplied by the water and the face still clips to white, while
+         a straight frame multiplies a framebuffer that already clipped -- so the
+         same moon comes out dimmer and spread wider, which is itself one of the
+         readings the checks carry. */
+      const MOON_L = 120;
+      const lit = new Uint8Array(w * h);
+      for (let i = 0; i < w * h; i++) lit[i] = L[i] > MOON_L && th[i] >= 0 ? 1 : 0;
+      const seen = new Uint8Array(w * h);
+      const blobs = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const s0 = y * w + x;
+        if (!lit[s0] || seen[s0]) continue;
+        const stack = [s0]; seen[s0] = 1;
+        let size = 0, sumTh = 0, maxL = -1, atMax = null, atMaxI = null;
+        while (stack.length) {
+          const c = stack.pop(); size++;
+          if (th[c] > 0) sumTh += th[c];
+          const cl = L[c];
+          if (cl > maxL) { maxL = cl; atMax = th[c]; atMaxI = c; }
+          const cx = c % w, cy = (c - cx) / w;
+          for (let k = 0; k < 4; k++) {
+            const nx = cx + (k === 0 ? 1 : k === 1 ? -1 : 0), ny = cy + (k === 2 ? 1 : k === 3 ? -1 : 0);
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            const n = ny * w + nx;
+            if (!lit[n] || seen[n]) continue;
+            seen[n] = 1; stack.push(n);
+          }
+        }
+        blobs.push({ size, meanTheta: +(sumTh / size).toFixed(2), maxLum: Math.round(maxL),
+          thetaAtMax: atMax === null ? null : +atMax.toFixed(2),
+          azAtMax: atMaxI === null ? null : +(Math.atan2(dir[atMaxI * 3], -dir[atMaxI * 3 + 2]) * R2D).toFixed(2) });
+      }
+      blobs.sort((a, b) => b.size - a.size);
+      let thSum = 0, thMax = -1, inside = 0, past = 0;
+      for (const sp of spikes) {
+        thSum += sp.th; if (sp.th > thMax) thMax = sp.th;
+        if (sp.th < 46) inside++; else if (sp.th >= 51) past++;
+      }
+      return { n: spikes.length, starPx, insideCone: inside, pastRim: past,
+        meanTheta: spikes.length ? +(thSum / spikes.length).toFixed(2) : null,
+        maxTheta: spikes.length ? +thMax.toFixed(2) : null,
+        bands: [...bands.entries()].sort((a, b) => a[0] - b[0]).map(e => ({ th: e[0], n: e[1] })),
+        blobs: blobs.slice(0, 3), pastMaxLum: Math.round(pastMax), spikes, bright };
+    };
+    /* what the straight frame is pointed at, in 1 degree cells of the sky: the
+       answer to "was that star simply out of the way?" */
+    let cover = null;
+    const coverOf = (at) => {
+      const r = rays(shot(), at), set = new Set();
+      for (let i = 0; i < r.th.length; i++) {
+        if (r.th[i] < 0) continue;
+        const az = Math.atan2(r.dir[i * 3], -r.dir[i * 3 + 2]) * 180 / Math.PI;
+        set.add(Math.round(r.th[i]) + ',' + Math.round(az));
+      }
+      return set;
+    };
+    const iorWas = g.env.liqIor;
+    const withAir = (fn) => { g.env.liqIor = 1; const r = fn(); g.env.liqIor = iorWas; return r; };
+    const sd = g.env.sunDir, md = [-sd[0], -sd[1], -sd[2]];
+    const ior = iorWas, D2R = Math.PI / 180, R2D = 180 / Math.PI;
+    const critical = Math.asin(1 / ior) * R2D;
+    const moonElev = Math.asin(Math.max(-1, Math.min(1, md[1]))) * R2D;
+    const moonTheta = 90 - moonElev;
+    const imageTheta = Math.asin(Math.min(1, Math.sin(moonTheta * D2R) / ior)) * R2D;
+    /* the lens turned under the moon: the azimuth the bend keeps, since the
+       face it is bent at is a horizontal one */
+    const yawMoon = Math.atan2(md[0], -md[2]);
+    const pitch = 0.9;
+    const a = put(spot.surface - 0.3, pitch, yawMoon);
+    const lensPos = { x: p.x, y: p.eyePos(), z: p.z };
+    const win = read(shot(), a);
+    /* A second read of the same frame with the index asked of air. The lens,
+       the water and what the water eats are untouched; only the turn is taken
+       out, so every star keeps the angle it stands at. */
+    const b = put(spot.surface - 0.3, pitch, yawMoon);
+    cover = coverOf(b);    const air = withAir(() => read(shot(), b));
+    /* C. the same lens at 07:00, turned away from that hour's sun so the sun
+       itself is not in the frame to be mistaken for a star. */
+    const clockWas = g.time;
+    g.time = N.DAY_LEN * (7 / 24); g.updateEnv();
+    const mdD = [-g.env.sunDir[0], -g.env.sunDir[1], -g.env.sunDir[2]];
+    const c = put(spot.surface - 0.3, pitch, Math.atan2(mdD[0], -mdD[2]));
+    const dayWin = read(shot(), c);
+    g.time = clockWas; g.updateEnv();
+    /* D. the stars' own clocks, with nothing else moved. The lens is put back
+       where A had it (the daylight control turned it away), and the game's own
+       clock is left alone: what the star field's phase reads is `env.time`, the
+       number the draw uploads as uTime, and moving the game's clock by a second
+       would move the sun by 0.86 degrees, the moon with it, and every star cell
+       in the sky along. So the environment is not re-derived here: the number
+       the clocks read is advanced and the sky stays where A shot it. */
+    const a2 = put(spot.surface - 0.3, pitch, yawMoon);
+    const lum = [], masks = [];
+    for (let k = 0; k < 3; k++) {
+      g.env.time = clockWas + k;
+      const s = shot(), w = s.w, h = s.h;
+      const L = new Float32Array(w * h);
+      for (let i = 0, j = 0; j < s.px.length; i++, j += 4) L[i] = lumaOf(s.px, j);
+      lum.push(L);
+      const m = new Uint8Array(w * h);
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        if (L[i] < STAR_L) continue;
+        let nb = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if (dx || dy) nb += L[i + dy * w + dx];
+        }
+        if (L[i] - nb / 8 > STAR_EDGE) m[i] = 1;
+      }
+      masks.push(m);
+    }
+    g.env.time = clockWas; g.time = clockWas; g.updateEnv();
+    let everN = 0, swinging = 0;
+    const perStep = [{ up: 0, down: 0 }, { up: 0, down: 0 }];
+    for (let i = 0; i < masks[0].length; i++) {
+      if (!masks[0][i] && !masks[1][i] && !masks[2][i]) continue;
+      everN++;
+      let lo = 1e9, hi = -1;
+      for (const L of lum) { if (L[i] < lo) lo = L[i]; if (L[i] > hi) hi = L[i]; }
+      if (hi - lo > 30) swinging++;
+      for (let k = 1; k < 3; k++) {
+        const d = lum[k][i] - lum[k - 1][i];
+        if (d > 10) perStep[k - 1].up++;
+        else if (d < -10) perStep[k - 1].down++;
+      }
+    }
+    /* 3. the same stars, found in both frames. A window ray at theta is a ray
+       that came in at asin(ior*sin(theta)) -- the law read backwards -- at the
+       azimuth a horizontal face keeps. So each star of one frame is looked for
+       in the other at the sky direction that would make it the same star, and a
+       pair agreeing to well under a degree is one star seen twice. */
+    const dirAt = (thetaDeg, az) => {
+      const t = thetaDeg * D2R, s = Math.sin(t);
+      return [s * Math.sin(az), Math.cos(t), -s * Math.cos(az)];
+    };
+    const azOf = (d) => Math.atan2(d[0], -d[2]);
+    const skyOf = (sp) => ({ az: azOf(sp.d),
+      th: Math.asin(Math.min(1, ior * Math.sin(sp.th * D2R))) * R2D });
+    const imageOf = (sp) => ({ az: azOf(sp.d),
+      th: Math.asin(Math.min(1, Math.sin(sp.th * D2R) / ior)) * R2D });
+    const cosNear = Math.cos(1.5 * D2R);
+    const findNear = (k, list) => {
+      const v = dirAt(k.th, k.az);
+      let best = null, bestDot = cosNear;
+      for (const o of list) {
+        const dot = v[0] * o.d[0] + v[1] * o.d[1] + v[2] * o.d[2];
+        if (dot > bestDot) { bestDot = dot; best = o; }
+      }
+      return best;
+    };
+    const wrap = (deg) => ((deg + 540) % 360) - 180;
+    const inThatFrame = (k) => {
+      const t = Math.round(k.th), az = Math.round(wrap(k.az * R2D));
+      if (t < 0 || t > 90) return false;
+      for (let dt = -2; dt <= 2; dt++) for (let da = -2; da <= 2; da++) {
+        if (cover.has((t + dt) + ',' + wrap(az + da))) return true;
+      }
+      return false;
+    };
+    /* And if that frame is pointed at it, does ground stand in front of it
+       there? The straight frame draws the sky only where the world does not
+       stand; the window draws sky with nothing in it at all, which is the
+       exclusion the daylight step already records (no shore, no gull, no body).
+       So an unmatched star has to be told apart: out of that frame's angles, or
+       behind the shore of this lake. The walk asks the frame's own question --
+       is a solid cell on that line within the ground the frame holds -- of the
+       world, with no GPU in it. */
+    const groundInWay = (k) => {
+      const v = dirAt(k.th, k.az);
+      for (let d = 0.5; d <= 240; d += 0.5) {
+        const X = lensPos.x + v[0] * d, Y = lensPos.y + v[1] * d, Z = lensPos.z + v[2] * d;
+        if (Y > W.h) break;
+        if (W.solidAt(Math.floor(X), Math.floor(Y), Math.floor(Z))) return +d.toFixed(1);
+      }
+      return null;
+    };
+    const pair = (from, other, unbent, why) => {
+      let matched = 0, outside = 0, hidden = 0, unexplained = 0, notFound = 0, dimThere = 0;
+      let sum = 0, worst = 0;
+      const shown = [];
+      /* the other frame's bright pixels that are not spikes: the moon's disc,
+         and stars that are too wide or too crowded to pass the spike test. A
+         star that is a sharp point in one frame and a wide smear in the other is
+         still the same star -- the two frames hold the same cell at different
+         sizes -- so it is told apart from a star that is not there at all. */
+      const wide = other.bright.map(d => ({ d }));
+      for (const sp of from) {
+        /* k is where the law says this star has to stand in the other frame.
+           The deviation asked of a pair is how far the star actually found
+           there stands from that: both ends of the bend read off a frame, the
+           arithmetic read off the index the liquid's own row carries. */
+        const k = unbent(sp);
+        const o = findNear(k, other.spikes);
+        if (!o) {
+          if (!why) { notFound++; continue; }
+          /* and why: that frame is not pointed at that part of the sky, or the
+             ground of this lake stands between that lens and it */
+          if (!inThatFrame(k)) outside++;
+          else if (groundInWay(k)) hidden++;
+          else if (findNear(k, wide)) dimThere++;
+          else unexplained++;
+          continue;
+        }
+        matched++;
+        const dev = Math.abs(o.th - k.th);
+        sum += dev; if (dev > worst) worst = dev;
+        if (shown.length < 8) shown.push({ at: +sp.th.toFixed(2), foundAt: +o.th.toFixed(2),
+          law: +k.th.toFixed(2), dev: +dev.toFixed(2) });
+      }
+      return { of: from.length, matched, notFound, outOfThatFrame: outside,
+        behindGround: hidden, dimThere, unexplained,
+        meanDev: matched ? +(sum / matched).toFixed(3) : null,
+        worstDev: +worst.toFixed(2), pairs: shown };
+    };
+    const pub = (r) => { const out = Object.assign({}, r); delete out.spikes; delete out.bright; return out; };
+    return back({ spot, lens: a, lensAir: b, lensDay: c, lensTwinkle: a2,
+      law: { ior, criticalDeg: +critical.toFixed(2), moonElevDeg: +moonElev.toFixed(2),
+        moonThetaDeg: +moonTheta.toFixed(2), imageThetaDeg: +imageTheta.toFixed(2),
+        moonAzDeg: +(yawMoon * R2D).toFixed(2),
+        // and whether the straight lens is even pointed at the moon: this lake
+        // has a shore, and the sky quad is drawn behind the world
+        moonStraightBehindGround: groundInWay({ th: moonTheta, az: yawMoon }) },
+      win: pub(win), air: pub(air), dayWin: pub(dayWin),
+      moon: win.blobs[0] || null, moonOff: air.blobs[0] || null,
+      starBlob: win.blobs[1] || null,
+      sameStars: pair(win.spikes, air, skyOf, true),
+      straightStars: pair(air.spikes, win, imageOf, false),
+      twinkle: { ever: everN, swinging, perStep } });
+  });
+
+  check('the lens stands 30 cm under the same open lake with its night complete: the sun 39.89 degrees below the horizon, so the moon -- the sun\'s own direction with its sign taken -- stands 39.89 degrees up',
+    !nightWindow.error && nightWindow.lens.inWater === 1 && nightWindow.lens.lensUnder === 0.3 &&
+    nightWindow.lens.ior === 1.333 && nightWindow.lens.night === 1 &&
+    nightWindow.law.moonElevDeg === 39.89 && nightWindow.law.criticalDeg === 48.61 &&
+    nightWindow.win.pastMaxLum <= 56, nightWindow);
+  /* The moon's image, by the angle of the ray that carries it: the same
+     measurement the daylight frame makes of the sun, at night, on a moon
+     standing fifteen degrees further from the vertical than the window puts it.
+     The peak of the disc is only a degree-scale instrument -- the disc is 324
+     pixels, near enough 11 px in radius, which at this field of view is 1.3 deg
+     -- so the angle the *disc as a whole* sits at is bounded tightly and the
+     peak's angle and azimuth loosely, with the disc's own radius as the reason. */
+  check('the moon stands inside the window at the angle the bend states and not the angle it stands at: the disc reads 35.13 degrees off the vertical where the law puts it at 35.14, and it stands at 50.11',
+    !!nightWindow.moon && Math.abs(nightWindow.moon.meanTheta - nightWindow.law.imageThetaDeg) < 0.5 &&
+    Math.abs(nightWindow.moon.thetaAtMax - nightWindow.law.imageThetaDeg) < 1.5 &&
+    nightWindow.moon.size > 150 && nightWindow.moon.maxLum > 240 &&
+    Math.abs(nightWindow.moon.azAtMax - nightWindow.law.moonAzDeg) < 2 &&
+    nightWindow.law.moonThetaDeg > nightWindow.law.imageThetaDeg + 10, nightWindow);
+  /* The same face asked of air, one read later, the same lens and the same sky:
+     the moon at the angle it stands at, outside the cone, bigger and dimmer.
+     Bigger because the fold shrinks angular sizes by 1.70 per axis at that angle
+     (d(theta_air)/d(theta_water) = ior * cos 35.14 / cos 50.11), 0.35 in area,
+     and the two discs the frames report differ by 324/786 = 0.41 -- that squeeze
+     read through a brightness threshold. Dimmer because a window lays its sky
+     down inside the shader, where the moon's own colour still has room to be
+     multiplied by the water and the face and clip once at the end, while a
+     straight frame multiplies a framebuffer that clipped before the water ever
+     got to it. */
+  check('and the same face asked of air holds that moon at the angle it stands at -- 50.13 where it stands at 50.11, outside the 48.6 the cone closes at -- a disc 786 pixels wide of 180, against the window\'s 324 of 254',
+    !!nightWindow.moonOff && nightWindow.moonOff.meanTheta > nightWindow.law.criticalDeg &&
+    Math.abs(nightWindow.moonOff.meanTheta - nightWindow.law.moonThetaDeg) < 0.5 &&
+    Math.abs(nightWindow.moonOff.azAtMax - nightWindow.law.moonAzDeg) < 2 &&
+    nightWindow.moonOff.size > nightWindow.moon.size * 1.5 &&
+    nightWindow.moonOff.maxLum < nightWindow.moon.maxLum - 30, nightWindow);
+  /* And it is the only large bright thing in there: every other bright mass is a
+     star cell, which is the size the daylight sky's own star scatter pins. */
+  check('and it is the one large bright mass in that frame: 324 pixels of moon, and the next largest bright mass in there is one star cell of 12',
+    !!nightWindow.starBlob && nightWindow.starBlob.size < 30 &&
+    nightWindow.moon.size > 10 * nightWindow.starBlob.size, nightWindow);
+  /* The stars, binned by the angle of the ray that carries them: 2 at 6 degrees,
+     16 at 12, 11 at 18, then 59, 57, 109, 89 up to 42 -- they crowd the rim,
+     which is where a folded sky puts most of its solid angle per pixel. */
+  check('the window is full of stars out to its rim and none past it: 343 of them, 330 inside 46 degrees and none past 48.6, and from 51 degrees out the frame is the water\'s own 53',
+    nightWindow.win.n > 200 && nightWindow.win.insideCone > 150 &&
+    nightWindow.win.pastRim === 0 &&
+    nightWindow.win.maxTheta < nightWindow.law.criticalDeg, nightWindow);
+  /* The squeeze, read from the side it is easiest to see: the same cells, at
+     turned angles. Read one way, from the window out: every star the window
+     shows is looked for in the straight frame at the sky direction that would
+     make it the same star. Read the other way, from the straight frame in.
+     Of the 153 the straight frame does not show as a star, 85 are out of that
+     frame's angles, 61 stand behind this lake's own shore -- which the window
+     never asks, since a turned ray asks only the sky -- 5 are lit in that frame
+     too but spread past the spike test there, and 2 are left over. */
+  check('they are the same stars, turned: 190 of the window\'s 343 are found in the straight frame at the angle the sines give, and each pair sits 0.051 degrees off the law on average and 0.47 at the worst',
+    nightWindow.sameStars.matched > 120 && nightWindow.sameStars.meanDev < 0.2 &&
+    nightWindow.sameStars.worstDev < 1 &&
+    nightWindow.sameStars.unexplained < 5, nightWindow);
+  check('and the other way round: 332 of the 337 stars the straight frame holds are in the window, 0.039 degrees off the law on average and 0.85 at the worst',
+    nightWindow.straightStars.matched > nightWindow.straightStars.of * 0.9 &&
+    nightWindow.straightStars.meanDev < 0.2 && nightWindow.straightStars.worstDev < 1.5,
+    nightWindow);
+  check('and they are the same stars at the same count and a different size: 343 cells over 697 pixels in the window and 337 over 1,279 in the straight frame, 2.0 pixels apiece against 3.8',
+    Math.abs(nightWindow.win.n - nightWindow.air.n) < nightWindow.win.n * 0.1 &&
+    nightWindow.win.starPx / nightWindow.win.n < nightWindow.air.starPx / nightWindow.air.n * 0.8,
+    nightWindow);
+  /* The stars' own clocks reach the water: with the sky held where it was shot
+     and only the phase advanced, real stars brighten and dim, and they do not do
+     it together. The star's own amplitude is 0.8 of its peak (0.6 + 0.4 sin),
+     so 30 of luminance is well inside a swing; the 24 of 582 that do not reach
+     it are cells whose own phase and own speed put the three grabs that close
+     together, which is what per-star phase means rather than a failure of it. */
+  check('the stars in the window keep their own clocks: 558 of the 582 cells that lit swing more than 30 of luminance across three grabs a second apart, and in the same second 317 brighten while 237 dim, then 226 while 299',
+    nightWindow.twinkle.ever > 150 &&
+    nightWindow.twinkle.swinging > nightWindow.twinkle.ever * 0.9 &&
+    nightWindow.twinkle.perStep.every(s => s.up > 30 && s.down > 30), nightWindow);
+  /* The gate that keeps stars out of a daylight sky lives in the sky function
+     the window shares, so it is asked under the water too -- and at the hour
+     that gate was written for: the clock says 0.37 of night while the sun stands
+     29.5 degrees up, which is exactly the case that used to put 217 star spikes
+     in a daylight sky. */
+  check('and at 07:00, when the clock still says 0.37 of night with the sun 29.5 degrees up, the same window holds no star at all: 0 cells, 0 lit pixels',
+    nightWindow.dayWin.n === 0 && nightWindow.dayWin.starPx === 0 &&
+    nightWindow.lensDay.night < 0.5, nightWindow);
 
   /* The mesher moves the water's surface and the shading used not to know. The
      wave is two sines written at the draw call -- `sin(t*1.7 + x*0.9 + z*0.7)*0.055

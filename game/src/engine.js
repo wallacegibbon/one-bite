@@ -206,10 +206,13 @@
   uniform vec3 uAmb, uWaterK, uLiqK;
   /* The colour a body of this liquid paints over a view. Read here (the water
      the light climbs out of) and in the fragment shader (the water the surface
-     mirrors back), so its precision has to be spelled out: the default here is
-     highp and the default there is mediump, and a uniform declared at two
-     precisions will not link at all. */
-  uniform mediump vec3 uVeil;
+     mirrors back), so both sides have to agree on its range: the default here is
+     highp, and the one program that reads it on the other side is FS_PANE, which
+     is written at highp for the star field. It used to be spelled mediump here to
+     meet the fragment default of the program it was compiled into; with that
+     program split in two, the spelling and the default are the same range and the
+     pair links. */
+  uniform vec3 uVeil;
   uniform vec3 uHazeK;      // per metre, per colour: what the liquid the lens sits in eats
   uniform float uHazeOn;    // 1 when that haze replaces the air's, 0 in air
   uniform float uInWater;   // 1 when the lens is inside a liquid at all
@@ -370,12 +373,41 @@
   }`;
   /* The sky, as one function, so that the frame's background and the window a
      lens under the water looks through are built by the same numbers -- the same
-     gradient, the same sun, the same moon. The star field is deliberately not in
-     here: it floors a unit direction by 160 and hashes the result, which needs
-     the range FS_SKY takes at highp and the range the surface's program is
-     written at mediump does not promise. The window has no stars in it yet, and
-     nothing stands in the way of putting them there but the writing. */
+     gradient, the same sun, the same moon, the same stars. All of it is in here
+     because it is all the sky, and a window that showed the moon but not the
+     stars next to it would be showing a different sky.
+     The star field is what fixes the range both these programs are written at:
+     it floors a unit direction by 160 and hashes the result, which needs the
+     range FS_SKY has always taken at highp and mediump does not promise (see
+     FS_SKY). That is not a new demand on a device -- the frame's background is
+     one fullscreen pass and has required it since the stars were written. */
   const GLSL_SKY = `
+  float hash(vec3 p){ p = fract(p*0.3183099 + vec3(0.71,0.113,0.419)); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+  /* The stars, as the sky's own answer, so that the same field reaches the frame
+     and the window the surface closes. */
+  vec3 starAt(vec3 d){
+    vec3 s = vec3(0.0);
+    // uNight alone is not enough: the day/night curve is symmetric about
+    // noon, so at 07:00 it still says 37% night while the sun is 29 degrees up,
+    // and 217 star spikes were measured in a daylight sky next to the sun. A
+    // star needs the sun properly down -- out of the sky, not merely low in it.
+    float starLit = uNight * smoothstep(0.0, 0.12, -uSunDir.y);
+    if (starLit > 0.05 && d.y > 0.02) {
+      vec3 g = floor(d*160.0);
+      float h = hash(g);
+      // The mask above pins every lit cell's h into the 0.0035 sliver
+      // [0.9965, 1), so h*40.0 left the whole sky with one shared phase and
+      // one shared speed: every star brightened and dimmed in unison, like a
+      // single lamp breathing. Phase and speed now come from two more
+      // full-range hashes of the same cell, so each star keeps its own clock
+      // while the mask is untouched and the scatter stays the same scatter.
+      float ph = 6.28318 * hash(g + vec3(0.5, 0.0, 0.0));
+      float sp = 0.5 + 2.0 * hash(g + vec3(0.0, 0.5, 0.0));
+      float star = step(0.9965, h) * (0.6 + 0.4*sin(uTime * sp + ph));
+      s = vec3(star) * starLit * smoothstep(0.02, 0.35, d.y);
+    }
+    return s;
+  }
   vec3 skyAt(vec3 d){
     float t = clamp(d.y*0.5+0.5, 0.0, 1.0);
     vec3 col = mix(uGround, uHorizon, smoothstep(0.42, 0.5, t));
@@ -388,6 +420,7 @@
     float mdot = dot(d, md);
     col += vec3(0.85,0.88,0.95) * smoothstep(0.9993, 0.9997, mdot) * uNight * 2.0;
     col += vec3(0.35,0.4,0.55) * pow(max(mdot,0.0), 60.0) * uNight * 0.5;
+    col += starAt(d);
     return col;
   }`;
 
@@ -574,15 +607,17 @@
      it at highp and a uniform declared at two precisions will not link at
      all), the liquid's index, this pass's role, the colour the face paints
      over a view, and the sky -- the same skyAt the frame's background is built
-     with, so the window a lens under the water looks through cannot drift away
-     from the sky above it. */
+     with, including its stars and the clock each one keeps on its own, so the
+     window a lens under the water looks up through cannot drift away from the
+     sky above it: not in its colours, not in its moon, not in which star is
+     bright at what moment. uTime is the face's only reason to know the time. */
   const FS_PANE = `
-  precision mediump float;
+  precision highp float;
   varying vec3 vEye; varying vec3 vPan;
   varying vec3 vPanN;      // which way the water's own face is pointing
   uniform highp vec3 uLiqK;
   uniform vec3 uZenith, uHorizon, uSunDir, uSunCol, uGround;
-  uniform float uNight;
+  uniform float uNight, uTime;
   uniform vec3 uVeil;
   uniform float uPane, uIor;
   ${GLSL_SKY}
@@ -597,9 +632,11 @@
   void main(){ gl_Position = vec4(aCorner, 0.999, 1.0); vDir = normalize(uFwd + uRight*aCorner.x*uTanX + uUp*aCorner.y*uTanY); }`;
   const FS_SKY = `
   precision highp float;
-  /* The one fragment shader allowed past the mediump range. Its star field
-     floors the unit direction by 160, so a cell's hash input runs to a few
-     hundred; the hash below multiplies those coordinates by 0.3183099 (to
+  /* The two fragment shaders written past the mediump range: this one, and the
+     water's own face (FS_PANE), which asks the same sky and so carries the same
+     stars. The star field floors the unit direction
+     by 160, so a cell's hash input runs to a few
+     hundred; the hash multiplies those coordinates by 0.3183099 (to
      ~51) and by 17 (to ~867) before a four-fold product (to ~1e6). The range
      a mediump float is only required to hold is +-2.0, so on a strict GPU
      every one of those steps overflows and the hash degrades: the stars stop
@@ -608,7 +645,9 @@
      suite's software backend reads mediump at full range and never shows it,
      which is why the watch could not see it either. highp is required in
      vertex shaders and present in desktop fragment shaders, and the sky is a
-     single fullscreen pass, so the price is negligible. */
+     single fullscreen pass, so the price is negligible. The face's program
+     inherits the demand, and asks nothing of a device the sky was not already
+     asking: where a frame holds no water its program is not run at all. */
   varying vec3 vDir;
   uniform vec3 uZenith, uHorizon, uSunDir, uSunCol, uGround;
   uniform float uNight, uTime;
@@ -617,30 +656,10 @@
      The same numbers the world's faces and the motes are drawn with. */
   uniform vec3 uHazeK, uFogCol;
   uniform float uInWater, uLensUnder, uEdge;
-  float hash(vec3 p){ p = fract(p*0.3183099 + vec3(0.71,0.113,0.419)); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
   ${GLSL_SKY}
   void main(){
     vec3 d = normalize(vDir);
     vec3 col = skyAt(d);
-    // stars. uNight alone is not enough: the day/night curve is symmetric about
-    // noon, so at 07:00 it still says 37% night while the sun is 29 degrees up,
-    // and 217 star spikes were measured in a daylight sky next to the sun. A
-    // star needs the sun properly down -- out of the sky, not merely low in it.
-    float starLit = uNight * smoothstep(0.0, 0.12, -uSunDir.y);
-    if (starLit > 0.05 && d.y > 0.02) {
-      vec3 g = floor(d*160.0);
-      float h = hash(g);
-      // The mask above pins every lit cell's h into the 0.0035 sliver
-      // [0.9965, 1), so h*40.0 left the whole sky with one shared phase and
-      // one shared speed: every star brightened and dimmed in unison, like a
-      // single lamp breathing. Phase and speed now come from two more
-      // full-range hashes of the same cell, so each star keeps its own clock
-      // while the mask is untouched and the scatter stays the same scatter.
-      float ph = 6.28318 * hash(g + vec3(0.5, 0.0, 0.0));
-      float sp = 0.5 + 2.0 * hash(g + vec3(0.0, 0.5, 0.0));
-      float star = step(0.9965, h) * (0.6 + 0.4*sin(uTime * sp + ph));
-      col += vec3(star) * starLit * smoothstep(0.02, 0.35, d.y);
-    }
     /* A lens standing in a liquid has no sky in front of it. This quad is not a
        thing in the world: it is the frame's answer for "nothing was drawn
        here", and out in open sea that answer was the sky at its brightest --
