@@ -7,106 +7,75 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one commit, and it is the sea being peopled --
-the half of the user's queue that was item 3 of **25**. Their words were 前肢像翅膀一样
-上下划, faster in the water than the frog's **4.6**, no clock drying its skin on land,
-under **1.8** on it, the nearest island to be a sand bar carrying that animal's fruit in
-sand, this island keeping only the frog's, and 现在海里面啥动物都没有，太冷清了. All of it
-is shipped, and all of it is measured.
+State at time of writing: this round is one commit, and it is the water's own face being
+asked which way it points. It opened on the user's question about their own screenshot --
+从在海底往上看青蛙，为什么是这种视角，为什么看到的是一个圆环 -- and it closes that question
+with numbers and ships the first item of the issue it leads to.
 
-- **What the nearest island is, and what it carries.** The nearest island to this one is a
-  sand bar: ordinal **1**, centre **(354,355)**, foot **26.5 m**, **389 m** out, **107**
-  columns of dry crown and **4** cells of the turtle's fruit on them. Over the **70**
-  ordinals the reach holds the fruit answers **152** times in **1,233,321** columns walked,
-  **304,420** of them above the water line -- every one on the crown of one of the **15**
-  bars, over **2,740** such columns, and **0** on the 16 reefs, 23 thickets, 11 isles and
-  5 ridges. The cell under every one of those cells is block **4**, sand, at the height
-  the kind states (**4**): a bar is sand from its floor to its crown (last round's rule),
-  and the fruit planted on it is planted by one rule, `cropAt`, which asks the column
-  whether the ground is dry and whether it is the kind the record names. This island's own
-  ground holds **0** of it and keeps its **49** cells of the fruit that grows in ground.
-- **What the animal is** (`game/data/creatures.js`, a second row; `game/data/fruits.js`, a
-  second fruit `turtlemelon` / 龟果, block **41**). `scale 0.25`, `speed 1.45`,
-  `swimSpeed 6.4`, no `hop`, no `dryTimer`, `herd 3`, `orbit {at:'coast', r0:12, r1:40}`.
-  Measured (`play.js`, `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`): it **drags** --
-  **1.44 m/s** over sand against the frog row's **1.8** -- and it is the faster body in the
-  water: **6.07 m/s** against the frog worn from its own record at **4.37** and the frog
-  row's **4.6**. No clock dries its skin: **0** over 200 s on dry ground where the body
-  whose record states one reaches its own **200** and loses vitality. It breathes like a
-  person and not like a frog: its air is empty in **18.3 s** under the surface against a
-  ceiling of **18**, where the frog body has no ceiling at all (**999**). And it does come
-  up: with the climb key held its head clears the surface, only **192** of the window's
-  **240** frames are wet, and it makes **3.63 m/s** instead of **6.07** -- which is what
-  coming up for air costs, and is now a check rather than an aside.
-- **The lift, and which ground it is asked on.** `dryGroundNamed` in `game/src/entities.js`
-  refuses a legless animal's lift on ground its own row does not name, and the look-ahead
-  that sizes a climb (`stepAhead`) asks the same question, which it did not before. That
-  one word is load-bearing twice: the fruit is planted only on a pile of the kind its
-  record names, and the animal is lifted only on ground of that kind. Measured: at an
-  inland bank two metres tall the animal gives **0 m** risen, **0** frames of climb and no
-  arc at all; at the eight shores of this island it never once comes ashore in 20 s each;
-  and sent from open water **31 m** out at the bar its own fruit grows on it walks up
-  **2.5 m** onto the crown over **473** frames of lift with the world under its feet for
-  **1,033** of them and never an arc. The body *worn* from that same record does none of
-  it -- **0** frames of dry ground on that bar, its nose on the bank face with **0** frames
-  of lift -- because what a body is made of decides the climbing and only what a record
-  names decides the ground. (The first version of the lane put these bodies inland; the
-  figure that came out of it is not quoted anywhere, because nothing on this tree
-  reproduces it. Same for the bank: the round's earlier draft quoted **0.94 m** over
-  **138** frames from a desk probe, and that number is gone.)
-- **The wings, and the table that was wrong.** `FLAP` in `game/src/models.js` was retuned
-  this round. The table it replaces put its amplitude in the turn-out column, so the tip
-  travelled further fore and aft than up and down: a paddle, and not what anyone calls a
-  wing. The table as it stands cycles the **elevation** (column 3, the third column being
-  a turn about the body's own front-to-back axis, mirrored by each part's `sign` so the
-  two blades are a pair) with a small **feather** on column 1, the sideways axis, which is
-  deliberately not mirrored because both chords face the flow. Measured off the matrices
-  the draw uploads (`theSeaTurtleStrokesBothWingsTogether`): each wingtip goes **0.478 m**
-  up and down against **0.134 m** fore and aft, the blade swings from **5 deg** below
-  horizontal to **82 deg** below -- **77 deg** of arc -- at **2.38** strokes a second
-  against the clock's own **2.39**, carrying about **3.8 m** of water a second; both wings are
-  identical to the last digit and reach the top of the arc on the same frame; a body in the
-  water that is not stroking has wings that move **0 m**; and a body the game is turning
-  (**0.593 rad/s** of heading, taken from the game) puts one wing through **5.7 m/s** of
-  water and the other through **2.0**, the two exchanging exactly when the sign is flipped.
-  The span is measured in the same place: **0.80 m** out each side as carved, **0.84 m**
-  floating, **1.07 m** at the top of a stroke, against the **0.75 m** half-width the world
-  enforces -- the model is not carved to that box and the note over it says so.
-- **A trap for the next rig that reads two limbs.** `localOf` caches a parent's matrix on
-  the state and the part matrices are built from module scratch that the next call reuses.
-  Sweeping one wing for 480 frames and then sweeping the other measures two different
-  bodies: the same tree reported one turtle's two wings **0.01 m** apart in height and
-  **3%** apart in the water they carried. Asked through one fresh `_loc` per frame, which
-  is how the draw asks them, they agree to the ninth decimal. Any rig that compares limbs
-  has to ask both through the same state.
-- **One thin margin, kept visible rather than loosened.** `aBodyCarriesTheCreaseWhereItsPartsMeet`
-  bounds the share of a model's faces that carry a crease below **0.6** of them; this tree
-  measures **0.589** (**279** of **474**). That is a fact about how many faces the models
-  have, not a margin of safety, and adding a box to any model moves it.
-- **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the
-  commit message carries no non-ASCII; `docs-sync.js` reports no disagreement;
-  `docs-drift.js` detects every injected drift, including the new anchors for the crop
-  census, the nearest bar and the second creature row, and leaves the tree unchanged;
-  `bash game/test/all.sh` **10/10** twice on this tree, each run followed by
-  `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**.
-
-What this round does not claim, and does not hide: the sea has one animal in it and one
-fruit on it. Nothing else lives out there -- no fish, no bird, no plant on any of the
-other four kinds of island -- and "the sea is peopled" is true only in the sense that it
-is no longer empty. The worn body cannot get up a single riser anywhere in this valley,
-which is what the absence of a `hop` means and what the model note spells out. And the
-numbers a day-soak prints for where the animals happened to walk move from run to run --
-one run said their offsets ran **4.4-20.5 m** outside the shore line, the next said
-**8.9-33.4 m** -- so the chapters now state only what the check holds (every frame wet, no
-frame on dry ground, never past the bound their own errands could reach plus the **31.2 m**
-the coast rule swings) and the arithmetic that does not move (the water's edge stands
-between **172.1 m** and **221.3 m** from this island's centre depending on the bearing).
-
-What this round leaves open, in order: the user's queue under **25** is now spent -- its
-items 1, 2 and 3 are shipped -- and the sea that got one animal is the place the rest of
-that queue would live in. Next is **28**, the unbent crossing: no refraction, no Snell's
-window, no tilt on the surface, no caustics, and an underwater mirror that is a colour
-instead of a picture.
+- **The ring is the edge of the cone the water's own index closes, and that is measured.** A
+  lens under the surface keeps nothing of the sky past asin(1/1.333) = **48.6 deg** from the
+  vertical, which is **41.4 deg** above its own eye line; `theSurfaceUnderWaterHandsTheLightBack`
+  finds the sky starting at **41.4** where the index states **41.4**, and a level lens 30 cm
+  under a lake holds **0** pixels brighter than the water it stands in, its brightest pixel
+  being that water's own **53**. So the ring is not the shore of that sea -- and it is not a
+  rendering error either: outside the cone the pane returns `uVeil`, the water's own colour,
+  which is what the shader and 07 §3.2 both name as the cheap answer. (How far that sea's
+  ground actually runs, and the colour the ring was seen against, were read off the player's
+  saved frame and a desk probe: **2.95 m** under an open sea with **9 m** of water under the
+  lens, its bottom **6** and its surface **15**, the ground the frame holds ending **51 m**
+  out at **87 deg** from the vertical, the frame outside the ring exactly `env.veil` at
+  **(15,61,82)**, and the blue blob inside it a bubble the body had just blown. Those are
+  probe figures, held by nothing in the suite, and are written down here only so the next
+  round does not go looking again.)
+- **Why the ring is a perfect circle with a hard edge.** A lens inside the liquid is shown a
+  flat interface: the wave is asked only of a lens **outside** the liquid, because a ray that
+  starts under water can meet that same surface three or four times within a few metres, the
+  pane writes no depth, its two passes multiply and then add, and every crossing it is handed
+  lays the water's colour over the last -- **961** pixels over the sea's own **53**, **107**
+  at the brightest, a dotted line at the eye line of a lens standing on the floor of an open
+  sea. One flat interface has one critical angle, so the cone's rim is a circle.
+- **Why the lens was where it was.** The view is third person, and the shot is a share of the
+  frame, not a fixed distance behind the body: `N.CAM.shotFor` puts the lens **1.19 m** off a
+  0.5 m body along the direction the mouse points (07 §3.2, measured by the camera step). Look
+  the mouse up and the lens goes below and behind -- which is what a lens under water pointing
+  up past the body's own back means. Nothing to fix; worth saying.
+- **What shipped** -- issue **28**, item 2, which that issue itself puts first because it is
+  the cheapest and buys the most. The vertex the wave displaces now writes down the normal the
+  same two sines give it (the derivative of the height being added, at the vertex that is
+  being moved: `vPanN` in `game/src/engine.js`), and the pane asks *that* face for the cosine
+  Schlick wants, for the critical-angle test and for the direction it would send the ray back
+  along. With no wave on it a vertex carries (0,1,0) and every term is bit for bit what it
+  was -- so nothing about a dry frame or an underwater one moved. The wave itself is unchanged:
+  **8.5 cm** tall, **7.0 m** and **25.1 m** long, and it never tips the surface more than
+  **3.87 deg**.
+- **What that does to a frame, measured** (`play.js`, `theWaterFaceAnswersWithItsOwnTilt`: a
+  lens 1.2 m over **240 m** of open water, level, at 13:00, reading the rows that meet the
+  surface 1 to 2.6 deg below its eye line, all of which are mirror). Asked a plane each of
+  those rows is one number -- the widest spans **9** of 255, varying along itself by **2.9**.
+  Asked its own tilt the rows that spanned **2** and **7** span **59** and **42** and the most
+  varied row runs **196 to 255**, while a row's mean moves by at most **6**: the same sky,
+  redistributed, with a reach bounded by the wave itself (a face tipped 3.87 deg turns a
+  mirror by **7.7 deg**). And it is the water's pattern: **1.9 s** of the clock changes
+  **28,371** of the **34,200** pixels of the surface's whole band, while the same 1.9 s
+  changes **0** of them with the face taken out of the shading. The one non-mirror number it
+  moves is the bed seen through a lens 30 cm over the water at 7 deg of slope: red **29.7**
+  and **38.9** against **25.5** and **33.8** with that face asked a plane, because at that
+  angle the faces tipping away throw the bed back and the ones tipping in let more through
+  than a flat mirror of that angle ever would -- a term convex in the cosine keeps the larger
+  share on the average (`aLakeVeilsItsBedAlongTheRay` now draws both).
+- **What this round does not claim.** No ray is bent anywhere, so there is still no Snell's
+  window -- the ring the user saw is the *edge* of the cone, and what comes through it is the
+  sky along the straight line, not the outside world folded into a 48.6 deg circle. A lens
+  inside the liquid is still shown a flat interface, so there is no glitter under the skin and
+  no picture of the lake in the mirror over the closed fan, and nothing asks what a moving
+  surface does to where light lands, so there are no caustics on the bed. Those are **28**
+  items 1, 3 and 4, still open, now with the tilt under them.
+- **Two numbers in the chapter that had quietly gone stale** were re-pinned from a run rather
+  than argued: the ray-length bed row (its three lenses at the surface line, **53.9/71.7 /
+  54.1/71.8 / 54.2/72.0** becoming **54.1/72.1 / 54.3/72.2 / 54.6/72.5**) and two counts of
+  sky in control frames (**6,063** to **5,523** pixels, and **16,228** over 200 to **13,020**).
+  The one that moved a great deal (**62.0** to **68.6** at mean, red **22.8** to **29.7**) is
+  this round's and is explained above.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -2415,11 +2384,17 @@ changes direction, and this renderer has no place where it does.
   measured rows and was nearly written down as a cause: the fan's sky strengthens steadily
   with angle where a real window has one bright disc with a sharp rim and the water's own
   bed outside it.
-- **The surface's tilt is asked nowhere.** `cn` is the cosine to the face's own *plane*, and
-  the vertex wave displaces the geometry without telling the shading anything about it (last
-  round's `wave: !inWater` removed the artefact that made that visible inside the water, it
-  did not give the face a normal). So the mirror under water is flat, the window has no
-  glitter, and nothing moves on the bed when the surface moves.
+- ~~**The surface's tilt is asked nowhere.**~~ **Shipped this round.** `cn` was the cosine to
+  the face's own *plane* while the vertex wave displaced the geometry; the vertex being
+  displaced now writes the normal its own two sines give it and the pane asks that face for
+  the cosine, the critical-angle test and the mirrored direction. A lens over the water is
+  therefore shown the lake's own cells instead of one flat gradient -- measured in
+  `theWaterFaceAnswersWithItsOwnTilt`, and the figures are in the state block above and in
+  07 §3.2. What it deliberately does **not** reach is a lens *inside* the liquid: the wave is
+  asked only of lenses outside the liquid (the multiple-crossing artefact -- **961** pixels at
+  the eye line of a lens standing on the sea floor), so under water the mirror is still flat,
+  the window still has no glitter, and nothing yet moves on the bed. Getting the tilt under
+  the skin means solving that compositing first, which is the same obstacle as item 1.
 - **No caustics.** The bed's `aUnder` term asks how much daylight got *down* through a
   column of water; nothing asks what the moving surface did to where that light lands.
 - **The mirror under water is a colour, not a picture.** Over the closed fan the pane
@@ -2445,9 +2420,24 @@ from the normal, and what it would sample is the water's own bottom, which the f
 already drawn along the wrong line. Nothing here wants a new pass; the first two want one
 extra expression each and the third wants the second.
 
-Status: open. Nothing about it is measured by this round beyond what is quoted above: the
-row profile that shows the window's absence is in the new step, the flat mirror and the
-absent caustics are stated in the shader's own comment and in the chapter.
+Status: open, with one of its four gone. Item 2 (the tilt) is shipped and measured; items 1,
+3 and 4 stand, and item 2 is now the ground for item 3 -- a caustic needs the surface's
+normal to say where the light goes, and it now has one. The order has not changed and the
+measurements made while doing item 2 say why item 1 is the expensive one:
+
+- **Item 1, the window, has its edge measured and its content missing.** The edge is at
+  **41.4 deg** above the eye line of a lens under the water where the index puts it, and the
+  frame outside it is the water's own colour (`levelOn`: **0** pixels over, brightest **53**).
+  So the ring a diver sees is drawn; what is not drawn is anything *inside* it that a real
+  window would hold -- the whole outside world, compressed, with the sun in it. That needs a
+  ray sampled along a direction the frame was not drawn along, which this renderer has never
+  done.
+- **Item 4, the bed in the mirror, is now reachable in one expression and still costs the
+  same second query.** The reflected direction is computable -- it is written down and used
+  for the sky above the water; under the water it is deliberately not used at all, because
+  the interface there is shown flat.
+- **Item 3, caustics, has its normal at last.** Nothing yet asks what the surface does to
+  where light lands; the bed's `aUnder` still asks only how much came down a column.
 
 ## The record of the last rounds (kept as history)
 
@@ -2456,7 +2446,54 @@ absent caustics are stated in the shader's own comment and in the chapter.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### One round back: a bar is sand through, a reef is rock through (014b515)
+### One round back: the sea has an animal, and it strokes with both wings at once (04a6572)
+
+The user's queue under **25** item 3, spent in one round: 前肢像翅膀一样上下划, a swimmer
+faster in the water than the frog's **4.6**, no clock drying its skin on land, under **1.8**
+on it, the nearest island to be a sand bar carrying that animal's fruit in sand, this island
+keeping only the frog's, and 现在海里面啥动物都没有，太冷清了.
+
+- **The nearest island, and what it carries.** A sand bar: ordinal **1**, centre **(354,355)**,
+  foot **26.5 m**, **389 m** out, **107** columns of dry crown and **4** cells of the turtle's
+  fruit on them; over the **70** ordinals the reach answers the fruit **152** times in
+  **1,233,321** columns walked, **304,420** of them above the water line, every one on the
+  crown of one of the **15** bars over **2,740** such columns, and **0** on the 16 reefs, 23
+  thickets, 11 isles and 5 ridges. One rule plants it (`cropAt`: is the column dry, is it the
+  kind the record names) and one rule decides the ground a legless body may stand on
+  (`dryGroundNamed`), which is the same word asked twice.
+- **The animal** (`game/data/creatures.js`, a second row; a second fruit `turtlemelon` / 龟果,
+  block **41**): `scale 0.25`, `speed 1.45`, `swimSpeed 6.4`, no `hop`, no `dryTimer`,
+  `herd 3`, `orbit {at:'coast'}`. Measured: **1.44 m/s** over sand against the frog row's
+  **1.8**, and the faster body in the water at **6.07 m/s** against the worn frog's **4.37**;
+  **0** dry-clock frames over 200 s on dry ground; air empty in **18.3 s** under the surface
+  against a ceiling of **18** where the frog body has none (**999**); and with the climb key
+  held, only **192** of **240** frames wet at **3.63 m/s** -- what coming up for air costs.
+- **Which ground it may rise onto.** `dryGroundNamed` refuses a legless animal's lift on
+  ground its row does not name, and `stepAhead` asks the same question. Measured: **0 m**
+  risen at an inland bank two metres tall; never ashore in 20 s at each of this island's eight
+  shores; and from open water **31 m** out at the bar it walks up **2.5 m** onto the crown
+  over **473** frames of lift. The body *worn* from that record does none of it, because what
+  a body is made of decides the climbing and only what a record names decides the ground.
+- **The wings.** `FLAP` in `game/src/models.js` had its amplitude in the turn-out column --
+  a paddle. It now cycles the elevation column with a small feather on the sideways axis, not
+  mirrored, because both chords face the flow. Measured off the matrices the draw uploads:
+  **0.478 m** up and down against **0.134 m** fore and aft, **77 deg** of arc, **2.38** strokes
+  a second against the clock's **2.39**, both wings identical to the last digit, **0 m** for a
+  body that is not stroking, and one wing through **5.7 m/s** of water while the other feels
+  **2.0** when the game turns the body.
+- **A trap for any rig that compares two limbs.** `localOf` caches a parent's matrix on the
+  state and the part matrices are built from module scratch the next call reuses: sweeping one
+  wing and then the other measures two different bodies (**0.01 m** and **3%** apart, falsely).
+  Asked through one fresh `_loc` per frame, as the draw asks them, they agree to the ninth
+  decimal.
+- **One thin margin, kept visible.** `aBodyCarriesTheCreaseWhereItsPartsMeet` bounds the
+  creased share of a model's faces below **0.6**; this tree measures **0.589** (**279** of
+  **474**). That is a fact about how many faces the models have, not a margin of safety.
+- **Not claimed:** the sea has one animal and one fruit; "peopled" means no longer empty. And
+  the worn body cannot get up a single riser anywhere in this valley -- which is what the
+  absence of a `hop` means.
+
+### Two rounds back: a bar is sand through, a reef is rock through (014b515)
 
 Not recorded here when it was made, so it is recorded now in two lines. A kind of
 island stated the shape of its shore and not what its ground is made of: the
@@ -2475,7 +2512,7 @@ the tally and the check still passed. The crown rows of all 70 islands are
 byte-identical before and after (sum 1442). Nothing
 lived on any of it yet; the round after it is the one that put something there.
 
-### Two rounds back: the surface under water hands the light back (160edcf)
+### Three rounds back: the surface under water hands the light back (160edcf)
 
 The question was the user's, asked over the picture the round before had just
 fixed: 这种远处的水光…水面之上这样显示我理解，但是在水底也是这个样子的吗？物理世界，
@@ -2580,7 +2617,7 @@ and animals in the sea at all, which is currently empty of everything but frogs;
 **28**, the unbent crossing -- no refraction, no Snell's window, no tilt on the surface, no
 caustics, and an underwater mirror that is a colour instead of a picture.
 
-### Six rounds back: the map becomes a window of ground round the body (29cd91e)
+### Seven rounds back: the map becomes a window of ground round the body (29cd91e)
 
 State at time of writing, then: this round is one commit, and it changes what the minimap is.
 It was a picture: one canvas of the authored square, 160x160 cells, painted once at boot, and
@@ -2657,7 +2694,7 @@ turtle's fruit in sand, the main island keeping only the frog's, and animals in 
 which is currently empty of everything but frogs. The minimap half of that queue is closed by
 this round.
 
-### Seven rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
+### Eight rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
 State at time of writing, then:
 A body whose legs are an arc was sized by the parabola -- launch squared over
 twice the gravity -- and the parabola is what the flight tends to as the frame goes to
@@ -2761,7 +2798,7 @@ no skin-drying clock on land, slower than **1.8** on it -- the island nearest th
 be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
 is currently empty of everything but frogs.
 
-### Eight rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+### Nine rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
 State at time of writing, then:
 the sea. The water the last round opened out is no longer an empty field: it holds
 islands, and it holds more of them the nearer they lie to the island this square sits
@@ -2868,7 +2905,7 @@ finished.
 
 
 
-### Nine rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
+### Ten rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
 State at time of writing: this round is one commit, and it changes what the world
 *is*. The map stops being the world and becomes a square of ground with an
 address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
@@ -3021,7 +3058,7 @@ round deliberately refused to invent one.
 Read the standing contract below first: it decides whether any of this counts as
 finished.
 
-### Ten rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+### Eleven rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
 State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
@@ -3110,7 +3147,7 @@ the contour probes is still unmeasured). One new one, 22's own seam: **the hand 
 in third person -- the marker now shows only where the key acts, which is what made
 that one distance and that origin visible.
 
-### Eleven rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### Twelve rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -3233,7 +3270,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Twelve rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Thirteen rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -3407,7 +3444,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Thirteen rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Fourteen rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and

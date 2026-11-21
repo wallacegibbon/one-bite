@@ -5470,6 +5470,214 @@ What was measured before any of this was fixed, over 180 frames of walking
     surfaceMirror.dryOn.maxLum === surfaceMirror.dryOff.maxLum && surfaceMirror.dryOn.maxLum > 200,
     surfaceMirror);
 
+  /* The mesher moves the water's surface and the shading used not to know. The
+     wave is two sines written at the draw call -- `sin(t*1.7 + x*0.9 + z*0.7)*0.055
+     + sin(t*0.6 + z*0.25)*0.03` -- which lift the skin 8 cm and tilt it at most
+     3.9 degrees off the horizontal, and everything the pane answers about a
+     horizontal face used to be asked of a plane: how hard the ray meets it
+     (`abs(v.y)`, the angle of the ray alone) and which way it would go back
+     (`-v.y`, the ray mirrored in a flat face). So a lens standing over a lake
+     and looking along it was handed a mirror whose colour was a function of the
+     angle and of nothing else -- while the geometry it was looking at was not
+     flat, which is why the frame's pattern and the frame's shading disagreed.
+     The vertex that is displaced now writes down the normal its own two sines
+     give it (the derivative of the height just added, for free), and the pane
+     is asked that. Nothing is added to the shading: the same Schlick term and
+     the same sky gradient, asked of a face that has a tilt.
+     The rig stands a lens 1.2 m over open water -- the longest stretch the world
+     answers for, found by search, so that no shore is in the way -- level, bare,
+     at 13:00, and reads the rows that look at the surface between 1 and 7
+     degrees below its eye line. Four frames: as the game draws it; with the
+     water's own face taken out of the shading (the pane asked a plane, which is
+     what the previous build did); and each of those again 1.9 s later on the
+     same pinned clock. What has to be true:
+       1. asked a plane, a row of that band is one number -- the sky at the one
+          angle that row's mirror can reach;
+       2. asked its tilt, the same row is the water's own pattern of cells, and
+          they run past that number in both directions: brighter where a face
+          tips the mirror down at the horizon band, darker where it tips it up
+          into the sky. The mean does not move; the spread does.
+       3. the pattern is the water's, not the angles': moving the clock moves the
+          rows of the frame that were asked their own face, and moves nothing of
+          the rows that were asked a plane. */
+  const faceTilt = await step('theWaterFaceAnswersWithItsOwnTilt', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, formT: p.formT, formMax: p.formMax, head: p.headWater,
+      third: g.thirdPerson, time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
+      camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady,
+      creatures: g.creatures, drops: g.drops, parts: g.particles ? g.particles.n : 0 };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, formT: was.formT,
+        formMax: was.formMax, headWater: was.head });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+      g.creatures = was.creatures; g.drops = was.drops;
+      if (g.particles) g.particles.n = was.parts;
+      return r;
+    };
+    p.form = null; g.mode = 'play'; g.thirdPerson = false;
+    /* no motes and no bodies in the frame: the census below counts the pixels
+       that changed, and a spark left over from the steps before would change on
+       its own */
+    g.creatures = []; g.drops = []; g.hover = null;
+    if (g.particles) g.particles.n = 0;
+    g.time = N.DAY_LEN * (13 / 24);
+    /* a body standing over the water has its head in the air, and the field of view
+       the eye is worn with depends on that: the wet eye closes by 12 degrees. The
+       steps before left this head under a lake; a rig that does not say which head
+       it stands with shoots a different frame from the one the same lens has on a
+       shore. */
+    p.headWater = false;
+    const topOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) return y + 1; return -1; };
+    const floorOf = (x, z) => { const s = topOf(x, z); if (s < 0) return -1;
+      for (let y = s; y >= 0; y--) if (W.solidAt(x, y, z)) return y + 1; return -1; };
+    /* the longest stretch of open water the world answers for, and it has to be
+       long: a row of this frame at 1 degree below the eye line meets the surface
+       69 m out, and at 7 degrees 9.8 m. Four metres deep at least, so the sea
+       has a floor the frame cannot reach and no shore anywhere near. */
+    let spot = null, best = 0;
+    for (let z = -60; z <= 300; z += 3) for (let x = -60; x <= 300; x += 3) {
+      const s = topOf(x, z), b = floorOf(x, z);
+      if (s < 0 || b < 0 || s - b < 4) continue;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        let run = 0;
+        for (let d = 1; d <= 240; d++) {
+          const px2 = Math.floor(x + dx * d), pz2 = Math.floor(z + dz * d);
+          if (topOf(px2, pz2) !== s || W.solidAt(px2, s - 1, pz2)) break;
+          run = d;
+        }
+        if (run > best) { best = run; spot = { x: x + 0.5, z: z + 0.5, surface: s, floor: b,
+          depth: s - b, dx, dz, run }; }
+      }
+    }
+    if (!spot) return back({ error: 'no open water long enough to look along' });
+    p.x = spot.x; p.z = spot.z; p.vx = p.vy = p.vz = 0;
+    p.yaw = Math.atan2(spot.dx, -spot.dz); p.pitch = 0;
+    p.y = spot.surface + 1.2 - (p.eyePos() - p.y);
+    g.camReady = true; g.cam.d = 0; g.cam.fov = p.fov();
+    const chx = Math.floor(p.x / W.cs), chz = Math.floor(p.z / W.cs);
+    let left = 1, guard = 0;
+    while (left > 0 && guard++ < 500) left = W.stream(gl, chx, chz, 8);
+    const shot = g.shootCamera(p);
+    g.updateEnv();
+    const frame = () => {
+      g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { w, h, px };
+    };
+    /* the water's own face, taken out of the shading and nothing else touched:
+       the pane is handed a flat face, so every term of it is asked of a plane.
+       This is the control, and it is also what the previous build did to the
+       colour -- the previous build moved the vertices and asked the shading a
+       plane, and the two agree row for row (measured against that build: every
+       row of this band read its numbers twice over, with the wave on and with
+       the wave off). */
+    const withFlatFace = (fn) => {
+      const was2 = g.R.drawMesh;
+      g.R.drawMesh = function (m, model, opts) {
+        return opts && opts.pane
+          ? was2.call(this, m, model, Object.assign({}, opts, { wave: false }))
+          : was2.call(this, m, model, opts);
+      };
+      try { return fn(); } finally { g.R.drawMesh = was2; }
+    };
+    /* Two readings, because two things are being asked.
+       `shallow` is the rows that meet the surface and nothing else worth the
+       name of an object: between 1 and 2.6 degrees below the eye line a ray that
+       goes on straight through the skin (light is not bent here) reaches this
+       sea's floor only 114 m out or further, and 114 m of this water leaves
+       nothing of a floor to see. Those rows are all mirror, and what is asked of
+       one is its spread. A row is sampled
+       every other column: a spread, not a census.
+       `all` is every row that meets the surface at all, 1 to 7 degrees down (at
+       7 degrees it is met 9.8 m out, at 1 degree 69 m out -- inside the run, and
+       inside the ground the frame holds). That one is asked how much of it
+       changed, which is a census and reads every pixel.
+       (readPixels puts row 0 at the bottom of the frame, so `up` runs with y.) */
+    const tanY = Math.tan(shot.fov * Math.PI / 360);
+    const elevOf = (s, y) => (p.pitch + Math.atan(((y + 0.5) / s.h * 2 - 1) * tanY)) * 180 / Math.PI;
+    const band = (s, lo) => {
+      const rows = [];
+      for (let y = 0; y < s.h; y++) {
+        const elev = elevOf(s, y);
+        if (elev > -1.0 || elev < lo) continue;
+        const v = [];
+        for (let x = 0; x < s.w; x += 2) v.push(0.2126 * s.px[(y * s.w + x) * 4] +
+          0.7152 * s.px[(y * s.w + x) * 4 + 1] + 0.0722 * s.px[(y * s.w + x) * 4 + 2]);
+        const mean = v.reduce((a, b) => a + b, 0) / v.length;
+        rows.push({ elev: +elev.toFixed(2), y, n: v.length, mean: +mean.toFixed(1),
+          sd: +Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / v.length).toFixed(1),
+          min: Math.round(Math.min(...v)), max: Math.round(Math.max(...v)) });
+      }
+      return rows;
+    };
+    const at = (rows, e) => {
+      const r = rows.reduce((a, b) => Math.abs(b.elev - e) < Math.abs(a.elev - e) ? b : a, { elev: 99 });
+      return r.elev > 50 ? null : { elev: r.elev, spread: r.max - r.min, sd: r.sd,
+        mean: r.mean, min: r.min, max: r.max };
+    };
+    const diff = (a, b) => {
+      let n = 0, max = 0, of = 0;
+      for (const r of band(a, -7)) {
+        of += r.n * 2;
+        for (let x = 0; x < a.w; x++) {
+          const i = (r.y * a.w + x) * 4;
+          const d = Math.abs(a.px[i] - b.px[i]) + Math.abs(a.px[i + 1] - b.px[i + 1]) +
+            Math.abs(a.px[i + 2] - b.px[i + 2]);
+          if (d > 4) n++;
+          if (d > max) max = d;
+        }
+      }
+      return { pixels: n, of, max };
+    };
+    const now = frame();
+    const flat = withFlatFace(frame);
+    const tWas = g.env.time;
+    g.env.time = tWas + 1.9;
+    const late = frame();
+    const lateFlat = withFlatFace(frame);
+    g.env.time = tWas;
+    const bn = band(now, -2.6), bf = band(flat, -2.6);
+    // the two rows the claim is read on, named by the angle they are drawn at
+    const rows = [-1.55, -2.05].map(e => ({ at: e, now: at(bn, e), flat: at(bf, e) }));
+    const worstNow = bn.reduce((a, r) => (r.max - r.min) > (a.max - a.min) ? r : a, bn[0]);
+    return back({
+      spot, lens: { eye: +p.eyePos().toFixed(2), over: +(p.eyePos() - spot.surface).toFixed(2),
+        inWater: g.env.inWater, fov: +shot.fov.toFixed(1), day: +g.env.day.toFixed(2) },
+      law: { amp: 0.055 + 0.03, maxTiltDeg: +(Math.atan(Math.hypot(0.055 * 0.9,
+        0.055 * 0.7 + 0.03 * 0.25)) * 180 / Math.PI).toFixed(2),
+        wavelengths: [+(2 * Math.PI / 0.9).toFixed(1), +(2 * Math.PI / 0.25).toFixed(1)] },
+      rows, shallowN: bn.length, bandN: band(now, -7).length,
+      flatRowMax: Math.max(...bf.map(r => r.max - r.min)),
+      flatRowMaxSd: Math.max(...bf.map(r => r.sd)),
+      nowRowMax: Math.max(...bn.map(r => r.max - r.min)),
+      nowWorstRow: { elev: worstNow.elev, spread: worstNow.max - worstNow.min, sd: worstNow.sd,
+        min: worstNow.min, max: worstNow.max },
+      moved: diff(now, late), flatMoved: diff(flat, lateFlat),
+      shading: diff(now, flat)
+    });
+  });
+  check('a lens 1.2 m over 240 m of open water, looking along it: the band is the surface, not its floor',
+    !faceTilt.error && faceTilt.lens.inWater === 0 && faceTilt.lens.over === 1.2 &&
+    faceTilt.spot.run >= 200 && faceTilt.spot.depth >= 4 && faceTilt.lens.fov === 76 &&
+    faceTilt.shallowN >= 8 && faceTilt.bandN >= 30, faceTilt);
+  check('asked a plane the lake is a foil: every row that meets only the surface is one number -- the widest of them spans 9 of 255, and reads along itself with a spread of 2.9 at most',
+    faceTilt.rows.every(r => r.flat && r.flat.spread <= 12 && r.flat.sd <= 4) &&
+    faceTilt.flatRowMax <= 12 && faceTilt.flatRowMaxSd <= 4, faceTilt);
+  check('asked the tilt its own geometry gives it, the same rows are the water\'s cells: the rows that spanned 2 and 7 span 59 and 42, the worst row of that band runs 196 to 255 -- and the mean of a row moves by 6 at most, so this is the same sky redistributed and not a brighter water',
+    faceTilt.rows.every(r => r.now && r.now.spread >= 30 && r.now.sd >= 5) &&
+    faceTilt.nowRowMax >= 30 && faceTilt.nowWorstRow.spread >= 40 &&
+    faceTilt.rows.every(r => Math.abs(r.now.mean - r.flat.mean) <= 12), faceTilt);
+  check('and the pattern belongs to the water: 1.9 s of the clock moves 28,371 of the 34,200 pixels of the surface\'s whole band (the largest by 148), and asks 27,501 of them a different colour at one instant; asked a plane, the same 1.9 s moves 0 of them',
+    faceTilt.moved.pixels > 15000 && faceTilt.moved.max > 100 &&
+    faceTilt.shading.pixels > 15000 &&
+    faceTilt.flatMoved.pixels === 0 && faceTilt.flatMoved.max === 0, faceTilt);
+
   /* How far under the water a surface is belongs to the surface, not to the
      point its shading is read at. The mesher asked the world "how deep is this
      point under the water above it", which is a question about a column of
@@ -5949,7 +6157,23 @@ What was measured before any of this was fixed, over 180 frames of walking
     const rows = [];
     for (const pitch of [-0.12, -1.4])
       for (const d of [-0.05, 0.0, 0.05, 0.30]) rows.push(shot(d, pitch));
-    return back({ shelf, rows });
+    /* The one lens here that sits over the water is looking through a face the
+       wave tilts, and that face is now asked the tilt its geometry gives it
+       (the step below measures what that does to a mirror). Asked a plane, the
+       face throws back one share at that angle; asked its own tilt, the faces
+       tipping away throw back more and those tipping in less, and since the
+       term is convex in the cosine the share kept on the average is the larger.
+       So the bed under that lens keeps a little more of its red -- a control
+       drawn here so the number is measured and not argued. */
+    const wasDraw = g.R.drawMesh;
+    g.R.drawMesh = function (m, model, opts) {
+      return opts && opts.pane
+        ? wasDraw.call(this, m, model, Object.assign({}, opts, { wave: false }))
+        : wasDraw.call(this, m, model, opts);
+    };
+    const alongFlat = shot(0.30, -0.12);
+    g.R.drawMesh = wasDraw;
+    return back({ shelf, rows, alongFlat });
   });
   const row = (pitch, d) => slab.rows.find(r => r.pitch === pitch && r.d === d);
   const sUnder = row(-0.12, -0.05), sOver = row(-0.12, 0.0), sHigh = row(-0.12, 0.05), sAlong = row(-0.12, 0.30);
@@ -5962,8 +6186,16 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and it is still the same bed 10 cm up: the murk does not arrive or leave with the surface line',
     sOver && sHigh && Math.abs(sUnder.bed.near.lum - sHigh.bed.near.lum) < 10 &&
     Math.abs(sUnder.bed.near.bmr - sHigh.bed.near.bmr) < 8, { under: sUnder && sUnder.bed.near, high: sHigh && sHigh.bed.near });
-  check('a bed looked at along 7 degrees of slope has walked 14 m of lake: its red is gone',
-    sAlong && sAlong.bed.near.red < 35 && sAlong.bed.mid.red < 38, sAlong && sAlong.bed);
+  check('a bed looked at along 7 degrees of slope has walked 14 m of lake: its red is gone -- 29.7 of red near, 38.9 further out, under a blue that stands 74 and 70 above it',
+    sAlong && sAlong.bed.near.red < 40 && sAlong.bed.mid.red < 45 &&
+    sAlong.bed.near.red < sAlong.bed.near.bmr - 30 && sAlong.bed.mid.red < sAlong.bed.mid.bmr - 20,
+    sAlong && sAlong.bed);
+  check('that lens looks through a face the wave tilts, and it is asked that tilt: asked a plane instead the bed keeps 25.5 and 33.8 of red, 4 and 5 less, because a plane throws back one share at that angle while the real faces throw back more where they tip away and less where they tip in -- and a term convex in the cosine keeps the more on the average',
+    slab.alongFlat && slab.alongFlat.bed.near.red < 40 && slab.alongFlat.bed.mid.red < 45 &&
+    sAlong.bed.near.red - slab.alongFlat.bed.near.red > 2 &&
+    sAlong.bed.mid.red - slab.alongFlat.bed.mid.red > 2 &&
+    slab.alongFlat.bed.near.bmr > 60 && slab.alongFlat.bed.mid.bmr > 60,
+    { along: sAlong && sAlong.bed, flat: slab.alongFlat && slab.alongFlat.bed });
   check('and looked at from straight above it keeps the depth it stands at, which is the old answer',
     sDownUnder && sDownOver && sDownHigh &&
     Math.abs(sDownUnder.bed.near.lum - sDownOver.bed.near.lum) < 4 &&

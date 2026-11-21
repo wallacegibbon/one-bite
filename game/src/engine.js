@@ -215,9 +215,26 @@
   uniform float uInWater;   // 1 when the lens is inside a liquid at all
   uniform vec3 uCamPos;     // the lens, in world space: the pane needs the direction it is looked at from
   varying vec4 vCol; varying vec3 vFog; varying vec3 vEye; varying vec3 vPan;
+  /* Which way the water's own face is pointing. The wave below moves the
+     surface, and a moved surface is not a flat one: the same two sines,
+     differentiated, are the slope this vertex was just given. It is written
+     here, at the vertex that is being displaced, because that is where the
+     slope is known for free -- and the pane has to be asked it, or the frame
+     draws a surface the shading believes to be a plane. */
+  varying vec3 vPanN;
   void main(){
     vec4 wp = uModel * vec4(aPos, 1.0);
-    if (uWave > 0.5) wp.y += sin(uTime*1.7 + wp.x*0.9 + wp.z*0.7)*0.055 + sin(uTime*0.6 + wp.z*0.25)*0.03;
+    vec3 panN = vec3(0.0, 1.0, 0.0);
+    if (uWave > 0.5) {
+      float wa = uTime*1.7 + wp.x*0.9 + wp.z*0.7, wb = uTime*0.6 + wp.z*0.25;
+      wp.y += sin(wa)*0.055 + sin(wb)*0.03;
+      // d/dx and d/dz of the height just added. The surface never tilts far --
+      // the steepest these two sines ever make it is 3.9 degrees off the
+      // horizontal, which is what any of this is scaled against.
+      panN = normalize(vec3(-cos(wa)*0.055*0.9, 1.0,
+                            -cos(wa)*0.055*0.7 - cos(wb)*0.03*0.25));
+    }
+    vPanN = panN;
     vec4 vp = uView * wp;
     gl_Position = uProj * vp;
     float d = length(vp.xyz);
@@ -354,6 +371,7 @@
   const FS_WORLD = `
   precision mediump float;
   varying vec4 vCol; varying vec3 vFog; varying vec3 vEye; varying vec3 vPan;
+  varying vec3 vPanN;      // which way the water's own face is pointing
   uniform vec3 uFogCol; uniform float uTintA; uniform vec3 uTint;
   /* uLiqK is read here as well as in the vertex shader, where the default
      precision is highp: a uniform declared at two precisions will not link at
@@ -385,9 +403,18 @@
          threw back.
          Which way this face points: the mesher puts a water face only where
          water meets air, so it is the top face of a column or one of the four
-         that can stand round its edge. The first faces straight up, the rest are
-         vertical, and for a vertical face the horizontal part of the view ray is
-         the measure of how hard it is looked at along itself.
+         that can stand round its edge. The vertical ones are not touched by the
+         wave and stay vertical, and for a vertical face the horizontal part of
+         the view ray is the measure of how hard it is looked at along itself.
+         The top one is carried by the wave, and it is asked the slope the wave
+         gave it -- the normal the vertex shader wrote down at the vertex it
+         displaced. Asked a plane instead, the face answers the same way at every
+         point a ray of the frame meets it at the same angle, and a lake is a
+         foil: every pixel looking along the water at half a degree is the same
+         number, every pixel at five degrees is the next number down the sky's
+         gradient, and the water's own pattern of ripples is in none of it.
+         Asked its tilt, the same view breaks into the cells the surface is
+         actually made of, and they move with it.
          Schlick, air to water: 2% straight down, running to everything as the
          view grazes the surface. This is the term that makes a lake a mirror
          from the bank and a window from a boat, and it is what keeps a grazing
@@ -403,14 +430,20 @@
          back into it past asin(1/ior) from the vertical -- 48.6 degrees at
          1.333 -- and outside that cone the face returns everything and passes
          nothing at all. The test is written on a cosine because cn is one:
-         sqrt(1 - 1/(ior*ior)) is the cosine of the same angle, and against a
-         flat surface it lands the edge of that fan 41 degrees above the eye
-         line of a lens under the water. The ray is not bent anywhere, so the
-         sky that does come through is not folded into the 48.6 degree window it
-         belongs in, and this is the one clause that knows about either. */
+         sqrt(1 - 1/(ior*ior)) is the cosine of the same angle, and asked of the
+         face the ray actually meets it lands the edge of that fan where the
+         water's own index and that face's own slope put it -- for a lens inside
+         the liquid, which is shown a flat interface, 41 degrees above the eye
+         line. The ray is not bent anywhere, so the sky that does come through
+         is not folded into the 48.6 degree window it belongs in, and this is
+         the one clause that knows about either. */
       float d = length(vEye);
       vec3 v = vEye / max(d, 1e-4);
-      float cn = mix(sqrt(max(0.0, 1.0 - v.y * v.y)), abs(v.y), vPan.x);
+      /* How hard the ray meets this face, and which way it would go back: both
+         asked of the face the wave left, not of a plane. A face with no wave on
+         it carries (0,1,0) and every term here is bit for bit what it was. */
+      float dn = dot(v, vPanN);
+      float cn = mix(sqrt(max(0.0, 1.0 - v.y * v.y)), abs(dn), vPan.x);
       float F = 0.02 + 0.98 * pow(1.0 - cn, 5.0);
       /* uIor arrives as 1 when there is no liquid in the frame at all, and then
          this edge is 0 and the clause cannot fire. */
@@ -418,7 +451,9 @@
       if (vPan.y > 0.5 && cn < tir) F = 1.0;
       vec3 surv = exp(-uLiqK * vPan.z);
       if (uPane < 1.5) { gl_FragColor = vec4(surv * (1.0 - F), 1.0); return; }
-      float ry = mix(v.y, abs(v.y), vPan.x);
+      // the view ray mirrored in this face; mirrored in a flat one that is
+      // -v.y, which is the abs() this line used to be
+      float ry = mix(v.y, v.y - 2.0 * dn * vPanN.y, vPan.x);
       vec3 mir = mix(uHor, uZen, clamp(ry, 0.0, 1.0));
       mir = mix(mir, uVeil, vPan.y);
       gl_FragColor = vec4((1.0 - F) * uVeil * (1.0 - surv) + F * mir, 1.0);

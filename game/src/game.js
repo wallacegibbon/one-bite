@@ -1381,25 +1381,28 @@
          un-culling it costs nothing in blending and adds no geometry. */
       const drawWater = (cx, cz, m) => {
         if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) return;
-        /* The wave is a fact about a surface a lens is *looking at from outside*.
-           Nothing in the water's own shading asks it: the face is asked how hard
-           the ray meets it and which way it points, never how it is tilted, so
-           the geometry is displaced and the shading is that of a plane. For a
-           lens standing in the liquid that disagreement is what the eye sees: a
-           ray along its own eye line climbs 3 cm per metre over a surface the
-           vertex wave moves 8 cm up and down about every 9 m of it (the two
-           sines in the world's vertex shader), so that ray meets the surface
-           three or four times inside a few metres, and since the face adds what
-           it throws back rather than replacing what it hides, each meeting lays
-           the water's colour over the last one. Measured at a lens standing on
-           the floor of the open sea: 961 pixels along its eye line over the
-           colour of the water it stands in, the brightest at 107 against that
-           water's 53 -- a dotted line, twice the colour of the sea, at the
-           height of its own eye (game/test/play.js draws that lens with and
-           without the wave, and with and without the edge).
-           A mirror at that angle is one surface, and it hides the ones behind
-           it. So the wave is left to the lenses it is drawn for, and a lens
-           inside the liquid is shown the interface its own numbers describe. */
+        /* The wave is a fact about the surface, and the surface now answers for
+           it: the vertex shader writes the slope of the same two sines at the
+           vertex it displaces, and the pane is asked that normal -- how hard the
+           ray meets it, which way the light goes back, and where the fan the
+           water's index closes ends. What the wave is still not given is a lens
+           standing inside the liquid, and the reason is not the shading. A lens
+           over the water meets its surface once along any ray. A lens under it
+           can meet the same interface twice and a third time: a ray along the
+           eye line of a lens 7 m under the sea climbs 3 cm per metre, and the
+           wave moves the surface 8 cm up and down about every 9 m of it, so that
+           ray crosses it several times within a few metres. The near crossing is
+           the one that hides the others, and this frame has no way to know that:
+           the pane writes no depth, its two passes multiply and then add, and
+           every crossing it is handed lays the water's colour over the last.
+           Measured at a lens standing on the floor of the open sea, with the
+           wave on that face: 961 pixels along its eye line over the colour of
+           the water it stands in, the brightest at 107 against that water's 53
+           -- a dotted line, twice the colour of the sea, at the height of its
+           own eye. (game/test/play.js draws that lens with and without the wave,
+           and with and without the edge.) So a lens inside the liquid is shown
+           the interface this frame can compose: a flat one, and a flat one whose
+           shading agrees with it. */
         const wv = !env.inWater;
         R.drawMesh(m, IDENT, { pane: 1, wave: wv, noCull: true });
         R.drawMesh(m, IDENT, { pane: 2, wave: wv, noCull: true });
