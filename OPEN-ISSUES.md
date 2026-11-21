@@ -7,115 +7,106 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one commit, and it is the half of the last
-round's answer that was spoken and not drawn. The question was the user's, asked over the
-picture the last round had just fixed -- 这种远处的水光…水面之上这样显示我理解，但是在水底
-也是这个样子的吗？物理世界，水底也是这个样子的吗？ -- over the water I follow why it shows
-like that; does it show like that from under the water too, and does it in the physical
-world? Over water that band is physical: at a shallow angle a surface throws back almost
-everything that reaches it, so a strip of the far sky lies along the eye line of anyone
-looking level across a lake. Under water the same surface does the other thing, and the
-frame was not asking it at all. Light climbing out of water is turned back into it past
-**48.6 deg** from the vertical (`asin(1/1.333)`, water against air), so no ray that meets
-the surface less than **41.4 deg** above a lens's own eye line ever leaves the water: a
-level view under a lake is met by that lake's own colour, and sky can only come through
-the cone overhead. That is in the code now, and it is measured.
+State at time of writing: this round is one commit, and it is the sea being peopled --
+the half of the user's queue that was item 3 of **25**. Their words were 前肢像翅膀一样
+上下划, faster in the water than the frog's **4.6**, no clock drying its skin on land,
+under **1.8** on it, the nearest island to be a sand bar carrying that animal's fruit in
+sand, this island keeping only the frog's, and 现在海里面啥动物都没有，太冷清了. All of it
+is shipped, and all of it is measured.
 
-- **Where the number lives, and what the clause is.** `def(5, ...)` in `game/src/world.js`
-  now states `ior: 1.333` beside the absorption it has always stated: both are what this
-  stuff does to light, so one belongs with the other. `World.liquidIor()` reads it beside
-  `liquidAbsorb()`, `updateEnv()` carries it as `env.liqIor` beside `liqK`, and the pane
-  pass gets it as `uIor`. The law is two lines on the angle the pane already computes --
-  `float tir = uIor > 1.0 ? sqrt(max(0.0, 1.0 - 1.0 / (uIor * uIor))) : 0.0;` and
-  `if (vPan.y > 0.5 && cn < tir) F = 1.0;` -- written on the **cosine**, because `cn` is
-  the cosine between the ray and the face's own normal, and `1/ior` is the *sine* of that
-  same angle: testing against the sine would put the edge seven degrees too high. With no
-  liquid in the frame `uIor` is **1**, the edge is **0**, and the clause cannot fire. No
-  new pass, no new geometry, no table: the pane already knew the angle and was being asked
-  the wrong question about it.
-- **What the new shots measure** (a new step, `theSurfaceUnderWaterHandsTheLightBack`). It
-  first searches the authored square for the longest run of open water the valley has --
-  **58 m**, at (92.5, 78.5), surface at the sea line, four metres deep, nothing standing in
-  it or breaking it along the bearing -- stands a lens **30 cm** under that, and reads the
-  frame *by the angle each of its rows is drawn at*, because a law about an angle can only
-  be bounded against an angle. Level: the whole of the frame above the eye line lies inside
-  the closed fan, and it holds **0** pixels brighter than the colour of the water it stands
-  in, its brightest pixel being that water's own **53**. The same face asked of air
-  (`env.liqIor = 1`, nothing else touched): **62,741** pixels over the water's colour,
-  **119** at the brightest, the sky beginning at **7.8 deg**. The same lens pitched up
-  **0.62 rad**, so that the frame spans angles on both sides of the edge: the sky begins at
-  **41.4 deg**, and the step bounds that measured angle against the index's own arithmetic
-  computed in the rig (`law: {ior: 1.333, criticalDeg: 48.6, edgeElevDeg: 41.4}`); the air
-  control begins at **7.7**. And the control that keeps this from being a darkening pass:
-  the same place **30 cm over** the skin is pixel for pixel the frame it was, index on or
-  off -- **6,063** pixels of sky, brightest **255**.
-- **This change moved the last round's figures, and they are re-pinned where they stand.**
-  Handing the light back below 41.4 deg is exactly what those frames were missing a little
-  of. The sea-floor lens's above-eye-line half, whose brightest read **55** against its
-  water's **53**, now reads **53** -- that water's own **53**, with nothing left over. The
-  mirror of an eye built for the dark, worn in the sun, was a median of **85** above its
-  eye line against **81** under it; it is **83** against **81**, and the point that round
-  made holds tighter for it -- with that mirror read back off the block row the same half
-  lands on the row's raw **53**, where it used to read **56** with sky leaking through it.
-  The looking-up control's mean moved **67.6-67.7 -> 65.9**. The counts that round quoted
-  for its two defects -- **0 / 517 / 961 / 1,403** pixels and `groundEdge` **224** -- did
-  not move, and both full runs of the suite print those bytes identically.
-  One figure in the chapter turned out to be quoted from nothing: "with the sun over it
-  that upper half holds **2,474** pixels over the water's colour, **106** of them over
-  200/255 and its brightest at **233**" is printed by no step, on this tree or on the one
-  before it. It is replaced with what the step does print -- that half's brightest **113**
-  against its middle's **83**, **27** pixels of that quarter of a million over the water's
-  colour -- which carries the same claim (the measure of a surface is the middle of its
-  half, never its brightest pixel) and can be checked against a log.
-- **A cause that was nearly written down wrong.** The bright count of a row climbs over
-  some twenty degrees rather than snapping at 41.4, and the cause first drafted for that --
-  the water eating the sky, or the basin cutting the bearings -- is wrong. A row of the
-  test's 900x560 frame is not one angle: with a **64 deg** vertical field and that aspect
-  the horizontal half-field is **45.1 deg**, so the row whose middle stands at 42.7 deg has
-  its outermost columns at **28.7 deg**, still inside the closed fan. The projection says
-  those columns clear the fan once the row's middle reaches **62.6 deg**, and the first row
-  the rig samples that the frame shows entirely as sky is **62.9**. The rig reports the
-  middle of a row, which is why the angle it bounds is the index's to the decimal. Written
-  into the chapter rather than left out: a wrong cause costs as much as a wrong number.
-- **Two things the round got wrong on the way, both kept visible.** (1) A word inside a
-  block definition's own comment is a field to `game/test/reach.js`: the first version of
-  the water row's comment ended a sentence with the word `existence` followed by a colon,
-  and the run reported `DEAD BLOCK FIELD existence` over a line claiming 18/18 declared
-  fields read. The comment is reworded; the test is right to be that crude, and it is the
-  only thing that would ever notice such a collision. (2) The first of the full runs failed
-  one check -- the island streamer's **4 us** per column bound came back at **9.77**, with a
-  cold fill of **7.9 ms** -- on a machine at load average **11**; the same tree at load **2**
-  came back inside every bound, **2.2 ms** for that same worst chunk. That is the machine,
-  and it is written here so the next session does not read it as a regression in the ground.
-- **What the round deliberately does not claim.** The crossing is not bent. No ray is
-  refracted anywhere in this renderer, so the sky that comes through the open fan is the
-  sky along the straight line rather than the whole outside world folded into a **48.6 deg**
-  window -- Snell's window is not in the code, and the chapter says so where the law
-  stands. The surface's tilt is asked nowhere in the water's shading, so the mirror is
-  flat and there is no glitter and no caustics on the bed. And the mirror handed to a lens
-  under water is the water's own colour, not a picture of the lakebed at that angle. Those
-  are collected as **28** rather than left buried inside a closed issue.
+- **What the nearest island is, and what it carries.** The nearest island to this one is a
+  sand bar: ordinal **1**, centre **(354,355)**, foot **26.5 m**, **389 m** out, **107**
+  columns of dry crown and **4** cells of the turtle's fruit on them. Over the **70**
+  ordinals the reach holds the fruit answers **152** times in **1,233,321** columns walked,
+  **304,420** of them above the water line -- every one on the crown of one of the **15**
+  bars, over **2,740** such columns, and **0** on the 16 reefs, 23 thickets, 11 isles and
+  5 ridges. The cell under every one of those cells is block **4**, sand, at the height
+  the kind states (**4**): a bar is sand from its floor to its crown (last round's rule),
+  and the fruit planted on it is planted by one rule, `cropAt`, which asks the column
+  whether the ground is dry and whether it is the kind the record names. This island's own
+  ground holds **0** of it and keeps its **49** cells of the fruit that grows in ground.
+- **What the animal is** (`game/data/creatures.js`, a second row; `game/data/fruits.js`, a
+  second fruit `turtlemelon` / 龟果, block **41**). `scale 0.25`, `speed 1.45`,
+  `swimSpeed 6.4`, no `hop`, no `dryTimer`, `herd 3`, `orbit {at:'coast', r0:12, r1:40}`.
+  Measured (`play.js`, `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`): it **drags** --
+  **1.44 m/s** over sand against the frog row's **1.8** -- and it is the faster body in the
+  water: **6.07 m/s** against the frog worn from its own record at **4.37** and the frog
+  row's **4.6**. No clock dries its skin: **0** over 200 s on dry ground where the body
+  whose record states one reaches its own **200** and loses vitality. It breathes like a
+  person and not like a frog: its air is empty in **18.3 s** under the surface against a
+  ceiling of **18**, where the frog body has no ceiling at all (**999**). And it does come
+  up: with the climb key held its head clears the surface, only **192** of the window's
+  **240** frames are wet, and it makes **3.63 m/s** instead of **6.07** -- which is what
+  coming up for air costs, and is now a check rather than an aside.
+- **The lift, and which ground it is asked on.** `dryGroundNamed` in `game/src/entities.js`
+  refuses a legless animal's lift on ground its own row does not name, and the look-ahead
+  that sizes a climb (`stepAhead`) asks the same question, which it did not before. That
+  one word is load-bearing twice: the fruit is planted only on a pile of the kind its
+  record names, and the animal is lifted only on ground of that kind. Measured: at an
+  inland bank two metres tall the animal gives **0 m** risen, **0** frames of climb and no
+  arc at all; at the eight shores of this island it never once comes ashore in 20 s each;
+  and sent from open water **31 m** out at the bar its own fruit grows on it walks up
+  **2.5 m** onto the crown over **473** frames of lift with the world under its feet for
+  **1,033** of them and never an arc. The body *worn* from that same record does none of
+  it -- **0** frames of dry ground on that bar, its nose on the bank face with **0** frames
+  of lift -- because what a body is made of decides the climbing and only what a record
+  names decides the ground. (The first version of the lane put these bodies inland; the
+  figure that came out of it is not quoted anywhere, because nothing on this tree
+  reproduces it. Same for the bank: the round's earlier draft quoted **0.94 m** over
+  **138** frames from a desk probe, and that number is gone.)
+- **The wings, and the table that was wrong.** `FLAP` in `game/src/models.js` was retuned
+  this round. The table it replaces put its amplitude in the turn-out column, so the tip
+  travelled further fore and aft than up and down: a paddle, and not what anyone calls a
+  wing. The table as it stands cycles the **elevation** (column 3, the third column being
+  a turn about the body's own front-to-back axis, mirrored by each part's `sign` so the
+  two blades are a pair) with a small **feather** on column 1, the sideways axis, which is
+  deliberately not mirrored because both chords face the flow. Measured off the matrices
+  the draw uploads (`theSeaTurtleStrokesBothWingsTogether`): each wingtip goes **0.478 m**
+  up and down against **0.134 m** fore and aft, the blade swings from **5 deg** below
+  horizontal to **82 deg** below -- **77 deg** of arc -- at **2.38** strokes a second
+  against the clock's own **2.39**, carrying about **3.8 m** of water a second; both wings are
+  identical to the last digit and reach the top of the arc on the same frame; a body in the
+  water that is not stroking has wings that move **0 m**; and a body the game is turning
+  (**0.593 rad/s** of heading, taken from the game) puts one wing through **5.7 m/s** of
+  water and the other through **2.0**, the two exchanging exactly when the sign is flipped.
+  The span is measured in the same place: **0.80 m** out each side as carved, **0.84 m**
+  floating, **1.07 m** at the top of a stroke, against the **0.75 m** half-width the world
+  enforces -- the model is not carved to that box and the note over it says so.
+- **A trap for the next rig that reads two limbs.** `localOf` caches a parent's matrix on
+  the state and the part matrices are built from module scratch that the next call reuses.
+  Sweeping one wing for 480 frames and then sweeping the other measures two different
+  bodies: the same tree reported one turtle's two wings **0.01 m** apart in height and
+  **3%** apart in the water they carried. Asked through one fresh `_loc` per frame, which
+  is how the draw asks them, they agree to the ninth decimal. Any rig that compares limbs
+  has to ask both through the same state.
+- **One thin margin, kept visible rather than loosened.** `aBodyCarriesTheCreaseWhereItsPartsMeet`
+  bounds the share of a model's faces that carry a crease below **0.6** of them; this tree
+  measures **0.589** (**279** of **474**). That is a fact about how many faces the models
+  have, not a margin of safety, and adding a box to any model moves it.
 - **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the
-  commit message carries no non-ASCII; `docs-sync.js` reports no disagreement and
-  `docs-drift.js` detects every injected drift; `bash game/test/all.sh` **10/10** twice on
-  this tree, each run followed by `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**.
-  Those two runs print every figure of the new step and of the sea step byte for byte --
-  the only field of either that moves between them is `held`, the count of chunks the
-  world is holding, which nothing quotes -- so the chapter's numbers for this round are
-  those runs'.
+  commit message carries no non-ASCII; `docs-sync.js` reports no disagreement;
+  `docs-drift.js` detects every injected drift, including the new anchors for the crop
+  census, the nearest bar and the second creature row, and leaves the tree unchanged;
+  `bash game/test/all.sh` **10/10** twice on this tree, each run followed by
+  `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**.
 
-No block was written this round, so the authored array's hash pin (**1271637568**, read
-out of seed 20261008 before any island rule) is untouched. The new rig stands inside the
-authored lake, which is where the water's own laws are cheapest to measure; the sea past
-the square keeps the rigs the last two rounds put there.
+What this round does not claim, and does not hide: the sea has one animal in it and one
+fruit on it. Nothing else lives out there -- no fish, no bird, no plant on any of the
+other four kinds of island -- and "the sea is peopled" is true only in the sense that it
+is no longer empty. The worn body cannot get up a single riser anywhere in this valley,
+which is what the absence of a `hop` means and what the model note spells out. And the
+numbers a day-soak prints for where the animals happened to walk move from run to run --
+one run said their offsets ran **4.4-20.5 m** outside the shore line, the next said
+**8.9-33.4 m** -- so the chapters now state only what the check holds (every frame wet, no
+frame on dry ground, never past the bound their own errands could reach plus the **31.2 m**
+the coast rule swings) and the arithmetic that does not move (the water's edge stands
+between **172.1 m** and **221.3 m** from this island's centre depending on the bearing).
 
-What this round leaves open, in order: the user's own queue, recorded under **25** -- next
-up its item 3, a sea turtle (wings-for-flippers, faster in water than the frog's **4.6**,
-no skin-drying clock on land, slower than **1.8** on it), the island nearest this one to be
-a sand isle carrying the turtle's fruit in sand, the main island keeping only the frog's,
-and animals in the sea at all, which is currently empty of everything but frogs; and then
-**28**, the unbent crossing -- no refraction, no Snell's window, no tilt on the surface, no
-caustics, and an underwater mirror that is a colour instead of a picture.
+What this round leaves open, in order: the user's queue under **25** is now spent -- its
+items 1, 2 and 3 are shipped -- and the sea that got one animal is the place the rest of
+that queue would live in. Next is **28**, the unbent crossing: no refraction, no Snell's
+window, no tilt on the surface, no caustics, and an underwater mirror that is a colour
+instead of a picture.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -2288,17 +2279,19 @@ each one would otherwise be rediscovered:
    authored square: it went black past the main island because it painted one **160x160**
    base image and nothing else. It paints a window of ground round the body now -- the
    record is in "four rounds back" below.
-3. **Next.** The sea turtle, and the sea being peopled: it swims by moving its front
-   flippers up and down the way a bird's wings move; `swimSpeed` above the frog's
-   **4.6**; no skin-drying clock on land; land speed under **1.8**; the island nearest
-   this one to be a **sand isle** carrying the turtle's fruit grown in sand; the main
-   island keeps only the frog's fruit; and animals in the sea at all -- now in their
-   words: 现在海里面啥动物都没有，太冷清了 ("right now there is no animal in the sea at
-   all, it is too empty"). What it needs before any of that can be asked: a second row in
-   `game/data/creatures.js` (the file holds one), a second fruit that grows in sand in
-   `game/data/fruits.js`, a flipper stroke beside `swimPose`/`STROKE` in
-   `game/src/models.js`, and a habitat rule for the sea -- animal placement is bounded by
-   the valley's zones today, which is the same wall as issue 24.
+3. **Done this round.** The sea turtle, and the sea peopled. In their words: 前肢像翅膀一样
+   上下划 (it rows with its front flippers the way a bird's wings move), a `swimSpeed`
+   above the frog's **4.6**, no skin-drying clock on land, a land speed under **1.8**, the
+   island nearest this one to be a sand isle carrying the turtle's fruit grown in sand,
+   the main island keeping only the frog's, and 现在海里面啥动物都没有，太冷清了 -- right
+   now there is no animal in the sea at all, it is too empty. Every one of those is now a
+   measured fact rather than a wish; the record of what was measured is in the state block
+   at the top of this file and in the body of this round's commit, and the two rules it
+   needed -- a fruit planted only on a kind of ground, and an animal given its lift only
+   on a kind of ground -- are 02 §3 and 03 §3.
+   What is *not* done, and was never in the item: the sea has no other animal in it.
+   One row, three bodies, in one lane off one island's shore. The empty sea the item
+   complained about is less empty; it is not peopled.
    One thing had to be true before any of it could be looked at from a boat or from
    inside: the sea being legible to a lens standing in it. That was taken up two rounds ago
    (6bd3b3f -- a lens standing in the sea is inside the sea: the sky, the water's mirror and
@@ -2463,7 +2456,131 @@ absent caustics are stated in the shader's own comment and in the chapter.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### Four rounds back: the map becomes a window of ground round the body (29cd91e)
+### One round back: a bar is sand through, a reef is rock through (014b515)
+
+Not recorded here when it was made, so it is recorded now in two lines. A kind of
+island stated the shape of its shore and not what its ground is made of: the
+material table read height only, so over the 70 ordinals 9 of the 15 sandbars wore
+grass over soil at their crown and all 16 reefs wore grass over soil -- a rock
+shelf and a hill of earth, the same ground. `ISLE_TYPES` carries a third number now,
+`ground: {pile, crown}`: a bar is sand from the floor it stands in to its crown, a
+reef is mountain rock to its crown, and the three kinds that state no pile keep the
+height table. Measured after it, out of the cells the world holds: the **15** bar
+crowns are sand over their **2,740** dry columns and the **16** reef crowns are
+stone over **8,252**, of which **4,307** wear the sea's skin of sand at the water
+line; the three kinds that state no pile are still grass x115 / x55 / x22 with
+three cells of snow. The expected materials are written in the test rather than read
+back out of the table -- read from the table, turning a bar crown into grass moved
+the tally and the check still passed. The crown rows of all 70 islands are
+byte-identical before and after (sum 1442). Nothing
+lived on any of it yet; the round after it is the one that put something there.
+
+### Two rounds back: the surface under water hands the light back (160edcf)
+
+The question was the user's, asked over the picture the round before had just
+fixed: 这种远处的水光…水面之上这样显示我理解，但是在水底也是这个样子的吗？物理世界，
+水底也是这个样子的吗？ Over water that bright band is physical -- at a shallow angle
+a surface throws back almost everything that reaches it. Under water the same surface
+does the other thing, and the frame was not asking it at all.
+
+
+- **Where the number lives, and what the clause is.** `def(5, ...)` in `game/src/world.js`
+  now states `ior: 1.333` beside the absorption it has always stated: both are what this
+  stuff does to light, so one belongs with the other. `World.liquidIor()` reads it beside
+  `liquidAbsorb()`, `updateEnv()` carries it as `env.liqIor` beside `liqK`, and the pane
+  pass gets it as `uIor`. The law is two lines on the angle the pane already computes --
+  `float tir = uIor > 1.0 ? sqrt(max(0.0, 1.0 - 1.0 / (uIor * uIor))) : 0.0;` and
+  `if (vPan.y > 0.5 && cn < tir) F = 1.0;` -- written on the **cosine**, because `cn` is
+  the cosine between the ray and the face's own normal, and `1/ior` is the *sine* of that
+  same angle: testing against the sine would put the edge seven degrees too high. With no
+  liquid in the frame `uIor` is **1**, the edge is **0**, and the clause cannot fire. No
+  new pass, no new geometry, no table: the pane already knew the angle and was being asked
+  the wrong question about it.
+- **What the new shots measure** (a new step, `theSurfaceUnderWaterHandsTheLightBack`). It
+  first searches the authored square for the longest run of open water the valley has --
+  **58 m**, at (92.5, 78.5), surface at the sea line, four metres deep, nothing standing in
+  it or breaking it along the bearing -- stands a lens **30 cm** under that, and reads the
+  frame *by the angle each of its rows is drawn at*, because a law about an angle can only
+  be bounded against an angle. Level: the whole of the frame above the eye line lies inside
+  the closed fan, and it holds **0** pixels brighter than the colour of the water it stands
+  in, its brightest pixel being that water's own **53**. The same face asked of air
+  (`env.liqIor = 1`, nothing else touched): **62,741** pixels over the water's colour,
+  **119** at the brightest, the sky beginning at **7.8 deg**. The same lens pitched up
+  **0.62 rad**, so that the frame spans angles on both sides of the edge: the sky begins at
+  **41.4 deg**, and the step bounds that measured angle against the index's own arithmetic
+  computed in the rig (`law: {ior: 1.333, criticalDeg: 48.6, edgeElevDeg: 41.4}`); the air
+  control begins at **7.7**. And the control that keeps this from being a darkening pass:
+  the same place **30 cm over** the skin is pixel for pixel the frame it was, index on or
+  off -- **6,063** pixels of sky, brightest **255**.
+- **This change moved the last round's figures, and they are re-pinned where they stand.**
+  Handing the light back below 41.4 deg is exactly what those frames were missing a little
+  of. The sea-floor lens's above-eye-line half, whose brightest read **55** against its
+  water's **53**, now reads **53** -- that water's own **53**, with nothing left over. The
+  mirror of an eye built for the dark, worn in the sun, was a median of **85** above its
+  eye line against **81** under it; it is **83** against **81**, and the point that round
+  made holds tighter for it -- with that mirror read back off the block row the same half
+  lands on the row's raw **53**, where it used to read **56** with sky leaking through it.
+  The looking-up control's mean moved **67.6-67.7 -> 65.9**. The counts that round quoted
+  for its two defects -- **0 / 517 / 961 / 1,403** pixels and `groundEdge` **224** -- did
+  not move, and both full runs of the suite print those bytes identically.
+  One figure in the chapter turned out to be quoted from nothing: "with the sun over it
+  that upper half holds **2,474** pixels over the water's colour, **106** of them over
+  200/255 and its brightest at **233**" is printed by no step, on this tree or on the one
+  before it. It is replaced with what the step does print -- that half's brightest **113**
+  against its middle's **83**, **27** pixels of that quarter of a million over the water's
+  colour -- which carries the same claim (the measure of a surface is the middle of its
+  half, never its brightest pixel) and can be checked against a log.
+- **A cause that was nearly written down wrong.** The bright count of a row climbs over
+  some twenty degrees rather than snapping at 41.4, and the cause first drafted for that --
+  the water eating the sky, or the basin cutting the bearings -- is wrong. A row of the
+  test's 900x560 frame is not one angle: with a **64 deg** vertical field and that aspect
+  the horizontal half-field is **45.1 deg**, so the row whose middle stands at 42.7 deg has
+  its outermost columns at **28.7 deg**, still inside the closed fan. The projection says
+  those columns clear the fan once the row's middle reaches **62.6 deg**, and the first row
+  the rig samples that the frame shows entirely as sky is **62.9**. The rig reports the
+  middle of a row, which is why the angle it bounds is the index's to the decimal. Written
+  into the chapter rather than left out: a wrong cause costs as much as a wrong number.
+- **Two things the round got wrong on the way, both kept visible.** (1) A word inside a
+  block definition's own comment is a field to `game/test/reach.js`: the first version of
+  the water row's comment ended a sentence with the word `existence` followed by a colon,
+  and the run reported `DEAD BLOCK FIELD existence` over a line claiming 18/18 declared
+  fields read. The comment is reworded; the test is right to be that crude, and it is the
+  only thing that would ever notice such a collision. (2) The first of the full runs failed
+  one check -- the island streamer's **4 us** per column bound came back at **9.77**, with a
+  cold fill of **7.9 ms** -- on a machine at load average **11**; the same tree at load **2**
+  came back inside every bound, **2.2 ms** for that same worst chunk. That is the machine,
+  and it is written here so the next session does not read it as a regression in the ground.
+- **What the round deliberately does not claim.** The crossing is not bent. No ray is
+  refracted anywhere in this renderer, so the sky that comes through the open fan is the
+  sky along the straight line rather than the whole outside world folded into a **48.6 deg**
+  window -- Snell's window is not in the code, and the chapter says so where the law
+  stands. The surface's tilt is asked nowhere in the water's shading, so the mirror is
+  flat and there is no glitter and no caustics on the bed. And the mirror handed to a lens
+  under water is the water's own colour, not a picture of the lakebed at that angle. Those
+  are collected as **28** rather than left buried inside a closed issue.
+- **Gates.** `node tools/extract-comments.js` -> `[]`, `occurrences: 0, unique: 0`; the
+  commit message carries no non-ASCII; `docs-sync.js` reports no disagreement and
+  `docs-drift.js` detects every injected drift; `bash game/test/all.sh` **10/10** twice on
+  this tree, each run followed by `grep -c "CHECK FAILED" /tmp/frutaria-play.log` -> **0**.
+  Those two runs print every figure of the new step and of the sea step byte for byte --
+  the only field of either that moves between them is `held`, the count of chunks the
+  world is holding, which nothing quotes -- so the chapter's numbers for this round are
+  those runs'.
+
+No block was written this round, so the authored array's hash pin (**1271637568**, read
+out of seed 20261008 before any island rule) is untouched. The new rig stands inside the
+authored lake, which is where the water's own laws are cheapest to measure; the sea past
+the square keeps the rigs the last two rounds put there.
+
+What this round leaves open, in order: the user's own queue, recorded under **25** -- next
+up its item 3, a sea turtle (wings-for-flippers, faster in water than the frog's **4.6**,
+no skin-drying clock on land, slower than **1.8** on it), the island nearest this one to be
+a sand isle carrying the turtle's fruit in sand, the main island keeping only the frog's,
+and animals in the sea at all, which is currently empty of everything but frogs; and then
+**28**, the unbent crossing -- no refraction, no Snell's window, no tilt on the surface, no
+caustics, and an underwater mirror that is a colour instead of a picture.
+
+### Six rounds back: the map becomes a window of ground round the body (29cd91e)
 
 State at time of writing, then: this round is one commit, and it changes what the minimap is.
 It was a picture: one canvas of the authored square, 160x160 cells, painted once at boot, and
@@ -2540,7 +2657,7 @@ turtle's fruit in sand, the main island keeping only the frog's, and animals in 
 which is currently empty of everything but frogs. The minimap half of that queue is closed by
 this round.
 
-### Five rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
+### Seven rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
 State at time of writing, then:
 A body whose legs are an arc was sized by the parabola -- launch squared over
 twice the gravity -- and the parabola is what the flight tends to as the frame goes to
@@ -2644,7 +2761,7 @@ no skin-drying clock on land, slower than **1.8** on it -- the island nearest th
 be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
 is currently empty of everything but frogs.
 
-### Six rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+### Eight rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
 State at time of writing, then:
 the sea. The water the last round opened out is no longer an empty field: it holds
 islands, and it holds more of them the nearer they lie to the island this square sits
@@ -2751,7 +2868,7 @@ finished.
 
 
 
-### Seven rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
+### Nine rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
 State at time of writing: this round is one commit, and it changes what the world
 *is*. The map stops being the world and becomes a square of ground with an
 address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
@@ -2904,7 +3021,7 @@ round deliberately refused to invent one.
 Read the standing contract below first: it decides whether any of this counts as
 finished.
 
-### Eight rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+### Ten rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
 State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
@@ -2993,7 +3110,7 @@ the contour probes is still unmeasured). One new one, 22's own seam: **the hand 
 in third person -- the marker now shows only where the key acts, which is what made
 that one distance and that origin visible.
 
-### Nine rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### Eleven rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -3116,7 +3233,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Ten rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Twelve rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -3290,7 +3407,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Eleven rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Thirteen rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and
@@ -3402,8 +3519,11 @@ only (CJK inside string/regex literals is fine).
   once; tests never reseed mid-suite.
 - Block ids: 1 grass, 2 dirt, 3 stone, 4 sand, 5 water, 6 trunk, 7 leaf,
   8 needles, 9 silver leaf, 12 dark brick, 16 cloud (solid false), 21 glass,
-  22 bone, 24 mountain rock, 27 dark leaf, 28 willow, 41 (non-solid, in the
-  sunken tower). `FOLIAGE = {7,8,9,27,28}`;
+  22 bone, 24 mountain rock, 27 dark leaf, 28 willow; and the fruit blocks,
+  numbered `40 + i` over the order `data/fruits.js` lists them, so **40** is
+  the frog's and **41** is the sea turtle's -- both non-solid micro boxes that
+  stand on the kind of ground their own record names (41 only on the crown of a
+  sand bar; 0 of either anywhere else). `FOLIAGE = {7,8,9,27,28}`;
   `TREE_BLOCK = {6,7,8,9,22,27,28}`.
 - Physics: `GRAVITY 23`, `MAX_FALL 42`. A body's motion lives in **one record
   per body**, and the two kinds of record have the same field names so one code

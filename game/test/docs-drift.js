@@ -46,7 +46,8 @@ const DRIFTS = [
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed stomach lets both bodies act at once.', 'cut design back in (mixed stomach)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nA mixed form is possible with the right talent.', 'cut design back in (mixed form)'],
   ['04-fruit-and-transformation.md', '### 5.1 The time bar', '### 5.1 The time bar\n\nBeast residue accumulates per form.', 'cut design back in (beast residue)'],
-  ['00-overview-and-design-pillars.md', '| Fruits | 1 | 12–16 |', '| Fruits | 3 | 12–16 |', 'scale table fruit count'],
+  ['00-overview-and-design-pillars.md', '| Fruits | 2 | 12–16 |', '| Fruits | 3 | 12–16 |', 'scale table fruit count'],
+  ['00-overview-and-design-pillars.md', '| Creatures | 2 species (2 with a fruit) |', '| Creatures | 3 species (2 with a fruit) |', 'scale table species count, and how many of them carry a fruit'],
   // the map chapter's heights, which only the world built from data/ can answer.
   // Each of these is a number the chapter carries as a measurement; none of them
   // appears in game/data/, so the table checks above cannot see any of them.
@@ -67,6 +68,20 @@ const DRIFTS = [
   ['02-map-and-scenes.md', 'foot **70 m** — has had its whole footprint (**15,421** columns)', 'foot **70 m** — has had its whole footprint (**15,422** columns)', 'the footprint of the island counted cell by cell'],
   ['02-map-and-scenes.md', 'takes 95% of the contrast off at **231 m**', 'takes 95% of the contrast off at **321 m**', 'the range at which the air gives up its contrast'],
   ['02-map-and-scenes.md', '**Greenhouse** y21', '**Greenhouse** y23', 'the row the keep greenhouse marker stands on'],
+  // the sea's own kinds bear fruit now: the census of what the piles carry, the
+  // spread over the bars, and the nearest bar this island has are all stated as
+  // counts in the chapter, and every one of them is a number only the world
+  // built from data/ can answer
+  ['02-map-and-scenes.md', '**1,233,321** of them, **304,420** standing above the water line', '**1,233,321** of them, **304,421** standing above the water line', 'the crop census: how many columns were walked and how many stand dry'],
+  ['02-map-and-scenes.md', '**2,740** such columns over the **15** bars', '**2,741** such columns over the **15** bars', 'the crop census: the sand bars\' crown and how many of them there are'],
+  ['02-map-and-scenes.md', 'from **2** cells on the least of them (ordinal 51, **47** columns of crown)', 'from **2** cells on the least of them (ordinal 51, **48** columns of crown)', 'the least a bar carries and which bar it is'],
+  ['02-map-and-scenes.md', 'The nearest island to this one is one of the bars: ordinal **1**, foot **26.5 m**', 'The nearest island to this one is one of the bars: ordinal **2**, foot **26.5 m**', 'which island is the nearest one, and that it is a bar'],
+  ['02-map-and-scenes.md', 'it carries **4** of that fruit over **107** columns of', 'it carries **4** of that fruit over **108** columns of', 'what the nearest bar actually carries'],
+  // the turtle row: the same cells the frog row is checked on, and the one row
+  // this round added
+  ['03-characters-and-creatures.md', '| 1.45 (swim 6.4; no hop at all) |', '| 1.45 (swim 6.5; no hop at all) |', 'the swim speed the turtle row prints'],
+  ['03-characters-and-creatures.md', '| turtle | 0.25 |', '| turtle | 0.26 |', 'the scale the turtle row prints'],
+  ['03-characters-and-creatures.md', '| 0.6 | 16 | 3 | Turtle Melon |', '| 0.6 | 16 | 2 | Turtle Melon |', 'the herd the turtle row prints'],
   // what the island under that door holds, and the room the town's door does
   // open onto: the chapter states both as counts, and the counts are what say
   // which of the two places may carry the word for a room

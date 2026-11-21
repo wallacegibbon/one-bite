@@ -152,7 +152,7 @@ const extents = (modelId, sc) => {
   }
   /* the same rule read off the bodies as the model builder really builds them,
      crease shades and all */
-  for (const id of ['human', 'frog']) {
+  for (const id of Object.keys(F.MODELS)) {   // every body the game can draw, not the two it had first
     let outward = 0, mine = 0;
     for (const part of F.MODELS[id].parts) {
       const m = new F.MeshBuilder();
@@ -181,7 +181,7 @@ const extents = (modelId, sc) => {
    asking the models' parts is the whole question. */
 {
   const bad = [];
-  for (const id of ['human', 'frog'])
+  for (const id of Object.keys(F.MODELS))
     if (F.MODELS[id].parts.some(p => p.emis)) bad.push(`${id} glows`);
   console.log('自发光', bad.length ? '!! ' + bad.join(', ') : 'OK 模型不带光源');
   if (bad.length) process.exitCode = 1;
@@ -689,6 +689,82 @@ console.log('水方块', water);
       (TYPES[k].ground ? ` 基${NAME[TYPES[k].ground.pile]}/顶${NAME[TYPES[k].ground.crown]}` : ' 高度表') +
       ` 查${asked[k] || 0}柱 顶` + Object.entries(crownTally[k] || {}).map(([b, c]) => `${NAME[b]}x${c}`).join('/')).join(' | '),
     `${columns} 柱`,
+    bad.length ? '!! ' + bad.slice(0, 4).join('; ') + `（共 ${bad.length} 处不对）` : 'OK');
+  if (bad.length) process.exitCode = 1;
+}
+
+/* A fruit that grows in a kind of ground. The valley's fruit stands in the soil
+   the height table makes; the second fruit the data carries grows nowhere in that
+   table -- it grows on the dry sand at the crown of a sand bar, which is a kind
+   of island and not a place. One rule plants it (worldgen.js `cropAt`), asked by
+   the only code that runs out there, and it asks two questions of the column: is
+   the ground dry, and is it the ground the record names. What is held here is
+   that claim over the whole reach the map chapter states -- every column of every
+   one of the 70 islands, read out of the cells the world builds for them:
+   the dry columns each kind has, the fruit cells each kind has, that every one of
+   the bars carries some of it, that no other kind carries any of it, that the
+   nearest bar to this island carries some of it, and that the authored square --
+   this island's own ground, counted by the census at the top of this file --
+   holds none of it. The last of those is the other half of the claim: the ground
+   the map authored keeps growing only the fruit that grows in ground. */
+{
+  const SEA = F.WORLD.sea, TYPES = F.ISLE_TYPES, bad = [];
+  const BY_BLOCK = {};
+  for (const f of F.FRUITS) if (f.bear) BY_BLOCK[F.FRUIT_BLOCK_REV[f.id]] = f;
+  const kind = {}, perBar = [];
+  let cols = 0, dry = 0, crop = 0, onWet = 0;
+  for (let n = 1; n <= 70; n++) {
+    const isle = F.isleRecord(n);
+    if (isle.r <= 0) continue;
+    const t = kind[isle.type] = kind[isle.type] || { isles: 0, cols: 0, dry: 0, crop: {} };
+    t.isles++;
+    const R = Math.ceil(isle.r), cx = Math.floor(isle.x), cz = Math.floor(isle.z);
+    let mine = 0, mineDry = 0;
+    for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) {
+      const x = cx + dx, z = cz + dz;
+      if (Math.hypot(x + 0.5 - isle.x, z + 0.5 - isle.z) >= isle.r) continue;
+      const under = F.islandUnder(x, z);
+      if (!under || under.isle.id !== isle.id) continue;   // an overlapping dome owns this column
+      cols++; t.cols++;
+      const h = F.landHeight(x, z);
+      if (h <= SEA) continue;                       // the foot: under the sea, nothing bears
+      dry++; t.dry++; mineDry++;
+      const b = w.get(x, h + 1, z);
+      if (b === 5) { onWet++; continue; }           // a dry crown with water over it: never
+      const f = BY_BLOCK[b];
+      if (!f) continue;
+      crop++; mine++; t.crop[f.id] = (t.crop[f.id] || 0) + 1;
+      /* the cell it stands on is the crown the kind states, and the kind is one
+         the record names: both halves of the rule in one place */
+      const says = TYPES[isle.type].ground;
+      if (says && w.get(x, h, z) !== says.crown && h > SEA + 1)
+        bad.push(`结果 ${x},${z} 脚下 y${h} 是 ${w.get(x, h, z)}，${isle.type} 的顶是 ${says.crown}`);
+      if (f.habitat.indexOf(isle.type) < 0)
+        bad.push(`${f.cn} 长在 ${isle.type} 上，它的记录只写 ${f.habitat.join('/')}`);
+    }
+    if (isle.type === 'sandbar') {
+      perBar.push({ n, at: [cx, cz], ex: isle.x, ez: isle.z, foot: +isle.r.toFixed(1), dry: mineDry, crop: mine });
+      if (!mine) bad.push(`沙洲 ${n}（${cx},${cz}）顶上是干的（${mineDry} 柱）却没有结果`);
+    }
+  }
+  /* the nearest bar to this island, and what it carries */
+  let near = null;
+  for (const b of perBar) {
+    const d = Math.hypot(b.ex - F.COAST.cx, b.ez - F.COAST.cz);
+    if (!near || d < near.d) near = { n: b.n, at: b.at, foot: b.foot, d: Math.round(d), crop: b.crop };
+  }
+  if (near && !near.crop) bad.push(`最近的沙洲 ${near.n} 上没有结果`);
+  for (const f of F.FRUITS) {
+    if (!f.bear || !f.habitat.some(h => TYPES[h])) continue;      // grows in ground, not in a kind
+    if (counts[f.id]) bad.push(`主岛上长了 ${counts[f.id]} 个 ${f.cn}`);
+  }
+  const show = k => `${k} 岛${kind[k].isles} 柱${kind[k].cols} 干${kind[k].dry} 结果` +
+    (Object.keys(kind[k].crop).length ? Object.entries(kind[k].crop).map(([i, c]) => `${i}x${c}`).join('/') : '0');
+  console.log('外海结果', Object.keys(TYPES).map(show).join(' | '),
+    `共 ${crop} 格（${cols} 柱里 ${dry} 干柱；水面上的结果 ${onWet}）`,
+    `每座沙洲 干柱/结果 ${perBar.map(b => `${b.n}:${b.dry}/${b.crop}`).join(' ')}`,
+    `最近沙洲 ${near.n} @${near.at} 脚${near.foot}m 距${near.d}m 结果${near.crop}`,
+    `主岛 ${Object.entries(counts).map(([i, c]) => `${i}x${c}`).join(' ')}`,
     bad.length ? '!! ' + bad.slice(0, 4).join('; ') + `（共 ${bad.length} 处不对）` : 'OK');
   if (bad.length) process.exitCode = 1;
 }

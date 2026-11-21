@@ -172,6 +172,26 @@
     if (rise <= arcApex(hop.up, dt) - STEP_CLEAR) return hop.up;
     return rise <= hopReach(hop, dt) ? launchForApex(rise + STEP_CLEAR, dt) : 0;
   }
+  /* Whether a rise above the water line is ground this body's record will stand
+     on. A `habitat` that names kinds of the sea's ground -- keys of ISLE_TYPES in
+     src/worldgen.js, the same words the fruit records of that animal use -- says
+     two things at once: the ground this animal climbs up on, and, because it
+     names it, the ground it does not. The sea such an animal swims is not a place
+     it may leave onto anything: ground above the water line belongs to it only
+     where the pile the world raised there is of a kind the record names, and
+     anywhere else the beach is a wall and the contour below takes the body round
+     it the way it takes any other wall round. Descent and level walking are not
+     asked, so nothing this law stops is ever trapped by it: it stops going up.
+     A record that names no kind of sea ground -- every animal of the valley's
+     land, whose `habitat` names places -- is not asked at all, and walks the
+     valley exactly as it always did. */
+  function dryGroundNamed(sp, x, z) {
+    const kinds = [];
+    for (const h of sp.habitat || []) if (N.ISLE_TYPES[h]) kinds.push(h);
+    if (!kinds.length) return true;
+    const pile = N.islandUnder(x, z);
+    return !!pile && kinds.indexOf(pile.isle.type) >= 0;
+  }
   /* ---------------- the arc: one reading, both bodies ----------------
      A body whose record says its legs are an arc covers ground in arcs and
      nowhere else. There are three ways a body of that shape moves, a frame is
@@ -548,6 +568,11 @@
          back, and it is what tells a body built for water whether its legs are
          trailing behind it or standing under it. */
       this.held = 0;
+      /* Whether this body has water to push at all: in it, and off its bottom.
+         The two are the same answer for a body the water holds up, and they are
+         not the same question -- see `strokeOf` in game.js. The draw reads this
+         and nothing else does. */
+      this.stroking = 0;
       /* Set by Game.die() and cleared at the top of the next frame. It is not a
          "is the player alive" flag -- dying always revives them at the town
          cellar -- it is a stop sign for the rest of the tick that killed them. */
@@ -1447,6 +1472,13 @@
          why the pose ramps instead of switching. */
       const heldWant = (this.inWater && heldUp && !this.grounded) ? 1 : 0;
       this.held += (heldWant - this.held) * Math.min(1, dt * 6);
+      /* and the stroke's own gate, asked of the same two facts without the hold:
+         a body in the water and not standing on its bottom has water in front of
+         it. Eased for the same reason the hold is: the `grounded` flag flickers
+         for a frame at a time where a body is wading, and wings that stop and
+         start again on the frame is a body having a seizure. */
+      const strokeWant = (this.inWater && !this.grounded) ? 1 : 0;
+      this.stroking += (strokeWant - this.stroking) * Math.min(1, dt * 6);
       if (!this.grounded) this.crouch = 0;
       /* The landing's squash is spent, not stored: the frame the feet arrive is
          the frame the body is at its flattest, and the frames after it are the
@@ -1922,12 +1954,30 @@
          body's own, which is what keeps them out of one another's way. */
       this.orbit = null;
       if (spec.orbit) {
-        const zone = N.ZONE_BY_ID[spec.habitat[0]] || {};
-        const at = zone[spec.orbit.at];
-        if (at) this.orbit = { cx: at[0], cz: at[1],
-          r: spec.orbit.r0 + Math.random() * (spec.orbit.r1 - spec.orbit.r0),
-          a: Math.atan2(z - at[1], x - at[0]),
-          errand: false };      // the errand the body holds at birth is its birthplace, not an arc of the ring
+        /* The lane this body keeps for itself, and the two ways a row can say
+           where a lane is. `at` naming a landmark of the habitat's zone is the
+           one the lake uses: a circle of radius r0..r1 round that point. `at:
+           'coast'` is the one the open sea needs: there is no landmark out
+           there, and a circle of fixed radius round the island's centre is not a
+           lane the animal could keep, because the island's shore is not a circle
+           -- it runs from 126 m to 175 m out, and a ring at 140 m would put a
+           body inland on half of it and 50 m out to sea on the other. So this
+           lane is an **offset from the shore**, resolved at the bearing the next
+           arc lies on by the same rule the map's own coast polygon is drawn
+           from. */
+        const lane = spec.orbit.r0 + Math.random() * (spec.orbit.r1 - spec.orbit.r0);
+        if (spec.orbit.at === 'coast') {
+          const c = N.COAST;
+          this.orbit = { cx: c.cx, cz: c.cz, lane, coast: true,
+            a: Math.atan2(z - c.cz, x - c.cx),
+            errand: false };
+        } else {
+          const zone = N.ZONE_BY_ID[spec.habitat[0]] || {};
+          const at = zone[spec.orbit.at];
+          if (at) this.orbit = { cx: at[0], cz: at[1], r: lane,
+            a: Math.atan2(z - at[1], x - at[0]),
+            errand: false };      // the errand the body holds at birth is its birthplace, not an arc of the ring
+        }
       }
       // the vertical velocity, and the same three signals the player carries, for
       // the same reason. It has to be a number: a body that is born on land and
@@ -1951,6 +2001,8 @@
       this.bend = 0;
       // and the sixth: the water is holding this body up, not the ground under it
       this.held = 0;
+      // and the sixth's question apart from it: does this body have water to push
+      this.stroking = 0;
       // and the seventh: the same body points along the path it is taking
       this.tilt = 0;
       /* and the eighth: the surface of the step this body is in the middle of
@@ -2035,7 +2087,10 @@
                ground, and the angle the body has covered so far is not spent
                on an errand it will not take. */
             const a2 = this.orbit.a + 0.35 + Math.random() * 0.45;
-            const rr = this.orbit.r * (1 + (Math.random() * 2 - 1) * 0.05);
+            const jitter = (Math.random() * 2 - 1) * 0.05;
+            const rr = this.orbit.coast
+              ? N.shoreWater(a2) + this.orbit.lane * (1 + jitter)
+              : this.orbit.r * (1 + jitter);
             const wx = this.orbit.cx + Math.cos(a2) * rr;
             const wz = this.orbit.cz + Math.sin(a2) * rr;
             if (waterColumn(world, wx, wz) >= 0 && !bodyInSolid(world, this, wx, wz)) {
@@ -2344,15 +2399,24 @@
            into is sized from it, and the ground those arcs cover over a cycle is
            the rate the animal's row states. */
         spd = inArc ? this.arcV : ((carried || !hop) ? ask : 0);
-        /* The edge of the valley is folded into the step before anything asks
-           whether the step can be taken, not applied to the body afterwards. A
-           clamp that runs after the test tests one column and lands the body in
-           another: a body walking the west wall was tested at x=6.99 and left
-           standing in the leaves at x=7. */
-        const edge = (v, hi) => Math.max(7, Math.min(hi - 7, v));
+        /* The address a body asks about is the address it asked for. This used
+           to fold the edge of the authored square into every step -- `Math.max(7,
+           Math.min(hi - 7, v))`, and the same pair again over the body at the end
+           of the branch -- which was harmless while every animal the valley held
+           was born inside that square, and is not a law about ground. The world
+           answers any address (`World.get` builds the chunk it needs), and the
+           square's rim is inland ground, not a wall: on most bearings the shore is
+           126-175 m out, well beyond it. Measured on the first animal that lives
+           out there: a body swimming a lane 184-261 m off the shore was snapped
+           back to the rim every frame it was past it -- 116 m in one frame, the
+           worst single-frame speed the 150-second census of every body in the
+           valley reports. What a body IS bounded by is the ground its errands
+           name: the home disc picked above, or the lane of the ring it runs. That
+           is stated where the errands are picked, and nothing here gets a second
+           say in it. */
         readDeep();                 // the heading is settled; now what is in the way
-        const nx = edge(this.x + Math.sin(this.yaw) * spd * dt, world.w);
-        const nz = edge(this.z - Math.cos(this.yaw) * spd * dt, world.d);
+        const nx = this.x + Math.sin(this.yaw) * spd * dt;
+        const nz = this.z - Math.cos(this.yaw) * spd * dt;
         const mx = nx, mz = nz;
         if (this.isAquatic()) {
           /* An animal that cannot leave the water is moved by the water column,
@@ -2648,6 +2712,14 @@
                1.3 m, which a lifted body climbs, is a wall to a frog and the
                contour below takes it round. */
             if (legs && r - this.y > hopReach(hop, dt)) return null;
+            /* And a rise above the water line is only a step where the record
+               names the ground: a body the sea drives is carried up a beach it
+               does not live on by the same lift that carries it onto the sand it
+               does, and once ashore the ring it was sent to is not asked of a
+               body that is no longer in the water -- so it wandered inland and
+               spent a third of the day on ground 105 m inside the valley, a
+               distance the shore it belongs to has no bearing on at all. */
+            if (r > N.WORLD.sea && r > this.y + 0.05 && !dryGroundNamed(this.sp, Math.floor(x), Math.floor(z))) return null;
             /* A body in the middle of an arc may only be put where THAT arc
                reaches. `hopReach` is the fullest extension these legs are
                capable of: it is the right question for legs deciding what to
@@ -2712,8 +2784,8 @@
             const half = this.hl;
             for (let s = ARC_PROBE; s < len - 1e-6; s += ARC_PROBE) {
               if (s <= half + 1e-6 || (s <= ARC_PROBE + 1e-6 && sunk)) continue;
-              if (ground(edge(this.x + vx * (s / len), world.w),
-                         edge(this.z + vz * (s / len), world.d)) === null) return null;
+              if (ground(this.x + vx * (s / len),
+                         this.z + vz * (s / len)) === null) return null;
             }
             return can(x, z);
           };
@@ -2731,8 +2803,8 @@
              about the ground the animal can have. */
           const arcUp = legs ? cruiseLaunch(hop, ask, hop.period, dt) : 0;
           const span = inArc ? this.arcLeft : (legs ? arcGround(arcUp, dt) : spd * dt);
-          const px = edge(this.x + Math.sin(this.yaw) * span, world.w);
-          const pz = edge(this.z - Math.cos(this.yaw) * span, world.d);
+          const px = this.x + Math.sin(this.yaw) * span;
+          const pz = this.z - Math.cos(this.yaw) * span;
           /* The ground the body was asking to reach, asked of the whole way to it:
              a body may not be put inside rock anywhere along the path, and a face
              part of the way along it is as much a wall as a face at the end. This
@@ -2756,8 +2828,8 @@
              was launched at the ground that was there, and nothing in the air can
              change it -- so it asks nothing. */
           if (legs && !inArc) {
-            const fitsAt = (s) => along(edge(this.x + Math.sin(this.yaw) * s, world.w),
-              edge(this.z - Math.cos(this.yaw) * s, world.d)) !== null;
+            const fitsAt = (s) => along(this.x + Math.sin(this.yaw) * s,
+              this.z - Math.cos(this.yaw) * s) !== null;
             arcFit = go === null ? 0 : span;
             for (let s = span - ARC_PROBE; arcFit === 0 && s >= MIN_HOP_GROUND; s -= ARC_PROBE) {
               if (fitsAt(s)) {
@@ -2780,8 +2852,20 @@
           const stepAhead = () => {
             const ux = Math.sin(this.yaw), uz = -Math.cos(this.yaw);
             for (let d = 0.35; d <= 1.4; d += 0.35) {
-              const s = standY(world, Math.floor(this.x + ux * d), Math.floor(this.z + uz * d), this.y);
-              if (s - this.y > 0.05) return s - this.y <= LIFT_REACH ? { d: d, s: s } : null;
+              const cx = Math.floor(this.x + ux * d), cz = Math.floor(this.z + uz * d);
+              const s = standY(world, cx, cz, this.y);
+              if (s - this.y > 0.05) {
+                /* The look-ahead reads a step the body has not reached yet, so it
+                   is asked the same question the step itself is asked below: a
+                   rise above the water line on ground this record does not name is
+                   not a step, and a body that begins climbing it anyway rises in
+                   place against the face and falls back down it. Measured before
+                   that was the answer here: an animal stopped at a built bank on
+                   ground inland was lifted 0.94 m up the face of it over 138
+                   frames and dropped back to the level it started on. */
+                if (s > N.WORLD.sea && !dryGroundNamed(this.sp, cx, cz)) return null;
+                return s - this.y <= LIFT_REACH ? { d: d, s: s } : null;
+              }
             }
             return null;
           };
@@ -2902,8 +2986,8 @@
                               : [[1, 0], [-1, 0], [0, 1], [0, -1]];
             let best = null, bestDot = -2;
             for (const [ox, oz] of ways) {
-              const nx = edge(this.x + ox * reach, world.w);
-              const nz = edge(this.z + oz * reach, world.d);
+              const nx = this.x + ox * reach;
+              const nz = this.z + oz * reach;
               const c = along(nx, nz);
               /* A wall is not a way round, and for a body that climbs with a hop
                  a step is neither: the way round a bank is the flat ground beside
@@ -2946,8 +3030,9 @@
               }
             } else { this.tx = this.x; this.tz = this.z; this.pause = 0.5; }
           }
-          this.x = Math.max(7, Math.min(world.w - 7, this.x));
-          this.z = Math.max(7, Math.min(world.d - 7, this.z));
+          /* and no clamp holding the body inside the authored square: the same
+             wall the asks above used to carry, and the same answer -- the ground
+             goes on past it, and the errand is the bound. */
         }
         /* One turn budget a frame, whoever spent it. Going round an obstacle
            bends the heading as well as steering at the errand does, and the two
@@ -3105,6 +3190,12 @@
         // frog sitting on the lakebed has feet under it, and a body with feet
         // does not kick at nothing
         this.held = (holds && this.y > gy + 0.2) ? 1 : 0;
+        /* The stroke's gate, without the species test and without the depth
+           test: an animal in water and off its bottom has water in front of it,
+           and whether the column is holding it up is a separate fact. For a frog
+           the two answers are the same; for an animal that breathes air they are
+           not, and the wings have to follow the water, not the hold. */
+        this.stroking = (this.inWater && this.y > gy + 0.2) ? 1 : 0;
         if (holds) {
           /* A frog does not swim in one layer. It holds a depth of its own,
              sinks now and then and comes back up to breathe, on a cycle of its

@@ -1,8 +1,8 @@
 # 03 · Characters and Creatures
 
-Source of truth: `game/data/creatures.js` (1 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name, and `HUMAN_FORM` — the body you start in, which is a body record like the animals' and not a rendering detail).
+Source of truth: `game/data/creatures.js` (2 species + the attitude matrix + codex text) and `game/data/player.js` (the identity layer: id / epithet / name, and `HUMAN_FORM` — the body you start in, which is a body record like the animals' and not a rendering detail).
 
-**One species per ecological niche.** The valley has one opening you can wear: the shallows and the shore, and the frog takes it. There is no "second fox", and no in-between species that is "half otter, half merrow". A second niche — open water — is empty for now. The mode its animal would run on — `locomotion: 'water'`, a body placed and moved by the water column at the depth its own row states — stays measured and tested in the suite, so the animal that arrives into that water arrives into a law that already holds.
+**One species per ecological niche.** The valley has two openings you can wear. The shallows and the shore, which the frog takes; and the open water off this island's shore, which the sea turtle takes. There is no "second fox", and no in-between species that is "half otter, half merrow": the second row is a different ground and a different way of moving through it, and the two rows share nothing but the shape of a record.
 
 ## 1. Characters
 
@@ -44,9 +44,10 @@ Lookup order: `attitude[species of the player's current form]` → `attitude.hum
 
 Rows = creatures, columns = player forms. `·` = falls through to `default`.
 
-| | human | frog |
-|---|---|---|
-| Mirrorlake Frog | · | calm |
+| | human | frog | turtle |
+|---|---|---|---|
+| Mirrorlake Frog | · | calm | · |
+| Sea Turtle | · | · | calm |
 
 **Two design intentions you can read off the matrix:**
 
@@ -58,8 +59,9 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 | id | 中文 | English | Model | scale | Habitat | Activity | Speed | turn | Alert | Herd | Fruit |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6, hop 6.0–7.4) | 0.9 | 12 | 8 | Frog Pear |
+| `turtle` | 海龟 | Sea Turtle | turtle | 0.25 | the sand of a sand bar in the open sea — a kind of ground, not a place | both | 1.45 (swim 6.4; no hop at all) | 0.6 | 16 | 3 | Turtle Melon |
 
-Distribution of the 5 individuals in the valley: frog 5.
+Distribution of the 8 individuals in the valley: frog 5, turtle 3.
 
 **That table is the row, cell for cell, and `test/docs-sync.js` reads it back out
 of `game/data/creatures.js` to keep it that way.** Two numbers near it are not
@@ -67,8 +69,64 @@ the same fact and were mixed up once: the `herd` of the record is the animal's
 own — the code asks only whether it is more than one, which is whether this
 animal walks back towards the middle of its kind when it has wandered far — and
 how many bodies the valley actually holds is on no record at all, it is what
-`spawnCreatures` in `src/game.js` decides, which today is 5 frogs. So the row
-carries 8 and the valley carries 5, and the chapter's table prints the row.
+`spawnCreatures` in `src/game.js` decides, which today is 5 frogs and 3 turtles. So the
+rows carry 8 and 3 and the valley carries 5 and 3, and the chapter's table prints
+the rows.
+
+**What a row may not say.** The turtle's row states no `hop`, and what that
+leaves is different for the two bodies the row makes, because the two bodies do
+not ask the same question at a step. A form carries its own body, and a body with
+no launch has no reach: `hopReach` answers 0 and there is no way up a riser in it
+at all. Driven at a bank two metres tall it stands on the ground in every one of
+the window's **540** frames, its nose **on** the face (**0.00 m** between the
+box's own half-length and the face), with **0** frames of it inside the rock, **0**
+frames with a lift set and **0 m** of ground gained; and it never gets up the sand
+bar out in the sea either — **0** frames with a block of the world under its feet
+in 15 s of that water. An animal of the same row has no legs to launch with
+either, but a legless animal's way up a step is the lift, and the lift is now
+asked **which ground it is being asked on**: `dryGroundNamed` in `src/entities.js`
+refuses the step unless the ground under it is one of the kinds the row's
+`habitat` names, and the look-ahead that sizes a climb asks the same question,
+which it did not — before that, an animal of this record stopped at an inland bank
+and was still lifted part of the way up the face of it and dropped back again,
+because nothing had asked what kind of ground the lift was being asked on.
+Measured at the same bank since: **0 m** risen, **0** frames of climb, no arc
+at all. Put in the sea at the eight bearings of this island's own shore and sent
+25 m inland, it never once came ashore — the highest ground the column under it
+ever answered for is the sea line itself (**14**), and it stood on dry ground for
+**0** frames of the eight windows. Sent from open water **31 m** out at the bar its
+own fruit grows on, it walks up **2.5 m** onto the crown over **473** frames of
+lift, with the world under its feet for **1,033** of them, and never once an arc.
+That is the animal: it goes along, and the only ground it gets up onto is the sand
+its own record names. It is also why its `speed` is under the frog's — measured at
+**1.44 m/s** against the frog row's **1.8** — flippers over sand being dragging,
+not running — and why its front flippers are carved as the legs it stands on. Its
+`habitat` names a
+**kind of ground** (`sandbar`, a key of `ISLE_TYPES` in `src/worldgen.js`) and not
+a zone, because the claim that row exists to make is the one its fruit's record
+makes with the same word: the ground this animal climbs out onto and the ground its
+fruit grows in are one ground, and `test/node-smoke.js` asks the world whether
+that is still true. That word is now load-bearing in two places rather than one:
+the fruit is planted only on a pile of the kind its own record names (02 §3), and
+the animal's lift is refused on ground of a kind its own record does not name.
+Where it *swims* is said by `orbit`, because a lane of water is a place and a kind
+of ground is not — and `at: 'coast'` is a lane measured as
+an offset from this island's own shore, resolved at each bearing by
+`shoreWater`, the same rule the map's coast polygon is drawn from. A circle of
+fixed radius round the island's centre would not do: the water's edge on this
+island stands between **172.1 m** and **221.3 m** from that centre depending on
+which bearing it is read on, so the same ring that is open water on one bearing
+is inland on another, and the first way this lane was written — a fixed distance
+round the centre — did put the bodies inland, on ground their record does not
+name. The band the record states is **12-40 m** of offset from that shore, and
+what the bodies do with it is measured rather than assumed: a whole day of the
+valley with nobody driving, and every frame of it was spent in the water, with
+**0** frames of the world under their feet, never on the land side of the shore
+the coast rule draws, and never outside the furthest offset their own errands
+could have drawn them at plus the **31.2 m** the coast rule itself swings over
+the bearing step an errand advances. Those are the limits the day's report is
+checked against. The offsets a body is born with are drawn at random and move
+from run to run, so no run's numbers for them are quoted here.
 
 **This row is the only place an animal's motion is written, and it is read by both
 bodies.** `speed`, `swimSpeed`, `hop` (two launches and the seconds between them:

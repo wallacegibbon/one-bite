@@ -72,6 +72,68 @@
       attitude: { self: 'calm', default: 'ignore' },
       dex: '雨后整片湖岸一起叫，声音能压过钟塔。它们不喝水——它们靠皮肤喝。',
       dexEn: 'After rain the whole shore calls at once, loud enough to drown out the bell tower. They do not drink — they drink through their skin.'
+    },
+    {
+      /* niche: the open water off the island's shore, and the sand it comes out
+         onto. The valley's second animal, and the first one the sea holds.
+         `habitat` names a kind of ground and not a place: `sandbar` is a key of
+         ISLE_TYPES in src/worldgen.js. It is the same word the fruit's record
+         uses, and that is the point of writing it here -- the ground this
+         animal climbs onto and the ground its fruit grows in are one ground, and
+         a test can ask the world whether that is still true. What it swims is
+         said by `orbit` below, because a lane of water is a place and a kind of
+         ground is not. */
+      id: 'turtle', cn: '海龟', en: 'Sea Turtle', model: 'turtle', scale: 0.25,
+      habitat: ['sandbar'], active: 'both',
+      /* No `hop`, and what that leaves the body with is different for the two
+         bodies this record makes. A form with no `hop` has no launch, so its
+         `hopReach` in src/entities.js answers 0 and its body has no way up a
+         riser at all: worn as this animal's fruit, driven at a two-metre bank,
+         it stops with its nose on the face and is never once lifted in front of
+         it, and it never gets up the bar out in the sea either -- what a body is
+         made of decides that. An animal of this record has no legs to launch with
+         either, but a legless animal's way up a step is the lift, and the lift
+         is asked which ground it is being asked on (`dryGroundNamed`, same file):
+         ground this record's `habitat` names is answered, ground it does not name
+         is not. Measured: sent at a bank built inland it never leaves the ground
+         and never rises in front of the face (0 m risen, 0 frames of climb, no
+         arc); sent at the eight bearings of this island's own shore it never once
+         comes ashore; sent from open water at the bar its own fruit grows on it
+         walks up 2.5 m onto the crown over 473 frames of lift, with a block of
+         the world under its feet for 1,033 of them and never an arc. That is the
+         animal: it goes along, and the only ground it gets up onto is sand.
+         Its land speed is under the frog's on purpose -- flippers over sand are
+         dragging, not running -- and its speed through water is over the frog's,
+         because the wings are built for it and the frog's legs are not.
+         `turn` is the widest rate of heading this body can add: at its own
+         cruising rate through water that is an arc of ~10 m across, seven body
+         lengths, and it is the animal: a turtle turns the way a barn door
+         swings. It is asked at the rate the body is actually going, so at a
+         crawl the same 0.6 rad/s is a much tighter circle. */
+      locomotion: 'amphibian', speed: 1.45, swimSpeed: 6.4, turn: 0.6, alert: 16, herd: 3,
+      /* The lane it swims: so many metres off the island's own shore, all the
+         way round it, at every bearing. `at: 'coast'` is resolved by
+         src/worldgen.js's `shoreWater(bearing)` -- the same rule the map's
+         `coastShape` is drawn from -- so the lane follows the coast where it
+         actually runs instead of standing where a circle would put it. On the
+         bearings where the shore is 126 m out the lane begins 12 m past it; on
+         the ones where it runs to 175 m it begins past that. It is water the
+         whole way, and its depth is whatever the shore's own slope has at that
+         distance, which the sea floor rule bounds at ~6 m: the animal spends
+         some of its ring deep enough that the water holds it up and some of it
+         walking the bottom, and no second rule gets a say in where that line
+         falls. */
+      orbit: { at: 'coast', r0: 12, r1: 40 },
+      /* A body the water holds up hangs this far under the level the water
+         floats it at. A sea turtle lies just under the surface -- it has to
+         come up to breathe, and it does not go looking for the bottom -- so
+         this is small on purpose, and the body worn from its fruit is held at
+         the same depth by the same number. */
+      hover: 0.35,
+      fruit: 'turtlemelon',
+      attitude: { self: 'calm', default: 'ignore' },
+      dex: '它一年会上岸一次，回到它出生的那片沙上去。它在水里从不落在沙上——它落在沙上是在找那个地方。',
+      dexEn: 'It comes ashore once a year, onto the sand it was hatched on. It never settles on sand in the water — when it does, it is looking for that place.'
     }
   ];
 

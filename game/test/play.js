@@ -9352,8 +9352,16 @@ What was measured before any of this was fixed, over 180 frames of walking
       for (const c of g.creatures) {
         sweep(c, c.sp.id);
         if (!isFinite(c.x) || !isFinite(c.y) || !isFinite(c.z) || !isFinite(c.speed) || !isFinite(c.yaw)) { bad.notANumber.push(c.sp.id); continue; }
-        if (c.x < 0 || c.z < 0 || c.x >= W.w || c.z >= W.d || c.y < 0 || c.y >= W.h) bad.outside.push([c.sp.id, +c.x.toFixed(1), +c.y.toFixed(1), +c.z.toFixed(1)]);
-        const bx = Math.floor(c.x), by = Math.floor(c.y + 0.2), bz = Math.floor(c.z);
+        /* The authored square's edge is not the world's edge: the same island
+           runs down to the sea past it, and a body whose row names a kind of
+           ground out there (`habitat` holding an ISLE_TYPES key) belongs out
+           there. So the question is put to the row: a body that lives in ground
+           stays inside the authored square, and one that lives on the sea's own
+           kinds does not -- what bounds it is the lane its ring states, measured
+           below over the whole day. */
+        const roostsOut = c.sp.habitat.some(h => N.ISLE_TYPES[h]);
+        if ((!roostsOut && (c.x < 0 || c.z < 0 || c.x >= W.w || c.z >= W.d)) ||
+            c.y < 0 || c.y >= W.h) bad.outside.push([c.sp.id, +c.x.toFixed(1), +c.y.toFixed(1), +c.z.toFixed(1)]);        const bx = Math.floor(c.x), by = Math.floor(c.y + 0.2), bz = Math.floor(c.z);
         if (W.solidAt(bx, by, bz)) {
           if (N.TREE_BLOCK[W.get(bx, by, bz)]) bad.inCrown++;
           else bad.inRock.push([c.sp.id, +c.x.toFixed(1), +c.y.toFixed(1), +c.z.toFixed(1)]);
@@ -9410,6 +9418,13 @@ What was measured before any of this was fixed, over 180 frames of walking
     p.x = sp0.x; p.y = sp0.y; p.z = sp0.z; p.vx = p.vy = p.vz = 0; p.form = null;
     p.vital = 10; p.air = 999; p.dry = 0; p.fright = 0;
     const jump = { worst: 0, who: null };
+    /* Where the lane actually is. A row that states `at: 'coast'` states a
+       distance off the shore the coast rule draws, not a circle round a point:
+       so the measure is taken from where the water's edge stands on the bearing
+       the body is on (`shoreWater`), over a whole day, and the band it keeps is
+       printed. The row's own numbers -- the lane it names, plus the swing of its
+       own width the errand draws -- are what it is checked against. */
+    const lane = {};
     // a whole day of the world's clock, so the animals are seen through their whole day
     for (let i = 0; i < Math.round(N.DAY_LEN * 60); i++) {
       g.input = {};
@@ -9419,10 +9434,52 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (d > jump.worst) { jump.worst = +d.toFixed(2); jump.who = c.sp.id; }
         prevY.set(c, c.y);
       }
+      for (const c of g.creatures) {
+        if (!(c.orbit && c.orbit.coast)) continue;
+        const t = lane[c.sp.id] = lane[c.sp.id] || { off: [1e9, -1e9], frames: 0, wet: 0, dry: 0, pastSquare: 0, dryGround: 0, drawn: [1e9, -1e9] };
+        const b = Math.atan2(c.z - N.COAST.cz, c.x - N.COAST.cx);
+        const o = Math.hypot(c.x - N.COAST.cx, c.z - N.COAST.cz) - N.shoreWater(b);
+        if (o < t.off[0]) { t.off[0] = o; t.nearAt = [Math.round(c.x), Math.round(c.z)]; }
+        if (o > t.off[1]) { t.off[1] = o; t.farAt = [Math.round(c.x), Math.round(c.z)]; }
+        if (c.orbit.lane < t.drawn[0]) t.drawn[0] = c.orbit.lane;
+        if (c.orbit.lane > t.drawn[1]) t.drawn[1] = c.orbit.lane;
+        t.frames++;
+        if (c.inWater) t.wet++; else { t.dry++; if (W.get(Math.floor(c.x), Math.floor(c.y) - 1, Math.floor(c.z))) t.dryGround++; }
+        /* past the edge of the authored square -- which for an animal the sea
+           drives is where it is supposed to be: the valley's own grid is 160x160
+           and the sea past it is built from the rule as it is looked at */
+        if (c.x < 0 || c.z < 0 || c.x >= W.w || c.z >= W.d) t.pastSquare++;
+      }
+    }
+    /* What the coast rule itself allows a lane to be worth at the place a body
+       is standing: the errand that sends a body round the ring advances the
+       bearing by 0.35-0.80 rad (entities.js, the `at:'coast'` branch), and the
+       lane is measured off where the water stands on the bearing the errand was
+       picked on. Over that bearing step the shore the lane is measured from moves
+       in and out, so the band a body keeps at its own bearing is the lane it drew
+       plus that swing. It is read off the rule, not guessed. */
+    const laneRule = { step: 0.8, swing: 0, min: 1e9, max: -1e9, r1: 0 };
+    for (let d = 0; d < 360; d++) {
+      const a = N.shoreWater(d * Math.PI / 180);
+      laneRule.min = Math.min(laneRule.min, a); laneRule.max = Math.max(laneRule.max, a);
+      const b = N.shoreWater((d + laneRule.step * 57.2958) * Math.PI / 180);
+      laneRule.swing = Math.max(laneRule.swing, Math.abs(b - a));
+    }
+    for (const id of Object.keys(N.CREATURE_BY_ID)) {
+      const o = N.CREATURE_BY_ID[id].orbit;
+      if (o && o.at === 'coast') laneRule[id] = { r0: o.r0, r1: o.r1 };
+    }
+    for (const id of Object.keys(lane)) {
+      const t = lane[id];
+      t.off = [+t.off[0].toFixed(1), +t.off[1].toFixed(1)];
+      t.drawn = [+t.drawn[0].toFixed(1), +t.drawn[1].toFixed(1)];
+      t.wet = Math.round(t.wet / t.frames * 100); t.dry = 100 - t.wet;
+      t.pastSquare = Math.round(t.pastSquare / t.frames * 100);
+      t.dryGround = Math.round(t.dryGround / t.frames * 100);
     }
     g.input = inp0;
     Object.assign(p, pw);
-    return { seconds: +(g.time - t0).toFixed(1), placed, before, after: look(), jump,
+    return { seconds: +(g.time - t0).toFixed(1), placed, before, after: look(), jump, lane, laneRule,
       countsBefore: n0, countsAfter: counts(),
       logTail: g.log.slice(-6).map(l => (l.txt || l.msg || JSON.stringify(l)).slice(0, 60)),
       player: { x: +g.player.x.toFixed(1), y: +g.player.y.toFixed(2), z: +g.player.z.toFixed(1),
@@ -9457,6 +9514,23 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('the log, the scattered fruit and the queues do not grow without bound',
     soak.countsAfter.log <= 40 && soak.countsAfter.creatures === soak.countsBefore.creatures &&
     soak.countsAfter.drops <= soak.countsBefore.drops && soak.countsAfter.grow <= soak.countsBefore.grow, soak);
+  /* A row that states `at: 'coast'` keeps its bodies in the sea off this
+     island's shore, at a lane of its own measured off where the water stands. A
+     day of the valley with nobody driving: they keep the water (never a body
+     standing on ground, never a body outside the map), they stay on the sea side
+     of the shore the coast rule draws -- `off` is the distance from where the
+     water's edge stands on the bearing the body is on, so `off > 0` is "out where
+     the water is" and nothing else -- and they stay inside the outer bound their
+     own errands could have sent them to: the widest lane their records state, its
+     own 5% errand swing on it, plus the swing the coast rule itself has over the
+     bearing step an errand advances. */
+  check('the animals the sea drives keep its water for a whole day, keep the shore as land, and keep to the lane their errands were sent to',
+    Object.keys(soak.lane).length > 0 && Object.keys(soak.lane).every(id => {
+      const t = soak.lane[id], r = soak.laneRule[id];
+      return t.wet === 100 && t.dryGround === 0 && t.off[0] > 0 &&
+        t.drawn[0] >= r.r0 - 0.05 && t.drawn[1] <= r.r1 + 0.05 &&
+        t.off[1] <= t.drawn[1] * 1.05 + soak.laneRule.swing;
+    }), soak.lane && soak.laneRule);
 
   /* 11m. A body keeps the space its own trunk takes up, and it keeps it from its
      own kind as well as from the world. Every step of an animal was tested
@@ -11958,6 +12032,837 @@ What was measured before any of this was fixed, over 180 frames of walking
     shore.walk.hops >= 3 && shore.walk.apexPerHop <= shore.arc.apex + 0.06 &&
     shore.walk.maxRisePerFrame < shore.arc.launch / 60 + 0.01, shore.walk);
 
+  /* ---- the nearest island, the ground it is, and the fruit on it ----
+     The map chapter says the island nearest this one is a sand bar and that the
+     sea's own fruit grows on the dry sand at its crown (02 s3, 04 s3). Nothing
+     had asked the built world that. A fruit that grows in a kind of ground has
+     to be planted by the one rule that runs out there -- `cropAt`, asked by
+     `columnInto`, because past the authored square there is no planting pass and
+     no grove loop -- and it has to still be there when a body walks up the shore
+     it was raised out of, several hundred metres from where the game starts.
+     So this walks the whole way: the nearest bar found from the record and not
+     from an address, the chunks filled by the game's own streamer, the crown
+     counted cell by cell, the authored square counted to make sure the valley's
+     own ground still grows only the fruit that grows in soil, and then a body
+     put in the water off that bar, walked up it, and asked to pick the thing
+     that grows there with the hand the game gives it (`aimed` and `interact`,
+     the same two the E key reads). The body walked is the one the game starts
+     with, because it is the one that can step: a body worn from this animal's own
+     record is stopped by the bar's terraces exactly as it is stopped by every
+     other riser in the world, and the animal itself walks up them -- both of
+     those are measured a few steps below, in
+     `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`, at this same bar and at
+     this same water. */
+  const bar = await step('theNearestSandBarCarriesItsFruitAndABodyClimbsUpOntoIt', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch,
+      faceYaw: p.faceYaw, grounded: p.grounded, inWater: p.inWater, air: p.air, fright: p.fright,
+      form: p.form, formT: p.formT, formMax: p.formMax, vital: p.vital, dry: p.dry, time: g.time,
+      mode: g.mode, creatures: g.creatures, drops: g.drops, input: g.input,
+      inv: g.inv.slice(), diffs: g.diffs.slice(), regrow: g.regrow.slice(), log: g.log.slice(),
+      stats: JSON.parse(JSON.stringify(g.stats)) };
+    const back = () => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, vx: was.vx, vy: was.vy, vz: was.vz,
+        yaw: was.yaw, pitch: was.pitch, faceYaw: was.faceYaw, grounded: was.grounded,
+        inWater: was.inWater, air: was.air, fright: was.fright, form: was.form,
+        formT: was.formT, formMax: was.formMax, vital: was.vital, dry: was.dry });
+      Object.assign(g, { mode: was.mode, creatures: was.creatures, drops: was.drops,
+        input: was.input, time: was.time });
+      for (const k of ['inv', 'diffs', 'regrow', 'log']) {
+        g[k].length = 0; for (const it of was[k]) g[k].push(it);
+      }
+      g.stats = was.stats;
+    };
+    /* the fruit this asks for is found from the records, not named: the one that
+       grows in a kind of ground the sea makes, and the animal's row that names
+       that same kind. If the two ever stop naming one ground this says so. */
+    const FRUIT = N.FRUITS.find(f => f.bear && f.habitat.some(h => N.ISLE_TYPES[h]));
+    if (!FRUIT) return { error: 'no fruit names a kind of ground the sea makes' };
+    const ANIMAL = N.CREATURE_BY_ID[FRUIT.creature];
+    if (!ANIMAL) return { error: `the fruit ${FRUIT.id} points at no animal` };
+    const KIND = FRUIT.habitat.find(h => N.ISLE_TYPES[h]);
+    const sameGround = ANIMAL.habitat.indexOf(KIND) >= 0;
+    const BID = N.FRUIT_BLOCK_REV[FRUIT.id];
+
+    /* the nearest one of that kind, from the island this game stands on */
+    let near = null;
+    for (let n = 1; n <= 70; n++) {
+      const q = N.isleRecord(n);
+      if (!q || q.r <= 0 || q.type !== KIND) continue;
+      const d = Math.hypot(q.x - N.COAST.cx, q.z - N.COAST.cz);
+      if (!near || d < near.d) near = { d, q };
+    }
+    if (!near) return { error: `no island of kind ${KIND} in the reach the map states` };
+    const home = near.q, cx = Math.floor(home.x), cz = Math.floor(home.z);
+    const out = { fruit: FRUIT.id, animal: ANIMAL.id, kind: KIND,
+      oneGround: sameGround, block: BID,
+      isle: { ordinal: home.id, at: [cx, cz], foot: +home.r.toFixed(1),
+        fromThisIsland: Math.round(near.d) } };
+
+    /* the ground has to be built before anything stands on it or is counted on
+       it: the same streamer call the game makes when it sails there */
+    const ckx = Math.floor(home.x / W.cs), ckz = Math.floor(home.z / W.cs);
+    let asks = 0, left = 1;
+    while (left > 0 && asks < 400) { left = W.stream(R.gl, ckx, ckz, 6); asks++; }
+    out.stream = { asks, left };
+
+    /* the crown, cell by cell. The top of a column is its top SOLID cell: a bar
+       stands in the sea, so a column with water over it is the sea floor and not
+       dry ground, and calling the water the top of it is how a census comes back
+       saying a bar carries nothing. */
+    const topSolid = (x, z) => {
+      for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z)) return y;
+      return -1;
+    };
+    const RR = Math.ceil(home.r);
+    let cols = 0, dry = 0;
+    const crops = [];
+    for (let x = cx - RR; x <= cx + RR; x++) for (let z = cz - RR; z <= cz + RR; z++) {
+      if (Math.hypot(x + 0.5 - home.x, z + 0.5 - home.z) >= home.r) continue;
+      const top = topSolid(x, z);
+      if (top < 0) continue;
+      cols++;
+      if (top <= N.WORLD.sea) continue;                 // the foot: under the sea
+      dry++;
+      if (W.get(x, top + 1, z) === BID) crops.push({ x, y: top + 1, z, footing: W.get(x, top, z) });
+    }
+    out.ground = { cols, dryCols: dry, cropCells: crops.length,
+      footing: Array.from(new Set(crops.map(c => c.footing))),
+      crownTheKindSays: N.ISLE_TYPES[home.type].ground.crown,
+      waterOver: crops.filter(c => W.liquidAt(c.x, c.y, c.z)).length };
+    /* the next step asks an animal of this kind whether it climbs up onto this
+       ground, so it is handed the address rather than sent out to find it again */
+    window.__barCrown = { x: cx, z: cz, crown: topSolid(cx, cz), foot: home.r };
+
+    /* and the other half of the sentence: the ground this valley was authored
+       with grows none of it. `W.blocks` is that square; everything past its edge
+       is built from the rule when it is looked at, so this counts the authored
+       island's own cells and nothing else. */
+    let authored = 0;
+    for (let i = 0; i < W.blocks.length; i++) if (W.blocks[i] === BID) authored++;
+    out.authoredHolds = authored;
+
+    /* A body walks up the bar. It is put in the water on the side that faces
+       this island -- the shortest open approach there is, and the one the animal
+       would be swimmed up on -- and driven at the bar's middle. It is put at the
+       surface and the up key is held along with the forward one, and that is not
+         a convenience: a body that breathes air is not held up by the water, so
+       a body let go of in 6 m of sea sinks to the floor of it and drowns there
+       (measured on the tree before this: it got 277 m of the sea, 2169 frames,
+       and its body came up in the town cellar). The up key is how such a body
+       keeps its head in the air, and the moment its feet are on the bar the walk
+       takes over on its own. */
+    p.form = null; g.mode = 'play';
+    const crowd = g.creatures; g.creatures = [];      // no body in the way of the aim
+    const bearing = Math.atan2(home.z - N.COAST.cz, home.x - N.COAST.cx);
+    let start = null;
+    for (let d = Math.round(home.r) + 4; d < Math.round(home.r) + 80 && !start; d++) {
+      const x = Math.floor(home.x - Math.cos(bearing) * d), z = Math.floor(home.z - Math.sin(bearing) * d);
+      const film = W.liquidSurfaceAt(x, z);
+      if (N.landHeight(x, z) < N.WORLD.sea && film >= N.WORLD.sea)
+        start = { x: x + 0.5, z: z + 0.5, y: film - 0.5, d, film };
+    }
+    if (!start) { g.creatures = crowd; return Object.assign(out, { error: 'no water off the bar to start in' }); }
+    p.x = start.x; p.z = start.z; p.y = start.y;
+    p.vx = p.vy = p.vz = 0; p.pitch = 0; p.grounded = false; p.inWater = true;
+    p.air = p.maxAir(); p.vital = 10; p.fright = 0; p.dry = 0;
+    const yawTo = (x, z) => Math.atan2(x - p.x, -(z - p.z));
+    p.yaw = p.faceYaw = yawTo(home.x, home.z);
+    const y0 = p.y;
+    let frames = 0, onFoot = 0, inWorld = 0, sunk = 0, wet = 0, walked = 0, maxRise = 0, lastY = p.y;
+    let px = p.x, pz = p.z, stood = null, airMin = 1e9, dead = false;
+    const onDry = () => p.grounded && N.standY(W, Math.floor(p.x), Math.floor(p.z), p.y) > N.WORLD.sea;
+    const limit = 2400;
+    g.input = { fwd: 1, up: 1 };
+    for (; frames < limit; frames++) {
+      g.update(1 / 60);
+      if (p.grounded) onFoot++;
+      if (p.hits(p.x, p.y, p.z)) inWorld++;
+      airMin = Math.min(airMin, p.air);
+      if (p.dead) { dead = true; break; }
+      const gy = N.terrainY(W, Math.floor(p.x), Math.floor(p.z), Math.floor(p.y + 2));
+      if (p.y < gy - 1) sunk++;
+      if (p.inWater) wet++;
+      const dy = p.y - lastY; if (dy > maxRise) maxRise = dy;
+      lastY = p.y;
+      walked += Math.hypot(p.x - px, p.z - pz); px = p.x; pz = p.z;
+      if (onDry()) { stood = { x: p.x, y: p.y, z: p.z }; break; }
+    }
+    out.climb = { startInWater: start.d, startFilm: start.film, frames, limit, onDryGround: !!stood,
+      drowned: dead, airMin: +airMin.toFixed(1),
+      metres: +Math.hypot(p.x - start.x, p.z - start.z).toFixed(1), walked: +walked.toFixed(1),
+      heightGained: +(p.y - y0).toFixed(2), feetOnGroundFrames: onFoot, wetFrames: wet,
+      insideSolidFrames: inWorld, throughGroundFrames: sunk, maxRisePerFrame: +maxRise.toFixed(3),
+      standingAt: stood ? [+stood.x.toFixed(1), +stood.y.toFixed(2), +stood.z.toFixed(1)] : null,
+      groundUnderIt: W.get(Math.floor(p.x), Math.floor(p.y) - 1, Math.floor(p.z)) };
+
+    /* then it is walked to the nearest of them and picked. The aim is set the way
+       the mouse sets it -- the lens turned to the cell -- and the pick goes
+       through the game's own two calls, so what is proved is that the E key would
+       do it, not that a cell can be edited. */
+    const dist = (c) => Math.hypot(c.x + 0.5 - p.x, c.y + 0.5 - p.eyePos(), c.z + 0.5 - p.z);
+    let target = null;
+    for (const c of crops) if (!target || dist(c) < dist(target)) target = c;
+    if (target) {
+      for (let f = 0; f < 1200 && dist(target) > 3.4; f++) {
+        p.yaw = p.faceYaw = yawTo(target.x + 0.5, target.z + 0.5);
+        g.input = { fwd: 1 };
+        g.update(1 / 60);
+      }
+    }
+    g.input = was.input;
+    const aim = {};
+    if (target) {
+      const ey = p.eyePos();
+      const dx = target.x + 0.5 - p.x, dy = target.y + 0.5 - ey, dz = target.z + 0.5 - p.z;
+      p.yaw = Math.atan2(dx, -dz); p.faceYaw = p.yaw;
+      p.pitch = Math.atan2(dy, Math.hypot(dx, dz));
+      const a = g.aimed();
+      aim.at = a ? { kind: a.kind, x: a.at && a.at.x, y: a.at && a.at.y, z: a.at && a.at.z } : null;
+      aim.metres = +Math.hypot(dx, dy, dz).toFixed(2);
+      aim.blockInCell = W.get(target.x, target.y, target.z);
+      const had = g.inv.filter(i => i.id === FRUIT.id).length;
+      g.interact();
+      aim.picked = g.inv.filter(i => i.id === FRUIT.id).length === had + 1;
+      aim.cellAfter = W.get(target.x, target.y, target.z);
+      aim.queued = g.regrow.filter(r => r.x === target.x && r.y === target.y &&
+        r.z === target.z && r.b === BID).length;
+      aim.target = [target.x, target.y, target.z];
+      /* put it back: the bar the next reader counts is the bar the world builds */
+      W.set(target.x, target.y, target.z, BID);
+    }
+    out.pick = aim;
+    g.creatures = crowd;
+    back();
+    return out;
+  });
+  check('the nearest island of the kind the sea fruit names is found, and the animal that carries that fruit names the same ground',
+    !bar.error && bar.oneGround && bar.stream.left === 0 && bar.isle.foot > 0 &&
+    bar.isle.fromThisIsland > 0, bar);
+  check('that island is dry at its crown and the fruit stands on the crown the kind states, and the valley this game was authored with holds none of it',
+    bar.ground.cropCells > 0 && bar.ground.waterOver === 0 &&
+    bar.ground.footing.length === 1 && bar.ground.footing[0] === bar.ground.crownTheKindSays &&
+    bar.authoredHolds === 0, bar.ground);
+  check('a body put in the sea off it swims to that bar, walks up it and stands on dry ground above the water line',
+    bar.climb.onDryGround && !bar.climb.drowned && bar.climb.airMin > 0 &&
+    bar.climb.heightGained > 0 && bar.climb.insideSolidFrames === 0 &&
+    bar.climb.throughGroundFrames === 0 && bar.climb.feetOnGroundFrames > 0 &&
+    bar.climb.groundUnderIt > 0 && bar.climb.maxRisePerFrame < 0.4, bar.climb);
+  check('and it picks the thing that grows there with the hand the game gives: the crosshair answers the fruit cell, the key takes it, the cell waits for its regrowth',
+    bar.pick.at && bar.pick.at.kind === 'pick' &&
+    bar.pick.at.x === bar.pick.target[0] && bar.pick.at.y === bar.pick.target[1] &&
+    bar.pick.at.z === bar.pick.target[2] && bar.pick.blockInCell === bar.block &&
+    bar.pick.picked && bar.pick.cellAfter === 0 && bar.pick.queued === 1, bar.pick);
+
+  /* ---- a body worn from the sea's animal, on the sand and in the water ----
+     The user's whole description of this animal is a set of rates and a
+     statement about its skin: the wings stroke up and down, it is faster through
+     water than the frog, it has no clock drying it out on land, and it is slow on
+     sand. Every one of those is a number in a record now, and none of them had
+     been run. So the same body is driven on a built shelf and in open sea and
+     asked: what does it actually travel at, does it ever leave the ground, does
+     its skin dry, and how long can it stay under. The animal itself is asked the
+     same bank in its own body, because the two bodies are two implementations and
+     the honest answer is what each of them does, not what one of them implies --
+     and here what they do is not the same thing at all: one of them is stopped by
+     a riser because it has no way up a riser, and the other is stopped by it
+     because of whose ground it stands on, which is a question only the animal's
+     record can answer. The two answers are told apart below, at a bank built on
+     inland ground and at two beaches the map built. */
+  const drag = await step('theSeaTurtleBodyDragsOnSandAndSwimsThroughWater', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    const ROW = N.CREATURE_BY_ID.turtle, FROGROW = N.CREATURE_BY_ID.frog;
+    const FORM = ROW.fruit, FROGFORM = FROGROW.fruit;
+    const was = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch,
+      faceYaw: p.faceYaw, grounded: p.grounded, inWater: p.inWater, air: p.air, fright: p.fright,
+      form: p.form, formT: p.formT, formMax: p.formMax, vital: p.vital, dry: p.dry, time: g.time,
+      mode: g.mode, creatures: g.creatures, input: g.input, held: p.held, cruise: p.cruise };
+    const back = () => {
+      Object.assign(p, was); g.time = was.time; g.mode = was.mode; g.creatures = was.creatures;
+      g.input = was.input;
+    };
+    const out = { sea: N.WORLD.sea, row: { speed: ROW.speed, swim: ROW.swimSpeed, noHop: !ROW.hop,
+      frogSpeed: FROGROW.speed, frogSwim: FROGROW.swimSpeed,
+      dryTimer: N.FRUIT_BY_ID[FORM].form.dryTimer === undefined ? null : N.FRUIT_BY_ID[FORM].form.dryTimer,
+      frogDryTimer: N.FRUIT_BY_ID[FROGFORM].form.dryTimer,
+      breatheAir: N.FRUIT_BY_ID[FORM].form.breatheAir } };
+    const put = (form, x, y, z, yaw) => {
+      p.form = form; p.formT = 9999; p.formMax = 9999;
+      p.x = x; p.y = y; p.z = z; p.vx = p.vy = p.vz = 0;
+      p.pitch = 0; p.yaw = p.faceYaw = yaw;
+      p.inWater = false; p.held = 0; p.air = 999; p.vital = 10; p.grounded = true;
+      p.airAmt = 0; p.crouch = 0; p.squash = 0; p.hopT = 0; p.wind = 0; p.bank = 0; p.tilt = 0;
+      p.dry = 0; p.fright = 0; p.climbTo = null; p.climbRate = 0;
+      /* a death raised by an earlier window in this step (the breath measure
+         drowns the body it is asked of) is a stop sign that `Game.update` clears
+       the next tick -- and these windows call the body itself, not the game loop,
+       so the flag is cleared here or every window after it measures a corpse. */
+      p.dead = false;
+    };
+    const measure = (secs, inp, faceZ) => {
+      const n = Math.round(secs * 60);
+      let walked = 0, px = p.x, pz = p.z, gnd = 0, air = 0, arcs = [], prevVy = 0, wet = 0;
+      let dryMax = 0, airMin = 1e9, climb = 0, top = -9, y0 = p.y, hi = y0, inWorld = 0, face = 1e9;
+      let surfMax = -9, dryGroundFrames = 0;
+      for (let i = 0; i < n; i++) {
+        p.update(1 / 60, inp, g); g.time += 1 / 60;
+        walked += Math.hypot(p.x - px, p.z - pz); px = p.x; pz = p.z;
+        if (p.grounded) gnd++; else air++;
+        if (p.inWater) wet++;
+        if (p.hits(p.x, p.y, p.z)) inWorld++;
+        if (p.climbTo !== null) climb++;
+        if (p.vy > 0.5 && prevVy <= 0.05) arcs.push(+p.vy.toFixed(3));
+        prevVy = p.vy;
+        dryMax = Math.max(dryMax, p.dry); airMin = Math.min(airMin, p.air);
+        hi = Math.max(hi, p.y);
+        if (faceZ !== undefined) face = Math.min(face, Math.abs(p.z - faceZ));
+        const surf = N.standY(W, Math.floor(p.x), Math.floor(p.z), p.y);
+        if (surf > surfMax) surfMax = surf;
+        if (surf > N.WORLD.sea && W.get(Math.floor(p.x), Math.floor(p.y) - 1, Math.floor(p.z))) dryGroundFrames++;
+        top = Math.max(top, surf - y0);
+      }
+      return { speed: +(walked / (n / 60)).toFixed(2), onFoot: gnd, airborne: air, wet,
+        insideSolidFrames: inWorld, arcs, climbFrames: climb, groundGained: +top.toFixed(3),
+        surfMax, dryGroundFrames,
+        risen: +(hi - y0).toFixed(3), dryMax: +dryMax.toFixed(1), airMin: +airMin.toFixed(1),
+        /* how far the nose of this body ended from the face it was driven at: the
+           box's own half-length off the centre, so 0 means standing at the face
+           with its tip on it and a negative number means through it */
+        noseGap: faceZ === undefined ? null : +(face - p.size()[0] / 2).toFixed(3) };
+    };
+
+    /* ---- the bank, built, and the shelf it is built on ----
+       The same rig the valley's own bank step builds: one shelf, one riser, the
+       height built rather than hunted. The window is longer than that step's,
+       because this body is slower than either of the two it drives -- at 1.45 m/s
+       it needs four seconds just to arrive at a face three metres away. */
+    let spot = null;
+    for (let z = 12; z < W.d - 12 && !spot; z++) for (let x = 12; x < W.w - 12 && !spot; x++) {
+      const gy = N.terrainY(W, x, z, W.h - 1);
+      if (gy <= 8 || gy >= 24) continue;
+      if (W.liquidSurfaceAt(x, z) >= 0) continue;
+      let flat = true;
+      for (let dz = -7; dz <= 7 && flat; dz++) for (let dx = -3; dx <= 3; dx++)
+        if (N.terrainY(W, x + dx, z + dz, W.h - 1) !== gy) { flat = false; break; }
+      if (!flat) continue;
+      let clear = true;
+      for (let dz = -7; dz <= 2 && clear; dz++) for (let dx = -3; dx <= 3; dx++)
+        for (let dy = 0; dy <= 3; dy++) if (W.solidAt(x + dx, gy + dy, z + dz)) { clear = false; break; }
+      if (clear) spot = { x: x + 0.5, z: z + 0.5, gy, bx: x, bz: z - 4, block: W.get(x, gy - 1, z - 4) };
+    }
+    if (!spot) { back(); return Object.assign(out, { error: 'no flat shelf to build a bank on' }); }
+    const cells = [];
+    for (const dx of [-3, -2, -1, 0, 1, 2, 3]) for (const dy of [0, 1])
+      cells.push([spot.bx + dx, spot.gy + dy, spot.bz]);
+    const wasB = cells.map(c => W.get(c[0], c[1], c[2]));
+    /* the animal of the same record, in its own body, sent straight at a face.
+       The same body is asked three questions, and they are the three the row
+       makes sense of: the terraces of ground inland, which its record does not
+       name; the beach of this valley's own island, which it does not name
+       either; and the crown of the bar it does name, three hundred and eighty
+       nine metres out in the sea. A body with no launch in its record climbs
+       none of the first two and climbs the third -- and the reason is not the
+       legs, it is the ground: a legless body's way up a step is the lift, and
+       the lift is now asked which ground it is being asked on (see
+       `dryGroundNamed` in src/entities.js, and the note over the row in
+       data/creatures.js).
+       The person is put away for it and the herd centre is stood on the body
+       itself: a person standing where an animal starts is a body it fears 1 m
+       away, and it leaves the face it was asked about (the same two things the
+       valley's own bank step settles before it opens its window -- see the note
+       over `runWild` there), and a herd centre a throw away is a second errand
+       that becomes the nearer one the moment the face stops it. The draw is
+       seeded for the same reason that step seeds it: which errand an animal picks
+       when a face stops it is a draw, and this window is read to the frame. */
+    const wild = (x0, y0, z0, tx, tz, secs) => {
+      const c = new N.Creature(ROW, x0, y0, z0);
+      c.state = 'wander'; c.pause = 9999; c.orbit = null; c.pace = 1; c.sleeping = false;
+      c.tx = tx; c.tz = tz;
+      c.yaw = Math.atan2(c.tx - c.x, -(c.tz - c.z));
+      c.homeX = c.x; c.homeZ = c.z; c.hovering = false; c.buoy = 0; c.hopT = 0;
+      c.wind = 0; c.speed = 0; c.t = 0; c.diveTo = 1.6; c.diveRate = 0.1; c.phase = 0;
+      c.alarm = 0; c.bank = 0; c.bend = 0; c.tilt = 0; c.held = 0; c.airAmt = 0;
+      c.crouch = 0; c.squash = 0; c.climbTo = null; c.climbRate = 0; c.gait = null;
+      c.watchX = null; c.watchZ = null; c.watchF = 0;
+      const crowdWas = g.creatures;
+      const herdWas = g.herdCentres && g.herdCentres[ROW.id];
+      const pp = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, form: p.form };
+      g.creatures = [c];
+      if (g.herdCentres) g.herdCentres[ROW.id] = { x: c.x, z: c.z, n: 1 };
+      p.form = null; p.x = 4.5; p.z = 4.5; p.y = W.h - 3; p.vx = p.vy = p.vz = 0;
+      const y1 = c.y;
+      let walked = 0, qx = c.x, qz = c.z, climb = 0, arcs = [], prevVy = 0, hi = y1, top = -9;
+      let wet = 0, dry = 0, onDryGround = false, inRock = 0;
+      /* `surfMax` is the highest ground the column under the body ever answered
+         for, in world heights and not relative: whether a body came ashore is a
+         question about the water line, and a number measured off wherever the
+         body happened to be put down is not it. `dryGroundFrames` counts the
+         frames it was actually stood on ground above that line -- a block of the
+         world under its own feet -- which is the same reading the day soak of the
+         valley takes, so the two are the same measurement. */
+      let surfMax = -9, dryGroundFrames = 0;
+      const rnd = Math.random;
+      let sd = 20240921;
+      Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+      for (let i = 0; i < secs * 60; i++) {
+        c.update(1 / 60, p, W, g); g.time += 1 / 60;
+        walked += Math.hypot(c.x - qx, c.z - qz); qx = c.x; qz = c.z;
+        if (c.climbTo !== null) climb++;
+        if (c.vy > 0.5 && prevVy <= 0.05) arcs.push(+c.vy.toFixed(3));
+        prevVy = c.vy;
+        hi = Math.max(hi, c.y);
+        if (c.inWater) wet++; else dry++;
+        const surf = N.standY(W, Math.floor(c.x), Math.floor(c.z), c.y);
+        if (c.grounded && surf > N.WORLD.sea) onDryGround = true;
+        if (surf > N.WORLD.sea && W.get(Math.floor(c.x), Math.floor(c.y) - 1, Math.floor(c.z))) dryGroundFrames++;
+        if (W.solidAt(Math.floor(c.x), Math.floor(c.y + 0.2), Math.floor(c.z))) inRock++;
+        top = Math.max(top, surf - y1);
+        surfMax = Math.max(surfMax, surf);
+      }
+      Math.random = rnd;
+      g.creatures = crowdWas;
+      if (g.herdCentres) g.herdCentres[ROW.id] = herdWas;
+      Object.assign(p, pp);
+      return { secs, speed: +(walked / secs).toFixed(2), risen: +(hi - y1).toFixed(3),
+        groundGained: +top.toFixed(3), surfMax, dryGroundFrames,
+        climbFrames: climb, arcs, wet, dry, inRock,
+        onDryGround, end: [+c.x.toFixed(2), +c.y.toFixed(2), +c.z.toFixed(2)] };
+    };
+    out.bank = { spot: [spot.x, spot.gy, spot.z] };
+    for (const h of [0, 1, 2]) {
+      cells.forEach(c => W.set(c[0], c[1], c[2], (c[1] === spot.gy ? 1 : 2) <= h ? spot.block : 0));
+      put(FORM, spot.x, spot.gy + 0.0005, spot.z + 1.2, Math.atan2(spot.bx - spot.x, -(spot.bz - spot.z)));
+      /* the face of the bank is the far edge of the row it is built in */
+      const worn = measure(9, { fwd: 1 }, spot.bz + 1);
+      out.bank['h' + h] = { worn, animal: wild(spot.x, spot.gy + 0.0005, spot.z + 1.2, spot.bx + 0.5, spot.bz - 4.5, 9) };
+    }
+    cells.forEach((cc, i) => W.set(cc[0], cc[1], cc[2], wasB[i]));
+
+    /* ---- the two beaches: the ground its row names, and the ground it does not ----
+       A bank built on inland ground is an unnatural thing to ask a sea animal
+       about, and the day soak of the valley is what made it worth asking: the
+       three bodies of this kind spent a third of a day on dry ground 105 m
+       inside an island they do not live on, because the lift that carries a
+       legless body up a riser asked nothing about whose ground it was, and once
+       a body is out of the water the ring it belongs to is not asked of it at
+       all. So the same body is now put in the sea twice and asked to go inland:
+       at this valley's own shore, whose ground its record does not name, and at
+       the bar out in the sea whose sand it does name and whose fruit it carries.
+       Both are asked of ground the map built, not of a bank built for the test,
+       and the address of the bar is taken from the step above -- found from the
+       records, not written down here. The animal is sent a few metres past the
+       crown rather than at its middle because arrival at a target stops a body
+       walking, and whether it can *stand* on that crown is a question about the
+       frames it is moving on it. */
+    const bc = window.__barCrown;
+    if (bc) {
+      const bb = Math.atan2(bc.z - N.COAST.cz, bc.x - N.COAST.cx);
+      let at = null;
+      for (let d = Math.round(bc.foot) + 4; d < Math.round(bc.foot) + 60 && !at; d++) {
+        const x = Math.floor(bc.x - Math.cos(bb) * d), z = Math.floor(bc.z - Math.sin(bb) * d);
+        const film = W.liquidSurfaceAt(x, z);
+        if (N.landHeight(x, z) < N.WORLD.sea && film >= N.WORLD.sea) at = { x: x + 0.5, z: z + 0.5, film, d };
+      }
+      out.bar = at
+        ? wild(at.x, at.film - 0.5, at.z, bc.x + Math.cos(bb) * 5, bc.z + Math.sin(bb) * 5, 30)
+        : { error: 'no water off the bar to start the animal in' };
+      out.bar.crown = bc.crown;
+      out.bar.startFrom = at ? at.d : null;
+      /* and the body worn from the same record, put in the same water and driven
+         the same way: it has the same wings and the same rate through the sea, and
+         no way up a riser at all. What its body is made of decides that, not what
+         its ground is made of -- which is the difference between the two bodies
+         this step is reading, and the reason the fruit of this animal is picked in
+         the step above by the body the game starts with. The window is short
+         because a body that breathes air has eighteen seconds of it under the
+         surface, and the open water here is two seconds of swimming. */
+      if (at) {
+        put(FORM, at.x, at.film - 0.5, at.z, Math.atan2(bc.x + 0.5 - at.x, at.z - bc.z - 0.5));
+        out.bar.worn = measure(15, { fwd: 1, up: 1 });
+        out.bar.worn.startFrom = at.d;
+      }
+    } else out.bar = { error: 'the bar step found no bar' };
+    /* the same question at the shore this game stands on, at every bearing that
+       has open water four metres off the land and dry ground 25 m inland */
+    out.shore = [];
+    for (let deg = 0; deg < 360; deg += 45) {
+      const th = deg * Math.PI / 180, wr = N.shoreWater(th);
+      const x = Math.floor(N.COAST.cx + Math.cos(th) * (wr + 4)) + 0.5;
+      const z = Math.floor(N.COAST.cz + Math.sin(th) * (wr + 4)) + 0.5;
+      const film = W.liquidSurfaceAt(Math.floor(x), Math.floor(z));
+      const ix = Math.floor(N.COAST.cx + Math.cos(th) * (wr - 25));
+      const iz = Math.floor(N.COAST.cz + Math.sin(th) * (wr - 25));
+      if (film < N.WORLD.sea || N.landHeight(ix, iz) <= N.WORLD.sea) continue;
+      const r = wild(x, film - 0.5, z, ix, iz, 20);
+      r.deg = deg; out.shore.push(r);
+    }
+    if (!out.shore.length) out.shore = [{ error: 'no shore with open water outside and dry ground inland' }];
+
+    /* ---- the rates: sand and open sea ----
+       The straight run on sand is measured on the shelf with nothing built, over
+       a window long enough for a slow body to ramp up in. The swim is measured in
+       the sea off this island's own shore, driven with the forward key alone, and
+       it is driven that way because of the thing the paragraph below about breath
+       says: a body that breathes air is not held up by the water, so this one is
+       measured going along the seabed, and the height it ends at is reported
+       beside the speed rather than hidden. Coming up for air is a separate fact
+       and is measured separately, with the up key held. */
+    put(FORM, spot.x, spot.gy + 0.0005, spot.z - 6, Math.PI);
+    out.sand = measure(6, { fwd: 1 });
+    const C = N.COAST;
+    let lane = null;
+    for (let deg = 0; deg < 360 && !lane; deg += 5) {
+      const th = deg * Math.PI / 180, wr = N.shoreWater(th);
+      const x = Math.floor(C.cx + Math.cos(th) * (wr + 30)) + 0.5;
+      const z = Math.floor(C.cz + Math.sin(th) * (wr + 30)) + 0.5;
+      const s = W.liquidSurfaceAt(Math.floor(x), Math.floor(z));
+      /* open water, not a shore shelf: the water has to hold a body up here,
+         which is the same two-block question the world asks elsewhere */
+      if (s >= N.WORLD.sea && N.groundY(W, Math.floor(x), Math.floor(z), s) <= s - 2) lane = { x, z, y: s - 0.6 };
+    }
+    if (!lane) { back(); return out; }
+    out.seaAt = [lane.x, lane.y, lane.z];
+    for (const form of [FORM, FROGFORM]) {
+      put(form, lane.x, lane.y, lane.z, Math.PI / 2);
+      const r = measure(8, { fwd: 1 });
+      r.endY = +p.y.toFixed(2);
+      r.bedTop = N.groundY(W, Math.floor(p.x), Math.floor(p.z), p.y);
+      r.film = W.liquidSurfaceAt(Math.floor(p.x), Math.floor(p.z));
+      put(form, lane.x, lane.y, lane.z, Math.PI / 2);
+      r.withUpKey = measure(4, { fwd: 1, up: 1 });
+      r.headOut = !p.headWater;
+      out['swim' + (form === FORM ? 'Turtle' : 'Frog')] = r;
+    }
+    /* ---- breath ---- */
+    put(FORM, lane.x, lane.y, lane.z, Math.PI / 2);
+    let drown = -1;
+    for (let i = 0; i < 60 * 40; i++) {
+      p.update(1 / 60, {}, g); g.time += 1 / 60;
+      if (drown < 0 && p.air <= 0) drown = +(i / 60).toFixed(1);
+    }
+    out.breath = { wornTurtleToZeroAir: drown, ceiling: p.maxAir(),
+      headUnderWater: !!p.headWater, frogAir: 999 };
+
+    /* ---- the skin ----
+       Two hundred seconds on dry ground with nobody holding a key. The record
+       that states no `dryTimer` never accumulates the clock at all -- that is
+       what the `else this.dry = 0` in the breathing block of entities.js is --
+       and the control for it is the body whose record does state one, measured in
+       the same window. */
+    out.skin = {};
+    for (const form of [FORM, FROGFORM]) {
+      put(form, spot.x, spot.gy + 0.0005, spot.z, 0);
+      let dryMax = 0, vital = 10, dead = false;
+      for (let i = 0; i < 60 * 200; i++) {
+        p.update(1 / 60, {}, g); g.time += 1 / 60;
+        dryMax = Math.max(dryMax, p.dry); vital = p.vital; dead = !!p.dead;
+      }
+      out.skin[form] = { dryMax: +dryMax.toFixed(1), vital: +vital.toFixed(1), dead };
+    }
+    back();
+    return out;
+  });
+  check('a body with no launch in its record never leaves the ground and never gets up the valley terraces: on sand it stops at the face, its nose on it and none of it through',
+    !drag.error && drag.bank.h1.worn.airborne === 0 && drag.bank.h1.worn.arcs.length === 0 &&
+    drag.bank.h1.worn.groundGained === 0 && drag.bank.h2.worn.groundGained === 0 &&
+    drag.bank.h1.worn.climbFrames === 0 && drag.bank.h1.worn.insideSolidFrames === 0 &&
+    Math.abs(drag.bank.h1.worn.noseGap) <= 0.02, drag.bank);
+  check('the animal of the same record is stopped at the same faces, and is not raised in front of them either: that ground is not ground its row names',
+    drag.bank.h1.animal.arcs.length === 0 && drag.bank.h1.animal.groundGained === 0 &&
+    drag.bank.h1.animal.risen === 0 && drag.bank.h1.animal.climbFrames === 0 &&
+    drag.bank.h2.animal.groundGained === 0 && drag.bank.h2.animal.climbFrames === 0 &&
+    drag.bank.h2.animal.risen === 0 && drag.bank.h2.animal.arcs.length === 0, drag.bank);
+  check('and it walks up the bar its own fruit grows on: from open water onto the crown above the sea, on a lift and never an arc, with the world under its feet',
+    !drag.bar.error && drag.bar.dryGroundFrames > 0 && drag.bar.surfMax > drag.sea &&
+    drag.bar.climbFrames > 0 && drag.bar.arcs.length === 0 && drag.bar.inRock === 0,
+    drag.bar);
+  check('and the beaches of ground it does not name are the wall they are: at every shore it was put in the sea and sent inland it never once came ashore',
+    drag.shore.length > 0 && !drag.shore[0].error &&
+    drag.shore.every(r => r.dryGroundFrames === 0 && r.surfMax <= drag.sea &&
+      r.climbFrames === 0 && r.arcs.length === 0 && r.inRock === 0), drag.shore);
+  check('the body worn from that same record swims to that same bar and never gets up it: what a body is made of decides that, and not what the ground under it is made of',
+    drag.bar.worn && drag.bar.worn.wet > 0 && drag.bar.worn.dryGroundFrames === 0 &&
+    drag.bar.worn.surfMax <= drag.sea && drag.bar.worn.arcs.length === 0 &&
+    drag.bar.worn.climbFrames === 0 && drag.bar.worn.insideSolidFrames === 0 &&
+    drag.bar.worn.airMin > 0, drag.bar.worn);
+  check('it drags on sand: the rate its row states, and under the rate the frog walks at',
+    drag.sand.speed >= drag.row.speed * 0.9 && drag.sand.speed < drag.row.frogSpeed, drag.sand);
+  check('and it is the faster body through water: over the frog worn from its own record, and over what the frog row states',
+    drag.swimTurtle.wet > 0 && drag.swimTurtle.speed > drag.row.frogSwim &&
+    drag.swimTurtle.speed > drag.swimFrog.speed, drag);
+  /* Coming up for air costs speed, and that is the shape of the fact: a body
+     that breathes air is not held up by the water, so the stroke only works on
+     the frames the surface is over the head. Held at the surface with the up key
+     the head clears it, the frames under the surface go down, and the body goes
+     slower than it does under the surface -- the cost is visible, not hidden. */
+  check('and it comes up for air when the up key is held: the head clears the surface, and the body that spends frames with the air over its head goes slower than the one that stays under',
+    drag.swimTurtle.headOut && drag.swimTurtle.withUpKey.wet < drag.swimTurtle.wet &&
+    drag.swimTurtle.withUpKey.speed < drag.swimTurtle.speed,
+    { held: drag.swimTurtle.withUpKey, under: drag.swimTurtle });
+  check('no clock dries this skin: on dry ground for 200 s it never accumulates one, while the body whose record does runs past its own',
+    drag.row.dryTimer === null && drag.skin.turtlemelon.dryMax === 0 && !drag.skin.turtlemelon.dead &&
+    drag.skin.frogpear.dryMax > drag.row.frogDryTimer, drag.skin);
+  check('and it holds its breath like a person and not like the frog: its air runs out under the surface, the frog body has no ceiling at all',
+    drag.breath.wornTurtleToZeroAir > 0 && drag.breath.wornTurtleToZeroAir <= drag.breath.ceiling + 1.5,
+    drag.breath);
+
+  /* ---- the stroke the wings draw ----
+     The model is data, and a number written in it is a claim: `game/src/models.js`
+     states the arc of this wing, the angle the blade swings through, the rate it
+     does it at, and that the two wings are one pair. Nothing had measured any of
+     that. This step takes the state the render hands the meshes -- a body driven
+     through open sea, the draw forced, the state captured off `partMatrix` itself
+     -- and walks the stroke's own clock forward from it, exactly as the render
+     would have: one state per frame, both wings asked through that same state.
+     That last part is not a style. `localOf` builds a parent's matrix out of
+     module scratch the next call reuses, so asking one wing for 480 frames and
+     the other for the 480 after them measures two different bodies: the same tree
+     read that way reported the two wings of one turtle 0.01 m apart in height and
+     3 % apart in the water they carried, and read the way the draw reads it they
+     are the same stroke to the metre and to the frame.
+     What is asked: that the wings are a pair (the same arc, the same frame at the
+     top of it); that the stroke is a flap and not a paddle (the tip's travel up
+     and down is many times its travel fore and aft, and the blade swings through
+     a wide angle about the body's own front-to-back axis); that its rate is the
+     table's own clock; that a body in the water that is not stroking has wings
+     that do not move at all; that a body which is turning puts one wing into the
+     water harder and swaps them when the turn swaps; and how far the drawn body
+     reaches across itself when it is carved, when it floats, and at the top of a
+     stroke -- which is the claim the note over the model makes about the swept
+     pose, and it is measured here rather than held there. */
+  const flap = await step('theSeaTurtleStrokesBothWingsTogether', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    /* the animal is found from the records, not named: the fruit that grows in a
+       kind of ground the sea makes, the row that names that ground, the model
+       that row points at. */
+    const FRUIT = N.FRUITS.find(f => f.bear && f.habitat.some(h => N.ISLE_TYPES[h]));
+    if (!FRUIT) return { error: 'no fruit names a kind of ground the sea makes' };
+    const ROW = N.CREATURE_BY_ID[FRUIT.creature];
+    if (!ROW) return { error: `the fruit ${FRUIT.id} points at no animal` };
+    const MDL = N.MODELS[ROW.model];
+    if (!MDL) return { error: `no model for ${ROW.model}` };
+    if (!N.FLAP_RATE) return { error: 'the model exports no wing clock to read a rate off' };
+    const was = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch,
+      faceYaw: p.faceYaw, grounded: p.grounded, inWater: p.inWater, air: p.air, fright: p.fright,
+      form: p.form, formT: p.formT, formMax: p.formMax, vital: p.vital, dry: p.dry, time: g.time,
+      mode: g.mode, input: g.input, tp: g.thirdPerson, frame: g._camFrame,
+      cam: { d: g.cam.d, fov: g.cam.fov } };
+    const back = () => {
+      Object.assign(p, was); g.time = was.time; g.mode = was.mode; g.input = was.input;
+      g.thirdPerson = was.tp; g._camFrame = was.frame;
+      g.cam.d = was.cam.d; g.cam.fov = was.cam.fov;
+    };
+    /* open sea, deep enough to hold a body up, off this island's own shore --
+       the same search the step above makes, because the same water is being
+       asked about */
+    let lane = null;
+    for (let deg = 0; deg < 360 && !lane; deg += 5) {
+      const th = deg * Math.PI / 180, wr = N.shoreWater(th);
+      const x = Math.floor(N.COAST.cx + Math.cos(th) * (wr + 30)) + 0.5;
+      const z = Math.floor(N.COAST.cz + Math.sin(th) * (wr + 30)) + 0.5;
+      const s = W.liquidSurfaceAt(Math.floor(x), Math.floor(z));
+      if (s >= N.WORLD.sea && N.groundY(W, Math.floor(x), Math.floor(z), s) <= s - 2) lane = { x, z, y: s - 0.6 };
+    }
+    if (!lane) { back(); return { error: 'no open sea to swim in' }; }
+    const put = (x, y, z, yaw) => {
+      p.form = FRUIT.id; p.formT = 9999; p.formMax = 9999;
+      p.x = x; p.y = y; p.z = z; p.vx = p.vy = p.vz = 0;
+      p.pitch = 0; p.yaw = p.faceYaw = yaw;
+      p.inWater = false; p.held = 0; p.air = 999; p.vital = 10; p.grounded = true;
+      p.airAmt = 0; p.crouch = 0; p.squash = 0; p.hopT = 0; p.wind = 0; p.bank = 0; p.tilt = 0;
+      p.dry = 0; p.fright = 0; p.climbTo = null; p.climbRate = 0; p.dead = false;
+    };
+    /* the state the render hands the meshes, off the render itself */
+    const pm = N.partMatrix, seen = [];
+    N.partMatrix = function (o, b, e, st, ps) {
+      if (!st._loc && e.part.name === 'body' && st.t === g.time) seen.push(st);
+      return pm.apply(this, arguments);
+    };
+    const drawn = () => {
+      seen.length = 0;
+      const tp = g.thirdPerson;
+      g.thirdPerson = true;
+      g.cam.d = N.CAM.shotFor(p.size()[1], p.fov() + N.CAM.fovBump).d;
+      g.updateEnv(); g._camFrame = g.shootCamera(p); g.render(); g._camFrame = null;
+      g.thirdPerson = tp;
+      return seen.length ? Object.assign({}, seen[0]) : null;
+    };
+    const out = { seaAt: [lane.x, lane.y, lane.z] };
+    const drive = (secs, swing) => {
+      let px = p.x, pz = p.z, gone = 0;
+      for (let i = 0; i < secs * 60; i++) {
+        if (swing) { p.yaw += swing / 60; p.faceYaw = p.yaw; }
+        p.update(1 / 60, { fwd: 1 }, g); g.time += 1 / 60;
+        gone += Math.hypot(p.x - px, p.z - pz); px = p.x; pz = p.z;
+      }
+      return +(gone / secs).toFixed(2);
+    };
+    /* straight through the water: the stroke as a body going somewhere draws it */
+    put(lane.x, lane.y, lane.z, Math.PI / 2);
+    /* the scale and the box are the body's own. Read before the form is put on,
+       they are the person's, and the whole step would be measured in the wrong
+       metres: the first version of this reported a 0.18 scale and a 0.31 m
+       half-width against a model 1.07 m across. */
+    out.scale = p.bodyScale();
+    out.halfWide = p.size()[0] / 2;
+    out.rate = +(N.FLAP_RATE / (Math.PI * 2)).toFixed(2);
+    out.metresPerStroke = +(ROW.swimSpeed * Math.PI * 2 / N.FLAP_RATE).toFixed(2);
+    out.speed = drive(3);
+    out.swam = p.inWater && !p.grounded;
+    const st = drawn();
+    if (!st) { N.partMatrix = pm; back(); return Object.assign(out, { error: 'the draw handed no state for this body' }); }
+    out.handed = { swim: +(st.swim || 0).toFixed(3), move: +(st.move || 0).toFixed(3),
+      held: +(st.held || 0).toFixed(3), turn: +(st.turn || 0).toFixed(3),
+      grounded: !!st.grounded };
+
+    const parts = MDL.parts.map(q => ({ part: q, pivot: q.pivot || [0, 0, 0] }));
+    const by = {}; for (const e of parts) by[e.part.name] = e;
+    const wingNames = parts.filter(e => e.part.swimFlap && e.part.name !== 'body').map(e => e.part.name);
+    if (wingNames.length < 2) { N.partMatrix = pm; back(); return Object.assign(out, { error: 'this model has no wing pair' }); }
+    const apply = (m, q) => [m[0] * q[0] + m[4] * q[1] + m[8] * q[2] + m[12],
+      m[1] * q[0] + m[5] * q[1] + m[9] * q[2] + m[13],
+      m[2] * q[0] + m[6] * q[1] + m[10] * q[2] + m[14]];
+    const corners = (e) => {
+      const o = [];
+      for (const b of e.part.boxes)
+        for (const fx of [b[0], b[0] + b[3]])
+          for (const fy of [b[1], b[1] + b[4]])
+            for (const fz of [b[2], b[2] + b[5]]) o.push([fx, fy, fz]);
+      return o;
+    };
+    /* the same corner of each wing, in the mirror the pair is built on: outboard
+       is `-sign * x`, and the corners of one box are broken between in the same
+       order for both. "The corner with the largest |x|" picks the top corner of
+       the blade on one wing and the bottom corner of the same blade on the
+       other, and the two wings then report a difference the model never drew. */
+    const tipOf = (e) => {
+      let best = null, bs = -1e9;
+      for (const c of corners(e)) {
+        const s = -e.part.sign * c[0];
+        if (s > bs + 1e-9 || (Math.abs(s - bs) < 1e-9 && (c[1] < best[1] ||
+            (Math.abs(c[1] - best[1]) < 1e-9 && c[2] < best[2])))) { bs = s; best = c; }
+      }
+      return best;
+    };
+    const SC = p.bodyScale();
+    const cycle = (st0, mod, secs) => {
+      const acc = {};
+      for (const nm of wingNames) acc[nm] = { lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9],
+        path: 0, prev: null, wave: [], tip: tipOf(by[nm]), sh: by[nm].pivot, eMax: -9, eMin: 9 };
+      let span = 0, long = 0;
+      const ext = { xlo: 1e9, xhi: -1e9, zlo: 1e9, zhi: -1e9, yhi: -1e9 };
+      const n = Math.round(secs * 60);
+      for (let i = 0; i <= n; i++) {
+        const stf = Object.assign({}, st0, mod, { t: st0.t + i / 60, _loc: {} });
+        for (const nm of wingNames) {
+          const e = by[nm], a = acc[nm];
+          const m = N.partMatrix(N.M4.create(), N.M4.create(), e, stf, parts);
+          const q = apply(m, a.tip);
+          for (let k = 0; k < 3; k++) { a.lo[k] = Math.min(a.lo[k], q[k]); a.hi[k] = Math.max(a.hi[k], q[k]); }
+          const el = Math.atan2(q[1] - a.sh[1], Math.abs(q[0] - a.sh[0]));
+          a.eMax = Math.max(a.eMax, el); a.eMin = Math.min(a.eMin, el);
+          if (a.prev) a.path += Math.hypot(q[0] - a.prev[0], q[1] - a.prev[1], q[2] - a.prev[2]);
+          a.prev = q; a.wave.push(q[1]);
+        }
+        for (const e of parts) {
+          const m = N.partMatrix(N.M4.create(), N.M4.create(), e, stf, parts);
+          for (const c of corners(e)) {
+            const r = apply(m, c);
+            span = Math.max(span, Math.abs(r[0]));
+            long = Math.max(long, Math.abs(r[2]));
+            ext.xlo = Math.min(ext.xlo, r[0]); ext.xhi = Math.max(ext.xhi, r[0]);
+            ext.zlo = Math.min(ext.zlo, r[2]); ext.zhi = Math.max(ext.zhi, r[2]);
+            ext.yhi = Math.max(ext.yhi, r[1]);
+          }
+        }
+      }
+      const r = {};
+      for (const nm of wingNames) {
+        const a = acc[nm], mid = (a.hi[1] + a.lo[1]) / 2;
+        let cross = 0, top = 0;
+        for (let i = 1; i < a.wave.length; i++) {
+          if (a.wave[i - 1] < mid && a.wave[i] >= mid) cross++;
+          if (a.wave[i] > a.wave[top]) top = i;
+        }
+        r[nm] = { updown: +((a.hi[1] - a.lo[1]) * SC).toFixed(3),
+          foreaft: +((a.hi[2] - a.lo[2]) * SC).toFixed(3),
+          span: +((a.hi[0] - a.lo[0]) * SC).toFixed(3),
+          above: +(a.hi[1] * SC).toFixed(3), below: +(a.lo[1] * SC).toFixed(3),
+          levelDeg: +(a.eMax * 180 / Math.PI).toFixed(0), downDeg: +(a.eMin * 180 / Math.PI).toFixed(0),
+          sweepDeg: +((a.eMax - a.eMin) * 180 / Math.PI).toFixed(0),
+          waterPerS: +((a.path * SC) / secs).toFixed(2),
+          strokesPerS: +(cross / secs).toFixed(2), topFrame: top };
+      }
+      r.wings = wingNames;
+      r.body = { halfAcross: +(span * SC).toFixed(3), halfLong: +(long * SC).toFixed(3),
+        across: +((ext.xhi - ext.xlo) * SC).toFixed(3), long: +((ext.zhi - ext.zlo) * SC).toFixed(3),
+        tall: +(ext.yhi * SC).toFixed(3) };
+      return r;
+    };
+    out.stroke = cycle(st, {}, 8);
+    /* the same body in the same water with the stroke taken out of it: a turtle
+       that is not stroking is gliding, and the wings do nothing */
+    out.idle = cycle(st, { swim: 0, held: 1 }, 8);
+    /* and the model as it is carved: the water's hold taken out too, and the
+       gait's amplitude with it, so what stands is the authored pose the note
+       over the model describes -- the swept wings the other two readings are
+       measured against */
+    out.carved = cycle(st, { swim: 0, held: 0, gait: 0, move: 0, air: 0, off: 0,
+      crouch: 0, turn: 0 }, 0.05).body;
+    /* and a body that is turning: driven the way the valley's own turn step
+       drives one -- the aim swung at a steady rate, which is what makes it hold
+       an arc -- so the `turn` the draw is handed is the game's and not a number
+       kept here. The state that comes back is then asked twice, once as it came
+       and once with the sign of the turn flipped, which is the same state a body
+       turning the other way is handed. */
+    put(lane.x, lane.y, lane.z, Math.PI / 2);
+    out.turnSpeed = drive(2, 0.6);
+    const stt = drawn();
+    if (!stt) { N.partMatrix = pm; back(); return Object.assign(out, { error: 'a turning body handed no state to the draw' }); }
+    out.turnHanded = +(stt.turn || 0).toFixed(3);
+    out.turnAsDrawn = cycle(stt, {}, 2);
+    out.turnFlipped = cycle(stt, { turn: -(stt.turn || 0) }, 2);
+    N.partMatrix = pm;
+    back();
+    return out;
+  });
+
+  const wA = flap.stroke && flap.stroke[flap.stroke.wings[0]];
+  const wB = flap.stroke && flap.stroke[flap.stroke.wings[1]];
+  check('the body was actually going through the water when the draw was read: it is in the water, off the bottom, and stroking is handed to the draw at full',
+    !flap.error && !!flap.swam && flap.handed.swim >= 0.9 && flap.speed > 0, flap);
+  check('the two wings are one pair: the same arc, the same water carried, the same rate, and the top of the stroke on the same frame',
+    wA && wB && Math.abs(wA.updown - wB.updown) < 1e-9 &&
+    Math.abs(wA.foreaft - wB.foreaft) < 1e-9 && Math.abs(wA.waterPerS - wB.waterPerS) < 1e-9 &&
+    Math.abs(wA.sweepDeg - wB.sweepDeg) < 1e-9 && wA.topFrame === wB.topFrame, flap.stroke);
+  check('and the stroke is a flap: the tip goes up and down several times as far as it goes fore and aft, and the blade swings through a wide arc about the body\'s own front-to-back axis',
+    wA && wA.updown > 0.3 && wA.updown > wA.foreaft * 3 && wA.sweepDeg > 60 &&
+    wA.levelDeg > -20 && wA.downDeg < -70, flap.stroke);
+  check('at the rate the model states, and no other: the strokes a second measured off the matrices are the table\'s own clock',
+    wA && Math.abs(wA.strokesPerS - flap.rate) < 0.15, { measured: wA && wA.strokesPerS, clock: flap.rate });
+  check('a body in the water that is not stroking has wings that do not move: no travel, no arc, no water carried',
+    flap.idle && flap.idle[flap.idle.wings[0]].updown === 0 &&
+    flap.idle[flap.idle.wings[0]].foreaft === 0 &&
+    flap.idle[flap.idle.wings[0]].waterPerS === 0 &&
+    flap.idle[flap.idle.wings[1]].waterPerS === 0 &&
+    flap.idle[flap.idle.wings[0]].sweepDeg === 0, flap.idle);
+  const tA = flap.turnAsDrawn && flap.turnAsDrawn[flap.stroke.wings[0]];
+  const tB = flap.turnAsDrawn && flap.turnAsDrawn[flap.stroke.wings[1]];
+  const fA = flap.turnFlipped && flap.turnFlipped[flap.stroke.wings[0]];
+  const fB = flap.turnFlipped && flap.turnFlipped[flap.stroke.wings[1]];
+  check('a body that is turning puts one wing into the water harder than the other, and the wings swap when the turn does',
+    tA && tB && fA && fB && flap.turnHanded > 0.05 &&
+    Math.abs(tA.waterPerS - tB.waterPerS) > 0.5 &&
+    Math.abs(tA.waterPerS - fB.waterPerS) < 1e-9 &&
+    Math.abs(tB.waterPerS - fA.waterPerS) < 1e-9,
+    { turn: flap.turnHanded, asDrawn: flap.turnAsDrawn, flipped: flap.turnFlipped });
+  check('the span only appears when the wings are moving: the body as carved reaches less far across itself than the top of a stroke does, and both are outside the box the world enforces',
+    flap.stroke && flap.carved && flap.idle &&
+    flap.stroke.body.halfAcross > flap.idle.body.halfAcross &&
+    flap.idle.body.halfAcross > flap.carved.halfAcross &&
+    flap.carved.halfAcross > flap.halfWide,
+    { carved: flap.carved, idle: flap.idle.body, stroke: flap.stroke.body, halfWide: flap.halfWide });
+
   /* ---- the box round the block the crosshair is on ----
      The twelve bars used to be rebuilt in world coordinates every frame and
      thrown away again: 12 box calls, 432 vertices and 4,752 array pushes a
@@ -12150,7 +13055,8 @@ What was measured before any of this was fixed, over 180 frames of walking
       return up0.call(this, gl);
     };
     const built = {};
-    for (const id of ['human', 'frog']) {
+    /* every body the game can draw, not the two it had when this was written */
+    for (const id of Object.keys(N.MODELS)) {
       const old = g.creatureMeshes[id];
       cap.length = 0;
       delete g.creatureMeshes[id];
@@ -12183,7 +13089,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       return out;
     };
     const spread = (f) => Math.max(...f) - Math.min(...f);
-    for (const id of ['human', 'frog']) {
+    for (const id of Object.keys(N.MODELS)) {
       tones[id] = new Set();
       for (const m of built[id]) for (let v = 0; v < m.dat.length; v += 4) tones[id].add(m.dat[v]);
       for (const p of N.MODELS[id].parts) {
@@ -12254,7 +13160,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        same part. Boxes of different parts are not counted -- a part turns, so a
        box that starts behind another can swing out into the light. */
     const buried = [];
-    for (const id of ['human', 'frog']) {
+    for (const id of Object.keys(N.MODELS)) {
       for (const pt of N.MODELS[id].parts) {
         const bs = pt.boxes || [];
         for (const a of bs) {

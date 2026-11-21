@@ -823,6 +823,31 @@
      authored island's beaches are made that way -- and a rock shelf has a sandy
      shallows round it for the same reason a hill of sand has a beach. Below
      that skin the pile's own material runs, to its crown. */
+  /* A fruit that grows in a kind of ground the sea made. The record names the
+     kind (`habitat`, the same key of ISLE_TYPES the animal's row names) and this
+     is the only code that can plant it: out past the authored square there is no
+     planting pass, no grove loop, no garden -- there is one rule that answers a
+     column by address, and it is the one the ground itself comes from. A plant
+     that could not be grown by that rule could not be grown out there at all.
+     The chance is hashed on the column's own address and not drawn: the island
+     round settled that a far place has to be the same place every time it is
+     met, and a chunk that is dropped and filled again must not come back with a
+     different number of melons on it. */
+  let GROWN = [];
+  function grownBlocks() {
+    GROWN = N.FRUITS.filter(f => f.bear).map(f => ({
+      block: N.FRUIT_BLOCK_REV[f.id], bear: f.bear, kinds: f.habitat
+    }));
+  }
+  function cropAt(x, z, g, ground) {
+    if (!GROWN.length || !g.pile || g.h <= SEA) return 0;      // dry ground only
+    if (!(ground && ground.crown === 4)) return 0;             // and sand, specifically
+    for (const c of GROWN) {
+      if (c.kinds.indexOf(g.pile.isle.type) < 0) continue;
+      if (h2(x, z, seed + 971) < c.bear) return c.block;
+    }
+    return 0;
+  }
   function columnInto(x, z, put) {
     const g = groundAt(x, z);
     const h = g.h;
@@ -839,10 +864,18 @@
       put(x, y, z, b);
     }
     for (let y = h + 1; y <= SEA; y++) put(x, y, z, 5);
+    /* The fruit stands over the ground it grew in, in the open air above it: a
+       melon on a beach, with no stem and no leaves, because there is nothing out
+       there that needs a tree to be grown first. Asked after the ground and the
+       water are put down, so it can only ever stand on top of a column this rule
+       has already decided is dry sand. */
+    const crop = cropAt(x, z, g, ground);
+    if (crop) put(x, h + 1, z, crop);
   }
 
   function generate(world, s) {
     W = world; seed = s | 0; rngS = seed + 12345;
+    grownBlocks();                     // which fruits grow in a kind of ground
     forgetIsles();                       // another world, another set of islands
     // terrain
     for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) columnInto(x, z, set);

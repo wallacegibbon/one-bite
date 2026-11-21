@@ -76,19 +76,28 @@
   function storeName(s) { return N.t('store.' + (s.kind === 'tree' ? 'tree' : 'cellar')); }
   /* How much of a stroke a body built for water is doing this frame: the speed
      it is actually making through the water over the speed its own record swims
-     at, and nothing at all when the water is not holding it up. A stroke is the
-     thing that pushes water behind a body, so it is sized by the water the body
-     is actually pushing: a body that is going nowhere does not kick at the lake,
-     and a body standing on the lakebed has work for its legs that has nothing to
-     do with swimming. `held` is what the water is doing to the body -- it is 0
-     wherever the body is out of the water or standing on the bottom -- so it is
-     the whole of the gate, and for the body you wear it is eased, which is what
-     keeps a stroke coming and going over frames rather than in one. Both drawn
-     bodies ask the same question; it used to be answered twice and differently,
-     with a floor under the creature's answer that kept a hovering frog stroking
-     at a lake it was not moving through. */
-  function strokeOf(held, spd, swimSpeed) {
-    return (held && swimSpeed) ? Math.min(1, spd / swimSpeed) : 0;
+     at, and nothing at all when the body has no water to push -- out of it, or
+     standing on the bottom of it. A stroke is the thing that pushes water behind
+     a body, so it is sized by the water the body is actually pushing: a body that
+     is going nowhere does not kick at the lake, and a body standing on the
+     lakebed has work for its legs that has nothing to do with swimming.
+     The gate used to be the water's hold (`held`), and for every body the valley
+     had that was the same question, answered twice: what the water holds up is in
+     it and off its bottom. It stopped being the same question the day the valley
+     held an animal that breathes air and swims under its own power. The sea does
+     not hold a turtle up -- the water's hold is a property of the column and the
+     breathing is a property of the body, and a body that breathes air is not held
+     up by a column it cannot breathe -- and its wings are the only thing keeping
+     it off the bottom. A stroke gated on the hold would send a turtle the length
+     of the sea with its wings still. So the gate is the body's own answer to the
+     one question a stroke asks: `stroking`, in the water and off its bottom. For
+     the body you wear it is eased, which is what keeps a stroke coming and going
+     over frames rather than in one; both drawn bodies ask the same question, and
+     it used to be answered twice and differently, with a floor under the
+     creature's answer that kept a hovering frog stroking at a lake it was not
+     moving through. */
+  function strokeOf(stroking, spd, swimSpeed) {
+    return (stroking && swimSpeed) ? Math.min(1, spd / swimSpeed) : 0;
   }
   /* The water a drawn body stands in, for the shader. The static world carries
      its depth under the surface in with it -- the mesher measures it once when
@@ -216,7 +225,7 @@
          record's herd under a column named for the field and say what this number
          is, and `docs-sync` compares that row against the record -- so the two
          cannot be read as one fact again. */
-      const counts = { frog: 5 };
+      const counts = { frog: 5, turtle: 3 };
       for (const sp of N.CREATURES) {
         const n = counts[sp.id] || 0;
         for (let i = 0; i < n; i++) {
@@ -234,7 +243,7 @@
           const room = (Math.max(mw[0], mw[1]) * (sp.scale || 0.2)) * 2 + 0.4;
           let p = null, bestGap = -1;
           for (let t = 0; t < 10; t++) {
-            const q = this.samplePos(sp.habitat[0]);
+            const q = this.sampleHome(sp);
             if (!q) break;
             let gap = 1e9;
             for (const c of this.creatures) {
@@ -247,17 +256,46 @@
           }
           if (!p) continue;
           const c = new N.Creature(sp, p.x, p.y, p.z);
-          /* A body that swims has to be **born in the water**. The sample puts its feet
-             on the ground of the column, and an animal of the water born on the lakebed
-             would spend its first updates being yanked up to the depth its row states --
-             the lamps paid it once, at 14.4 m/s against the 2.2 m/s they swam, and their
-             depth reading came to depend on how long the page had been alive. No animal
-             in the valley is aquatic now, so the line stands for the one the water next
-             holds. */
-          if (c.isAquatic()) c.y = N.hoverLevel(sp, this.world, p.x, p.z, c.tall);
+          /* A body born in water has to be **born in the water**. The sample puts
+             its feet on the ground of the column, and an animal of the water born
+             on the bottom would spend its first updates being yanked up to the
+             depth its row states -- the lamps paid it once, at 14.4 m/s against
+             the 2.2 m/s they swam, and their depth reading came to depend on how
+             long the page had been alive. The sampler now says which of its points
+             are water, which is the honest test: an animal that lives in a lane of
+             the open sea is an amphibian by the way it moves and a water animal by
+             the place it is put in, and asking it which of the two it is gets the
+             wrong answer. */
+          if (p.water || c.isAquatic()) c.y = N.hoverLevel(sp, this.world, p.x, p.z, c.tall);
           this.creatures.push(c);
         }
       }
+    }
+    /* An animal is born in the place its own record states. A zone is a place,
+       and `samplePos` draws a point out of one; a lane of water off the island's
+       own shore is not a zone, and drawing it from one would answer with the
+       forest -- `samplePos` falls back to a zone when the name it is given is
+       not one. So a lane is asked of the one rule that knows where the water
+       stands along a bearing, the same rule the map's coast polygon is drawn from
+       and the same one the animal's own errands are aimed with a few hundred
+       lines away in entities.js. What comes back is a point in the lane, and the
+       `water` on it says so: an animal born in water has to be born *in* it, at
+       the level it hangs at, and not on the bottom of it. */
+    sampleHome(sp) {
+      if (!sp.orbit || sp.orbit.at !== 'coast') return this.samplePos(sp.habitat[0]);
+      const W = this.world;
+      for (let t = 0; t < 60; t++) {
+        const th = Math.random() * Math.PI * 2;
+        const r = N.shoreWater(th) + sp.orbit.r0 +
+                  Math.random() * (sp.orbit.r1 - sp.orbit.r0);
+        const x = N.COAST.cx + Math.cos(th) * r, zz = N.COAST.cz + Math.sin(th) * r;
+        const surf = W.liquidSurfaceAt(Math.floor(x), Math.floor(zz));
+        if (surf === undefined || surf < 0) continue;          // dry ground: not this lane
+        const top = N.landHeight(Math.floor(x), Math.floor(zz));
+        if (surf - top < 2) continue;                          // the two cells the water's own hold asks
+        return { x, y: top, z: zz, water: true };
+      }
+      return null;
     }
     samplePos(zoneId) {
       const z = N.ZONE_BY_ID[zoneId] || N.ZONE_BY_ID.whisperwood;
@@ -1245,7 +1283,7 @@
           off: Math.max(0, Math.min(1,
             (c.y - N.groundY(W, Math.floor(c.x), Math.floor(c.z), Math.floor(c.y))) / (N.MODEL_H[c.sp.model] * sc))),
           // only a body the data gives a swim speed to is stroked by the water
-          swim: strokeOf(c.held, c.speed, c.sp.swimSpeed),
+          swim: strokeOf(c.stroking, c.speed, c.sp.swimSpeed),
           held: c.held || 0,
           // signed rad/s of heading: the outside leg of a turn does the work
           turn: c.bend || 0
@@ -1304,7 +1342,7 @@
              legs do. And this is the one body in the valley whose hold is eased,
              so a stroke comes in over a few frames and goes out the same way
              instead of in one. */
-          swim: strokeOf(p.held, Math.hypot(p.vx, p.vz), p.moveDef.swimSpeed),
+          swim: strokeOf(p.stroking, Math.hypot(p.vx, p.vz), p.moveDef.swimSpeed),
           held: p.held || 0,
           // signed rad/s of heading: the outside leg of a turn does the work
           turn: p.bend || 0

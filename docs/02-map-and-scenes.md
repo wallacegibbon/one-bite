@@ -180,7 +180,17 @@ Measured at the seed the game opens with, over the first 70 islands of the spira
 | islands per km², by band | **3.50** in the 0-1 km band, **2.02** at 1-2 km, **1.21** at 2-3 km, **0.82** at 3-4 km — the gradient the rule exists for, falling as 1/r |
 | the nearest of them | centre **389 m** from (80,80); **169 m** of open water between this island's water's edge and its foot |
 | how far open sea is from land | sampled on rings out to 1.5 km, the median point of sea is **171 m** from an island's foot and the furthest sampled point is **476 m**: one fruit is **966 m** out and back, so no water in that reach is a crossing a body cannot make |
-| what stands on the nearest ground big enough to stand on | **nothing**. The nearest island with a foot of 40 m or more — ordinal 4, a thicket, **603 m** out, foot **70 m** — has had its whole footprint (**15,421** columns) counted cell by cell: **0** cells of tree, **0** of fruit, **0** of plant. What it does hold: **71,920** cells of water, **64,670** of stone, **51,836** of sand, **43,763** of the mountain rock the sea floor is paved with, **7,386** of soil and **2,462** of grass — the dome the rule states, read back out of ground the game built. That is the honest hole (07 §3.6) |
+| what stands on the nearest ground big enough to stand on | **nothing**. The nearest island with a foot of 40 m or more — ordinal 4, a thicket, **603 m** out, foot **70 m** — has had its whole footprint (**15,421** columns) counted cell by cell: **0** cells of tree, **0** of fruit, **0** of plant. What it does hold: **71,920** cells of water, **64,670** of stone, **51,836** of sand, **43,763** of the mountain rock the sea floor is paved with, **7,386** of soil and **2,462** of grass — the dome the rule states, read back out of ground the game built. That ground is still bare (07 §3.6) |
+| what the sea's own kinds bear | **152 cells** of the one fruit that grows in a *kind of ground* instead of in ground (04 §3). Every column of all 70 islands was walked — **1,233,321** of them, **304,420** standing above the water line — and the fruit answers **152** times, every one on the crown of a sand bar: **2,740** such columns over the **15** bars, and **0** on the 16 reefs, 23 thickets, 11 isles and 5 ridges, whose ground its record does not name. All **15** bars carry some, from **2** cells on the least of them (ordinal 51, **47** columns of crown) to **27** on the most (ordinal 19, **419**). This island's own authored ground holds **0** of it, and **49** cells of the fruit that grows in ground |
+
+The nearest island to this one is one of the bars: ordinal **1**, foot **26.5 m**,
+centre **389 m** out, and it carries **4** of that fruit over **107** columns of
+crown above the water line. The ground too small to stand on is the right size to
+grow in — a bar's crown is a few metres across, which is why nothing was ever
+standing on it. What the reach holds now is stated in the two chapters it belongs
+to: the animal whose row names that kind of ground, and the lane of water it keeps
+round this island (03 §3), and the fruit, its clock and what wearing it costs
+(04 §3).
 
 Two numbers bound that reach, and both belong to the player, not to the world:
 

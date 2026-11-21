@@ -215,6 +215,117 @@
           ] }
       ]
     },
+    /* ---------------- sea turtle ----------------
+       Measured off its own boxes at the row's 0.25 scale, in the pose it is
+       authored in (play.js `theSeaTurtleStrokesBothWingsTogether` reports these
+       as `carved`): 1.60 m from wingtip to wingtip, 1.41 m from the tip of its
+       snout to the trailing edge of its trailing flippers, 0.87 m off the sand
+       it stands on. The wings are carved swept back -- that is where a turtle
+       holds them when it is not swimming.
+       The model does NOT fit the box the world enforces for it (the form states
+       a 1.5 m square in plan, half-width 0.75 m) and it is not carved to: as
+       authored it reaches 0.80 m out each side and 0.80 m past its nose, and at
+       the top of a stroke its wingtips reach 1.07 m out -- 0.32 m of drawn
+       animal outside the wall the world enforces. What the swept-back pose buys
+       is the difference between those two numbers: a body pressed against a rock
+       face draws its wings through the face instead of standing 1.07 m into it
+       the whole time. The span appears when the wings move, and play.js measures
+       all three readings (carved, floating, top of a stroke) off the matrices the
+       draw uploads instead of holding any of them as a number here.
+       Two things about this body are stated by the absence of a field, not the
+       presence of one. There is no `hop` anywhere in its record. Worn as a form
+       that is the whole of its climbing: a body with no launch has no reach, its
+       `hopReach` answers 0, and every riser in this valley is a wall to it --
+       measured in play.js, stopped at a face with its nose on it and never once
+       lifted in front of it. An animal of this record is a different body: the
+       lift a legless animal is given at a step asks which ground it is being
+       asked on, so it climbs the sand of the bar its own record names and is
+       refused the ground inland it does not (see `dryGroundNamed` in
+       src/entities.js and the note over the row in data/creatures.js).
+       And its wings are the only pair of limbs the body stands on: the rear
+       flippers trail.
+       The wings are not legs. They are paddles with no elbow, and they work in
+       phase with each other (`syncPair`) rather than half a stride apart, which
+       is what a turtle does on sand and in water both: it pushes with both sides
+       at once. The blade sticks out to the side and its chord runs fore and aft:
+       the turn that raises it is about the body's own front-to-back axis and the
+       turn that feathers it is about the body's sideways axis -- two axes, not
+       one, and the water's stroke already knows both. In the water the cycle is
+       FLAP below -- the raised wing feathers its leading edge forward, the driven
+       one back, and the body surges on the down-stroke; see the comment over
+       that table. */
+    turtle: {
+      eye: 0.62,
+      parts: [
+        { name: 'body', anim: 'bob', swimFlap: 1, boxes: [
+          /* the carapace, two steps and a pale row of plates along the top: the
+             dome of a turtle's shell is the one thing about its silhouette that
+             says turtle, and one box cannot be a dome -- the second step stands
+             0.22 m inboard and 0.2 m above the first, and the plates sit on top
+             of the crown rather than inside it */
+          [-1.8, 1.6, -2.2, 3.6, 0.9, 3.6, '#3f4a33'],
+          [-1.4, 2.5, -1.7, 2.8, 0.8, 2.9, '#4a5739'],
+          [-0.9, 3.3, -1.4, 1.8, 0.14, 0.8, '#77855c'],
+          [-0.9, 3.3, -0.4, 1.8, 0.14, 0.8, '#7d8b61'],
+          [-0.9, 3.3, 0.6, 1.8, 0.14, 0.7, '#77855c'],
+          /* the rim of the shell: the marginals. They stand outside both plates
+             they sit between, which is what makes the edge of a shell read as an
+             edge and not as the side of a brick */
+          [-1.95, 1.55, -1.6, 0.2, 0.7, 2.8, '#2f3a26'],
+          [1.75, 1.55, -1.6, 0.2, 0.7, 2.8, '#2f3a26'],
+          [-1.5, 1.55, -2.35, 3.0, 0.6, 0.25, '#2f3a26'],
+          /* the plastron, pale, under the shell and short of it fore and aft --
+             a turtle's belly is shielded, not a continuation of its back */
+          [-1.45, 1.15, -1.8, 2.9, 0.5, 3.2, '#b3ad8c']
+        ] },
+        { name: 'head', parent: 'body', pivot: [0, 2.0, 1.4], anim: 'nod', boxes: [
+          [-0.55, 1.7, 1.2, 1.1, 0.9, 0.5, '#4b5540'],           // the neck
+          [-0.8, 1.75, 1.6, 1.6, 1.1, 1.2, '#5b6544'],           // the skull
+          [-0.45, 1.8, 2.8, 0.9, 0.5, 0.4, '#c8c39a'],           // the beak, horn
+          [-0.85, 2.35, 2.3, 0.3, 0.4, 0.3, '#1c1a12'],          // eyes, on the sides
+          [0.55, 2.35, 2.3, 0.3, 0.4, 0.3, '#1c1a12']
+        ] },
+        /* the front wings. The pivot is the shoulder, at the top of the shell's
+           front corner; the paddle hangs out, down and back from it, its long
+           axis outboard and its chord fore and aft. So the turn that raises it
+           is a turn about the body's own front-to-back axis and the turn that
+           feathers it is a turn about the body's sideways axis -- the same two
+           axes the water's stroke already knows how to split, and no new joint.
+           The `heldPose` is the swept pose the model is authored in, and it is
+           what a stroke starts and ends from. */
+        { name: 'wingL', parent: 'body', pivot: [-1.7, 2.0, 0.9], anim: 'walk', sign: 1,
+          stride: 1, stands: 1, syncPair: 1, swimFlap: 1,
+          air: [0, 0, 0.22], crouch: [0.18, 0, -0.1], heldPose: [0.12, 0, -0.1], boxes: [
+            [-1.7, 1.05, 0.5, 0.55, 0.9, 0.85, '#33402c'],        // the shoulder, into the top of the shell's corner
+            [-3.15, 0.14, -0.75, 1.95, 1.01, 1.45, '#33402c'],    // the blade: out and down, and this is the leg it stands on
+            [-3.1, 0.0, -0.7, 0.9, 0.16, 1.35, '#8e9a72'],        // the pale edge of it, the part that touches the sand
+            [-3.1, 1.15, 0.4, 0.9, 0.16, 0.3, '#6a7a52'],         // the leading edge, standing above the blade
+            [-3.2, 0.2, -0.75, 0.14, 0.9, 1.4, '#2c3726']         // its outer corner, the widest corner the model has
+          ] },
+        { name: 'wingR', parent: 'body', pivot: [1.7, 2.0, 0.9], anim: 'walk', sign: -1,
+          stride: 1, stands: 1, syncPair: 1, swimFlap: 1,
+          air: [0, 0, -0.22], crouch: [0.18, 0, 0.1], heldPose: [0.12, 0, 0.1], boxes: [
+            [1.15, 1.05, 0.5, 0.55, 0.9, 0.85, '#33402c'],
+            [1.2, 0.14, -0.75, 1.95, 1.01, 1.45, '#33402c'],
+            [2.2, 0.0, -0.7, 0.9, 0.16, 1.35, '#8e9a72'],
+            [2.2, 1.15, 0.4, 0.9, 0.16, 0.3, '#6a7a52'],
+            [3.06, 0.2, -0.75, 0.14, 0.9, 1.4, '#2c3726']
+          ] },
+        /* the rear flippers: they trail. They swing a little as the body moves
+           (a small share of the walk cycle) and they hold the swept pose the
+           water puts them in, and they carry nothing -- no `stands`, and no
+           stroke of their own. A turtle steers with them; it does not stand on
+           them. */
+        { name: 'rearL', parent: 'body', pivot: [-1.25, 1.5, -1.4], anim: 'walk', sign: 1,
+          stride: 0.25, swimPose: [0, 0, -0.14], boxes: [
+            [-2.15, 1.1, -2.45, 0.9, 0.4, 1.05, '#3a4630']
+          ] },
+        { name: 'rearR', parent: 'body', pivot: [1.25, 1.5, -1.4], anim: 'walk', sign: -1,
+          stride: 0.25, swimPose: [0, 0, 0.14], boxes: [
+            [1.25, 1.1, -2.45, 0.9, 0.4, 1.05, '#3a4630']
+          ] }
+      ]
+    },
   };
 
 
@@ -501,6 +612,68 @@
     [0.56, 0.85, 0.75, -0.38, -0.16, 0.12],   // driven: the knees extend and the feet shoot back
     [1.00, 0.85, 0.75, -0.38, -0.16, 0.00]    // and gliding on to the next stroke
   ];
+  /* A sea turtle does not breaststroke. It flies, and what it flies with is two
+     wings that are one pair: both go down together, both come up together, and
+     the animal's whole forward motion comes from the down-stroke. Read the same
+     six columns as STROKE -- the pitch, nothing at the knee (a flipper has no
+     elbow), the turn out, nothing at the second joint, and the body riding it --
+     and read them as one cycle of a wing instead of one cycle of a leg.
+     The pitch and the turn out are the two things a wing has, and they are two
+     different axes, which is worth saying because the model's own geometry makes
+     it easy to think they are one. The blade sticks out to the side and its
+     chord runs fore and aft: raising it is a turn about the body's own
+     front-to-back axis (`rz`, the third column), and feathering it -- leading
+     edge down on the stroke, up on the recovery, so the wing goes back through
+     the water edge-first -- is a turn about the body's sideways axis (`rx`, the
+     first column). Nothing had to be added to the matrix code to make a wing
+     work; only this table and the flag that says which parts run it.
+     The rows are a wing going up, driving down under the body, and levelling out
+     on its way back up. The positive direction of the third column is **down**
+     for both wings: the code mirrors the turn with each part's own `sign`, which
+     is what keeps a pair of wings a pair, and the same mirror applied to the
+     timing (the half stride the legs keep) would have one wing up while the
+     other was down -- a turtle rowing, not flying. The first column is NOT
+     mirrored, and that is also right: both blades point their chords the same
+     way as the body moves through the water, so both want the same angle of
+     attack, and mirroring the number would feather one wing and de-feather the
+     other.
+     The feather is small on purpose. The blade hangs below and behind its
+     shoulder, so a turn about the sideways axis moves its tip mostly fore and
+     aft, and the wider that turn is the more of the tip's travel is fore and aft
+     rather than up and down -- a big feather spends the stroke cancelling the
+     lift it is trying to make. That was measured while the table was being
+     tuned, on versions of it that are not in this file, and it is why the number
+     is small. At +/-0.15 the edge still reverses between the recovery and the
+     drive -- it is a feather, a small one -- and the elevation is what carries
+     the body.
+     What the table as it stands draws, measured off the matrices the draw
+     uploads at the row's own 0.25 scale (play.js
+     `theSeaTurtleStrokesBothWingsTogether`, which takes them the way the render
+     takes them -- one state per frame, both wings asked through that same
+     state): each wingtip goes 0.478 m up and down against 0.134 m fore and aft,
+     the blade swings from 5 deg below horizontal to 82 deg below -- 77 deg of
+     arc -- and carries about 3.8 m of water a second at 2.38 strokes a second (the
+centimetre of that moves with the phase the draw happens to be at). Both
+     wings reach the top of their arc on the same frame and carry the same
+     distance of water doing it, and a body in the water that is not stroking has
+     wings that do not move at all. A body that is turning puts one wing through
+     5.7 m of water a second and the other through 2.0, and the two swap when the
+     turn is swapped. The checks are on the ratio, the arc and the pair, not on
+     the third decimal: where the sampling window starts depends on the phase the
+     draw happens to be at.
+     `FLAP_RATE` is the wing's own clock: 15 rad/s is 0.419 s a cycle, and the
+     sweep measured above is 2.38 strokes a second. At the 6.4 m/s the record
+     states that is 2.68 m of water to a stroke, and at the 6.07 the valley's
+     body was actually measured holding, 2.54 m -- about two body lengths, the
+     share a turtle holds at a burst. The cycle's shape, not its rate, is what
+     the row above is for. */
+  const FLAP = [
+    [0.00, -0.15, 0, -0.85, 0, -0.05],   // at the top: wings up and out, leading edge forward, the body settling
+    [0.45,  0.15, 0,  0.64, 0,  0.07],   // driven: down and back under the body, edge bit into the water, the body surges
+    [0.72,  0.03, 0,  0.06, 0,  0.02],   // levelling: the edge slips back flat as the wing comes through
+    [1.00, -0.15, 0, -0.85, 0, -0.05]    // and up again
+  ];
+  const FLAP_RATE = 15.0;   // rad/s: 2.4 strokes a second
   const KNEE_FLEX = 0.62;       // how far a knee folds at that peak, at a full stride
   const BOB = 0.20;             // how far the body rides a stride, in its own model units
   /* how much of an arm's bend is held all the way through the stride at the
@@ -697,8 +870,8 @@
   /* where the stroke is at a point in the cycle, eased between the keys: the
      legs reach a key and stop there for a moment rather than swinging through
      it, which is what makes the three acts read as three acts. */
-  function strokeAt(u) {
-    const k = STROKE;
+  function strokeAt(u, table) {
+    const k = table || STROKE;
     u -= Math.floor(u);
     let i = 0;
     while (i < k.length - 2 && u > k[i + 1][0]) i++;
@@ -735,8 +908,12 @@
        delay and not a flip of the shape, because flip the shape and both sides
        take their stance at the same moment and the body is left with nothing
        under it for 38% of every stride. The body's own phase only shifts the
-       whole animal against the others of its kind. */
-    const u = (st.gait || 0) + ph / (Math.PI * 2) + (sg < 0 ? 0.5 : 0);
+       whole animal against the others of its kind.
+       A pair of wings is the exception and says so with `syncPair`: a turtle's
+       two front flippers push at the same moment, on sand and in water both.
+       Half a stride between them is a body that rows, and a rowing turtle is not
+       a turtle. */
+    const u = (st.gait || 0) + ph / (Math.PI * 2) + (sg < 0 && !p.syncPair ? 0.5 : 0);
     const stance = stanceOf(st.move);
     let rx = 0, ry = 0, rz = 0, dy = 0, sc = 1;
     /* the share of this part's turn that comes from the land gait, kept apart
@@ -881,7 +1058,14 @@
          towards the lakebed stops stroking over a few frames instead of at one
          instant. */
       const s1 = Math.min(1, swim);
-      const amp = Math.min(1, held * 3) * Math.max(s1, TREAD * (1 - s1));
+      /* A wing is not a leg in the water. A frog's legs at rest are still doing
+         the work of holding a body up, and TREAD is that work; a turtle at rest
+         is gliding, and its wings do nothing at all until it means to move. So
+         the wing's amplitude is the water it is actually pushing, with no floor
+         under it -- and the floor stays exactly where it was for the bodies that
+         have legs, because it is a fact about holding still, not about swimming. */
+      const wings = !!p.swimFlap;
+      const amp = wings ? s1 : Math.min(1, held * 3) * Math.max(s1, TREAD * (1 - s1));
       /* and the stroke itself this frame, read off the table. Going somewhere
          it is the full STROKE on its own clock. At a standstill it is not a
          stroke at all: a stroke carries a hold, the last 44 % of the cycle the
@@ -897,15 +1081,39 @@
          speed, so the legs never stop and start again as the body gets up to
          speed -- they just get faster. */
       const hand = Math.min(1, s1 / 0.35);
-      const aN = strokeAt((t * SWIM_RATE + ph) / (Math.PI * 2));
-      const a = hand >= 1 ? aN : (function () {
+      const aN = strokeAt((t * (wings ? FLAP_RATE : SWIM_RATE) + ph) / (Math.PI * 2),
+        wings ? FLAP : STROKE);
+      const a = wings || hand >= 1 ? aN : (function () {
         const uT = 0.49 + 0.07 * Math.sin(t * TREAD_RATE + ph);
         const aT = strokeAt(uT);
         const out = new Array(5);
         for (let i = 0; i < 5; i++) out[i] = aT[i] + (aN[i] - aT[i]) * hand;
         return out;
       })();
-      if (p.swimKick) {
+      if (wings) {
+        /* Both wings, one cycle, no half-stride between them: the timing mirror
+           the legs use is dropped here the same way the stroke drops it for a
+           breaststroke pair, and the space mirror is kept -- `sg` is what makes a
+           turn put the outside wing into the water harder than the inside one,
+           and it is also what makes the same number take both wings down.
+           The whole turn is hung on the roll. A leg hanging under a body has to
+           split its sideways swing between a yaw and a roll because the leg
+           itself is pointed at the floor; a paddle held out to the side is
+           already at right angles to the body's front-to-back axis, so the roll
+           does all of it and the pitch that goes with it is the feather. The
+           pose the water holds the wing in (`heldPose`) is where a stroke starts
+           and ends, exactly as it is for a leg. */
+        if (anim === 'bob') {
+          dy = a[4] * amp;              // the body surges on the down-stroke, settles on the recovery
+        } else {
+          const tn = Math.max(-1, Math.min(1, turn / TURN_FULL)) * sg;
+          const hp = p.heldPose || [0, 0, 0];
+          rx = hp[0] * held + a[0] * amp * (1 + TURN_KICK * TURN_FOLD * tn);
+          const out = a[2];
+          rz = hp[2] * held + sg * out * amp * (1 + TURN_KICK * tn);
+          gait = 0;
+        }
+      } else if (p.swimKick) {
         /* A body that is turning kicks harder with the leg on the outside of the
            turn: that leg has to carry the body round the arc as well as along
            it, and the inside leg is being dragged. A breaststroke turn is one leg
@@ -1046,6 +1254,13 @@
   }
 
   N.MODELS = MODELS;
+  /* the water's own cycle, and its clock: `partAngles` reads these straight from
+     the module, so anything that wants to ask a question about the shape of a
+     stroke -- or answer one by changing it -- has to be able to reach them.
+     play.js reads the arc off the matrices and reads this table to know what it
+     was looking at; nothing there holds a copy of the numbers. */
+  N.FLAP = FLAP;
+  N.FLAP_RATE = FLAP_RATE;
   N.gaitStride = gaitStride;
   N.walkMove = walkMove;
   /* the other half of the law, for anything that has to know when a foot is on

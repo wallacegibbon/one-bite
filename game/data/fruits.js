@@ -92,6 +92,44 @@
       costEn: ['the skin must stay wet: after 90 s out of water it dries and vitality keeps draining', 'slow on land: 1.8 m/s, the frog\'s own pace, and this body has no sprint at all', 'too small: cannot reach high fruit, cannot push a door open'],
       lore: '长在芦苇半腰的绿果，雨后一夜之间全出来。它不喝水——它靠皮肤喝，所以它把这份本事也给了你。',
       loreEn: 'A green fruit halfway up a reed, all of them out overnight after rain. It does not drink water — it drinks through its skin, so it hands you that trick as well.'
+    },
+    /* ============ uncommon ============ */
+    {
+      /* The ground this fruit grows in is named by the world's own word for it,
+         the same word the animal's row uses: `sandbar` is a key of
+         ISLE_TYPES in src/worldgen.js, not a zone. A zone is a place on the
+         island and this is a kind of ground anywhere the sea made one, and the
+         one claim this record exists to make -- the animal's ground and its
+         fruit's ground are one ground -- cannot be written twice from two
+         different vocabularies. `columnInto` reads it: it already asks which
+         island's dome stands under the column it is filling, and a fruit whose
+         habitat names that kind is set on the dry top of it. Nothing is planted
+         here by hand, because nothing runs out there but that one rule.
+         `bear` is the chance one metre of that dry sand carries a fruit. It is
+         per column and hashed on the column's own address, so the same bar
+         bears the same fruit in every world of this seed and in every fill of
+         its chunks; a random draw at fill time would make the island a
+         different island each time you sailed near it, which is the one thing
+         the island round settled. What it comes to in the world is not stated
+         here: node-smoke counts the cells over the 70 ordinals the reach holds
+         and prints the total. */
+      id: 'turtlemelon', cn: '龟果', en: 'Turtle Melon', rarity: 'uncommon', creature: 'turtle',
+      habitat: ['sandbar'], habitatCn: '沙洲顶上干的沙', habitatEn: 'the dry sand on the crown of a sand bar',
+      bear: 0.06,
+      duration: 420,
+      form: {
+        /* No `dryTimer`: this skin does not dry. A turtle comes out of the water
+           and stays out, and the body you wear with it has no clock running
+           against it on the sand. The cost is elsewhere and it is not small:
+           `breatheAir` is this skin's, and it is the ordinary kind, so the sea
+           is not a place this body breathes, and it must come up. */
+        cn: '海龟', en: 'sea turtle', size: [1.5, 0.9], breatheAir: true,
+        stealth: 0.7, fov: 95
+      },
+      cost: ['它不呼吸水：海对这具身体不是能呼吸的地方，下来就得再上去', '陆地上很慢：每秒 1.45 米，比雨蛙还慢，这具身体也不会跳', '太大：1.5 米宽的身子进不了门，也挤不进林子'],
+      costEn: ['it does not breathe water: the sea is not a place this body can breathe, and down means up again', 'slow on land: 1.45 m/s, slower than the frog, and this body cannot jump at all', 'too big: a 1.5 m body does not fit through a door or between the trees'],
+      lore: '沙洲顶上只有沙，瓜就躺在沙上。它不爬藤到别处去——它只要那片沙被日头晒干过。',
+      loreEn: 'There is only sand on the crown of a bar, and the melon lies on it. It does not run its vines anywhere else — it only asks that the sand have been dry in the sun.'
     }
   ];
 

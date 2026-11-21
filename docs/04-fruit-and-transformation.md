@@ -2,7 +2,7 @@
 
 Source of truth: `game/data/fruits.js`. Every number in this document comes straight from that file.
 
-**One fruit per animal.** The valley has four animals you can wear (03), so it has four transformation fruits. There is no "second fox fruit", and no fruit that belongs to no animal.
+**One fruit per animal.** The valley has two animals you can wear (03), so it has two transformation fruits. There is no "second fox fruit", and no fruit that belongs to no animal.
 
 ## 1. Rarity: capacity and shelf life
 
@@ -18,9 +18,18 @@ Rarity is not a "value tier", it is **two physical parameters**:
 
 **The backpack is 24 slots** → at most: 24 common / 12 uncommon / 6 rare / 3 epic / **2 legendary**.
 
-The valley currently grows **one of these five rungs** — common. The ladder stays: it is a law of storage, not a shopping list.
+The valley now grows **two of these five rungs** — common (the frog pear of the
+reeds) and uncommon (the turtle melon of the sand bars). The ladder stays: it is a
+law of storage, not a shopping list.
 
-One important corollary: the Frog Pear costs 1 slot, so the backpack's 24 slots hold twenty-four of them — the constraint is no longer space but time, since each one decays after 1500 s (25 min).
+One corollary, stated per fruit because the slots are what makes it mean
+something: the Frog Pear costs 1 slot, so the backpack's 24 slots hold
+twenty-four of them — the constraint is no longer space but time, since each one
+decays after 1500 s (25 min). A Turtle Melon costs 2, so the same backpack holds
+twelve, and it decays after 1200 s. That is not a tax on the rarer fruit; it is
+the size of the thing. A melon that lies on a bar half a kilometre of open water
+from anywhere, and is worth a body that can cross open water, is not going to
+come home twelve at a time.
 
 ### 1.1 Regrowth
 
@@ -47,7 +56,7 @@ A fruit starts counting down the moment it is picked.
 - The game announces dormancy explicitly: "Frog Pear went dormant — all that is left is a pit. Plant it and it may still fruit."
 - **There are no "preservation" items.** The only way to slow decay is storage.
 
-## 3. The full fruit table (1 kind)
+## 3. The full fruit table (2 kinds)
 
 ### Common (1 slot)
 
@@ -57,7 +66,30 @@ A fruit starts counting down the moment it is picked.
 
 **Which of those costs the prototype enforces**: the frog's skin and the dark. `dryTimer` drains vitality 90 s after a frog body leaves the water; `nightVision` brightens the dark for the body that has it and washes that same body's daylight out. What is still only written down: a frog "cannot reach high fruit" (harvest reach is one fixed distance for every body). Every ability in the Key abilities column is read by the code — see §4.
 
-**Why there is no second**: the fruit table is a mirror of the animal table. Adding a fruit means adding a niche, a row in the attitude matrix and a new set of gates (03 §3). One is what the valley currently grows; the next one has to earn its ten seconds.
+**Why there was no second, and what the second cost.** The fruit table is a
+mirror of the animal table: adding a fruit means adding a ground, a row in the
+attitude matrix and a new set of gates (03 §3). The turtle melon is what earning
+that took: a kind of ground the world had to be taught to build (02 §1.2), an
+animal whose home is a lane of open water and whose fruit grows on the sand of a
+bar it swims out to, a body that breathes air and therefore is not held up by the
+sea it swims in, and one new animation cycle, because a body that flies through
+water is not a body that kicks one.
+
+### Uncommon (2 slots)
+
+| id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
+|---|---|---|---|---|---|---|
+| `turtlemelon` | Turtle Melon | sea turtle | 420 s | the dry sand on the crown of a sand bar | the animal's own motion — **1.45 m/s** on land, **6.4 m/s** through water, **no launch at all**: a body with no `hop` has no reach, so every riser in the valley is a wall to it (03 §3); it swims the lane off this island's shore and it comes out onto sand, and its skin does not dry — there is no `dryTimer` on this record and no clock running against it on the beach; stealth 0.7, fov 95 | **it does not breathe water**: the sea is not a place this body can breathe, and the water does not hold it up either — down means swimming up, and there is 18 s of breath in a body that stops; **slow on land: 1.45 m/s, slower than the frog**, and this body cannot jump; **too big**: a 1.5 m wide body does not fit through a door or between the trees |
+
+**Where it actually grows, measured.** `bear: 0.06` is the chance that one metre
+of a bar's dry sand carries a fruit, hashed on the column's own address so the
+same bar bears the same melons in every fill of its chunks. Over the 70 ordinals
+the reach of this world holds on the default seed: **15 sand bars, 2,740 dry
+columns, 152 melons**, the nearest bar (ordinal 1, foot 26.5 m, 389 m from this
+island's centre) carrying **4** of them, and **0** melons anywhere that is not the
+dry crown of a sand bar — which includes **0** in the cells this island was
+authored from. The frog pear keeps the island and the melon keeps the bars; no
+count here is a rate multiplied out, and `test/node-smoke.js` walks the columns.
 
 ## 4. Form ability fields
 

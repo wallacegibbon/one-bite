@@ -694,6 +694,47 @@ for (const L of LANGS) {
       if (BK[b] && BK[b].micro) islePlants++;
     }
   }
+  /* what the sea's own kinds bear. A fruit that grows in a *kind of ground* is a
+     rule about the island kinds, not about a place, so the census the chapter
+     prints is asked of every column of every island: how many of them stand above
+     the water line, and what grows on top of the ones that do. The same question
+     is asked of this island's own authored ground, where the answer must be the
+     other fruit and nothing of this one. */
+  const CROPS = N.FRUITS.filter(f => f.bear && f.habitat.some(h => N.ISLE_TYPES[h]));
+  const CROPB = {};
+  for (const f of CROPS) CROPB[N.FRUIT_BLOCK_REV[f.id]] = f;
+  const cropKind = {}, cropBar = [];
+  let cropCols = 0, cropDry = 0, cropCells = 0;
+  for (let n = 1; n <= ORD; n++) {
+    const r = N.isleRecord(n);
+    if (r.r <= 0) continue;
+    const t = cropKind[r.type] = cropKind[r.type] || { isles: 0, cols: 0, dry: 0, crop: 0 };
+    t.isles++;
+    const span = Math.ceil(r.r), cx = Math.floor(r.x), cz = Math.floor(r.z);
+    let mine = 0, mineDry = 0;
+    for (let dz = -span; dz <= span; dz++) for (let dx = -span; dx <= span; dx++) {
+      const x = cx + dx, z = cz + dz;
+      if (Math.hypot(x + 0.5 - r.x, z + 0.5 - r.z) >= r.r) continue;
+      const under = N.islandUnder(x, z);
+      if (!under || under.isle.id !== r.id) continue;      // an overlapping dome owns it
+      cropCols++; t.cols++;
+      const h = N.landHeight(x, z);
+      if (h <= SZ.sea) continue;
+      cropDry++; t.dry++; mineDry++;
+      if (CROPB[w.get(x, h + 1, z)]) { cropCells++; mine++; t.crop++; }
+    }
+    if (r.type === 'sandbar')
+      cropBar.push({ id: r.id, at: [cx, cz], foot: r.r, d: Math.hypot(r.x - CEN.x, r.z - CEN.z), dry: mineDry, crop: mine });
+  }
+  const byCrop = a => a.slice().sort((u, v) => u.crop - v.crop);
+  const barLeast = byCrop(cropBar)[0], barMost = byCrop(cropBar)[cropBar.length - 1];
+  const barNear = cropBar.slice().sort((u, v) => u.d - v.d)[0];
+  const authored = {};
+  for (const [id, fid] of Object.entries(N.FRUIT_BLOCK)) {
+    let n = 0;
+    for (let i = 0; i < w.blocks.length; i++) if (w.blocks[i] === +id) n++;
+    if (n) authored[fid] = n;
+  }
   /* the two numbers that bound what a body can do out there, both read out of the
      code rather than remembered: the radius the renderer holds ground to, and the
      distance at which the air has taken 95% of the contrast off -- the reason that
@@ -861,6 +902,21 @@ for (const L of LANGS) {
       [ISLE_STAND, isleStand.id, Math.round(isleStandDist), Math.round(isleStand.r), isleCols, isleTrees, isleFruit, islePlants, isleCells[IWATER] || 0, isleCells[ISTONE] || 0, isleCells[ISAND] || 0, isleCells[IMROCK] || 0, isleCells[ISOIL] || 0, isleCells[IGRASS] || 0],
       /what stands on the nearest ground big enough to stand on \| \*\*nothing\*\*\. The nearest island with a foot of (\d+) m or more — ordinal (\d+), a [a-z]+, \*\*(\d+) m\*\* out, foot \*\*(\d+) m\*\* — has had its whole footprint \(\*\*([\d,]+)\*\* columns\) counted cell by cell: \*\*(\d+)\*\* cells of tree, \*\*(\d+)\*\* of fruit, \*\*(\d+)\*\* of plant\. What it does hold: \*\*([\d,]+)\*\* cells of water, \*\*([\d,]+)\*\* of stone, \*\*([\d,]+)\*\* of sand, \*\*([\d,]+)\*\* of the mountain rock[^,]*, \*\*([\d,]+)\*\* of soil and \*\*([\d,]+)\*\* of grass/,
       [ISLE_STAND, isleStand.id, Math.round(isleStandDist), Math.round(isleStand.r), isleCols, isleTrees, isleFruit, islePlants, isleCells[IWATER] || 0, isleCells[ISTONE] || 0, isleCells[ISAND] || 0, isleCells[IMROCK] || 0, isleCells[ISOIL] || 0, isleCells[IGRASS] || 0]),
+    H('what the sea\'s own kinds bear, cell by cell',
+      /\|\s*what the sea's own kinds bear\s*\|\s*\*\*(\d+) cells\*\*[^|]*walked — \*\*([\d,]+)\*\* of them, \*\*([\d,]+)\*\* standing above the water line[^|]*answers \*\*(\d+)\*\* times[^|]*\*\*([\d,]+)\*\* such columns over the \*\*(\d+)\*\* bars, and \*\*(\d+)\*\* on the/,
+      [cropCells, cropCols, cropDry, cropCells, cropKind.sandbar.dry, cropKind.sandbar.isles, cropCells - cropKind.sandbar.crop],
+      /\|\s*what the sea's own kinds bear\s*\|\s*\*\*(\d+) cells\*\*[^|]*walked — \*\*([\d,]+)\*\* of them, \*\*([\d,]+)\*\* standing above the water line[^|]*answers \*\*(\d+)\*\* times[^|]*\*\*([\d,]+)\*\* such columns over the \*\*(\d+)\*\* bars, and \*\*(\d+)\*\* on the/,
+      [cropCells, cropCols, cropDry, cropCells, cropKind.sandbar.dry, cropKind.sandbar.isles, cropCells - cropKind.sandbar.crop]),
+    H('the least and the most a bar carries, and what this island\'s own ground holds',
+      /All \*\*(\d+)\*\* bars carry some, from \*\*(\d+)\*\* cells on the least of them \(ordinal (\d+), \*\*(\d+)\*\* columns of crown\) to \*\*(\d+)\*\* on the most \(ordinal (\d+), \*\*(\d+)\*\*\)\. This island's own authored ground holds \*\*(\d+)\*\* of it, and \*\*(\d+)\*\* cells of the fruit that grows in ground/,
+      [cropKind.sandbar.isles, barLeast.crop, barLeast.id, barLeast.dry, barMost.crop, barMost.id, barMost.dry, authored[CROPS[0].id] || 0, authored[N.FRUIT_BY_ID.frogpear.id] || 0],
+      /All \*\*(\d+)\*\* bars carry some, from \*\*(\d+)\*\* cells on the least of them \(ordinal (\d+), \*\*(\d+)\*\* columns of crown\) to \*\*(\d+)\*\* on the most \(ordinal (\d+), \*\*(\d+)\*\*\)\. This island's own authored ground holds \*\*(\d+)\*\* of it, and \*\*(\d+)\*\* cells of the fruit that grows in ground/,
+      [cropKind.sandbar.isles, barLeast.crop, barLeast.id, barLeast.dry, barMost.crop, barMost.id, barMost.dry, authored[CROPS[0].id] || 0, authored[N.FRUIT_BY_ID.frogpear.id] || 0]),
+    H('the nearest island to this one is a bar, and what it carries',
+      /The nearest island to this one is one of the bars: ordinal \*\*(\d+)\*\*, foot \*\*([\d.]+) m\*\*,\s*centre \*\*(\d+) m\*\* out, and it carries \*\*(\d+)\*\* of that fruit over \*\*(\d+)\*\* columns of\s+crown/,
+      [barNear.id, +barNear.foot.toFixed(1), Math.round(barNear.d), barNear.crop, barNear.dry],
+      /The nearest island to this one is one of the bars: ordinal \*\*(\d+)\*\*, foot \*\*([\d.]+) m\*\*,\s*centre \*\*(\d+) m\*\* out, and it carries \*\*(\d+)\*\* of that fruit over \*\*(\d+)\*\* columns of\s+crown/,
+      [barNear.id, +barNear.foot.toFixed(1), Math.round(barNear.d), barNear.crop, barNear.dry]),
     H('the range the air gives up its contrast at, and the range the renderer holds',
       /takes 95% of the contrast off at \*\*(\d+) m\*\*[^|]*?keeps\s*\n?\s*chunks out to \*\*(\d+) chunks of (\d+) m = (\d+) m\*\*/,
       [airRange, keepChunks, chunkSize, drawRange],
@@ -906,11 +962,16 @@ for (const L of LANGS) {
     'the nearest of them, in centre distance and in open water': `${isleNear.toFixed(1)} m to the centre of the nearest, ${isleShore.toFixed(1)} m of open water past this island's shore`,
     'how far a point of open sea stands from the nearest ground': `sampled ${isleFar.length} points, median ${islePct(0.5).toFixed(1)} m, furthest ${islePct(1).toFixed(1)} m`,
     'what stands on the nearest ground big enough to stand on, cell by cell': `ordinal ${isleStand.id}: ${isleCols} columns over a foot of ${isleStand.r.toFixed(1)} m, ${isleTrees} tree cells, ${isleFruit} fruit cells, ${islePlants} plant cells, and by material ${Object.keys(isleCells).map(Number).sort((a, b) => isleCells[b] - isleCells[a]).map(k => `${k}x${isleCells[k]}`).join(' ')}`,
+    'what the sea\'s own kinds bear, cell by cell': `${cropCells} crop cells in ${cropCols} columns (${cropDry} above the water line); by kind ${Object.keys(cropKind).map(k => `${k} ${cropKind[k].isles}/${cropKind[k].dry}/${cropKind[k].crop}`).join(' ')}`,
+    'the least and the most a bar carries, and what this island\'s own ground holds': `bars carry ${barLeast.crop} (ordinal ${barLeast.id}, ${barLeast.dry} columns) to ${barMost.crop} (ordinal ${barMost.id}, ${barMost.dry}); authored ground ${authored[CROPS[0].id] || 0} of it, ${authored[N.FRUIT_BY_ID.frogpear.id] || 0} of the fruit that grows in ground`,
+    'the nearest island to this one is a bar, and what it carries': `ordinal ${barNear.id} at ${barNear.at}, foot ${barNear.foot.toFixed(1)} m, ${Math.round(barNear.d)} m out, ${barNear.crop} cells over ${barNear.dry} columns`,
     'the range the air gives up its contrast at, and the range the renderer holds': `fogDen ${fogDen} (${fogLaw ? 'the shader law is the one this solves' : 'THE SHADER LAW HAS CHANGED'}), 95% at ${airRange} m, renderer holds ${keepChunks} chunks x ${chunkSize} m = ${drawRange} m`,
     'the trip a fruit pays for, in seconds, speeds and metres': `${frogDur} s of frog, ${handKeep} s in hand at night`,
     'the speeds that trip is walked at, and the two distances it buys': `${frogWalk} m/s on land, ${frogSwim} m/s in the water: ${oneFruit} m out and back, ${threeFruit} m for three`
   };
 
+  if (isleNearest.type !== 'sandbar' || isleNearest.id !== barNear.id)
+    bad('02 the nearest island to this one', `a ${isleNearest.type}, ordinal ${isleNearest.id}; the nearest bar is ordinal ${barNear.id}`, 'one and the same sand bar, which is what the chapter\'s paragraph says');
   if (!fogLaw) bad('02 the law the air costs contrast by', 'the shader no longer carries `1.0 - exp(-uFogDen*uFogDen*d*d)`', 'the law the chapter\'s 95% range is solved from');
 
   let badHeights = 0;

@@ -84,7 +84,7 @@ A person with a basket on their back, a fruit in their mouth, finding ways throu
 |---|---|---|
 | World | one authored square of ground, 160×48×160 voxels, standing in an island on an unbounded plane (02 §1.1) | no edge to reach: what is missing out there is not more ground but what lives on it — plants, animals, places |
 | Zones | 9 | 20–24 |
-| Fruits | 1 | 12–16 |
-| Creatures | 1 species (1 with a fruit) | 12–16 species + named individuals |
+| Fruits | 2 | 12–16 |
+| Creatures | 2 species (2 with a fruit) | 12–16 species + named individuals |
 | Deeds | 3 | none: the valley keeps its places until an animal arrives with a fruit, a niche and a door only it can open |
 | One day | 420 seconds | 1200 seconds |
