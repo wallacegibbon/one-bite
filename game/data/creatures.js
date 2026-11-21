@@ -111,6 +111,28 @@
          swings. It is asked at the rate the body is actually going, so at a
          crawl the same 0.6 rad/s is a much tighter circle. */
       locomotion: 'amphibian', speed: 1.45, swimSpeed: 6.4, turn: 0.6, alert: 16, herd: 3,
+      /* How long a body of this animal holds its breath, in seconds, head under
+         water and not frightened. It is the animal's own, like its speed and like
+         the depth it hangs at, because a body worn from this fruit is the same
+         animal: it is asked of the record `src/entities.js` already takes the
+         cruise and the hover from, and there is no second copy of it anywhere.
+         A sea turtle is a lung that went back to the sea: it comes up for one
+         breath and then feeds under the surface for minutes at a time, and the
+         resting holds recorded for the large ones run to tens of minutes, which
+         is a thing nothing in this valley asks of it. What it does every day,
+         swimming and feeding, is minutes -- so this is minutes, and it is the
+         animal and not a licence: put the body this fruit gives and a person's
+         body in the same open water, hold the dive key, and the person's air is
+         gone at **18.9 s** -- the **18 s** on that body's own record, plus the
+         moment it takes a body the water is not holding up to get its head under
+         -- while this body is still under that same surface, its own air gone at
+         **240 s** (`test/play.js`,
+         `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`).
+         A row that states no `breath` is a body that holds its breath as long as
+         a person's body does -- that is the number `data/player.js` carries, and
+         the only other body in the valley that needs a number at all, the frog's,
+         breathes the water and has no reserve to hold. */
+      breath: 240,
       /* The lane it swims: so many metres off the island's own shore, all the
          way round it, at every bearing. `at: 'coast'` is resolved by
          src/worldgen.js's `shoreWater(bearing)` -- the same rule the map's
@@ -124,12 +146,27 @@
          walking the bottom, and no second rule gets a say in where that line
          falls. */
       orbit: { at: 'coast', r0: 12, r1: 40 },
-      /* A body the water holds up hangs this far under the level the water
-         floats it at. A sea turtle lies just under the surface -- it has to
-         come up to breathe, and it does not go looking for the bottom -- so
-         this is small on purpose, and the body worn from its fruit is held at
-         the same depth by the same number. */
-      hover: 0.35,
+      /* How far under the level the water floats a body this animal lies, asked
+         of the crown of it. The number is negative, and the sign is the whole
+         of the sentence: a sea turtle does not hang under the surface film the
+         way a frog does, it rides it. The crown of its shell breaks the water
+         and its head stands out over the film, because it is a lung and has to
+         come up -- and it does not go looking for the bottom, which is the other
+         half of why this row, and not the water, decides where the animal lies.
+         The frog's row states 1.6 m down because it breathes the water and has
+         no reason to see the sky; this one states the top of the water because
+         it has nothing else to breathe. It is the same number the body worn from
+         its fruit floats at, and it is the reason that body can stop moving in
+         the open sea and still be breathing: a body of this animal that stops
+         moving comes to rest with its crown **0.20 m above the film** and its
+         eyes **0.12 m** above it, out of the water and breathing, its belly a
+         hand's width under. It cannot be *any* negative number, though: the
+         level a body stops at has to stay below the highest point the water's own
+         hold lets a body that keeps asking climb (`surfCeiling`, the surface less
+         half the body), or the two ends of one law would be the other way round
+         -- for this body that bound is -0.225 m, and this is -0.2.
+         `test/play.js` asks both rows whether they lie inside it. */
+      hover: -0.2,
       fruit: 'turtlemelon',
       attitude: { self: 'calm', default: 'ignore' },
       dex: '它一年会上岸一次，回到它出生的那片沙上去。它在水里从不落在沙上——它落在沙上是在找那个地方。',

@@ -49,7 +49,15 @@
      comes up when it wants the sky, and `hover` on the animal's record says how
      far under that floating level a body of that kind rests. A body with nothing
      to say -- a human, or any body that has to come up for air -- keeps the 30 cm
-     its back hangs under the surface, which is what it has always kept. */
+     its back hangs under the surface, which is what it has always kept.
+     That term is allowed to be negative, and a row that makes it negative is an
+     animal that does not hang under the film but rides it: the sea turtle's row
+     does, because it is a lung and lies at the top of the water with its head
+     out. The one bound on the number is `surfCeiling` a few lines below -- the
+     level a body comes to rest at has to stay under the highest point a body the
+     water is holding can climb, or the two ends of this law change places and a
+     resting body sits above the reach of its own stroke. Both animal rows are
+     asked whether they keep that bound in test/play.js. */
   function floatLevel(wSurf, tall, hover) { return wSurf - tall - (hover === undefined ? FLOAT_UNDER : hover); }
   /* The depth an animal's own row states, or the 30 cm a body hangs under the
      surface when its row states none. Asked as a function because a row that
@@ -538,7 +546,11 @@
       this.form = null;            // fruitId
       this.formT = 0;              // time remaining
       this.formMax = 1;
-      this.air = 18;
+      /* Held breath. A body starts the run with the reserve of the body the run
+         starts in; the reserve itself belongs to the record of whichever body is
+         being worn (`maxAir`, and `breath` on data/player.js and on the animal
+         rows in data/creatures.js). */
+      this.air = HUMAN.breath;
       this.vital = 5;              // vitality
       this.fright = 0;             // fright 0..1
       this.inWater = false; this.headWater = false;
@@ -631,11 +643,18 @@
        is no stride to size at all -- its model gives its legs no share of one,
        because a frog does not walk on land, it hops. */
     walkMove() { return N.walkMove(Math.hypot(this.vx, this.vz), this.moveDef.speed); }
-    /* Held breath is a property of the body. A frog body does not need air at
-       all (breatheAir: false, handled by the caller); every body that does need
-       it holds it for the same eighteen seconds. No body in the valley carries
-       a bonus since the jellyfish was cut -- the field went with it. */
-    maxAir() { return 18; }
+    /* How long this body holds its breath, in seconds. It is the animal's own
+       number, off the same record the cruise and the hover are taken from: the
+       body worn from a sea turtle holds a sea turtle's breath, and a person's
+       body holds a person's, which sits on data/player.js with the rest of that
+       record. A row that states no `breath` is a body with no animal to answer
+       for it, and there is no other number for such a body. A body that
+       breathes water is never asked this at all: the caller holds its ceiling
+       off `breatheAir`. */
+    maxAir() {
+      const own = this.moveDef.breath;
+      return own === undefined ? HUMAN.breath : own;
+    }
     eyePos() {
       const m = N.MODELS[this.modelId];
       const h = (m && m.eye ? m.eye : 1.6);
@@ -787,14 +806,31 @@
          water is only a metre deep over is on its feet; a body at the surface of
          a deep column is not.
          The buoyancy below is a narrower question -- whether the water holds the
-         body up on its own when the body stops moving, which belongs to a body
-         that breathes water and not to one that drowns in it -- and it is this
-         answer with that one condition added. */
+         body up on its own when the body stops moving. The gas is not the test.
+         The body is: a body is held up when it is a body whose animal is built to
+         lie in that water, and that is the record's own word for it --
+         `locomotion`, the same word the animal's own body asks with
+         (`isAmphibian`/`isAquatic`, read in `Creature.move` below), so the animal
+         walking its ring and the body worn from its fruit answer once. What used
+         to be asked here was `breatheAir`, and the two are not the same animal:
+         the sea turtle's row says it lies at the top of the sea (`hover`), says
+         it swims faster through water than any other body in the valley, and
+         says it comes ashore onto sand -- and the field made its body, worn as a
+         form, sink to the bottom of that sea and stand there, because it happens
+         to breathe air. What the breath decides is written one block below, where
+         a body whose head is under the surface spends the reserve its own record
+         states; it is a clock, not a force. */
       const bedTop = this.inWater ? standY(W, cx, cz, this.y) : -1;
       const carried = this.inWater && waterHoldsUp(wSurf, bedTop);
-      const heldUp = canBreathe && carried;
+      const M = this.moveDef;
+      const builtForWater = M.locomotion === 'amphibian' || M.locomotion === 'water';
+      const heldUp = carried && builtForWater;
 
       // ---- breathing ----
+      /* Held breath is a property of the body, and how long a body of this
+         animal holds it is on that animal's row: `breath` there, and the
+         person's number on data/player.js. The reserve is spent only while the
+         head is under the surface of a water this body cannot breathe. */
       if (this.headWater && !canBreathe) {
         this.air -= dt * (this.fright > 0.4 ? 1.6 : 1);
         if (this.air <= 0) { this.air = 0; game.damage(0.55 * dt, N.t('log.causeDrown')); }
@@ -1011,10 +1047,17 @@
            always had, the lakebed stays in reach -- up to a small gap above it,
            where the stroke can keep running -- and the water takes it back up the
            moment the key comes off, including off the bottom, which is why the
-           branch is picked by `heldUp` and not by `!grounded`. A body that
-           breathes air is not held up at all: it has to kick to stay off
-           the bottom, and that is what it costs to wear a body that was not
-           built for the lake. */
+           branch is picked by `heldUp` and not by `!grounded`. What decides
+           `heldUp` is the body's record and not its breath, so the other body
+           built for this water -- the sea turtle's, worn as a form, breathing
+           air -- is held up as well, and going down is a thing it has to be
+           *asked* to do. A person's body is the one that states nothing about
+           the water anywhere, and so it is the one left to gravity here: it has
+           to kick to stay off the bottom, and that is what it costs to wear a
+           body that was not built for the lake. That a person's body floats a
+           little in real water is true and is not modelled here, and the
+           sentence is left standing as an open question rather than settled by
+           a bare number (OPEN-ISSUES 29). */
         const push = speed * 1.5;
         // the level the water holds a body at is a height, not a cell: the body's
         // own height, the depth a body of that animal's kind rests at under the
@@ -2226,7 +2269,12 @@
          one rule and lifted up a bank like a crate by the other. Whether the
          species belongs to the water at all belongs to the body, not to the
          column: a body that was not built for the lake stands in it whatever the
-         depth of it, and nothing holds it up. */
+         depth of it, and nothing holds it up. The body worn from this animal asks
+         that same word of this same record (`builtForWater`, in `Player#update`),
+         which is the reason the animal and the body worn from it cannot answer it
+         in two different ways -- the breath is not in it anywhere, because the
+         breath decides how long a head may stay under, not whether the water
+         carries the body. */
       const waterHolds = (bed) => this.isAmphibian() && inWater && waterHoldsUp(wSurf, bed);
       /* Which of the three ways a body of this shape moves this frame, answered
          once, before anything that depends on the answer. There is the water of
@@ -3805,5 +3853,11 @@
   N.floatLevel = floatLevel;
   N.hoverOf = hoverOf;
   N.bedFloor = bedFloor;
+  /* and the top of the same hold, for the same reason: the two ends of it are
+     one pair, and anything that asks whether an animal's row describes a body
+     that can lie in this water has to ask whether the level it lies at is under
+     the height its own stroke can carry it to. A row that puts them the other
+     way round describes an animal that rests above its own reach. */
+  N.surfCeiling = surfCeiling;
 
 })(window.FRUTARIA = window.FRUTARIA || {});

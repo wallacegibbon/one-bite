@@ -120,14 +120,28 @@
       form: {
         /* No `dryTimer`: this skin does not dry. A turtle comes out of the water
            and stays out, and the body you wear with it has no clock running
-           against it on the sand. The cost is elsewhere and it is not small:
-           `breatheAir` is this skin's, and it is the ordinary kind, so the sea
-           is not a place this body breathes, and it must come up. */
-        cn: '海龟', en: 'sea turtle', size: [1.5, 0.9], breatheAir: true,
+           against it on the sand.
+           `breatheAir` is this skin's, and it is the ordinary kind: the sea is
+           not a place this body breathes, and it must come up. What it is not is
+           the test for whether the sea carries the body -- that belongs to the
+           animal's `locomotion` and to the level its `hover` states (see
+           src/entities.js), and asking the breath instead is what used to leave
+           this body standing on the seabed in the middle of an ocean. The breath
+           decides how long a head may stay under, and the animal's row states
+           that number: `breath` in data/creatures.js, not a shared one.
+           The box is the animal's own shape: 1.5 m across the wings, and 0.45 m
+           from the sand to the top of its head -- the height the model is carved
+           to. That one is not a preference. The water's hold is asked of this
+           number for the body worn from the fruit and of the model's own height
+           for the animal that walks the sea, and a creature that hung one number
+           in the water while standing another on the sand would be two animals
+           with one name. `test/node-smoke.js` keeps the drawn body inside this
+           box from below and from above. */
+        cn: '海龟', en: 'sea turtle', size: [1.5, 0.45], breatheAir: true,
         stealth: 0.7, fov: 95
       },
-      cost: ['它不呼吸水：海对这具身体不是能呼吸的地方，下来就得再上去', '陆地上很慢：每秒 1.45 米，比雨蛙还慢，这具身体也不会跳', '太大：1.5 米宽的身子进不了门，也挤不进林子'],
-      costEn: ['it does not breathe water: the sea is not a place this body can breathe, and down means up again', 'slow on land: 1.45 m/s, slower than the frog, and this body cannot jump at all', 'too big: a 1.5 m body does not fit through a door or between the trees'],
+      cost: ['它不呼吸水：海对这具身体不是能呼吸的地方。它躺在水面上，潜下去要自己按着，底下那口气是有数的', '陆地上很慢：每秒 1.45 米，比雨蛙还慢，这具身体也不会跳', '太大：1.5 米宽的身子进不了门，也挤不进林子'],
+      costEn: ['it does not breathe water: the sea is not a place this body can breathe. it lies at the top of the water, going down is a thing it has to ask for, and the breath down there is counted', 'slow on land: 1.45 m/s, slower than the frog, and this body cannot jump at all', 'too big: a 1.5 m body does not fit through a door or between the trees'],
       lore: '沙洲顶上只有沙，瓜就躺在沙上。它不爬藤到别处去——它只要那片沙被日头晒干过。',
       loreEn: 'There is only sand on the crown of a bar, and the melon lies on it. It does not run its vines anywhere else — it only asks that the sand have been dry in the sun.'
     }

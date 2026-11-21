@@ -71,15 +71,16 @@ mirror of the animal table: adding a fruit means adding a ground, a row in the
 attitude matrix and a new set of gates (03 §3). The turtle melon is what earning
 that took: a kind of ground the world had to be taught to build (02 §1.2), an
 animal whose home is a lane of open water and whose fruit grows on the sand of a
-bar it swims out to, a body that breathes air and therefore is not held up by the
-sea it swims in, and one new animation cycle, because a body that flies through
+bar it swims out to, a body that breathes air and is held up by the sea all the
+same — it lies at the top of it, head out, and going down is a thing the player
+asks for — and one new animation cycle, because a body that flies through
 water is not a body that kicks one.
 
 ### Uncommon (2 slots)
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `turtlemelon` | Turtle Melon | sea turtle | 420 s | the dry sand on the crown of a sand bar | the animal's own motion — **1.45 m/s** on land, **6.4 m/s** through water, **no launch at all**: a body with no `hop` has no reach, so every riser in the valley is a wall to it (03 §3); it swims the lane off this island's shore and it comes out onto sand, and its skin does not dry — there is no `dryTimer` on this record and no clock running against it on the beach; stealth 0.7, fov 95 | **it does not breathe water**: the sea is not a place this body can breathe, and the water does not hold it up either — down means swimming up, and there is 18 s of breath in a body that stops; **slow on land: 1.45 m/s, slower than the frog**, and this body cannot jump; **too big**: a 1.5 m wide body does not fit through a door or between the trees |
+| `turtlemelon` | Turtle Melon | sea turtle | 420 s | the dry sand on the crown of a sand bar | the animal's own motion — **1.45 m/s** on land, **6.4 m/s** through water, **no launch at all**: a body with no `hop` has no reach, so every riser in the valley is a wall to it (03 §3); it swims the lane off this island's shore and it comes out onto sand, and its skin does not dry — there is no `dryTimer` on this record and no clock running against it on the beach; stealth 0.7, fov 95 | **it does not breathe water: the sea is not a place this body can breathe. it lies at the top of the water, going down is a thing it has to ask for, and the breath down there is counted**; **slow on land: 1.45 m/s, slower than the frog, and this body cannot jump at all**; **too big: a 1.5 m body does not fit through a door or between the trees** |
 
 **Where it actually grows, measured.** `bear: 0.06` is the chance that one metre
 of a bar's dry sand carries a fruit, hashed on the column's own address so the

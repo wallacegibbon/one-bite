@@ -216,22 +216,44 @@
       ]
     },
     /* ---------------- sea turtle ----------------
+       A flat animal, and the model is flat because the animal is. The shell's
+       dome rises a quarter of the shell's own length; its belly shield is carved
+       down at the sand, because this body gets along on land by dragging -- the
+       row says as much, and the row and the model are one animal. The tallest
+       thing on it is its head, which is raised: that is the pose this animal
+       lies in at the top of the water, head out, breathing, and it is the pose
+       the worn body is drawn in the moment it stops moving (the row's own
+       `hover`, and `floatLevel` in src/entities.js).
+       The front wings are plates. Each one is a thick root at the shoulder and a
+       blade that is thin through, wide along its chord and wide outboard -- the
+       shape a flipper is, and the reason the water's stroke works: a blade that
+       is thick through is a body moving water out of the way, not a wing pushing
+       against it. The blades are held swept back, which is where a turtle keeps
+       them when it is not swimming.
        Measured off its own boxes at the row's 0.25 scale, in the pose it is
-       authored in (play.js `theSeaTurtleStrokesBothWingsTogether` reports these
-       as `carved`): 1.60 m from wingtip to wingtip, 1.41 m from the tip of its
-       snout to the trailing edge of its trailing flippers, 0.87 m off the sand
-       it stands on. The wings are carved swept back -- that is where a turtle
-       holds them when it is not swimming.
-       The model does NOT fit the box the world enforces for it (the form states
-       a 1.5 m square in plan, half-width 0.75 m) and it is not carved to: as
-       authored it reaches 0.80 m out each side and 0.80 m past its nose, and at
-       the top of a stroke its wingtips reach 1.07 m out -- 0.32 m of drawn
-       animal outside the wall the world enforces. What the swept-back pose buys
-       is the difference between those two numbers: a body pressed against a rock
-       face draws its wings through the face instead of standing 1.07 m into it
-       the whole time. The span appears when the wings move, and play.js measures
-       all three readings (carved, floating, top of a stroke) off the matrices the
-       draw uploads instead of holding any of them as a number here.
+       authored in, and off the matrices the draw uploads for it: play.js
+       `theSeaTurtleStrokesBothWingsTogether` reports those readings as `carved`,
+       `idle` and `stroke` and prints each wing's blade through, along its chord
+       and out from the shoulder, and it is the record of this body's size rather
+       than anything written below. Of the two figures worth stating here because
+       that step holds them: the plate is **0.045 m** through against **0.300 m**
+       of chord and **0.362 m** out, and the column of it at the shoulder is
+       **0.205 m** through; and the tallest point of the authored body is
+       **0.450 m**, which is the height the form's box states and the height the
+       water's hold is asked of.
+       The model does NOT fit the box the world enforces for it in plan (the form
+       states a 1.5 m square, half-width 0.75 m) and it is not carved to: the
+       span reaches past that wall, and further still at the top of a stroke.
+       What the swept-back pose buys is the difference between those two numbers:
+       a body pressed against a rock face draws its wings through the face instead
+       of standing past it the whole time. The span appears when the wings move,
+       and play.js measures all three readings off the matrices rather than
+       holding any of them as a number here. In the other direction it is carved
+       to the box exactly: the highest point of the model is the height the form
+       states, because that height is the height of the animal and the water's
+       hold is asked of it twice over -- `floatLevel` for the body worn from this
+       fruit and `MODEL_H` for the animal itself, and a body that hangs one
+       number in the water and stands another on the sand is two animals.
        Two things about this body are stated by the absence of a field, not the
        presence of one. There is no `hop` anywhere in its record. Worn as a form
        that is the whole of its climbing: a body with no launch has no reach, its
@@ -255,74 +277,92 @@
        one back, and the body surges on the down-stroke; see the comment over
        that table. */
     turtle: {
-      eye: 0.62,
+      eye: 0.37,
       parts: [
         { name: 'body', anim: 'bob', swimFlap: 1, boxes: [
           /* the carapace, two steps and a pale row of plates along the top: the
              dome of a turtle's shell is the one thing about its silhouette that
              says turtle, and one box cannot be a dome -- the second step stands
-             0.22 m inboard and 0.2 m above the first, and the plates sit on top
-             of the crown rather than inside it */
-          [-1.8, 1.6, -2.2, 3.6, 0.9, 3.6, '#3f4a33'],
-          [-1.4, 2.5, -1.7, 2.8, 0.8, 2.9, '#4a5739'],
-          [-0.9, 3.3, -1.4, 1.8, 0.14, 0.8, '#77855c'],
-          [-0.9, 3.3, -0.4, 1.8, 0.14, 0.8, '#7d8b61'],
-          [-0.9, 3.3, 0.6, 1.8, 0.14, 0.7, '#77855c'],
+             inboard of the first and above it, and the plates sit on top of the
+             crown rather than inside it. What the dome is allowed to be is the
+             animal's: the rise of it is a quarter of the shell's own length, the
+             same proportion a real carapace has, and not the half that turns a
+             tortoise's high dome into a bowl tipped up on the sand. This animal
+             swims through water and under it; its shell is a foil. */
+          [-1.8, 0.3, -2.2, 3.6, 0.65, 3.6, '#3f4a33'],
+          [-1.4, 0.95, -1.7, 2.8, 0.4, 2.9, '#4a5739'],
+          [-0.9, 1.35, -1.4, 1.8, 0.12, 0.8, '#77855c'],
+          [-0.9, 1.35, -0.4, 1.8, 0.12, 0.8, '#7d8b61'],
+          [-0.9, 1.35, 0.6, 1.8, 0.12, 0.7, '#77855c'],
           /* the rim of the shell: the marginals. They stand outside both plates
              they sit between, which is what makes the edge of a shell read as an
              edge and not as the side of a brick */
-          [-1.95, 1.55, -1.6, 0.2, 0.7, 2.8, '#2f3a26'],
-          [1.75, 1.55, -1.6, 0.2, 0.7, 2.8, '#2f3a26'],
-          [-1.5, 1.55, -2.35, 3.0, 0.6, 0.25, '#2f3a26'],
+          [-1.95, 0.25, -1.6, 0.2, 0.62, 2.8, '#2f3a26'],
+          [1.75, 0.25, -1.6, 0.2, 0.62, 2.8, '#2f3a26'],
+          [-1.5, 0.25, -2.35, 3.0, 0.55, 0.25, '#2f3a26'],
           /* the plastron, pale, under the shell and short of it fore and aft --
-             a turtle's belly is shielded, not a continuation of its back */
-          [-1.45, 1.15, -1.8, 2.9, 0.5, 3.2, '#b3ad8c']
+             a turtle's belly is shielded, not a continuation of its back. It is
+             carved down at the model's own ground line because this body drags
+             it: on sand a sea turtle does not stand its trunk off the ground on
+             its flippers the way a tortoise does, it hauls the shell along with
+             the flippers, and the row says the same thing in its own units by
+             giving the body no launch at all and a land speed under the frog's. */
+          [-1.45, 0.0, -1.8, 2.9, 0.35, 3.2, '#b3ad8c']
         ] },
-        { name: 'head', parent: 'body', pivot: [0, 2.0, 1.4], anim: 'nod', boxes: [
-          [-0.55, 1.7, 1.2, 1.1, 0.9, 0.5, '#4b5540'],           // the neck
-          [-0.8, 1.75, 1.6, 1.6, 1.1, 1.2, '#5b6544'],           // the skull
-          [-0.45, 1.8, 2.8, 0.9, 0.5, 0.4, '#c8c39a'],           // the beak, horn
-          [-0.85, 2.35, 2.3, 0.3, 0.4, 0.3, '#1c1a12'],          // eyes, on the sides
-          [0.55, 2.35, 2.3, 0.3, 0.4, 0.3, '#1c1a12']
+        { name: 'head', parent: 'body', pivot: [0, 1.1, 1.4], anim: 'nod', boxes: [
+          [-0.55, 0.85, 1.2, 1.1, 0.7, 0.5, '#4b5540'],           // the neck
+          [-0.8, 0.95, 1.6, 1.6, 0.85, 1.2, '#5b6544'],           // the skull
+          [-0.45, 1.0, 2.8, 0.9, 0.45, 0.4, '#c8c39a'],           // the beak, horn
+          [-0.85, 1.3, 2.3, 0.3, 0.4, 0.3, '#1c1a12'],            // eyes, on the sides
+          [0.55, 1.3, 2.3, 0.3, 0.4, 0.3, '#1c1a12']
         ] },
-        /* the front wings. The pivot is the shoulder, at the top of the shell's
-           front corner; the paddle hangs out, down and back from it, its long
-           axis outboard and its chord fore and aft. So the turn that raises it
-           is a turn about the body's own front-to-back axis and the turn that
-           feathers it is a turn about the body's sideways axis -- the same two
-           axes the water's stroke already knows how to split, and no new joint.
-           The `heldPose` is the swept pose the model is authored in, and it is
-           what a stroke starts and ends from. */
-        { name: 'wingL', parent: 'body', pivot: [-1.7, 2.0, 0.9], anim: 'walk', sign: 1,
+        /* the front wings: a root and a plate. The root is the thick end of the
+           flipper, the column of it that meets the shoulder at the top of the
+           shell's front corner, and that is where the pivot is. The blade is the
+           flat end: thin through, and wide along its chord and outboard -- the
+           one pair of dimensions a wing is, and the reason it pushes against the
+           water instead of shoving it aside. The blade lies along the ground
+           rather than reaching down to it, because the body it belongs to is
+           lying there too; and its lowest face is carved on the model's ground
+           line, so the walk cycle's lift (models.js, FOOT) is what keeps it out
+           of the sand and nothing else.
+           So the turn that raises it is a turn about the body's own front-to-back
+           axis and the turn that feathers it is a turn about the body's sideways
+           axis -- the same two axes the water's stroke already knows how to split,
+           and no new joint. The `heldPose` is the swept pose the model is
+           authored in, and it is what a stroke starts and ends from. */
+        { name: 'wingL', parent: 'body', pivot: [-1.7, 0.95, 0.9], anim: 'walk', sign: 1,
           stride: 1, stands: 1, syncPair: 1, swimFlap: 1,
           air: [0, 0, 0.22], crouch: [0.18, 0, -0.1], heldPose: [0.12, 0, -0.1], boxes: [
-            [-1.7, 1.05, 0.5, 0.55, 0.9, 0.85, '#33402c'],        // the shoulder, into the top of the shell's corner
-            [-3.15, 0.14, -0.75, 1.95, 1.01, 1.45, '#33402c'],    // the blade: out and down, and this is the leg it stands on
-            [-3.1, 0.0, -0.7, 0.9, 0.16, 1.35, '#8e9a72'],        // the pale edge of it, the part that touches the sand
-            [-3.1, 1.15, 0.4, 0.9, 0.16, 0.3, '#6a7a52'],         // the leading edge, standing above the blade
-            [-3.2, 0.2, -0.75, 0.14, 0.9, 1.4, '#2c3726']         // its outer corner, the widest corner the model has
+            [-2.05, 0.14, 0.4, 0.95, 0.82, 0.95, '#33402c'],      // the root, into the shell's corner
+            [-3.11, 0.0, -0.7, 1.45, 0.18, 1.2, '#33402c'],       // the blade: a plate, thin through
+            [-3.11, 0.0, 0.5, 1.4, 0.18, 0.22, '#8e9a72'],        // its leading edge, pale, and proud of the plate
+            [-3.05, 0.18, 0.35, 0.9, 0.12, 0.3, '#6a7a52'],       // the ridge along that edge
+            [-3.25, 0.0, -0.7, 0.14, 0.18, 1.35, '#2c3726']       // its outer corner, the widest corner the model has
           ] },
-        { name: 'wingR', parent: 'body', pivot: [1.7, 2.0, 0.9], anim: 'walk', sign: -1,
+        { name: 'wingR', parent: 'body', pivot: [1.7, 0.95, 0.9], anim: 'walk', sign: -1,
           stride: 1, stands: 1, syncPair: 1, swimFlap: 1,
           air: [0, 0, -0.22], crouch: [0.18, 0, 0.1], heldPose: [0.12, 0, 0.1], boxes: [
-            [1.15, 1.05, 0.5, 0.55, 0.9, 0.85, '#33402c'],
-            [1.2, 0.14, -0.75, 1.95, 1.01, 1.45, '#33402c'],
-            [2.2, 0.0, -0.7, 0.9, 0.16, 1.35, '#8e9a72'],
-            [2.2, 1.15, 0.4, 0.9, 0.16, 0.3, '#6a7a52'],
-            [3.06, 0.2, -0.75, 0.14, 0.9, 1.4, '#2c3726']
+            [1.1, 0.14, 0.4, 0.95, 0.82, 0.95, '#33402c'],
+            [1.66, 0.0, -0.7, 1.45, 0.18, 1.2, '#33402c'],
+            [1.71, 0.0, 0.5, 1.4, 0.18, 0.22, '#8e9a72'],
+            [2.15, 0.18, 0.35, 0.9, 0.12, 0.3, '#6a7a52'],
+            [3.11, 0.0, -0.7, 0.14, 0.18, 1.35, '#2c3726']
           ] },
         /* the rear flippers: they trail. They swing a little as the body moves
            (a small share of the walk cycle) and they hold the swept pose the
            water puts them in, and they carry nothing -- no `stands`, and no
            stroke of their own. A turtle steers with them; it does not stand on
+           them. They are plates for the same reason the front ones are, and they
+           are tucked under the shell's rear rim, which is where a turtle keeps
            them. */
-        { name: 'rearL', parent: 'body', pivot: [-1.25, 1.5, -1.4], anim: 'walk', sign: 1,
+        { name: 'rearL', parent: 'body', pivot: [-1.25, 0.5, -1.4], anim: 'walk', sign: 1,
           stride: 0.25, swimPose: [0, 0, -0.14], boxes: [
-            [-2.15, 1.1, -2.45, 0.9, 0.4, 1.05, '#3a4630']
+            [-2.4, 0.04, -2.2, 0.9, 0.14, 1.0, '#3a4630']
           ] },
-        { name: 'rearR', parent: 'body', pivot: [1.25, 1.5, -1.4], anim: 'walk', sign: -1,
+        { name: 'rearR', parent: 'body', pivot: [1.25, 0.5, -1.4], anim: 'walk', sign: -1,
           stride: 0.25, swimPose: [0, 0, 0.14], boxes: [
-            [1.25, 1.1, -2.45, 0.9, 0.4, 1.05, '#3a4630']
+            [1.5, 0.04, -2.2, 0.9, 0.14, 1.0, '#3a4630']
           ] }
       ]
     },

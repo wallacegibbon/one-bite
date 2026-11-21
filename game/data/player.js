@@ -105,6 +105,17 @@
   N.HUMAN_FORM = {
     cn: '人形', en: 'human', size: [0.62, 1.8], scale: 0.18,
     speed: 4.7, sprint: 1.45, swimSpeed: 2.9, jump: 8.3, turn: 1.6,
+    /* Held breath, seconds, with the head under water and the body not
+       frightened. This is the number the game has always carried for a person
+       under water -- a body with no animal's record under it is asked no other
+       -- and it is kept here rather than in the rules so that there is one
+       record per body, this one being the body the run starts in. An animal's
+       row may state its own (`breath`, data/creatures.js); a body worn from an
+       animal whose row states none holds its breath for this long, because a
+       body that breathes air and has no animal to answer for it is a person's
+       body. It is a small number next to the sea turtle's, and that is the
+       point: in the open water this is the body that has to come up. */
+    breath: 18,
     fov: 76
   };
 
