@@ -4424,10 +4424,18 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   check('a lens under the lake surface is a lens in the water, and the body above it is dry',
     !lensUnder.error && lensUnder.tilt.cam.lensInWater === true && lensUnder.tilt.headWater === false, lensUnder);
-  check('every ray from that lens hits water first, so no pixel may show raw sky',
+  /* "No pixel may show raw sky" used to be what this frame was held to, and it
+     was the pane passing the sky quad through at every angle the index closes:
+     with the bend in, a lens half a metre under a lake and turned toward the
+     sun does meet the sun's own brightness -- through 0.5 m of lake, at the
+     angle the bend states -- and so does the frame with no water in it at all.
+     What the water does keep out of the frame is everything else: the mean, the
+     colour, and 2.4 points of the share over 200. That is what is held now. */
+  check('every ray from that lens hits water first, and the water keeps the sky out of the rest of it: 0.92% of the frame over 200 where a lake that is not there puts 3.3% there, a mean of 99.9 against 146.7, blue over red by 114.7 against 32.9',
     lensUnder.tilt && lensUnder.tilt.px.waterFirst === lensUnder.tilt.px.n &&
-    lensUnder.tilt.px.maxLum < lensUnder.tilt.bare.maxLum &&
-    lensUnder.tilt.px.over200 < lensUnder.tilt.bare.over200, lensUnder);
+    lensUnder.tilt.px.over200 < lensUnder.tilt.bare.over200 - 1 &&
+    lensUnder.tilt.px.meanLum < lensUnder.tilt.bare.meanLum - 30 &&
+    lensUnder.tilt.px.blueMinusRed > lensUnder.tilt.bare.blueMinusRed + 50, lensUnder);
   check('and the whole frame is tinted by the water it is looking through',
     lensUnder.tilt && lensUnder.tilt.hazeOn === 1 && lensUnder.tilt.hazeK[0] > 0.5 &&
     lensUnder.tilt.px.blueMinusRed > 45, lensUnder);
@@ -4436,9 +4444,12 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('a level view, lens above the surface, is not put underwater',
     lensUnder.lvl && lensUnder.lvl.cam.lensInWater === false && lensUnder.lvl.fogDen < 0.02 &&
     lensUnder.lvl.px.over200 > 0, lensUnder);
-  check('first person on the bed of deep water keeps its fog and now sees the surface from below',
-    lensUnder.dp && lensUnder.dp.hazeOn === 1 && lensUnder.dp.px.over200 === 0 &&
-    lensUnder.dp.px.maxLum < lensUnder.dp.bare.maxLum, lensUnder);
+  check('first person on the bed of deep water keeps its fog, sees the surface from below, and the sun through it is the only thing in that frame over 200: 0.1% of it at 216, where a lake that is not there puts 2.73% over 200 and 255 at its brightest',
+    lensUnder.dp && lensUnder.dp.hazeOn === 1 &&
+    lensUnder.dp.px.over200 < 0.5 && lensUnder.dp.px.over200 > 0 &&
+    lensUnder.dp.px.maxLum < lensUnder.dp.bare.maxLum &&
+    lensUnder.dp.bare.over200 > 2 &&
+    lensUnder.dp.px.meanLum < lensUnder.dp.bare.meanLum - 40, lensUnder);
 
   /* A body standing in the lake with the lens out over the water and above the
      surface: the half of it under the surface must read as water. The body used
@@ -5469,6 +5480,298 @@ What was measured before any of this was fixed, over 180 frames of walking
     surfaceMirror.dry.inWater === 0 && surfaceMirror.dryOn.over === surfaceMirror.dryOff.over &&
     surfaceMirror.dryOn.maxLum === surfaceMirror.dryOff.maxLum && surfaceMirror.dryOn.maxLum > 200,
     surfaceMirror);
+
+  /* A lens under the water is at the bottom of a window, and the window is not
+     a hole cut in the water: it is what the surface does to every ray that gets
+     out of it. n_water sin(theta_water) = n_air sin(theta_air), and read
+     backwards that says something about the whole sky at once. A ray climbing
+     out at 20 degrees from the vertical leaves the water at 27.6; at 40 it
+     leaves at 64.2; at 48.6 it leaves along the water itself, which is the
+     horizon. So every direction above the lake -- horizon, cloud, low sun,
+     zenith -- reaches a lens under the surface from inside 48.6 degrees of the
+     vertical: the world outside is folded into a cone, and the disc it draws,
+     Snell's window, has the sky over the lens's own head at its middle and the
+     edge of the world along its rim. Two things follow, and both are visible.
+     The rim is the brightest ring in the frame, because the horizon is the
+     brightest part of any sky; and a sun that stands 30 degrees up is seen 20
+     degrees higher than it stands.
+     Asked only the fan the index closes -- which is all the previous build
+     knew -- the same face drew the sky along the straight line: the window's
+     rim answered with the sky 41 degrees up and its middle with the sky
+     overhead, so the whole of the world's edge lay outside the disc, and with
+     the sun 30 degrees up there was no sun in the frame at all, because its
+     light is inside the window (it enters the water 41 degrees off the
+     vertical) while the straight ray that would carry it is outside, and past
+     48.6 degrees the face hands every ray back.
+     The rig is the one above: the longest stretch of open lake the valley
+     answers for, a lens 30 cm under it at 17:00, when the sun stands at 29.5
+     degrees -- low enough that the bend moves it a long way, high enough that
+     the day is a day. Two readings of that frame, and both read every pixel by
+     the one angle the window is made of: the angle its ray makes with the
+     vertical, rebuilt from the lens's own basis. Reading the frame by its rows
+     cannot answer this: a row of a wide frame runs from 30 degrees off the
+     vertical at its middle to 60 at its edge, and the window is a disc in the
+     other angle.
+       1. the lens turned toward the sun: where its image sits, against
+          asin(sin(theta_air)/ior), and the same lens asked of air.
+       2. the lens turned 90 degrees away, so the sun's own glow is out of the
+          frame: the window read bin by bin -- its middle, its rim, and past
+          the rim where the face hands back the water's own colour.
+     The cost is read too. The window is painted with the sky, because the sky
+     is what a turned ray asks for and this frame has one lens to ask with: a
+     block of the world put in the air above the lake, inside the window, is
+     drawn by the straight path and erased by the pane's first pass, so the bend
+     loses it. It is asked with a stone and not a body because a stone has one
+     silhouette in every run and a body has whichever one its random phase
+     happens to be at. That is measured and recorded here, not fixed: it is what
+     a second lens, or a traced ray, would have to answer. */
+  const windowFold = await step('theSurfaceUnderWaterBendsTheWorldIntoItsWindow', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, gl = R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, formT: p.formT, formMax: p.formMax, head: p.headWater,
+      third: g.thirdPerson, time: g.time, mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env,
+      hover: g.hover, camD: g.cam.d, camFov: g.cam.fov, camReady: g.camReady,
+      creatures: g.creatures, drops: g.drops };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, formT: was.formT,
+        formMax: was.formMax, headWater: was.head });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover;
+      g.cam.d = was.camD; g.cam.fov = was.camFov; g.camReady = was.camReady;
+      g.creatures = was.creatures; g.drops = was.drops;
+      return r;
+    };
+    p.form = null; g.mode = 'play'; g.thirdPerson = false;
+    g.creatures = []; g.drops = []; g.hover = null;
+    if (g.particles) g.particles.n = 0;
+    /* the clock is pinned and the environment asked what the sun then stands at:
+       the sun's own elevation is the input the law is measured against, and
+       reading it before the clock moves answers yesterday's sky. */
+    g.time = N.DAY_LEN * (17 / 24);
+    g.updateEnv();
+    const topOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) return y + 1; return -1; };
+    const floorOf = (x, z) => { const s = topOf(x, z); if (s < 0) return -1;
+      for (let y = s; y >= 0; y--) if (W.solidAt(x, y, z)) return y + 1; return -1; };
+    let spot = null, best = 0;
+    for (let z = 0; z < 160; z += 2) for (let x = 0; x < 160; x += 2) {
+      const s = topOf(x, z), b = floorOf(x, z);
+      if (s !== N.WORLD.sea + 1 || b < 0 || s - b < 4) continue;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        let run = 0;
+        for (let d = 1; d <= 200; d++) {
+          const px2 = Math.floor(x + dx * d), pz2 = Math.floor(z + dz * d);
+          if (topOf(px2, pz2) !== s || W.solidAt(px2, s - 1, pz2)) break;
+          run = d;
+        }
+        if (run > best) { best = run; spot = { x: x + 0.5, z: z + 0.5, surface: s, floor: b,
+          depth: s - b, dx, dz, run }; }
+      }
+    }
+    if (!spot) return back({ error: 'no open water to look up through' });
+    const put = (lensY, pitch, yaw) => {
+      g.camReady = true; g.cam.d = 0; g.cam.fov = p.fov();
+      p.x = spot.x; p.z = spot.z; p.vx = p.vy = p.vz = 0; p.pitch = pitch; p.yaw = yaw;
+      p.y = lensY - (p.eyePos() - p.y);
+      g._camFrame = g.shootCamera(p);
+      g.creatures = []; g.drops = []; g.hover = null;
+      const chx = Math.floor(p.x / W.cs), chz = Math.floor(p.z / W.cs);
+      let left = 1, guard = 0;
+      while (left > 0 && guard++ < 400) left = W.stream(gl, chx, chz, 6);
+      g.updateEnv();
+      return { lensY: +lensY.toFixed(2), eye: +p.eyePos().toFixed(2), pitch: +pitch.toFixed(3),
+        inWater: g.env.inWater, lensUnder: g.env.inWater ? +(g.env.waterY - g._lens.y).toFixed(2) : 0,
+        ior: g.env.liqIor, fov: g._camFrame.fov };
+    };
+    const shot = () => {
+      g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { w, h, px };
+    };
+    const lumaOf = (px, i) => 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+    /* Every pixel's ray, from the basis the lens was shot with -- the same one
+       the sky's own quad is drawn with -- and the angle it makes with the
+       vertical, in 3 degree bins. Rays at or below the eye line are left out:
+       they never meet this face at all. */
+    const rays = (s, at, cb) => {
+      const tanY = Math.tan(at.fov * Math.PI / 360), tanX = tanY * (s.w / s.h);
+      for (let y = 0; y < s.h; y++) {
+        const uy = (y + 0.5) / s.h * 2 - 1;
+        for (let x = 0; x < s.w; x += 2) {
+          const ux = (x + 0.5) / s.w * 2 - 1;
+          let dx = R.fwd[0] + R.right[0] * ux * tanX + R.up[0] * uy * tanY;
+          let dy = R.fwd[1] + R.right[1] * ux * tanX + R.up[1] * uy * tanY;
+          let dz = R.fwd[2] + R.right[2] * ux * tanX + R.up[2] * uy * tanY;
+          const L = Math.hypot(dx, dy, dz); dx /= L; dy /= L; dz /= L;
+          const th = Math.acos(Math.max(-1, Math.min(1, dy))) * 180 / Math.PI;
+          if (th > 90) continue;
+          cb(Math.floor(th / 3) * 3, th, lumaOf(s.px, (y * s.w + x) * 4));
+        }
+      }
+    };
+    const byTheta = (s, at) => {
+      const bins = new Map();
+      rays(s, at, (k, th, l) => {
+        let b = bins.get(k);
+        if (!b) { b = { th: k, n: 0, sum: 0, max: -1 }; bins.set(k, b); }
+        b.n++; b.sum += l; if (l > b.max) b.max = l;
+      });
+      return [...bins.values()].sort((a, b) => a.th - b.th)
+        .map(b => ({ th: b.th, n: b.n, mean: +(b.sum / b.n).toFixed(1), max: Math.round(b.max) }));
+    };
+    /* The sun's image: the angle its ray is at, from the pixels the image
+       lights and from the single brightest one of them. */
+    const sunByTheta = (s, at, thr) => {
+      const acc = { n: 0, sum: 0, max: -1, thAtMax: null };
+      rays(s, at, (k, th, l) => {
+        if (l > acc.max) { acc.max = l; acc.thAtMax = th; }
+        if (l < thr) return;
+        acc.n++; acc.sum += th;
+      });
+      return { thr, n: acc.n, meanTheta: acc.n ? +(acc.sum / acc.n).toFixed(2) : null,
+        thetaAtMax: acc.thAtMax === null ? null : +acc.thAtMax.toFixed(2), maxLum: Math.round(acc.max) };
+    };
+    const diffCount = (s1, s2, thr) => {
+      let n = 0, mx = 0;
+      const m = Math.min(s1.px.length, s2.px.length);
+      for (let i = 0; i < m; i += 4) {
+        const d = Math.abs(lumaOf(s1.px, i) - lumaOf(s2.px, i));
+        if (d > thr) n++;
+        if (d > mx) mx = d;
+      }
+      return { n, max: Math.round(mx) };
+    };
+    const iorWas = g.env.liqIor;
+    const withAir = (fn) => { g.env.liqIor = 1; const r = fn(); g.env.liqIor = iorWas; return r; };
+    const sd = g.env.sunDir;
+    const ior = iorWas;
+    const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+    const sunElev = Math.asin(Math.max(-1, Math.min(1, sd[1]))) * R2D;
+    const critical = Math.asin(1 / ior) * R2D;
+    /* the angle the law gives the sun's image: the sun is at theta_air off the
+       vertical, and the ray that carries it to a lens in the water is at
+       asin(sin(theta_air)/ior) */
+    const imageTheta = Math.asin(Math.min(1, Math.sin((90 - sunElev) * D2R) / ior)) * R2D;
+    const yawSun = Math.atan2(sd[0], -sd[2]);
+    const pitch = 0.9;      // 51.6 degrees, so the frame spans the disc and the water past it
+
+    /* 1. the sun's image, the lens turned to the sun */
+    const a = put(spot.surface - 0.3, pitch, yawSun);
+    const sun = sunByTheta(shot(), a, 245);
+    const sunOff = withAir(() => sunByTheta(shot(), a, 245));
+    /* 2. the window itself, the lens turned 90 degrees away from the sun */
+    const b = put(spot.surface - 0.3, pitch, yawSun + Math.PI / 2);
+    const ring = byTheta(shot(), b);
+    const ringOff = withAir(() => byTheta(shot(), b));
+    /* 3. the cost: a thing standing in the air, inside the window, on the
+       bearing the lens is looking down -- put there after the lens is shot, so
+       that it is the lens's own look that says where it stands. It is a block
+       of the world and not a body: a body draws with a phase, a facing and a
+       dive cycle the constructor drew from Math.random(), and how many random
+       numbers the suite has spent before this line is not a fact about this rig,
+       so the same body covered a different number of pixels in every run. A
+       stone is the same silhouette every run, and the question -- is the thing
+       the straight path draws anywhere in the frame the bent path draws -- does
+       not need a body to be asked. The angle the stone ends up at is reported
+       with the result, because the claim is about a thing standing inside the
+       window and that is the number which says it is. */
+    const c = put(spot.surface - 0.3, pitch, yawSun);
+    const bxc = Math.floor(p.x + Math.sin(p.yaw) * 3), bzc = Math.floor(p.z + Math.cos(p.yaw) * 3);
+    const byc = spot.surface + 3;
+    const stoneWas = W.get(bxc, byc, bzc);
+    const STONE = 3;
+    const flush = () => { g.world.rebuildDirty(R.gl, 6); };
+    const build = (id) => { W.set(bxc, byc, bzc, id); flush(); };
+    const bare = shot();
+    build(STONE);
+    const held = shot();
+    const seen = diffCount(held, bare, 25);
+    const seenOff = withAir(() => {
+      build(0); const bare2 = shot();
+      build(STONE); const held2 = shot();
+      return diffCount(held2, bare2, 25);
+    });
+    build(stoneWas);
+    const blockAt = { cell: [bxc, byc, bzc],
+      dist: +Math.hypot(bxc + 0.5 - p.x, bzc + 0.5 - p.z).toFixed(2),
+      up: +(byc + 0.5 - c.eye).toFixed(2), eye: c.eye, surface: spot.surface,
+      elev: +(Math.atan2(byc + 0.5 - c.eye, Math.hypot(bxc + 0.5 - p.x, bzc + 0.5 - p.z)) * R2D).toFixed(1),
+      theta: +(90 - Math.atan2(byc + 0.5 - c.eye, Math.hypot(bxc + 0.5 - p.x, bzc + 0.5 - p.z)) * R2D).toFixed(1),
+      was: stoneWas };
+    /* read the window off its own bins: the water's colour is the frame's, read
+       past the rim, and the middle and the rim are the two bins the law puts
+       the furthest apart */
+    const binAt = (bins, th) => bins.find(r => r.th === th) || null;
+    const past = ring.filter(r => r.th >= 54);
+    return back({ spot, pitch,
+      law: { ior, criticalDeg: +critical.toFixed(2), edgeElevDeg: +(90 - critical).toFixed(2),
+        sunElevDeg: +sunElev.toFixed(2), imageThetaDeg: +imageTheta.toFixed(2),
+        imageElevDeg: +(90 - imageTheta).toFixed(2) },
+      lensA: a, lensB: b, sun, sunOff, ring, ringOff,
+      water: Math.max(...past.map(r => r.max)),
+      middle: binAt(ring, Math.min(...ring.map(r => r.th))),
+      rim: binAt(ring, 45), rimPast: binAt(ring, 51),
+      middleOff: binAt(ringOff, Math.min(...ringOff.map(r => r.th))),
+      rimOff: binAt(ringOff, 45),
+      blockAt, seen, seenOff});
+  });
+
+  check('the lens is in the water, 30 cm under a lake with nothing above it, and the sun it is turned to stands low enough for the bend to be seen moving it',
+    !windowFold.error && windowFold.lensA.inWater === 1 && windowFold.lensA.lensUnder === 0.3 &&
+    windowFold.lensA.ior === 1.333 && windowFold.law.criticalDeg === 48.61 &&
+    windowFold.law.sunElevDeg > 20 && windowFold.law.sunElevDeg < 40, windowFold);
+  /* The sun, by the angle of the ray that carries it. The law says that angle
+     and no other: 40.74 degrees off the vertical for a sun standing at 29.5.
+     The same lens with the index asked of air has no sun anywhere in its
+     frame, because the straight ray at that angle meets the surface past the
+     fan the index closes and the face hands it back entire. */
+  check('the sun is seen at the angle the bend states, not at the angle it stands at: its image sits 40.73 degrees off the vertical where the law puts it at 40.74 and the sun itself stands 60.45 off it -- 151 pixels of it over 245, brightest 250 -- and asked of air there is no sun anywhere in that frame, whose brightest pixel reads 112',
+    Math.abs(windowFold.sun.meanTheta - windowFold.law.imageThetaDeg) < 1.5 &&
+    Math.abs(windowFold.sun.thetaAtMax - windowFold.law.imageThetaDeg) < 2.5 &&
+    windowFold.sun.n > 100 && windowFold.sun.maxLum > 240 &&
+    windowFold.sunOff.n === 0 && windowFold.sunOff.maxLum < 200, windowFold);
+  /* The window read bin by bin. The colour climbs from the middle of the disc
+     to its rim -- the middle is the sky over the lens's head and the rim is the
+     horizon of the world, which is the brightest part of any sky -- and at the
+     angle the index states it falls to the colour of the water the lens stands
+     in. Ask the same face of air and the order is the other way: the disc is
+     flattest at the rim, because what it shows there is the sky 41 degrees up. */
+  check('the window is a ring, not a disc of one colour: 74.6 at its middle, climbing to 96.7 at its rim, and nothing above 53 -- the water the lens stands in -- from 51 degrees off the vertical out',
+    windowFold.water <= 56 &&
+    windowFold.rim.mean > windowFold.middle.mean + 15 &&
+    windowFold.rim.mean > windowFold.water + 35 &&
+    windowFold.ring.filter(r => r.th >= 51).every(r => r.max <= windowFold.water + 3), windowFold);
+  check('and that is the bend, not a brighter water: asked of air the same bins run 73.9 at the middle and 56.1 at the rim -- the same order nowhere in it',
+    windowFold.middleOff.mean > windowFold.rimOff.mean + 10 &&
+    windowFold.rim.mean > windowFold.rimOff.mean + 25, windowFold);
+  /* What the bend costs. The window is painted with the sky, because the sky is
+     what the turned ray asks for and there is no second lens to ask: a body
+     held in the air inside the window is in the frame the straight path draws
+     and in no part of the frame the bent one does. */
+  check('the cost, measured: a block of stone laid 3 m out along the sun\'s azimuth and 3 m above the surface of that lake -- 3.2 m out and 3.8 m above the eye of a lens 30 cm under the water, so 39.8 degrees off the vertical, inside the window and beside where the sun\'s image stands -- is in 0 pixels of the frame the bend draws, against 17,097 of the frame the straight path draws',
+    windowFold.blockAt.was === 0 && windowFold.blockAt.theta < windowFold.law.criticalDeg &&
+    windowFold.seen.n === 0 && windowFold.seenOff.n > 1000, windowFold);
+
+  /* Which program the face belongs to. A fragment shader is compiled here
+     without branches in it: an `if` is a mask over instructions that are run
+     anyway, so everything written into the world's program is paid for by every
+     pixel of every frame, water in the frame or not. The face is therefore
+     drawn by a program that knows the surface and nothing else -- and this asks
+     that it stayed that way: the world's program has no place even for the
+     face's own questions, and the face's program has a place for every one of
+     them. The names are the ones only the surface reads: the index, the pass's
+     role, and the sky the window is filled with. */
+  const faceProgram = await step('theFaceHasAProgramOfItsOwn', () => {
+    const R = window.game.R, gl = R.gl;
+    const has = (P, n) => gl.getUniformLocation(P.p, n) !== null;
+    return { separate: !!R.pPane && R.pPane !== R.pWorld,
+      rows: ['uIor', 'uPane', 'uZenith', 'uHorizon', 'uSunDir', 'uSunCol', 'uGround', 'uNight']
+        .map(n => ({ n, world: has(R.pWorld, n), face: has(R.pPane, n) })) };
+  });
+  check('the surface is drawn by a program of its own: the world\'s program holds no place for the surface\'s questions, and the surface\'s program holds all eight',
+    faceProgram.separate && faceProgram.rows.every(r => !r.world && r.face), faceProgram);
 
   /* The mesher moves the water's surface and the shading used not to know. The
      wave is two sines written at the draw call -- `sin(t*1.7 + x*0.9 + z*0.7)*0.055

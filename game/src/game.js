@@ -1402,10 +1402,30 @@
            own eye. (game/test/play.js draws that lens with and without the wave,
            and with and without the edge.) So a lens inside the liquid is shown
            the interface this frame can compose: a flat one, and a flat one whose
-           shading agrees with it. */
+           shading agrees with it. Flat, and turned: the same index that closes
+           that 48.6 degree fan is Snell's law, and the pane reads it the other
+           way as well -- every ray of a lens inside the liquid that gets out is
+           bent on the way, so the whole sky above the water stands inside that
+           fan for such a lens, and the horizon of the world along its rim.
+           Where a bend is found the first pass multiplies the frame by nothing,
+           because a turned ray did not come from the pixel it lands in, and the
+           second pass, told that the lens stands inside the liquid, lays the
+           turned sky down itself. A body standing out there in that sky is
+           therefore not in the window: the scene is drawn once, from the
+           straight lens, and there is no second lens to ask. */
         const wv = !env.inWater;
+        /* Which job the second pass has depends on which side of the surface the
+           lens stands: above it the face gives back a reflection of the sky and
+           nothing else; inside the liquid it gives back that reflection and the
+           window the bend opens. The pass is told rather than left to work it
+           out per pixel -- not because telling it saves anything, since it does
+           not: measured, a pass told one way and a pass left to test the same
+           thing per pixel cost the same, because the instructions run whichever
+           way the test goes. It is told because which side of the surface the
+           lens is on is a fact the whole frame shares, and this function has
+           had it since before a single pixel was drawn. */
         R.drawMesh(m, IDENT, { pane: 1, wave: wv, noCull: true });
-        R.drawMesh(m, IDENT, { pane: 2, wave: wv, noCull: true });
+        R.drawMesh(m, IDENT, { pane: env.inWater ? 3 : 2, wave: wv, noCull: true });
       };
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const m = W.chunks[cz * W.cx + cx];

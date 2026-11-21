@@ -368,101 +368,226 @@
        the water instead, where it was just applied. */
     vPan = vec3(aTop, uInWater, uInWater > 0.5 ? d : 0.0);
   }`;
-  const FS_WORLD = `
-  precision mediump float;
-  varying vec4 vCol; varying vec3 vFog; varying vec3 vEye; varying vec3 vPan;
-  varying vec3 vPanN;      // which way the water's own face is pointing
-  uniform vec3 uFogCol; uniform float uTintA; uniform vec3 uTint;
-  /* uLiqK is read here as well as in the vertex shader, where the default
-     precision is highp: a uniform declared at two precisions will not link at
-     all, so the one here is spelled out. */
-  uniform highp vec3 uLiqK;
-  uniform vec3 uVeil, uZen, uHor;
-  uniform float uPane, uIor;
-  void main(){
-    if (uPane > 0.5) {
-      /* The water's own face, drawn in two passes over the frame.
-         Everything the water does to light on its way *through* it is asked of
-         the surface the light came from: the sun's leg down to a lakebed and the
-         leg back up from it to a lens over the lake are both applied to that
-         lakebed in the vertex shader, and the water a lens is sitting in is the
-         haze. What is left for the face is what only the face knows -- how much
-         of the view it throws back, and whether there is water between the lens
-         and whatever lies behind it. The second is the case of looking up at the
-         sky out of a lake, or across at a bank that stands over the water: the
-         ray leaves the water through this face, and the water it has just come
-         through is the distance from the lens to the face. That is vPan.z, and
-         it is zero whenever the lens is over the lake rather than in it, which
-         is what keeps the veil from being counted twice.
-         Two passes because the survival of what lies behind is per colour -- the
-         red of the sky seen through three metres of lake is eaten more than
-         twice over while its blue is barely touched -- and a blend can only ever
-         scale the frame behind it by one number. The first pass scales the frame
-         by what survives and by what the interface lets through; the second adds
-         the colour the water put into the ray on the way, and what the interface
-         threw back.
-         Which way this face points: the mesher puts a water face only where
-         water meets air, so it is the top face of a column or one of the four
-         that can stand round its edge. The vertical ones are not touched by the
-         wave and stay vertical, and for a vertical face the horizontal part of
-         the view ray is the measure of how hard it is looked at along itself.
-         The top one is carried by the wave, and it is asked the slope the wave
-         gave it -- the normal the vertex shader wrote down at the vertex it
-         displaced. Asked a plane instead, the face answers the same way at every
-         point a ray of the frame meets it at the same angle, and a lake is a
-         foil: every pixel looking along the water at half a degree is the same
-         number, every pixel at five degrees is the next number down the sky's
-         gradient, and the water's own pattern of ripples is in none of it.
-         Asked its tilt, the same view breaks into the cells the surface is
-         actually made of, and they move with it.
-         Schlick, air to water: 2% straight down, running to everything as the
-         view grazes the surface. This is the term that makes a lake a mirror
-         from the bank and a window from a boat, and it is what keeps a grazing
-         view of a shallow shelf from showing the sand through the far side of
-         the lake: at a flat angle the surface gives back the sky instead.
-         Seen from under the water the surface reflects the lake rather than the
-         sky, so the mirror takes the water's own colour there; what it would
-         really show outside Snell's window is the lakebed at that angle, and
-         this is the cheap version of that -- the same colour, not the picture.
-         And Schlick is the air-to-glass number, which only fades towards 1 as
-         the view grazes the surface and never gets there. From inside the water
-         that is wrong by a whole fan of the view: light climbing out is turned
-         back into it past asin(1/ior) from the vertical -- 48.6 degrees at
-         1.333 -- and outside that cone the face returns everything and passes
-         nothing at all. The test is written on a cosine because cn is one:
-         sqrt(1 - 1/(ior*ior)) is the cosine of the same angle, and asked of the
-         face the ray actually meets it lands the edge of that fan where the
-         water's own index and that face's own slope put it -- for a lens inside
-         the liquid, which is shown a flat interface, 41 degrees above the eye
-         line. The ray is not bent anywhere, so the sky that does come through
-         is not folded into the 48.6 degree window it belongs in, and this is
-         the one clause that knows about either. */
-      float d = length(vEye);
-      vec3 v = vEye / max(d, 1e-4);
-      /* How hard the ray meets this face, and which way it would go back: both
-         asked of the face the wave left, not of a plane. A face with no wave on
-         it carries (0,1,0) and every term here is bit for bit what it was. */
-      float dn = dot(v, vPanN);
-      float cn = mix(sqrt(max(0.0, 1.0 - v.y * v.y)), abs(dn), vPan.x);
-      float F = 0.02 + 0.98 * pow(1.0 - cn, 5.0);
-      /* uIor arrives as 1 when there is no liquid in the frame at all, and then
-         this edge is 0 and the clause cannot fire. */
-      float tir = uIor > 1.0 ? sqrt(max(0.0, 1.0 - 1.0 / (uIor * uIor))) : 0.0;
-      if (vPan.y > 0.5 && cn < tir) F = 1.0;
-      vec3 surv = exp(-uLiqK * vPan.z);
-      if (uPane < 1.5) { gl_FragColor = vec4(surv * (1.0 - F), 1.0); return; }
-      // the view ray mirrored in this face; mirrored in a flat one that is
-      // -v.y, which is the abs() this line used to be
-      float ry = mix(v.y, v.y - 2.0 * dn * vPanN.y, vPan.x);
-      vec3 mir = mix(uHor, uZen, clamp(ry, 0.0, 1.0));
-      mir = mix(mir, uVeil, vPan.y);
-      gl_FragColor = vec4((1.0 - F) * uVeil * (1.0 - surv) + F * mir, 1.0);
+  /* The sky, as one function, so that the frame's background and the window a
+     lens under the water looks through are built by the same numbers -- the same
+     gradient, the same sun, the same moon. The star field is deliberately not in
+     here: it floors a unit direction by 160 and hashes the result, which needs
+     the range FS_SKY takes at highp and the range the surface's program is
+     written at mediump does not promise. The window has no stars in it yet, and
+     nothing stands in the way of putting them there but the writing. */
+  const GLSL_SKY = `
+  vec3 skyAt(vec3 d){
+    float t = clamp(d.y*0.5+0.5, 0.0, 1.0);
+    vec3 col = mix(uGround, uHorizon, smoothstep(0.42, 0.5, t));
+    col = mix(col, uZenith, pow(clamp((t-0.5)*2.0, 0.0, 1.0), 0.65));
+    float sd = dot(d, uSunDir);
+    col += uSunCol * pow(max(sd,0.0), 220.0) * 3.0;
+    col += uSunCol * pow(max(sd,0.0), 8.0) * 0.22;
+    // moon
+    vec3 md = -uSunDir;
+    float mdot = dot(d, md);
+    col += vec3(0.85,0.88,0.95) * smoothstep(0.9993, 0.9997, mdot) * uNight * 2.0;
+    col += vec3(0.35,0.4,0.55) * pow(max(mdot,0.0), 60.0) * uNight * 0.5;
+    return col;
+  }`;
+
+  /* The water's face has a program of its own: the same vertex shader, and
+     only its own clause. It is not a surface of the world with a shader painted
+     on it -- it is the one thing in the frame that changes which direction a
+     pixel is asking about, and everything it knows is asked of that: how much
+     of the view it throws back, the fan the liquid's index closes, the bend, the
+     sky folded into the fan.
+     It cannot stay a clause of the world's shader however it is guarded,
+     because a fragment shader here is compiled without branches in it: what runs
+     is one straight line of instructions, run for every pixel the draw covers,
+     and a clause behind a test is not skipped but masked -- the instructions are
+     still in the line. So writing the face into the world's program charges the
+     lake to every pixel of a frame that holds no lake, and it does so whether
+     the test on it is a uniform or a per-pixel one: both were tried and neither
+     asked for less. Kept apart, a frame with no water in it asks nothing of the
+     face, and a pixel of a face stops paying for the world's lighting on its way
+     to being a face.
+     Which of its jobs a pass of the face has arrives as uPane: below 1.5 it
+     multiplies the frame by what the face leaves, at 2 it adds what the face
+     puts in and what it threw back, and at 3 -- the same question, asked of a
+     lens standing inside the liquid -- the window too. The roles are told by the
+     caller, in game/src/game.js, because which of them applies is a fact about
+     which side of the surface the lens is on, and the lens knows that before a
+     single pixel is drawn. game/test/play.js asks that the world's program holds
+     no place for the face's questions at all, and the face's program holds all
+     of them: a lens standing in a field of grass is not asked for a surface. */
+  const GLSL_PANE = `
+    /* The water's own face, drawn over the frame in two passes: the second
+       adds back what the face gives, and to a lens standing inside the liquid
+       it gives back more than it gives to one standing over the water.
+       Everything the water does to light on its way *through* it is asked of
+       the surface the light came from: the sun's leg down to a lakebed and the
+       leg back up from it to a lens over the lake are both applied to that
+       lakebed in the vertex shader, and the water a lens is sitting in is the
+       haze. What is left for the face is what only the face knows -- how much
+       of the view it throws back, and whether there is water between the lens
+       and whatever lies behind it. The second is the case of looking up at the
+       sky out of a lake, or across at a bank that stands over the water: the
+       ray leaves the water through this face, and the water it has just come
+       through is the distance from the lens to the face. That is vPan.z, and
+       it is zero whenever the lens is over the lake rather than in it, which
+       is what keeps the veil from being counted twice.
+       Two passes because the survival of what lies behind is per colour -- the
+       red of the sky seen through three metres of lake is eaten more than
+       twice over while its blue is barely touched -- and a blend can only ever
+       scale the frame behind it by one number. The first pass scales the frame
+       by what survives and by what the interface lets through; the second adds
+       the colour the water put into the ray on the way, the colour the
+       interface threw back, and -- for a lens standing inside the liquid, which
+       is the only lens that has an out to climb through this face -- the sky
+       the bend folds into the fan.
+       Which way this face points: the mesher puts a water face only where
+       water meets air, so it is the top face of a column or one of the four
+       that can stand round its edge. The vertical ones are not touched by the
+       wave and stay vertical, and for a vertical face the horizontal part of
+       the view ray is the measure of how hard it is looked at along itself.
+       The top one is carried by the wave, and it is asked the slope the wave
+       gave it -- the normal the vertex shader wrote down at the vertex it
+       displaced. Asked a plane instead, the face answers the same way at every
+       point a ray of the frame meets it at the same angle, and a lake is a
+       foil: every pixel looking along the water at half a degree is the same
+       number, every pixel at five degrees is the next number down the sky's
+       gradient, and the water's own pattern of ripples is in none of it.
+       Asked its tilt, the same view breaks into the cells the surface is
+       actually made of, and they move with it.
+       Schlick, air to water: 2% straight down, running to everything as the
+       view grazes the surface. This is the term that makes a lake a mirror
+       from the bank and a window from a boat, and it is what keeps a grazing
+       view of a shallow shelf from showing the sand through the far side of
+       the lake: at a flat angle the surface gives back the sky instead.
+       Seen from under the water the surface reflects the lake rather than the
+       sky, so the mirror takes the water's own colour there; what it would
+       really show outside Snell's window is the lakebed at that angle, and
+       this is the cheap version of that -- the same colour, not the picture.
+       And Schlick is the air-to-glass number, which only fades towards 1 as
+       the view grazes the surface and never gets there. From inside the water
+       that is wrong by a whole fan of the view: light climbing out is turned
+       back into it past asin(1/ior) from the vertical -- 48.6 degrees at
+       1.333 -- and outside that cone the face returns everything and passes
+       nothing at all. The test is written on a cosine because cn is one:
+       sqrt(1 - 1/(ior*ior)) is the cosine of the same angle, and asked of the
+       face the ray actually meets it lands the edge of that fan where the
+       water's own index and that face's own slope put it -- for a lens inside
+       the liquid, which is shown a flat interface, 41 degrees above the eye
+       line.
+       What lies inside that fan is bent, and that is a second law and not a
+       decoration on the first. n_water sin(theta_water) = n_air
+       sin(theta_air): a ray climbing out at 20 degrees from the vertical
+       leaves at 27.6, one at 40 leaves at 64.2, and one at 48.6 leaves along
+       the water -- the horizon itself. Run the same sines backwards and every
+       direction above the water lands inside 48.6 degrees of the vertical:
+       the whole sky, horizon to zenith, stands inside a cone of that half
+       angle for a lens under the surface, and what it is folded into is the
+       window -- a disc whose rim is the horizon, so the rim is its brightest
+       ring, and whose middle is the sky over the lens's own head. Asked
+       without this, a lens under a lake was shown the sky along the straight
+       line instead: the fan's rim answered with the sky 41 degrees up, and
+       the horizon, the sun when it is low, and the whole of the world's edge
+       were nowhere in the frame at all.
+       So the ray is turned here, with the face's own normal, and the colour
+       the face hands through is asked of the turned direction. That costs the
+       frame behind: a ray that was turned did not come from the pixel it
+       lands in, so the first pass multiplies that frame by nothing at all
+       wherever a bend was found, and the pass that lays the turned sky down
+       is a third role of the second one, asked for only when a lens stands
+       inside the liquid. What that throws away is honest and open: the sky is the
+       only thing the window can hold. A shore, a body, a gull standing
+       between the surface and that direction is not in the frame the turned
+       ray asks for, and it does not appear -- the scene is drawn once, from
+       the straight lens, and there is no second lens to ask.
+       The bend needs the face's tilt, so it is asked of the same normal the
+       mirror is asked of; a face the wave is not written on carries (0,1,0)
+       and the bend is the flat one the law gives. */
+    float d = length(vEye);
+    vec3 v = vEye / max(d, 1e-4);
+    /* How hard the ray meets this face, and which way it would go back: both
+       asked of the face the wave left, not of a plane. A face with no wave on
+       it carries (0,1,0) and every term here is bit for bit what it was. */
+    float dn = dot(v, vPanN);
+    float cn = mix(sqrt(max(0.0, 1.0 - v.y * v.y)), abs(dn), vPan.x);
+    float F = 0.02 + 0.98 * pow(1.0 - cn, 5.0);
+    /* uIor arrives as 1 when there is no liquid in the frame at all, and then
+       this edge is 0 and the clause cannot fire. */
+    float tir = uIor > 1.0 ? sqrt(max(0.0, 1.0 - 1.0 / (uIor * uIor))) : 0.0;
+    if (vPan.y > 0.5 && cn < tir) F = 1.0;
+    vec3 surv = exp(-uLiqK * vPan.z);
+    /* Which way this ray goes once it is out. Only a lens inside the liquid
+       has an out to climb to, only a top face is that out, and only a ray
+       climbing into it is turned; a ray meeting the underside of a face is
+       already in the case the mirror above answers. The vector form of the
+       law, with n = -normal because the ray runs with the normal it meets:
+       eta is n_water/n_air, the term multiplying n is eta*cos - cos', and
+       cos' is the square root the sine law leaves. sin2 over 1 is the fan the
+       clause above has already closed, and this ray is not bent: it is one of
+       theirs, and it is answered by the mirror. */
+    float bent = 0.0;
+    vec3 outd = v;
+    if (uIor > 1.0 && vPan.y > 0.5 && vPan.x > 0.5 && dn > 0.0) {
+      float eta = uIor;
+      float sin2 = eta * eta * (1.0 - dn * dn);
+      if (sin2 <= 1.0) {
+        outd = eta * v - (eta * dn - sqrt(1.0 - sin2)) * vPanN;
+        bent = 1.0;
+      }
+    }
+    if (uPane < 1.5) {
+      gl_FragColor = vec4(surv * (1.0 - F) * (1.0 - bent), 1.0);
       return;
     }
+    // the view ray mirrored in this face; mirrored in a flat one that is
+    // -v.y, which is the abs() this line used to be
+    float ry = mix(v.y, v.y - 2.0 * dn * vPanN.y, vPan.x);
+    vec3 mir = mix(uHorizon, uZenith, clamp(ry, 0.0, 1.0));
+    mir = mix(mir, uVeil, vPan.y);
+    /* The window is laid down by the pass that was told a lens stands inside the
+       liquid: uPane 3. Above the surface nothing is turned at all, and whether
+       anything could be is a question the whole frame answers alike, so it is
+       asked once at the draw instead of of every pixel -- which is the honest
+       way round even though, measured, it costs the same either way: a fragment
+       shader here runs its instructions whatever a test says and masks the ones
+       it does not want. */
+    vec3 col = (1.0 - F) * uVeil * (1.0 - surv) + F * mir;
+    if (uPane > 2.5) col += bent * surv * (1.0 - F) * skyAt(outd);
+    gl_FragColor = vec4(col, 1.0);
+    return;
+  `;
+
+  /* A frame's surfaces, and nothing else: the water's face is drawn by FS_PANE
+     below, and no mesh reaches this program with a face in it. */
+  const FS_WORLD = `
+  precision mediump float;
+  varying vec4 vCol; varying vec3 vFog;
+  uniform vec3 uFogCol; uniform float uTintA; uniform vec3 uTint;
+  void main(){
     vec3 c = mix(vCol.rgb, uFogCol, clamp(vFog, 0.0, 1.0));
     c = mix(c, uTint, uTintA);
     gl_FragColor = vec4(c, vCol.a);
   }`;
+
+  /* What the face reads, and only the face: how much of the ray the water it
+     climbs through leaves (uLiqK, spelled out because the vertex stage writes
+     it at highp and a uniform declared at two precisions will not link at
+     all), the liquid's index, this pass's role, the colour the face paints
+     over a view, and the sky -- the same skyAt the frame's background is built
+     with, so the window a lens under the water looks through cannot drift away
+     from the sky above it. */
+  const FS_PANE = `
+  precision mediump float;
+  varying vec3 vEye; varying vec3 vPan;
+  varying vec3 vPanN;      // which way the water's own face is pointing
+  uniform highp vec3 uLiqK;
+  uniform vec3 uZenith, uHorizon, uSunDir, uSunCol, uGround;
+  uniform float uNight;
+  uniform vec3 uVeil;
+  uniform float uPane, uIor;
+  ${GLSL_SKY}
+  void main(){
+  ${GLSL_PANE}  }`;
 
   const VS_SKY = `
   precision highp float;
@@ -493,19 +618,10 @@
   uniform vec3 uHazeK, uFogCol;
   uniform float uInWater, uLensUnder, uEdge;
   float hash(vec3 p){ p = fract(p*0.3183099 + vec3(0.71,0.113,0.419)); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+  ${GLSL_SKY}
   void main(){
     vec3 d = normalize(vDir);
-    float t = clamp(d.y*0.5+0.5, 0.0, 1.0);
-    vec3 col = mix(uGround, uHorizon, smoothstep(0.42, 0.5, t));
-    col = mix(col, uZenith, pow(clamp((t-0.5)*2.0, 0.0, 1.0), 0.65));
-    float sd = dot(d, uSunDir);
-    col += uSunCol * pow(max(sd,0.0), 220.0) * 3.0;
-    col += uSunCol * pow(max(sd,0.0), 8.0) * 0.22;
-    // moon
-    vec3 md = -uSunDir;
-    float mdot = dot(d, md);
-    col += vec3(0.85,0.88,0.95) * smoothstep(0.9993, 0.9997, mdot) * uNight * 2.0;
-    col += vec3(0.35,0.4,0.55) * pow(max(mdot,0.0), 60.0) * uNight * 0.5;
+    vec3 col = skyAt(d);
     // stars. uNight alone is not enough: the day/night curve is symmetric about
     // noon, so at 07:00 it still says 37% night while the sun is 29 degrees up,
     // and 217 star spikes were measured in a daylight sky next to the sun. A
@@ -601,6 +717,7 @@
       if (!gl) throw new Error(N.t('err.webgl'));
       this.canvas = canvas;
       this.pWorld = prog(gl, VS_WORLD, FS_WORLD, ['aPos', 'aCol', 'aData', 'aUnder', 'aTop']);
+      this.pPane = prog(gl, VS_WORLD, FS_PANE, ['aPos', 'aCol', 'aData', 'aUnder', 'aTop']);
       this.pSky = prog(gl, VS_SKY, FS_SKY, ['aCorner']);
       this.pPart = prog(gl, VS_PART, FS_PART, ['aPos', 'aCol', 'aSize', 'aUnder']);
 
@@ -765,8 +882,12 @@
         u.uCamPos = gl.getUniformLocation(P.p, 'uCamPos');
         u.uPane = gl.getUniformLocation(P.p, 'uPane');
         u.uVeil = gl.getUniformLocation(P.p, 'uVeil');
-        u.uZen = gl.getUniformLocation(P.p, 'uZen');
-        u.uHor = gl.getUniformLocation(P.p, 'uHor');
+        u.uZenith = gl.getUniformLocation(P.p, 'uZenith');
+        u.uHorizon = gl.getUniformLocation(P.p, 'uHorizon');
+        u.uSunDir = gl.getUniformLocation(P.p, 'uSunDir');
+        u.uSunCol = gl.getUniformLocation(P.p, 'uSunCol');
+        u.uGround = gl.getUniformLocation(P.p, 'uGround');
+        u.uNight = gl.getUniformLocation(P.p, 'uNight');
         u._done = 1;
       }
       gl.uniformMatrix4fv(u.uProj, false, this.proj);
@@ -807,8 +928,19 @@
       gl.uniform3fv(u.uCamPos, this.camPos || [0, 0, 0]);
       gl.uniform1f(u.uPane, opts.pane || 0);
       gl.uniform3fv(u.uVeil, e.veil || [0, 0, 0]);
-      gl.uniform3fv(u.uZen, e.zenith);
-      gl.uniform3fv(u.uHor, e.horizon);
+      /* The sky as the frame's background draws it. Only the water's own face
+         reads it -- the window a lens under the surface looks up through is
+         that face bending the sky, and a bend has to be answered with the same
+         sky the sky is. So these go to the pass that asks them: a dry frame,
+         and every mesh that is not the face, never read a value of these. */
+      if (opts.pane) {
+        gl.uniform3fv(u.uZenith, e.zenith);
+        gl.uniform3fv(u.uHorizon, e.horizon);
+        gl.uniform3fv(u.uSunDir, e.sunDir);
+        gl.uniform3fv(u.uSunCol, e.sunCol);
+        gl.uniform3fv(u.uGround, e.ground);
+        gl.uniform1f(u.uNight, e.night);
+      }
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);
       gl.uniform1f(u.uTime, e.time);
       gl.uniform1f(u.uWave, opts.wave ? 1 : 0);
@@ -846,8 +978,11 @@
 
     drawMesh(mesh, model, opts) {
       if (!mesh || !mesh.count) return;
-      const gl = this.gl, P = this.pWorld;
       opts = opts || {};
+      /* A mesh of the water's own face is drawn by the face's program, which
+         knows the surface and nothing else; every other mesh is drawn by the
+         world's, which knows the world and not the surface. See FS_PANE. */
+      const gl = this.gl, P = opts.pane ? this.pPane : this.pWorld;
       gl.useProgram(P.p);
       this.setWorldUniforms(P, opts);
       gl.uniformMatrix4fv(P.u.uModel, false, model || IDENT);

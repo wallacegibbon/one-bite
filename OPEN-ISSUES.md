@@ -8,74 +8,108 @@ round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
 State at time of writing: this round is one commit, and it is the water's own face being
-asked which way it points. It opened on the user's question about their own screenshot --
-从在海底往上看青蛙，为什么是这种视角，为什么看到的是一个圆环 -- and it closes that question
-with numbers and ships the first item of the issue it leads to.
+asked which way it *bends* the light. It opened on the user's refusal of the last round's
+answer -- 先解决海底往上看的那个问题, 那个原形我觉得好奇怪, 我觉得有点不符合常识, and then
+如果物理世界确实是那个样子, 毕竟我没有站在海底往上看过, 你必须能够说服我: if the physical
+world really is that way, I have never stood on the sea floor looking up, so you have to be
+able to persuade me. It closes **28** item 1, and the persuasion is not in prose: the frame
+now states the law, and every number below is the frame's answer, not the arithmetic's.
 
-- **The ring is the edge of the cone the water's own index closes, and that is measured.** A
-  lens under the surface keeps nothing of the sky past asin(1/1.333) = **48.6 deg** from the
-  vertical, which is **41.4 deg** above its own eye line; `theSurfaceUnderWaterHandsTheLightBack`
-  finds the sky starting at **41.4** where the index states **41.4**, and a level lens 30 cm
-  under a lake holds **0** pixels brighter than the water it stands in, its brightest pixel
-  being that water's own **53**. So the ring is not the shore of that sea -- and it is not a
-  rendering error either: outside the cone the pane returns `uVeil`, the water's own colour,
-  which is what the shader and 07 §3.2 both name as the cheap answer. (How far that sea's
-  ground actually runs, and the colour the ring was seen against, were read off the player's
-  saved frame and a desk probe: **2.95 m** under an open sea with **9 m** of water under the
-  lens, its bottom **6** and its surface **15**, the ground the frame holds ending **51 m**
-  out at **87 deg** from the vertical, the frame outside the ring exactly `env.veil` at
-  **(15,61,82)**, and the blue blob inside it a bubble the body had just blown. Those are
-  probe figures, held by nothing in the suite, and are written down here only so the next
-  round does not go looking again.)
-- **Why the ring is a perfect circle with a hard edge.** A lens inside the liquid is shown a
-  flat interface: the wave is asked only of a lens **outside** the liquid, because a ray that
-  starts under water can meet that same surface three or four times within a few metres, the
-  pane writes no depth, its two passes multiply and then add, and every crossing it is handed
-  lays the water's colour over the last -- **961** pixels over the sea's own **53**, **107**
-  at the brightest, a dotted line at the eye line of a lens standing on the floor of an open
-  sea. One flat interface has one critical angle, so the cone's rim is a circle.
-- **Why the lens was where it was.** The view is third person, and the shot is a share of the
-  frame, not a fixed distance behind the body: `N.CAM.shotFor` puts the lens **1.19 m** off a
-  0.5 m body along the direction the mouse points (07 §3.2, measured by the camera step). Look
-  the mouse up and the lens goes below and behind -- which is what a lens under water pointing
-  up past the body's own back means. Nothing to fix; worth saying.
-- **What shipped** -- issue **28**, item 2, which that issue itself puts first because it is
-  the cheapest and buys the most. The vertex the wave displaces now writes down the normal the
-  same two sines give it (the derivative of the height being added, at the vertex that is
-  being moved: `vPanN` in `game/src/engine.js`), and the pane asks *that* face for the cosine
-  Schlick wants, for the critical-angle test and for the direction it would send the ray back
-  along. With no wave on it a vertex carries (0,1,0) and every term is bit for bit what it
-  was -- so nothing about a dry frame or an underwater one moved. The wave itself is unchanged:
-  **8.5 cm** tall, **7.0 m** and **25.1 m** long, and it never tips the surface more than
-  **3.87 deg**.
-- **What that does to a frame, measured** (`play.js`, `theWaterFaceAnswersWithItsOwnTilt`: a
-  lens 1.2 m over **240 m** of open water, level, at 13:00, reading the rows that meet the
-  surface 1 to 2.6 deg below its eye line, all of which are mirror). Asked a plane each of
-  those rows is one number -- the widest spans **9** of 255, varying along itself by **2.9**.
-  Asked its own tilt the rows that spanned **2** and **7** span **59** and **42** and the most
-  varied row runs **196 to 255**, while a row's mean moves by at most **6**: the same sky,
-  redistributed, with a reach bounded by the wave itself (a face tipped 3.87 deg turns a
-  mirror by **7.7 deg**). And it is the water's pattern: **1.9 s** of the clock changes
-  **28,371** of the **34,200** pixels of the surface's whole band, while the same 1.9 s
-  changes **0** of them with the face taken out of the shading. The one non-mirror number it
-  moves is the bed seen through a lens 30 cm over the water at 7 deg of slope: red **29.7**
-  and **38.9** against **25.5** and **33.8** with that face asked a plane, because at that
-  angle the faces tipping away throw the bed back and the ones tipping in let more through
-  than a flat mirror of that angle ever would -- a term convex in the cosine keeps the larger
-  share on the average (`aLakeVeilsItsBedAlongTheRay` now draws both).
-- **What this round does not claim.** No ray is bent anywhere, so there is still no Snell's
-  window -- the ring the user saw is the *edge* of the cone, and what comes through it is the
-  sky along the straight line, not the outside world folded into a 48.6 deg circle. A lens
-  inside the liquid is still shown a flat interface, so there is no glitter under the skin and
-  no picture of the lake in the mirror over the closed fan, and nothing asks what a moving
-  surface does to where light lands, so there are no caustics on the bed. Those are **28**
-  items 1, 3 and 4, still open, now with the tilt under them.
-- **Two numbers in the chapter that had quietly gone stale** were re-pinned from a run rather
-  than argued: the ray-length bed row (its three lenses at the surface line, **53.9/71.7 /
-  54.1/71.8 / 54.2/72.0** becoming **54.1/72.1 / 54.3/72.2 / 54.6/72.5**) and two counts of
-  sky in control frames (**6,063** to **5,523** pixels, and **16,228** over 200 to **13,020**).
-  The one that moved a great deal (**62.0** to **68.6** at mean, red **22.8** to **29.7**) is
-  this round's and is explained above.
+- **What shipped: the crossing is bent, in one expression.** `n1 sin t1 = n2 sin t2` asked
+  as vectors of the face's own normal -- `eta = uIor`, `sin^2 t = eta^2 (1 - dn^2)`,
+  `out = eta*v - (eta*dn - sqrt(1 - sin^2 t)) * N` -- in `game/src/engine.js`, asked only of
+  a top face that a lens inside the liquid is climbing out through, so the flat face and the
+  waved face of last round are one case. Where a bend is found the pane's first pass
+  multiplies the frame behind by **nothing at all** -- a turned ray did not come from the
+  pixel it lands in -- and the pass that adds lays the turned sky down itself, as a third
+  role of that pass asked only of a lens inside the liquid (see the bullet below on which
+  program all of this is compiled into), out of `GLSL_SKY`, the one `skyAt()` the sky's own
+  quad is built from. The closed fan did not move: the same
+  critical-angle test still closes it, and a ray inside it wants no bending because it never
+  gets out.
+- **The cone answers from the frame at the angle the law states and nowhere else**
+  (`game/test/play.js`, `theSurfaceUnderWaterBendsTheWorldIntoItsWindow`: the longest open
+  stretch of lake the valley answers, **58 m** at (92.5, 78.5), a lens **30 cm** under it at
+  **17:00**, every pixel read by the angle its ray makes with the *vertical* -- a row of a
+  wide frame is not a line of that angle, it runs 30 deg off the vertical at its middle and
+  60 at its edge, so rows cannot answer this). At that hour the sun stands **29.55 deg** up,
+  and its image is found at **40.73 deg** off the vertical where
+  `asin(sin theta_air / ior)` puts it at **40.74** -- **151** pixels over 245, **250** at the
+  brightest, at the sun's own azimuth. Ask the same face of air and there is **no sun anywhere
+  in that frame**: 0 pixels over 245, its brightest pixel **112**. The straight ray and the
+  bent one are not two ways of drawing the same picture.
+- **The window is a ring, because its rim is the horizon.** Its middle (6 deg off the
+  vertical) reads **74.6**, the bins climb through **84.1** at thirty degrees and **93.2** at
+  thirty-nine to **96.7** at its rim (45), and from **51** degrees out nothing in the frame
+  reads above **53**, the colour of the water the lens stands in. Ask the same face of air and
+  the order is the other way round -- **73.9** at the middle, **56.1** at the rim -- which is
+  what an unbent fan is: a disc flattest exactly where its rim should be.
+- **And what it costs was measured rather than left out.** A block of stone laid **3 m** out
+  along the sun's azimuth and **3 m** above that lake -- **3.2 m** out and **3.8 m** above the
+  eye of a lens **30 cm** under the water, at **39.8 deg** off the vertical -- inside the
+  window, beside where the sun's image stands -- is in **0** pixels of the frame the bend
+  draws, against
+  **17,097** of the frame the straight path draws. The window holds the sky and none of the
+  things standing in it: no shore, no gull, no body. That is the open half of **28** item 1
+  named above, not hidden: answering it needs a second lens or a traced ray, and this renderer
+  draws the world once, from the straight one.
+- **Two checks were holding the physics this round replaced, and they were rewritten rather
+  than loosened.** `lensSeesTheWater` used to require that a lens half a metre under a lake
+  show **no pixel over 200**, and that was the pane passing the sky quad through at every
+  angle the index closes. With the bend asked, that same lens turned toward a low sun *does*
+  meet the sun -- **0.92%** of the frame over 200 and **255** at the brightest, where the
+  same lens with the crossing asked unbent puts **0%** and **180**, at a mean of **92.0**
+  against the bent frame's **99.9** and blue over red by **+98.3** against **+114.7**; a lake
+  that is not there at all puts **3.3%** over 200. What the water keeps out is what is held
+  now -- the mean, the colour, and 2.4 points of the share. The deep-bed frame is the same
+  pair: its only pixels over 200 are the sun through the surface (**0.1%** at **216**), and
+  with no water in the scene **2.73%** are over 200 at **255**.
+- **The chapter's own control frames moved the way the law says they should** (07 §3.2, the
+  sky bullet): a lens **4 m** under a flat sea looking up at 1.2 rad still has the sun
+  through the skin, and now has it *as the sun* -- mean **65.9 -> 66.6**, brightest
+  **87 -> 205**, 99th percentile **86 -> 129**, pixels over 200 **0 -> 1,006**, pixels over
+  the water's own colour **309,008 -> 372,545**. The lens 30 cm *over* the same skin is
+  handed none of this and reads **141.2 / 255 / 13,020**, index on or off.
+- **A measurement that moved between runs of an unchanged tree is not a measurement.** The
+  cost above was first read with a held body, and it came back a different number every run:
+  a `Creature` draws with a phase, a facing and a dive cycle its constructor drew from
+  `Math.random()`, and how many random numbers the suite has spent before that line is not a
+  fact about the rig. Any future rig that counts pixels belonging to a body must pin its pose
+  or ask the world instead; this one asks the world, with a stone.
+- **The clause could not stay in the program the physics first put it in.** Written into the
+  world's fragment shader, the bend took the suite's own save round trip below the
+  frames-a-second floor that step holds (`game/test/save.js` asks whether a page drawing the
+  valley, with no water anywhere in its frame, is still running a second later): it went red,
+  on a tree whose only change was a clause behind a test. That is not the bending being
+  dear. A fragment shader is compiled here with no branches in it, so an `if` is a mask over
+  instructions that are run anyway, and a clause written into the world's program is paid for
+  by every pixel of every frame -- guarded by a per-pixel test, guarded by a uniform the whole
+  frame shares, either way, both tried. The surface is drawn by a program of its own instead
+  (`FS_PANE`: the same vertex stage, its own clause, nothing else), and which job a pass of
+  it has is told by the caller: **1** multiplies the frame by what the surface leaves, **2**
+  adds what it throws back, **3** adds the window as well and is asked only of a lens standing
+  inside the liquid, which is the only lens with an out to climb through that face. The cost
+  comes back twice over: a frame holding no water asks nothing of the surface at all, and a
+  pixel of the surface stops paying for the world's lighting on its way to being a reflection.
+  `game/test/play.js`, `theFaceHasAProgramOfItsOwn` holds the split -- the world's program has
+  no place for the eight names only the surface reads, and the surface's program has a place
+  for all eight.
+- **What this round does not claim.** Past the rim the surface still hands back the water's
+  own colour and not a picture of the lakebed -- **28** item 4, open. Nothing asks what a
+  moving surface does to where light lands, so there are still no caustics -- **28** item 3,
+  open. The window holds the analytic sky and nothing else: **no stars** in it yet -- the
+  range objection that used to stand in the way was the shared program, and the split below
+  removes it, so this one is unwritten rather than blocked -- and no cloud, shore, body or
+  gull -- measured above. Only a *top* face is treated
+  as a way out of the liquid, so the vertical faces a shoreline puts in the water are bent
+  nowhere. And a lens inside the liquid is still shown a flat interface, so there is no
+  glitter under the skin: that is the multiple-crossing obstacle the last round named, and it
+  is the same obstacle that stands between item 4 and a one-expression fix.
+- **Asked for by the user, deferred by them, and recorded so it is not lost: the turtle's own
+  body.** It is **29** below -- holding a height in the water and being worked up and down
+  through it the way a frog body is, a breath cycle that is a turtle's rather than the shared
+  eighteen seconds, and two front flippers that sit at the sides of the shell instead of under
+  it.
 
 Read the standing contract below first: it decides whether any of this counts as
 finished.
@@ -2247,7 +2281,7 @@ each one would otherwise be rediscovered:
 2. **Done four rounds ago (29cd91e).** The minimap stops lying about the world outside the
    authored square: it went black past the main island because it painted one **160x160**
    base image and nothing else. It paints a window of ground round the body now -- the
-   record is in "four rounds back" below.
+   record is in the entry for 29cd91e below.
 3. **Done this round.** The sea turtle, and the sea peopled. In their words: 前肢像翅膀一样
    上下划 (it rows with its front flippers the way a bird's wings move), a `swimSpeed`
    above the frog's **4.6**, no skin-drying clock on land, a land speed under **1.8**, the
@@ -2369,21 +2403,23 @@ and is measured from both sides of the skin. The figures, the cause that was nea
 wrong (a frame row is not one angle), and what the clause does not buy are in the body of
 this round's commit and in 07 §3.2; what it does not buy is kept open as **28**.
 
-## 28. The crossing itself is not bent: no window, no tilt, no bed in the mirror (found while closing 27)
+## 28. The crossing itself is not bent: no window, no tilt, no bed in the mirror (found while closing 27; two of its four shipped)
 
 **What is missing, stated as four things the frame does not do.** They belong together
 because they are all consequences of one absence -- the surface is a place where light
 changes direction, and this renderer has no place where it does.
 
-- **No refraction, so no Snell's window.** The pane now knows exactly *which* directions
-  get through (**41.4 deg** above the eye line of a lens under the water, and everything
-  below that handed back) and nothing about *which way they bend*. A ray that leaves the
-  water continues along the line it was already on, so the sky a diver is shown through the
-  open fan is the sky that happens to lie along those straight lines, not the whole outside
-  world compressed into a **48.6 deg** circle overhead. The visible signature is in the
-  measured rows and was nearly written down as a cause: the fan's sky strengthens steadily
-  with angle where a real window has one bright disc with a sharp rim and the water's own
-  bed outside it.
+- ~~**No refraction, so no Snell's window.**~~ **Shipped this round.** What was said there
+  was true and is now replaced: the pane knew *which* directions got through (**41.4 deg**
+  above the eye line of a lens under the water) and nothing about *which way they bend*. It
+  asks the vector form of the law of the face's own normal now, and the frame answers with the
+  window: a sun standing **29.55 deg** up is seen at **40.73 deg** off the vertical where the
+  law puts it at **40.74**, its image is nowhere in the frame when the bending is asked away,
+  and the window's rim is its brightest ring (**74.6** at the middle, **96.7** at the rim, and
+  nothing above **53** -- the water the lens stands in -- from **51 deg** out). The figures,
+  the rig, and
+  what it costs are in the state block above and in 07 §3.2; the step is
+  `theSurfaceUnderWaterBendsTheWorldIntoItsWindow`.
 - ~~**The surface's tilt is asked nowhere.**~~ **Shipped this round.** `cn` was the cosine to
   the face's own *plane* while the vertex wave displaced the geometry; the vertex being
   displaced now writes the normal its own two sines give it and the pane asks that face for
@@ -2402,42 +2438,87 @@ changes direction, and this renderer has no place where it does.
   as such in the shader and in 07 §3.2. What it should show is the lakebed at that angle:
   the same lake the lens is standing in, seen again.
 
-**Why it is worth keeping in the queue rather than in a comment.** The next item the user
-asked for lives under the surface: a sea turtle swims, and a body will wear it and look up
-through the water it is inside. The fan is right now; what it lets through is still the
-wrong sky, and the mirror over it is a colour where it should be the bottom of the lake.
+**Why the rest of it is worth keeping in the queue rather than in a comment.** The frame the
+user was standing in is the one this round fixed: a lens under the water is inside a window
+with the whole sky of it, sun included. What is still missing from that frame is what the
+window should hold -- the lake's own shore, a body, a gull, a cloud -- and what the mirror
+past its rim should show, which is the bottom of the same lake. And the body the user asked
+for next is a turtle's (**29**): it will be worn, and it will be looked at from inside the
+water it swims in.
 
-**What each of the four costs, since that decides the order.** The tilt is the cheapest and
-buys the most: the wave is two sines whose derivative is written down in the same place the
-vertices are displaced, so a normal exists for free at the draw call -- and with it come
-glitter on the window, a mirror that is not flat, and the ground for caustics later. The
-window is the expensive one: a bend means sampling the sky along a *different* direction
-than the one the frame was drawn along, which is a second sky query per pane pixel (a
-procedural gradient is a few ALU ops, so it is not a pass -- but it is the first thing in
-this renderer that asks the world along a ray the camera did not take). The bed in the
-mirror is the same question again in reverse: the reflected direction is already computable
-from the normal, and what it would sample is the water's own bottom, which the frame has
-already drawn along the wrong line. Nothing here wants a new pass; the first two want one
-extra expression each and the third wants the second.
+**What the two that remain cost.** The bed in the mirror is one expression, and it is the
+expression this round paid for: the reflected direction is already computed and already used
+for the sky above the water, and what it would sample is the water's own bottom -- but the
+frame drew that bottom along the straight line, so sampling it along the mirrored one is the
+second-lens question over again. Caustics want the surface's normal, which has existed since
+last round, and an answer to where the light lands, which does not: the bed's `aUnder` is
+baked into the vertices when the mesh is built, so a pattern that moves with the surface wants
+either a term computed at the draw or a re-bake of the column.
 
-Status: open, with one of its four gone. Item 2 (the tilt) is shipped and measured; items 1,
-3 and 4 stand, and item 2 is now the ground for item 3 -- a caustic needs the surface's
-normal to say where the light goes, and it now has one. The order has not changed and the
-measurements made while doing item 2 say why item 1 is the expensive one:
+Status: two of its four are shipped and measured -- item 2 (the face's own tilt) and item 1
+(the bending). Items 3 and 4 stand, and item 1 left a remainder that belongs with them rather
+than with itself:
 
-- **Item 1, the window, has its edge measured and its content missing.** The edge is at
-  **41.4 deg** above the eye line of a lens under the water where the index puts it, and the
-  frame outside it is the water's own colour (`levelOn`: **0** pixels over, brightest **53**).
-  So the ring a diver sees is drawn; what is not drawn is anything *inside* it that a real
-  window would hold -- the whole outside world, compressed, with the sun in it. That needs a
-  ray sampled along a direction the frame was not drawn along, which this renderer has never
-  done.
+- **The window holds the analytic sky and nothing else.** A turned ray asks `skyAt()`, so a
+  thing standing out there is not in the window: a block of stone laid **3 m** out along the
+  sun's azimuth and **3 m** above the lake -- **3.2 m** out and **3.8 m** above a lens **30 cm**
+  under the water, so **39.8 deg** off the vertical -- inside it, beside where the sun's image
+  stands -- is in **0** pixels of the frame the bend draws and **17,097** of the frame the
+  straight path draws. So there is no shore in the window, no body, no gull, no cloud. No
+  stars either, and that one is simply unwritten now: the objection to putting them in was
+  that the star hash wants the range the sky pass takes at `highp` and the surface's terms
+  were compiled inside the world's `mediump` program, and the surface has a program of its own
+  now (state block, above), so the only thing standing between a night sky and a night window
+  is the writing. That is not a matter of taste -- a lake's own shore is the brightest thing
+  most of its windows would hold.
 - **Item 4, the bed in the mirror, is now reachable in one expression and still costs the
   same second query.** The reflected direction is computable -- it is written down and used
   for the sky above the water; under the water it is deliberately not used at all, because
   the interface there is shown flat.
 - **Item 3, caustics, has its normal at last.** Nothing yet asks what the surface does to
   where light lands; the bed's `aUnder` still asks only how much came down a column.
+- **Only a top face is a way out of the liquid.** The vertical faces a shoreline puts in the
+  water are bent nowhere, and a lens inside the liquid is still shown a flat interface, so the
+  window has no glitter under it. Both of those are the compositing question, not the law's.
+
+## 29. A worn turtle holds no height in the water, breathes on a person's clock, and rows with flippers standing under the shell (asked for by the user, set behind the water itself by them)
+
+**Three things the user asked for, which they then put behind this round's water on their own
+instruction.** They are written here rather than left in the conversation because two of them
+are already printed by the suite and bounded by nothing, and the third is a fact about a file.
+
+- **A body worn from that fruit does not hold a height in the water the way a frog body
+  does.** The row states one -- `hover: 0.35` in `game/data/creatures.js`, read through
+  `hoverDepth()` in `game/src/entities.js`, the same number the animal itself hangs at -- and
+  the step that swims both bodies prints what the two actually do. Over **8 s** of swimming
+  (480 frames) in the open sea the worn turtle gives up **5.4 m** of height and ends **7.2 m**
+  under the skin, **2 m** off the bottom of the column it is in (`endY 7.78`, that column's
+  ground top `5.78`, the skin at **15**); the worn frog, started at the same place in the same
+  sea, ends **2.1 m** under that skin (`endY 12.9`) over ground **7.9** in its own column.
+  Holding the rise key for **4 s** lifts the turtle **0.66 m** and the frog **0.35 m** --
+  neither is the working up and down a water column with the same keys that the request
+  describes. What the step's checks hold is the turtle's *speed* and that the rise key leaves
+  it wetter (**192** of **240** frames wet, at **3.63 m/s**); nothing holds a settled depth at
+  all, so the request has no number to be measured against yet.
+- **Its breath is a person's.** `maxAir()` in `game/src/entities.js` answers **18** for every
+  body that needs air at all; the frog sits outside that with `breatheAir: false` -- which is
+  why it never has to surface, and why its air reads **999** -- and the turtle wears the
+  person's eighteen seconds. The same step prints a worn body emptying its air in **18.3 s**
+  against a ceiling of **18**, while the animal's own row says it lies just under the surface
+  because it has to come up. What is asked for is a cycle that belongs to the animal: much
+  longer than a person's, and finite, unlike the frog's. The field to carry it does not exist.
+- **The two front flippers stand under the body, not at its sides.** `game/src/models.js`,
+  the `turtle` block (the record is `game/data/creatures.js`, `scale: 0.25`). The wings are
+  what reads as a turtle, and where they are attached is what says whether the shell rests on
+  them or they reach round it. This one is stated as coordinates rather than as a measurement:
+  it wants the model's joint boxes read against the shell's own box, and
+  `aJointTheLensSeesIsTwoColoursNotOneColourTwice` and
+  `aBodyCarriesTheCreaseWhereItsPartsMeet` already carry the machinery for asking that.
+
+**Why they belong in the queue and not in a comment.** All three are the difference between
+"the animal is in the valley" -- which is what **25** item 3 closed, with the measurements --
+and "the body worn in the water behaves like that animal". The second is the question the
+water this round bent is now legible enough to be looked at from.
 
 ## The record of the last rounds (kept as history)
 
@@ -2446,7 +2527,61 @@ measurements made while doing item 2 say why item 1 is the expensive one:
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### One round back: the sea has an animal, and it strokes with both wings at once (04a6572)
+### One round back: a lake's face answers with the tilt it has (d20eccf)
+
+Opened on the user's own screenshot -- 从在海底往上看青蛙，为什么是这种视角，为什么看到的是一个圆环:
+from the sea floor looking up at the frog, why this view, why is what I see a ring -- and it
+answered the question with numbers before changing anything.
+
+- **The ring is the edge of the cone the water's own index closes.** A lens under the surface
+  keeps nothing of the sky past `asin(1/1.333)` = **48.6 deg** from the vertical, which is
+  **41.4 deg** above its own eye line; `theSurfaceUnderWaterHandsTheLightBack` finds the sky
+  starting at **41.4** where the index states **41.4**, and a level lens 30 cm under a lake
+  holds **0** pixels brighter than the water it stands in, its brightest pixel being that
+  water's own **53**. So the ring was neither the shore of that sea nor a rendering error:
+  outside the cone the pane returns `uVeil`, the water's own colour, which is what the shader
+  and 07 §3.2 both name as the cheap answer.
+- **Why it is a perfect circle with a hard edge.** A lens inside the liquid is shown a flat
+  interface: a ray starting under water meets the vertex wave's surface three or four times
+  within a few metres, the pane writes no depth and its two passes multiply then add, and every
+  crossing lays the water's colour over the last -- **961** pixels over the sea's own **53**
+  and **107** at the brightest, a dotted line at the eye line of a lens standing on the floor
+  of an open sea. One flat interface has one critical angle, so the cone's rim is a circle.
+- **Shipped: the face's own tilt.** The vertex the wave displaces now writes down the normal
+  its own two sines give it (`vPanN`), and the pane asks *that* face for the cosine Schlick
+  wants, for the critical-angle test and for the direction it would send the ray back along.
+  With no wave on it a vertex carries (0,1,0) and every term is bit for bit what it was. The
+  wave itself is unchanged: **8.5 cm** tall, **7.0 m** and **25.1 m** long, never tipping the
+  surface more than **3.87 deg**.
+- **What that does to a frame.** A lens **1.2 m** over **240 m** of open water at (258.5,
+  -59.5), level, at 13:00, reading the rows that meet the surface 1 to 2.6 deg below its eye
+  line: asked a plane each of those rows is one number -- the widest spans **9** of 255,
+  varying along itself by **2.9**. Asked its own tilt, the rows that spanned **2** and **7**
+  span **59** and **42**, the most varied runs **196 to 255**, and a row's mean moves by at
+  most **6**: the same sky redistributed, with a reach bounded by the wave itself (a face
+  tipped **3.87 deg** turns a mirror by **7.7 deg**). And it is the water's pattern: **1.9 s**
+  of the clock changes **28,371** of the **34,200** pixels of that band, and **0** of them with
+  the face taken out of the shading.
+- **The one number it moved that is not a mirror:** the bed seen through a lens 30 cm over the
+  water at 7 deg of slope -- red **29.7** and **38.9**, against **25.5** and **33.8** with the
+  same face asked a plane, because the faces tipping away throw the bed back and the ones
+  tipping in let more through than a flat mirror of that angle would; a term convex in the
+  cosine keeps the larger share on the average. `aLakeVeilsItsBedAlongTheRay` draws both.
+- **Two figures in the chapter had quietly gone stale** and were re-pinned from a run rather
+  than argued: the ray-length bed row (**53.9/71.7 / 54.1/71.8 / 54.2/72.0** becoming
+  **54.1/72.1 / 54.3/72.2 / 54.6/72.5**) and two counts of sky in control frames (**6,063** to
+  **5,523** pixels, and **16,228** over 200 to **13,020**).
+- **Not claimed, and named as the next thing:** no ray was bent anywhere, so there was no
+  Snell's window; the mirror under the water was still a colour; nothing asked what a moving
+  surface does to where light lands. Those are **28** items 1, 4 and 3. Item 1 is the round
+  this file is standing in now; 4 and 3 are open still.
+- **A trap for any lens rig under water.** `g.time` alone does not move the sun: the
+  environment has to be asked what the sun then stands at (`updateEnv()`) before the frame is
+  shot, or the rig reads yesterday's sky and its "sun elevation" is a number the hour does not
+  state. One run of this round's window rig answered nearly twice the elevation the clock it
+  pinned gives.
+
+### Two rounds back: the sea has an animal, and it strokes with both wings at once (04a6572)
 
 The user's queue under **25** item 3, spent in one round: 前肢像翅膀一样上下划, a swimmer
 faster in the water than the frog's **4.6**, no clock drying its skin on land, under **1.8**
@@ -2493,7 +2628,7 @@ keeping only the frog's, and 现在海里面啥动物都没有，太冷清了.
   the worn body cannot get up a single riser anywhere in this valley -- which is what the
   absence of a `hop` means.
 
-### Two rounds back: a bar is sand through, a reef is rock through (014b515)
+### Three rounds back: a bar is sand through, a reef is rock through (014b515)
 
 Not recorded here when it was made, so it is recorded now in two lines. A kind of
 island stated the shape of its shore and not what its ground is made of: the
@@ -2512,7 +2647,7 @@ the tally and the check still passed. The crown rows of all 70 islands are
 byte-identical before and after (sum 1442). Nothing
 lived on any of it yet; the round after it is the one that put something there.
 
-### Three rounds back: the surface under water hands the light back (160edcf)
+### Four rounds back: the surface under water hands the light back (160edcf)
 
 The question was the user's, asked over the picture the round before had just
 fixed: 这种远处的水光…水面之上这样显示我理解，但是在水底也是这个样子的吗？物理世界，
@@ -2617,7 +2752,7 @@ and animals in the sea at all, which is currently empty of everything but frogs;
 **28**, the unbent crossing -- no refraction, no Snell's window, no tilt on the surface, no
 caustics, and an underwater mirror that is a colour instead of a picture.
 
-### Seven rounds back: the map becomes a window of ground round the body (29cd91e)
+### Eight rounds back: the map becomes a window of ground round the body (29cd91e)
 
 State at time of writing, then: this round is one commit, and it changes what the minimap is.
 It was a picture: one canvas of the authored square, 160x160 cells, painted once at boot, and
@@ -2694,7 +2829,7 @@ turtle's fruit in sand, the main island keeping only the frog's, and animals in 
 which is currently empty of everything but frogs. The minimap half of that queue is closed by
 this round.
 
-### Eight rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
+### Nine rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
 State at time of writing, then:
 A body whose legs are an arc was sized by the parabola -- launch squared over
 twice the gravity -- and the parabola is what the flight tends to as the frame goes to
@@ -2798,7 +2933,7 @@ no skin-drying clock on land, slower than **1.8** on it -- the island nearest th
 be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
 is currently empty of everything but frogs.
 
-### Nine rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+### Ten rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
 State at time of writing, then:
 the sea. The water the last round opened out is no longer an empty field: it holds
 islands, and it holds more of them the nearer they lie to the island this square sits
@@ -2905,7 +3040,7 @@ finished.
 
 
 
-### Ten rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
+### Eleven rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
 State at time of writing: this round is one commit, and it changes what the world
 *is*. The map stops being the world and becomes a square of ground with an
 address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
@@ -3058,7 +3193,7 @@ round deliberately refused to invent one.
 Read the standing contract below first: it decides whether any of this counts as
 finished.
 
-### Eleven rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+### Twelve rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
 State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
@@ -3147,7 +3282,7 @@ the contour probes is still unmeasured). One new one, 22's own seam: **the hand 
 in third person -- the marker now shows only where the key acts, which is what made
 that one distance and that origin visible.
 
-### Twelve rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### Thirteen rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -3270,7 +3405,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Thirteen rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Fourteen rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -3444,7 +3579,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Fourteen rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Fifteen rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and
