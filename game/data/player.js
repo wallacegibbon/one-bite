@@ -137,6 +137,45 @@
        body's empty (**0**) on the animal and it stays **0** of its own **240**
        and pays that debt back a second to the second. */
     breath: 18,
+    /* How much of this body the valley's prices are taken out of. The field the
+       body carries it in is `vital`; the page draws one mark for each unit of it
+       (`vitals` in src/ui.js, and `test/play.js`
+       (`theDeepestWaterIsMeasuredAgainstTheBodyThatFallsIntoIt`) counts the marks
+       against this figure, because a record and a gauge that disagree about it
+       would be one fact written twice). It is stated here and nowhere else: the
+       same figure was written in three places -- this body's first state, the
+       state it is put back into when it dies, and the number of marks the gauge
+       draws -- and none of the three was the record.
+       No animal row states it. Nothing in this build ever takes vitality out of a
+       wild body: the prices the valley charges a body -- drowning, drying skin,
+       an animal's teeth -- are all charged to this one, so this is the only
+       record that is asked for it.
+       With `breath` it is the whole of what a body can do under water, and the
+       pair is what the deepest water in this valley is measured against. The
+       water takes this at a price the water states, not on this row: **0.55** of
+       it to the second with the head under and the store already empty -- read
+       back out of the water itself as **0.5507**, which is that figure with the
+       frame's own quantization in it. Measured,
+       in the deepest column this world carves -- **11** blocks of water, film at
+       y15, bed at y4, the column docs/02 s3 counts -- with the body standing on
+       that bed and nothing asked of it, it is dead at **27.08 s**: the **18** its
+       own row states, then **9.08 s** of the water taking **5** at that price.
+       Given twice this figure the same body lies under the same water for twice
+       the drowning (**36.17 s**) at a price that moved by **0.0003**, which is
+       what says the figure on the row is the whole of the arithmetic.
+       Asked with the climb key held it reaches the film **21.35 s** after it was
+       put there, its head out **3.35 s** past the end of its own breath, alive,
+       having paid **1.842** of the **5** for the climb: the deepest floor of this
+       valley is survivable by the body the run starts in, with **5.73 s** to
+       spare. Held at the panic figure the same floor
+       is not: the store is empty at **11.25 s** and the body is dead at
+       **20.33 s** with its head never once out -- which is what that unowned
+       figure is worth here, and it is recorded as an open question at
+       OPEN-ISSUES 2l, not settled by this row. Every figure in this comment is a
+       rig of `test/play.js`
+       (`theDeepestWaterIsMeasuredAgainstTheBodyThatFallsIntoIt`: `out.reach`,
+       `out.reachTwice`, `out.climb`, `out.panicked`, `out.swim`). */
+    life: 5,
     fov: 76
   };
 

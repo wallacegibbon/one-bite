@@ -853,7 +853,7 @@
         this.drops.push({ x: ok ? dx : p.x, y: ok ? y : feet, z: ok ? dz : p.z, item: it, t: 600 });
       }
       this.inv = [];
-      p.vital = 5; p.air = p.maxAir(); p.fright = 0; p.form = null; p.formT = 0;
+      p.vital = N.HUMAN_FORM.life; p.air = p.maxAir(); p.fright = 0; p.form = null; p.formT = 0;
       const s = this.cellar();
       p.x = s.x + 2; p.y = s.y + 1; p.z = s.z + 2; p.vx = p.vy = p.vz = 0;
       this.mode = 'dead';

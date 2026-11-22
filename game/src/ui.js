@@ -253,8 +253,13 @@
         (g.name ? ' <span class="dim">' + g.name + '</span>' : ' <span class="dim">' + N.t('hud.namePrompt') + '</span>');
 
       // vitality / air / fright
+      /* The marks are the record's: one per unit of the life the body's own row
+         states (`life` on data/player.js). Five marks were drawn here while the
+         figure was written in two other places, and a record that changed would
+         have moved the number the body holds without moving the gauge that shows
+         it. `test/play.js` counts the marks against the row. */
       let v = '';
-      for (let i = 0; i < 5; i++) v += '<span class="hp' + (p.vital > i + 0.5 ? ' on' : '') + '">✦</span>';
+      for (let i = 0; i < N.HUMAN_FORM.life; i++) v += '<span class="hp' + (p.vital > i + 0.5 ? ' on' : '') + '">✦</span>';
       el('vitals').innerHTML = v;
       el('air').style.width = Math.max(0, Math.min(100, p.air / p.maxAir() * 100)) + '%';
       el('airWrap').style.opacity = p.air < p.maxAir() - 0.5 ? 1 : 0;

@@ -14369,6 +14369,220 @@ What was measured before any of this was fixed, over 180 frames of walking
     drag.breathCross.personToTurtle.payBack.vital > 0,
     drag.breathCross.personToTurtle);
 
+  /* ---- the deepest water in this valley, against the body that falls into it ----
+     Under water a body carries two clocks. One is the breath its record states --
+     `breath`, on the row of every body that has a record, and one unit of it to
+     the second of holding since the round that closed the pair of ends. The other
+     is what the valley takes out of the body after that store is empty, and it was
+     written in three places and on no record at all: the state a body is first in
+     (`entities.js`), the state it is set back to when it dies (`game.js`), and the
+     number of marks the gauge on the page draws (`ui.js`). The two together are
+     one reach in seconds, and that reach is what the world's own floor is measured
+     against -- and this valley has a floor: docs/02 s3 counts its water column by
+     column, gives the deepest of them eleven blocks of water over a bed at y4, and
+     `docs-sync.js` reads that census out of the world the data builds.
+     Nothing before this round asked the two questions in one sentence. Measured
+     here, in the deepest column the world has, with the body the run starts in and
+     nothing but its own record under it:
+       - stood on that bed and asked nothing: the store is empty at **18 s** and the
+         body is dead at **27.08 s** -- the life the record states taken at the one
+         rate the water charges, **0.55** of it to the second;
+       - the climb key held: its head reaches the film at **21.35 s**, **3.35 s**
+         past the end of its own breath, alive, and the water charges it **1.842**
+         of its life for the wait -- so that floor is climbable, with **5.73 s** of
+         the reach left over;
+       - the same climb held at the panic figure: the store is empty at **11.25 s**,
+         the head never once reaches the film, and the body is dead at **20.33 s**
+         -- the figure OPEN-ISSUES 2l leaves open is worth a life here, and which
+         life is not claimed by this file;
+       - at the film, asked only to go forward at the speed its own row states: its
+         head is out in **6.3%** of the frames and it dies in the water.
+     And the valley does ask: of every column of standing water in the authored
+     valley all but a shelf one block deep is deeper than this body is tall, and
+     that shelf is the only shallow water there is. That is the question OPEN-ISSUES
+     29 left under the water law -- whether the valley ever asks -- answered with a
+     count. The census is the same walk docs/02 s3 records and `docs-sync.js`
+     repeats: the film from the topmost water cell, the bed searched up from it. */
+  const deep = await step('theDeepestWaterIsMeasuredAgainstTheBodyThatFallsIntoIt', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    const ROW = N.HUMAN_FORM;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      vx: p.vx, vy: p.vy, vz: p.vz, grounded: p.grounded, inWater: p.inWater, headWater: p.headWater,
+      air: p.air, fright: p.fright, form: p.form, formT: p.formT, formMax: p.formMax,
+      vital: p.vital, dry: p.dry, dead: p.dead, held: p.held, time: g.time, mode: g.mode,
+      deaths: g.stats.deaths, inv: g.inv, creatures: g.creatures };
+    const dropsWas = g.drops.length, logWas = g.log.slice();
+    const back = () => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        faceYaw: was.faceYaw, vx: was.vx, vy: was.vy, vz: was.vz, grounded: was.grounded,
+        inWater: was.inWater, headWater: was.headWater, air: was.air, fright: was.fright,
+        form: was.form, formT: was.formT, formMax: was.formMax, vital: was.vital,
+        dry: was.dry, dead: was.dead, held: was.held });
+      g.time = was.time; g.mode = was.mode; g.stats.deaths = was.deaths;
+      g.inv = was.inv; g.creatures = was.creatures;
+      g.drops.length = dropsWas;
+      g.log.length = 0; Array.prototype.push.apply(g.log, logWas);
+      if (g.ui) g.ui.showDead(false);
+    };
+    g.creatures = [];
+
+    /* The census: every column of standing water in the authored valley, how deep
+       the water in it is, and which of them is the deepest. The two reads are the
+       water's own -- the film from the topmost water cell, the bed searched up from
+       it -- and the deepest is the first maximum in scan order, which is the column
+       docs/02 s3 names. */
+    let deepCol = null, wet = 0, overBody = 0, shelf = 0, oneBlock = 0;
+    for (let z = 1; z < W.d - 1; z++) for (let x = 1; x < W.w - 1; x++) {
+      const wt = N.waterTop(W, x, z, W.h - 1);
+      if (wt < 0) continue;
+      const film = wt + 1, bed = N.groundY(W, x, z, wt), depth = film - bed;
+      if (depth <= 0) continue;
+      wet++;
+      if (depth <= 1.05) oneBlock++;
+      if (depth > ROW.size[1]) overBody++; else shelf++;
+      if (!deepCol || depth > deepCol.depth) deepCol = { x, z, film, bed, depth };
+    }
+    const out = { records: { breath: ROW.breath, life: ROW.life, tall: ROW.size[1],
+      swimSpeed: ROW.swimSpeed },
+      census: { columns: wet, deeperThanTheBody: overBody, shallowEnoughToStand: shelf,
+        shallowAtOneBlock: oneBlock,
+        shareDeeperThanTheBody: wet ? +(100 * overBody / wet).toFixed(1) : null },
+      deepest: deepCol };
+    if (!deepCol) return Object.assign(out, { error: 'the world holds no standing water' });
+
+    /* The gauge before anything is asked of it: how many marks the page draws, how
+       many of them lit, and what the body holds. A record and a gauge that
+       disagree about this figure would be one fact written twice -- which is exactly
+       what it was before this round. */
+    const expectLit = (v) => { let n = 0; for (let i = 0; i < ROW.life; i++) if (v > i + 0.5) n++; return n; };
+    out.gauge = { marks: document.querySelectorAll('#vitals .hp').length,
+      lit: document.querySelectorAll('#vitals .hp.on').length, held: p.vital,
+      marksTheRecordStates: ROW.life, litTheBodyHolds: expectLit(p.vital) };
+
+    const put = (y) => {
+      p.form = null; p.formT = 0; p.formMax = 1;
+      p.x = deepCol.x + 0.5; p.z = deepCol.z + 0.5; p.y = y;
+      p.vx = p.vy = p.vz = 0; p.air = p.maxAir(); p.fright = 0; p.dead = false;
+      p.grounded = false; p.inWater = false; p.headWater = false; p.held = 0; p.dry = 0;
+      p.vital = ROW.life;
+    };
+    /* The body's own frames, one at a time, the way the game's loop spends them.
+       `holdFright` re-sets the state the panic branch reads on every frame, which
+       is the only honest way to ask that branch a question: the state decays at
+       0.12 to the second while a chase puts 0.9 into it, so nothing but re-asking
+       it keeps the branch open for the length of a climb. */
+    const sink = (secs, keys, holdFright, lifeAsked) => {
+      if (lifeAsked === undefined) lifeAsked = ROW.life;
+      const rec = { t: 0, frames: 0, airGoneAt: null, headOutAt: null, dryAt: null,
+        diedAt: null, paid: 0, headOutFrames: 0, lastSeen: null };
+      for (let i = 0; i < 60 * secs; i++) {
+        if (holdFright) p.fright = 1;
+        /* the state as this frame found it. A body that dies is put back to full
+           by the same line that ends the run, so the values it died at have to be
+           kept before the frame spends them -- reporting the numbers after the
+           reset would report a body that was never there. */
+        const v0 = p.vital;
+        rec.lastSeen = { air: p.air, vital: p.vital };
+        p.update(1 / 60, keys, g);
+        g.time += 1 / 60; rec.t += 1 / 60; rec.frames++;
+        // what the valley took out of the body, and nothing it gave back
+        rec.paid += Math.max(0, v0 - p.vital);
+        if (!p.headWater) rec.headOutFrames++;
+        if (p.air <= 0 && rec.airGoneAt === null) rec.airGoneAt = rec.t;
+        if (!p.headWater && rec.headOutAt === null) rec.headOutAt = rec.t;
+        if (p.grounded && !p.inWater && rec.dryAt === null) rec.dryAt = rec.t;
+        if (p.dead) { rec.diedAt = rec.t; break; }
+      }
+      for (const k of ['airGoneAt', 'headOutAt', 'dryAt', 'diedAt'])
+        if (rec[k] !== null) rec[k] = +rec[k].toFixed(2);
+      rec.t = +rec.t.toFixed(2); rec.paid = +rec.paid.toFixed(3);
+      rec.headOutPct = +(100 * rec.headOutFrames / Math.max(1, rec.frames)).toFixed(1);
+      rec.alive = !p.dead;
+      rec.left = { air: +rec.lastSeen.air.toFixed(2), vital: +rec.lastSeen.vital.toFixed(3) };
+      delete rec.lastSeen;
+      /* the water's price, measured: the life it took, over the seconds it took it
+         in. Not read out of the source -- the whole point is that this figure is
+         charged to a body and so has to be measured against that body. */
+      rec.price = (rec.airGoneAt !== null && rec.diedAt !== null)
+        ? +(lifeAsked / (rec.diedAt - rec.airGoneAt)).toFixed(4) : null;
+      return rec;
+    };
+
+    /* 1. stood on the bed of the deepest water this world carves, asked nothing */
+    put(deepCol.bed + 0.05);
+    out.reach = sink(120, {}, false);
+    /* 2. the same body with twice the life: what the second clock is worth */
+    put(deepCol.bed + 0.05);
+    p.vital = ROW.life * 2;
+    out.reachTwice = sink(120, {}, false, ROW.life * 2);
+    out.reachTwice.startedWith = ROW.life * 2;
+    /* 3. the climb key kept: the body's own answer to that floor */
+    put(deepCol.bed + 0.05);
+    out.climb = sink(120, { up: 1 }, false);
+    /* 4. the same climb with the panic branch held open */
+    put(deepCol.bed + 0.05);
+    out.panicked = sink(120, { up: 1 }, true);
+    /* 5. at the film of that water, asked only to go forward at the rate its own
+       row states, headed for the nearest shore -- the hand still on the key that
+       moves a body on land. It is aimed across the water, not at a shore it was
+       told about: what this rig measures is the body's own progress through the
+       film, and it never claims the shore was reached. */
+    put(deepCol.film - 0.4);
+    const lake = (N.ZONE_BY_ID && N.ZONE_BY_ID.mirrorlake && N.ZONE_BY_ID.mirrorlake.lake) ||
+      [Math.round(W.w / 2), Math.round(W.d / 2)];
+    {
+      const dx = deepCol.x - lake[0], dz = deepCol.z - lake[1], L = Math.hypot(dx, dz) || 1;
+      p.yaw = p.faceYaw = Math.atan2(dx / L, -(dz / L));
+    }
+    out.swim = sink(120, { fwd: 1 }, false);
+    back();
+    return out;
+  });
+
+  check('the life a body has is a figure on its own record, and the gauge on the page draws one mark for each unit of it: three places used to write it and none of them was the record',
+    deep.gauge.marks === deep.gauge.marksTheRecordStates &&
+    deep.gauge.lit === deep.gauge.litTheBodyHolds && deep.gauge.marks > 0, deep.gauge);
+
+  check('a body stood on the bed of the deepest water this valley has and asked nothing runs out at the breath its record states and then dies at the water taking its life: the column is deeper than the body is tall by wide margin',
+    deep.deepest.depth > deep.records.tall * 4 &&
+    Math.abs(deep.reach.airGoneAt - deep.records.breath) < 0.05 &&
+    deep.reach.diedAt !== null && deep.reach.diedAt > deep.reach.airGoneAt &&
+    deep.reach.headOutAt === null, deep.reach);
+
+  check('and the two clocks are one reach at one price: a body with twice the life lies exactly twice as long under the water, the breath part of it unchanged, the price the water takes the same figure both times, and the water is the only thing that charged that body anything',
+    deep.reachTwice.diedAt !== null &&
+    Math.abs(deep.reach.paid - deep.records.life) < 0.01 &&
+    Math.abs(deep.reachTwice.paid - deep.reachTwice.startedWith) < 0.01 &&
+    Math.abs(deep.reachTwice.airGoneAt - deep.reach.airGoneAt) < 0.05 &&
+    Math.abs((deep.reachTwice.diedAt - deep.reachTwice.airGoneAt) -
+             2 * (deep.reach.diedAt - deep.reach.airGoneAt)) < 0.06 &&
+    Math.abs(deep.reachTwice.price - deep.reach.price) < 0.002, deep);
+
+  check('the deepest floor of this valley is climbable by the body the run starts in: kept on its own climb key its head reaches the film inside its own reach, and it is alive when it gets there',
+    deep.climb.headOutAt !== null && deep.climb.alive &&
+    deep.climb.headOutAt < deep.reach.diedAt &&
+    deep.reach.diedAt - deep.climb.headOutAt > 1, deep.climb);
+
+  check('and it pays for that climb out of its life and not out of its breath: the store is empty 3.35 s before the head gets out, and what the water takes in those seconds is the figure the record states, at the price it takes everywhere else',
+    Math.abs(deep.climb.airGoneAt - deep.records.breath) < 0.05 &&
+    deep.climb.paid > 0 && deep.climb.paid < deep.records.life &&
+    Math.abs(deep.climb.paid - (deep.climb.headOutAt - deep.climb.airGoneAt) * deep.reach.price) < 0.06,
+    deep.climb);
+
+  check('the same floor with the panic figure in force is not climbable: the store empties sooner by that figure, the head never once reaches the film, and the body is dead before a calm one reaches the surface',
+    deep.panicked.diedAt !== null && deep.panicked.headOutAt === null &&
+    deep.panicked.airGoneAt < deep.records.breath &&
+    deep.panicked.diedAt < deep.climb.headOutAt, deep.panicked);
+
+  check('and the valley asks the question, it does not offer it: the standing water of this valley is measured column by column and all but a shelf one block deep is deeper than the body that falls into it is tall',
+    deep.census.shareDeeperThanTheBody > 90 &&
+    deep.census.shallowEnoughToStand < deep.census.columns * 0.1 &&
+    deep.census.shallowEnoughToStand === deep.census.shallowAtOneBlock, deep.census);
+
+  check('what that costs a body that breathes air and wears no animal: at the film of its own deepest water, going forward at the speed its own row states, its head is out in 6.3% of its frames and it drowns there',
+    deep.swim.headOutPct < 10 && deep.swim.headOutAt !== null && !deep.swim.alive &&
+    deep.swim.diedAt !== null, deep.swim);
+
   /* ---- the stroke the wings draw ----
      The model is data, and a number written in it is a claim: `game/src/models.js`
      states the arc of this wing, the angle the blade swings through, the rate it

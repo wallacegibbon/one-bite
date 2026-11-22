@@ -551,7 +551,15 @@
          being worn (`maxAir`, and `breath` on data/player.js and on the animal
          rows in data/creatures.js). */
       this.air = HUMAN.breath;
-      this.vital = 5;              // vitality
+      /* Vitality the same way. It is a figure about this body and not about the
+         water or the animal, and until now it was written in three places -- this
+         body's first state, the state it is set back to when it dies, and the
+         number of marks the gauge draws -- and in none of them. `life` on
+         data/player.js is the one place it is stated; the water's price against
+         it is the water's own, and the pair is what the deepest water in this
+         valley is measured against in `test/play.js`. No animal row carries it:
+         nothing in this build takes vitality out of a wild body. */
+      this.vital = HUMAN.life;
       this.fright = 0;             // fright 0..1
       this.inWater = false; this.headWater = false;
       this.dry = 0;                // seconds this amphibian body has been out of water
