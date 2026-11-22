@@ -7834,7 +7834,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const was = { form: p.form, x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw,
       pitch: p.pitch, faceYaw: p.faceYaw, bank: p.bank, tilt: p.tilt, vital: p.vital, air: p.air,
       dry: p.dry, fright: p.fright, grounded: p.grounded };
-    const run = (form, at, keys, secs, afterBottom) => {
+    const run = (form, at, keys, secs) => {
       p.form = form; p.vital = 10; p.dry = 0; p.fright = 0; p.air = 999;
       p.x = at.x; p.z = at.z; p.y = at.y;
       p.vx = p.vy = p.vz = 0; p.bank = 0; p.tilt = 0; p.faceYaw = 0; p.pitch = 0; p.grounded = false;
@@ -7843,39 +7843,55 @@ What was measured before any of this was fixed, over 180 frames of walking
          climb the leg reaches, with the body's nose as it showed at that moment.
          Read while the body is travelling and not while it stands: the frame a
          body lands on has already had its nose taken back to level by the ground
-         under its feet, and the landing is often the fastest frame of the fall.
-         A leg may also run on after the body reaches the bottom -- see below. */
-      let down = null, up = null, gr = 0;
+         under its feet, and the landing is often the fastest frame of the fall. */
+      let down = null, up = null;
+      /* The floor of the water's hold is asked of the ground the body's own box
+         reaches, so it moves when that ground moves. This leg is aimed inshore,
+         where the lakebed of Mirrorlake steps up a block every few columns, so
+         the leg records its own margin: the distance between the body and the
+         floor its box states, the worst that margin reaches, the number it ends
+         at, and how many times the ground under the box came up. A floor that
+         only brakes on the way down leaves a body that swims onto higher ground
+         *under its own floor* for the rest of the leg -- at (54.5,95.2) a frog
+         body crossing from a column whose ground was 7 to one whose ground was 8
+         was left at 8.07, 0.18 under the floor the same reading states for it,
+         its feet 0.07 above the ground, standing in no frame because no frame
+         ever met the ground and held in no frame because the level the water
+         holds it at is above it. */
+      let under = 0, underAt = null, groundUp = 0, bedWas = null, margin = null, underFrames = 0;
+      const note = () => {
+        if (!p.inWater) { bedWas = null; return; }
+        const bed = N.groundUnder(W, p.x, p.z, p.size()[0] / 2, p.y);
+        if (bedWas !== null && bed > bedWas) groundUp++;
+        bedWas = bed;
+        margin = p.y - N.bedFloor(bed, p.size()[1]);
+        if (margin < -0.05) underFrames++;
+        if (margin < under) { under = margin; underAt = { y: +p.y.toFixed(3), bed, at: +p.z.toFixed(2) }; }
+      };
       const n = Math.round(secs * 60);
-      let end = afterBottom ? 12 * 60 : n, landed = false;
-      for (let i = 0; i < end; i++) {
+      for (let i = 0; i < n; i++) {
         p.yaw = 0;
         g.input = keys(p); g.particles.n = 0; g.hover = null;
         p.update(1 / 60, g.input, g);
-        if (p.grounded) gr++;
-        /* A body asked to go down is measured until it has stood on the bottom
-           for the leg's own length. The lake is deeper than it was -- 9 m of
-           water at the column this reads, 7 before -- and a body sinking at
-           2.08 m/s while it swims at 4 reaches the bed when the bed says so, not
-           after a fixed time: with the leg ending 2.5 s in, the widened lake put
-           the body still coming down at the last frame, standing on the bottom
-           in 3% of them. */
-        if (afterBottom && !landed && p.grounded) { landed = true; end = i + n; }
         if (p.vy < -0.3 && !p.grounded && (!down || p.vy < down.vy)) {
           down = { vy: +p.vy.toFixed(2), tilt: +(p.tilt || 0).toFixed(3), y: +p.y.toFixed(2) };
         }
         if (p.vy > 0.3 && !p.grounded && (!up || p.vy > up.vy)) {
           up = { vy: +p.vy.toFixed(2), tilt: +(p.tilt || 0).toFixed(3), y: +p.y.toFixed(2) };
         }
+        note();
       }
       return { tilt: +(p.tilt || 0).toFixed(3), vy: +p.vy.toFixed(2), y: +p.y.toFixed(2),
-        g: p.grounded ? 1 : 0, grPct: Math.round(gr / end * 100), frames: end, down, up };
+        g: p.grounded ? 1 : 0, frames: n, down, up, groundUp, underFrames,
+        under: +under.toFixed(3), underAt, margin: margin === null ? null : +margin.toFixed(3) };
     };
-    /* The dive keeps its stroke while it is coming down and gives it up when it
-       is on the bottom: the leg is asking the body to go down, and a body on the
-       bottom that is still swimming forward walks off the place it reached. */
+    /* The stroke is asked of whether the feet have a ground under them: a body
+       the water holds keeps the stroke, and the leg runs long enough for the
+       descent and the swim inshore to finish, which is what the floor the body
+       stops at decides -- not the clock. A body with feet on the bottom giving
+       the stroke up is the shelf step a few steps below. */
     const sink = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 1.5 },
-      p => ({ fwd: !p.grounded, up: false, down: true, sprint: false }), 2.5, true);
+      p => ({ fwd: !p.grounded, up: false, down: true, sprint: false }), 12);
     const rise = run('frogpear', { x: lake.x, z: lake.z, y: lake.top - 3.0 },
       () => ({ fwd: true, up: true, down: false, sprint: false }), 1.2);
     // a dry flat stretch to walk: eight columns ahead, the same height, no water
@@ -7940,14 +7956,24 @@ What was measured before any of this was fixed, over 180 frames of walking
   });
   check('a body sinking through water noses down the way it is going',
     !attitude.error && !!attitude.sink.down && attitude.sink.down.tilt > 0.2 && attitude.sink.down.vy < -1, attitude);
-  /* The dive still reaches the bottom: the water holding a body up is not a lid
-     on going down. It used to reach it by falling out of the water branch onto
-     the bottom and hopping along it, so the frame the leg ended on was mid-hop
-     with the body already coming down -- the nose it showed was the hop's, not
-     the dive's. Now the body stays in the water the whole way, stands on the
-     bottom while the key is held, and the nose is read off the sinking itself. */
-  check('and a body asked to go down still gets to the lakebed and stands on it while asked',
-    !attitude.error && attitude.sink.g === 1 && attitude.sink.grPct > 40, attitude);
+  /* Going down ends at the floor the water leaves a body, not at the ground: a
+     body the water carries keeps half its own height off the bottom it is
+     carried over, and stays a body the water carries -- there are no feet in
+     this water. The floor is asked of the ground the body's own box reaches, and
+     that ground steps up as the body swims inshore, so the floor moves. A floor
+     is not only a brake on going down: a body that swims onto ground higher than
+     the level it is carried at goes up with the floor. This leg's own reading
+     says the ground under the box came up while the body was sinking and left it
+     a fifth of a metre under the floor the new ground stated; it ends at the
+     floor, and was under it for one frame -- the frame that asks the ground
+     where the frame starts. A brake alone left it under that floor for every
+     frame of the rest of the leg: 8.07 with its feet 0.07 above the ground,
+     standing in no frame because no frame ever met the ground, held in no frame
+     because the level the water holds it at is above it. */
+  check('the floor a body is carried above is the ground its own box reaches, and it follows that ground up',
+    !attitude.error && attitude.sink.g === 0 && attitude.sink.groundUp >= 1
+    && attitude.sink.under <= -0.05 && attitude.sink.underFrames <= 2
+    && Math.abs(attitude.sink.margin) <= 0.01, attitude);
   check('a body climbing through water noses up',
     !attitude.error && !!attitude.rise.up && attitude.rise.up.tilt < -0.1 && attitude.rise.up.vy > 1, attitude);
   check('a body on foot stays level: feet hold a body level',
@@ -9905,17 +9931,19 @@ What was measured before any of this was fixed, over 180 frames of walking
         span: +(Math.max(...tail) - Math.min(...tail)).toFixed(4), rev };
     };
     const out = { wt, bed, hover: N.CREATURE_BY_ID[N.FRUIT_BY_ID.frogpear.creature].hover };
-    /* Where a body is parked at the bottom of this column is asked of its own
-       box, not of the column under its middle. The worn turtle body is 1.5 m
-       across, and the lakebed here is a trough: the ground a metre outside its
-       middle is 1 m higher than the ground at it, so a body that wide stands on
-       the lip of the trough rather than in it. `src/entities.js` reads the floor
-       a dive stops at (`bedFloor`) from the middle of the column and the
-       collision reads the whole box, and where the ground under the box is the
-       higher of the two, the box decides where the body ends up standing. Both
-       numbers are printed below and both are asked of the bodies, so the
-       difference between a narrow body and a wide one in one and the same water
-       is measured here instead of assumed away. */
+    /* Where a body of this shape would be standing at the bottom of this column
+       is asked two ways and the two answers have to be one number. The first is
+       this file's own scan: the top of the highest solid over every column the
+       body's box reaches. The second is the ground the game reads when it decides
+       whether the water carries that body and where a dive stops (`groundUnder`,
+       `bedFloor`, `waterHoldsUp` in `src/entities.js`). Neither is the ground at
+       the column under the body's middle, and this column is the place where the
+       difference is not academic: the lakebed here is a trough, and the ground a
+       metre outside the middle is a metre higher than the ground at it, so a body
+       1.5 m across stands on the lip of the trough while the middle of it hangs
+       over nothing. The middle-column number is printed beside the other two
+       because that is what the water used to ask, and what it asked is why a
+       1.5 m body was told to stop a metre above the ground it was standing on. */
     const parkY = (form, at) => {
       p.form = form; p.formT = 9999; p.formMax = 9999;
       const hw = p.size()[0] / 2;
@@ -9931,11 +9959,54 @@ What was measured before any of this was fixed, over 180 frames of walking
     out.ground = {};
     for (const form of ['frogpear', 'turtlemelon']) {
       p.form = form; p.formT = 9999; p.formMax = 9999;
-      const tall = p.size()[1];
+      const tall = p.size()[1], hw = p.size()[0] / 2;
+      const law = N.groundUnder(W, lake.x, lake.z, hw, wt);
       out.ground[form] = { across: p.size()[0], tall: +tall.toFixed(3),
-        park: parkY(form, lake), holdFloor: +(bed + tall * 0.5).toFixed(3),
+        park: parkY(form, lake), law: +law.toFixed(3), column: bed,
+        holdFloor: +(N.bedFloor(law, tall)).toFixed(3),
         rest: +(N.floatLevel(wt + 1, tall, p.hoverDepth())).toFixed(3) };
     }
+    /* And from which cell that ground is asked. A column may be scanned from the
+       feet, as the floor read of a body's own collision scans it, or from
+       `STAND_SCAN` above the feet, as the read that sizes a step does: the
+       difference between those two scans is the block over a body's head, and a
+       body's floor is exactly where the difference stops being harmless, because
+       a floor a body is already under lifts it. Built rather than hunted -- the
+       question is about a body under a face, not about the shape a search would
+       happen to find: one block of stone set in the column so that its face sits
+       at the crown of a body stood 0.5 m off the bed. Both readings are
+       reported: the one asked from the feet answers the bed, the one asked from
+       the step's scan answers the top of that block, and the floor the second
+       one states is 1.75 m above where the body stands and on the far side of
+       the block entirely. */
+    const bx = Math.floor(lake.x), bz = Math.floor(lake.z);
+    const face = bed + 1;                                  // the block's own face at the crown
+    const wasBlock = W.get(bx, face, bz);
+    W.set(bx, face, bz, 3);                               // stone
+    place('frogpear', bed + 0.5, lake);
+    const tallF = p.size()[1], hwF = p.size()[0] / 2;
+    const roofStart = p.y;
+    const stepScan = () => {
+      let hi = -1;
+      for (let zz = Math.floor(p.z - hwF); zz <= Math.floor(p.z + hwF); zz++)
+        for (let xx = Math.floor(p.x - hwF); xx <= Math.floor(p.x + hwF); xx++)
+          hi = Math.max(hi, N.standY(W, xx, zz, p.y));    // the step's read, STAND_SCAN high
+      return hi;
+    };
+    const feetRead = N.groundUnder(W, p.x, p.z, hwF, p.y);
+    const headRead = stepScan();
+    let inSolid = 0, roofHi = p.y;
+    for (let i = 0; i < 240; i++) {
+      g.input = { down: true }; g.particles.n = 0; g.hover = null;
+      p.update(1 / 60, g.input, g);
+      if (p.y < face + 1 && p.y + tallF > face && Math.floor(p.x) === bx && Math.floor(p.z) === bz) inSolid++;
+      if (p.y > roofHi) roofHi = p.y;
+    }
+    out.roof = { face, feet: +feetRead.toFixed(3), head: +headRead.toFixed(3),
+      holdFeet: +(N.bedFloor(feetRead, tallF)).toFixed(3), holdHead: +(N.bedFloor(headRead, tallF)).toFixed(3),
+      up: +(N.bedFloor(headRead, tallF) - roofStart).toFixed(2),
+      y: +p.y.toFixed(3), hi: +roofHi.toFixed(3), inSolid, g: p.grounded ? 1 : 0 };
+    W.set(bx, face, bz, wasBlock);
     place('frogpear', bed + 3, lake); out.tall = +p.size()[1].toFixed(3); out.mid = glide(10, {}); // let go of mid-water
     place('frogpear', wt + 0.6, lake); out.surf = glide(10, {});        // let go of at the surface
     place('frogpear', bed + 0.0001, lake); out.fromBed = glide(12, {}); // put on the bottom, left
@@ -10108,6 +10179,33 @@ What was measured before any of this was fixed, over 180 frames of walking
     !buoy.error && buoy.surf.g === 0 && Math.abs(buoy.surf.y - buoy.wild.shallow) < 0.2, buoy);
   check('a body put on the lakebed and left alone gets off it',
     !buoy.error && buoy.fromBed.g === 0 && Math.abs(buoy.fromBed.y - buoy.wild.shallow) < 0.2, buoy);
+  /* The ground a body of this shape stands on, asked two ways: this file's own
+     scan over the box, and the ground the game reads for the water's hold and the
+     floor of a dive. They are one number for both bodies here, and that is the
+     claim -- a body cannot be supported by one ground and told where to stop by
+     another. The wide body's box reaches a higher ground than its own middle does
+     in this column, and the narrow body's does not, which is the whole
+     difference between a 1.5 m body and a 0.5 m one in one and the same water:
+     not two laws, one ground read of two bodies. */
+  check('the ground a body is told about is the ground its own box would stand on, asked the same way by the water and by the world, and a wide body and a narrow one in one column reach different grounds',
+    !buoy.error && ['frogpear', 'turtlemelon'].every(f => {
+      const r = buoy.ground[f];
+      return r.park === r.law && r.holdFloor === +(r.law + r.tall * 0.5).toFixed(3);
+    }) && buoy.ground.turtlemelon.law > buoy.ground.turtlemelon.column &&
+    buoy.ground.frogpear.law === buoy.ground.frogpear.column, buoy.ground);
+  /* That ground is asked from the feet, and this is where the difference between
+     the feet's scan and the step's scan moves a body rather than merely reading
+     a different number. With a block of stone let down over a body's crown the
+     step's scan answers the top of the block, the floor it states sits on the far
+     side of the block, and a body that is already under that floor is lifted to
+     it -- through the block. Asked from the feet, the block is a ceiling and not
+     a floor, the bed stays the ground, and the body goes down to the floor the
+     bed states and never enters the stone. */
+  check('and the ground a body is told about is asked from its own feet: a block over its head is a ceiling, not the floor under it',
+    !buoy.error && buoy.roof.feet === buoy.bed && buoy.roof.head > buoy.roof.feet
+    && buoy.roof.holdHead > buoy.roof.face + 1 && buoy.roof.up > 1
+    && Math.abs(buoy.roof.y - buoy.roof.holdFeet) <= 0.01
+    && buoy.roof.hi < buoy.roof.face && buoy.roof.inSolid === 0, buoy.roof);
   check('a body the water holds and asks to go down stops a small gap above the lakebed instead of on it, ' +
         'and the water takes it back when it stops asking',
     !buoy.error && buoy.dive.g === 0 && Math.abs(buoy.dive.y - buoy.ground.frogpear.holdFloor) <= 0.05
@@ -10192,20 +10290,19 @@ What was measured before any of this was fixed, over 180 frames of walking
   /* Going down is the thing that has to be asked for. This is the shape the user
      asked for in so many words: the animal does not settle to the bottom on its
      own; it is the player who takes it down, and the water takes it back.
-     Where the body being asked to go down ends up standing is the higher of two
-     floors, and at this column the two differ for this body: the water's own
-     floor is **6.225 m**, a hand's width above the lakebed at the middle of the
-     column, and the ground under this body's own 1.5 m box is **7.0 m** -- the lip
-     of the trough, a metre above its floor, which a body that wide stands on. The
-     collision is the one that reaches it there, so the claim asked here is the one
-     that is true of both bodies: the key takes the body down off the level the
-     water holds it at, its head goes under with it, and the moment the key is off
-     the water carries it back to that level, head out, whether it was standing on
-     the bottom or hanging above it. The frog body, which is 0.5 m across and does
-     reach the floor at the middle, is the pair that shows the gap is real. */
-  check('it goes down only while the down key is held -- down off the level the water holds it at, head under with it -- and the water takes it back up to that level, head out, the moment the key comes off',
+     A body this wide has one floor, not two. The ground its own box stands on at
+     this column is the lip of the trough, **7.0 m**, a metre above the lakebed at
+     the middle of the same column, and the water's hold and the world's collision
+     now read that same ground -- which is what lets the same claim be asked of
+     this body as of the 0.5 m one next to it: a body the water is holding stops a
+     gap above the ground it would stand on, and the gap is half its own height.
+     The narrow body reaches the middle of the trough with its box, so its ground
+     is the lakebed, and both bodies are then obeying one law rather than being
+     settled by whichever of two readings happened to answer first. */
+  check('it goes down only while the down key is held -- down off the level the water holds it at, head under with it, stopping the same gap above the ground its own box reaches that a narrow body keeps above its own -- and the water takes it back up to that level, head out, the moment the key comes off',
     !buoy.error && buoy.turtleDive.y < buoy.ground.turtlemelon.rest - 1 &&
-    Math.abs(buoy.turtleDive.y - buoy.ground.turtlemelon.park) <= 0.01 &&
+    Math.abs(buoy.turtleDive.y - buoy.ground.turtlemelon.holdFloor) <= 0.05 &&
+    buoy.turtleDive.g === 0 &&
     buoy.turtleDive.headW === 1 &&
     buoy.turtleLetGo.g === 0 &&
     Math.abs(buoy.turtleLetGo.y - buoy.ground.turtlemelon.rest) < 0.2 &&
@@ -10333,7 +10430,21 @@ What was measured before any of this was fixed, over 180 frames of walking
      and a day of the valley running caught a frog doing exactly that 1.6 m at a
      time. A step is a rate, and it is the same rate the body on foot uses --
      which is why the two animals now share one routine for feet, water and the
-     ground. */
+     ground.
+     What the routine had not shared was the rate. The lift was bounded only where
+     the walk gate had asked for the step in front of the body, and a body whose
+     legs are an arc never has such an ask: the gate clears it for every hopper,
+     because a hopper takes a step with an arc and not by rising in place. So the
+     body inside the bank fell through to the other branch, which closes a fraction
+     of the distance left -- the very shape the code above it calls an elevator that
+     starts fast -- and this window measured 0.325, 0.276 and 0.235 m over its first
+     three frames, 19.5 m/s in the first of them, before that was fixed. What the
+     window asks now is the shape of a rate: the first frame of the climb out does
+     not know how deep the body was put in (0.1 m whether it is 1.5 m in or 0.5 m
+     in) and the frames it takes do (14 against 4). Two more frames of the same
+     window came out of the same question: the ground rule and the rock correction
+     were two allowances spent in one frame, and the launch gate let a body standing
+     under its own ground load its legs for a push-off. (docs/03 s3) */
   const bank = await step('aBodyClimbsItsBank', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA;
     let spot = null;
@@ -10350,22 +10461,71 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
     }
     if (!spot) return { error: 'no lakebed step' };
-    const frog = g.creatures.find(c => c.sp.id === 'frog');
+    /* One body, made the way every body the valley has is made, and nothing else
+       in the world for the length of the window. The rig used to borrow a frog from
+       the flock, and the flock is not the same flock twice: what a body is born
+       with -- the hop timer, the depth it hangs at, the tempo it spends its pace at
+       -- comes out of the draws the spawner spent before it was, and the neighbours
+       that could press it stand where their own errands left them. Measured on the
+       same valley with the same hole, the worst frame of this window was 0.325 m on
+       one page and 0.885 m on another, at a different frame and a different place
+       each time. The world's clock is held here too, because `night` is read from
+       it and an animal the dark has put to sleep is not the animal this asks about.
+       What is measured is therefore one body from one draw, in ground this file
+       found, with nothing else in it: how deep it is put under the top of the bank,
+       and whether it is put there through the water or through the sand, are the
+       only things that differ between the windows. */
+    const crowdWas = g.creatures, herdWas = g.herdCentres, timeWas = g.time;
+    const rnd = Math.random;
+    let sd = 0;
+    const seed = (s) => { sd = s; Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; }; };
+    g.herdCentres = {};
+    g.time = 300; g.updateEnv();
     const away = { x: -999, y: 0, z: -999, form: null, formDef: {} };
-    const was = { x: frog.x, y: frog.y, z: frog.z, vy: frog.vy, state: frog.state, pause: frog.pause,
-      tx: frog.tx, tz: frog.tz, yaw: frog.yaw, alarm: frog.alarm, airAmt: frog.airAmt,
-      squash: frog.squash, speed: frog.speed, wind: frog.wind, hopT: frog.hopT };
-    const run = (y0, x0, z0) => {
-      Object.assign(frog, { x: x0, z: z0, y: y0, vy: 0, speed: 0, state: 'wander', pause: 0, alarm: 0,
-        airAmt: 0, squash: 0, wind: 0, hopT: 0, yaw: Math.atan2(spot.dx, -spot.dz),
-        tx: spot.x + spot.dx * 6, tz: spot.z + spot.dz * 6 });
-      const r = { worst: 0, at: null, onShelf: 0 };
+    const sp = N.CREATURE_BY_ID.frog;
+    const run = (x0, z0, y0) => {
+      seed(31415);
+      const frog = new N.Creature(sp, x0, y0, z0);
+      g.creatures = [frog];
+      Object.assign(frog, { vy: 0, speed: 0, state: 'wander', pause: 0, alarm: 0, hopT: 0,
+        yaw: Math.atan2(spot.dx, -spot.dz), tx: spot.x + spot.dx * 6, tz: spot.z + spot.dz * 6 });
+      const r = { put: [x0, z0, +y0.toFixed(2)], inside: +(spot.bed2 - y0).toFixed(2),
+        worst: 0, worstAt: null, liftWorst: 0, liftAt: null, liftFrames: 0, seq: [], pushOffs: [],
+        arcFrames: 0, onShelf: 0, outFrame: -1 };
       for (let i = 0; i < 600; i++) {
-        const y = frog.y;
+        const y = frog.y, hopWas = frog.hopT;
+        const gy = N.standY(W, Math.floor(frog.x), Math.floor(frog.z), y);
+        /* Whose frame is this. A body carrying a rate of its own, up or along, is
+           spending its legs on the frame; a body whose feet are under the ground it
+           is standing in, with no rate of its own, is one the world is holding
+           inside itself. Only the second kind has a bound that can be read off the
+           rules rather than watched for. */
+        const own = frog.vy > 0 || frog.arcV > 0;
+        const under = y < gy - 0.02;
         frog.update(1 / 60, away, W, g);
-        const d = Math.abs(frog.y - y);
-        if (d > r.worst) { r.worst = +d.toFixed(3); r.at = { f: i, y0: +y.toFixed(2), y1: +frog.y.toFixed(2) }; }
-        if (frog.y >= spot.bed2 - 0.02) r.onShelf++;
+        const d = +(frog.y - y).toFixed(3);
+        if (Math.abs(d) > r.worst) {
+          r.worst = Math.abs(d);
+          r.worstAt = { f: i, y: +y.toFixed(2), to: +frog.y.toFixed(2), ground: +gy.toFixed(2) };
+        }
+        if (!own && under) {
+          r.liftFrames++;
+          if (d > r.liftWorst) {
+            r.liftWorst = d;
+            r.liftAt = { f: i, y: +y.toFixed(2), to: +frog.y.toFixed(2), ground: +gy.toFixed(2) };
+          }
+        }
+        if (i < 6) r.seq.push(d);
+        /* A push-off is the frame `hopT` is set forward again; `feet` and `ground`
+           are the body's height and the height of the ground under its column when
+           it asked, and a body asked for the frame under its own ground is a body
+           that is not standing on anything. */
+        if (frog.hopT > hopWas + 0.2 && r.pushOffs.length < 4) {
+          r.pushOffs.push({ f: i, feet: +y.toFixed(2), ground: +gy.toFixed(2),
+            kept: +frog.vy.toFixed(3), along: +frog.arcV.toFixed(3) });
+        }
+        if (frog.arcV > 0) r.arcFrames++;
+        if (frog.y >= spot.bed2 - 0.02) { r.onShelf++; if (r.outFrame < 0) r.outFrame = i; }
       }
       r.end = { y: +frog.y.toFixed(2), x: +frog.x.toFixed(2), z: +frog.z.toFixed(2),
         gy: N.standY(W, Math.floor(frog.x), Math.floor(frog.z), frog.y),
@@ -10373,18 +10533,31 @@ What was measured before any of this was fixed, over 180 frames of walking
         inWater: W.liquidAt(Math.floor(frog.x), Math.floor(frog.y + 0.2), Math.floor(frog.z)) };
       return r;
     };
-    const swim = run(spot.bed + 0.4, spot.x, spot.z);
-    const stuck = run(spot.bed2 - 1.5, spot.x + spot.dx, spot.z + spot.dz);
-    Object.assign(frog, was);
-    return { spot, swim, stuck };
+    /* The most a frame may move this body, read off the rules rather than guessed:
+       the allowance the world gives a body it is holding inside itself, times this
+       frame, plus the animal's own stroke, which is bounded by the speed its row
+       states for the water it is in. */
+    const rate = +(((N.unsettleRate || 0) + (sp.swimSpeed || sp.speed)) / 60).toFixed(3);
+    const swim = run(spot.x, spot.z, spot.bed + 0.4);
+    const deep = run(spot.x + spot.dx, spot.z + spot.dz, spot.bed2 - 1.5);
+    const shallow = run(spot.x + spot.dx, spot.z + spot.dz, spot.bed2 - 0.5);
+    g.creatures = crowdWas; g.herdCentres = herdWas; g.time = timeWas; g.updateEnv();
+    Math.random = rnd;
+    return { spot, rate, swim, deep, shallow };
   });
   check('a lakebed that steps up two blocks under the water was found', !!bank.spot, bank);
   check('a frog swims up on to the shelf the lakebed steps on to', bank.swim.onShelf > 0, bank.swim);
-  check('a body left inside the bank is not thrown out of it in one frame',
-    bank.stuck.worst <= 0.4, bank.stuck);
-  check('and it does get out, and is not left in the solid',
-    !bank.stuck.end.inSolid, bank.stuck);
-  check('no frame of the swim throws the body either', bank.swim.worst <= 0.4, bank.swim);
+  check('a body left 1.5 m inside the bank gets out on to the shelf and is not left in the solid',
+    bank.deep.outFrame >= 0 && !bank.deep.end.inSolid, bank.deep);
+  check('and on a frame the body is not spending on its own legs, nothing lifts it out of the bank further than the rates that may move it',
+    bank.deep.liftWorst <= bank.rate && bank.shallow.liftWorst <= bank.rate &&
+    bank.swim.liftWorst <= bank.rate, bank);
+  check('and the lift is a rate and not a fraction of what is left: its first frame does not know how deep the body was put, and the frames it takes do',
+    Math.abs(bank.deep.seq[0] - bank.shallow.seq[0]) <= 0.005 &&
+    bank.deep.outFrame >= 2 * bank.shallow.outFrame, bank);
+  check('and a body whose feet are under its ground does not load its legs for a push-off',
+    [bank.swim, bank.deep, bank.shallow].every(r =>
+      r.pushOffs.every(p => Math.abs(p.feet - p.ground) <= 0.02)), bank);
 
   /* ---- the valley stays inside itself ----
      A hundred seconds of the world running with nobody driving it. The question
@@ -10683,7 +10856,18 @@ What was measured before any of this was fixed, over 180 frames of walking
     const sp0 = N.spawn;
     p.x = sp0.x; p.y = sp0.y; p.z = sp0.z; p.vx = p.vy = p.vz = 0; p.form = null;
     p.vital = 10; p.air = 999; p.dry = 0; p.fright = 0;
-    const jump = { worst: 0, who: null };
+    const jump = { worst: 0, who: null, at: null };
+    const prevState = new Map(feet.map(c => [c, null]));
+    /* A number over a day of the valley is worth naming the body and the frame it
+       came from, because the bound this reads is a bound on a rate and the fix, if
+       there is one, belongs to a law: which law is read off what the body was
+       carrying at the time -- the rate it had, the ground its own column states for
+       it, whether anything was asked of its legs. */
+    const cstate = (c) => ({ y: +c.y.toFixed(3), vy: +c.vy.toFixed(3), arcV: +c.arcV.toFixed(3),
+      arcLeft: +c.arcLeft.toFixed(3), climbTo: c.climbTo, climbRate: +(c.climbRate || 0).toFixed(2),
+      gy: +N.standY(W, Math.floor(c.x), Math.floor(c.y), c.y).toFixed(3),
+      x: +c.x.toFixed(2), z: +c.z.toFixed(2), st: c.state, hopT: +c.hopT.toFixed(3),
+      inWater: c.inWater, inSolid: c.inSolid, tall: +c.tall.toFixed(2) });
     /* Where the lane actually is. A row that states `at: 'coast'` states a
        distance off the shore the coast rule draws, not a circle round a point:
        so the measure is taken from where the water's edge stands on the bearing
@@ -10696,8 +10880,13 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.input = {};
       g.update(1 / 60);
       for (const c of feet) {
-        const d = Math.abs(c.y - prevY.get(c));
-        if (d > jump.worst) { jump.worst = +d.toFixed(2); jump.who = c.sp.id; }
+        const py = prevY.get(c);
+        const d = Math.abs(c.y - py);
+        if (d > jump.worst) {
+          jump.worst = +d.toFixed(2); jump.who = c.sp.id;
+          jump.at = { f: i, y0: +py.toFixed(3), y1: +c.y.toFixed(3), now: cstate(c), was: prevState.get(c) };
+        }
+        prevState.set(c, cstate(c));
         prevY.set(c, c.y);
       }
       for (const c of g.creatures) {

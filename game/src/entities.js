@@ -793,9 +793,15 @@
          rather than from the view. See uWaterY in engine.js. */
       this.wSurf = wSurf;
       const canBreathe = f.breatheAir === false;
-      /* The ground under this body in its own column, and whether the water of
-         that column is what is carrying this body. It is asked of the column and
-         not of the body's height or of its breath: the depth at which water has
+      /* The ground this body's own box would stand on, and whether the water
+         there is what is carrying it. The ground is asked of the box and not of
+         the column under the body's middle, because that is how the world
+         supports this body anywhere else it is asked (`colAt`, the vertical part
+         of `axis`): a 1.5 m body over a trough with a lip inside its footprint
+         stands on the lip, and a hold computed from the middle of the trough
+         would tell it to stop a metre above the ground it is standing on. The
+         depth question itself is asked of the ground and not of the body's height
+         or of its breath: the depth at which water has
          enough of a body in it to hold one up is a fact about the water
          (`waterHoldsUp`, the same two-block line the animals' step gate, the dive
          floor and the 183 one-block columns of Mirrorlake's shore are all read
@@ -820,7 +826,7 @@
          to breathe air. What the breath decides is written one block below, where
          a body whose head is under the surface spends the reserve its own record
          states; it is a clock, not a force. */
-      const bedTop = this.inWater ? standY(W, cx, cz, this.y) : -1;
+      const bedTop = this.inWater ? groundUnder(W, this.x, this.z, this.size()[0] / 2, this.y) : -1;
       const carried = this.inWater && waterHoldsUp(wSurf, bedTop);
       const M = this.moveDef;
       const builtForWater = M.locomotion === 'amphibian' || M.locomotion === 'water';
@@ -878,10 +884,11 @@
          And the flag is the answer of the frame that is over: `grounded` is
          reset only by the displacement below, so a body that has just stepped
          off a ledge is still reported standing on it while its fall begins.
-         Put the question to the ground instead: how far above the level it would
-         be standing at in this column is this body. The 2 cm of slack is the
-         same one the step-up and the water's hold use. */
-      const onFoot = this.grounded || this.y - standY(W, cx, cz, this.y) < 0.02;
+         Put the question to the ground instead: how far above the level its own
+         box would be standing at is this body -- the same ground the hold above
+         was computed from, and the same one the collision would put it on. The
+         2 cm of slack is the same one the step-up and the water's hold use. */
+      const onFoot = this.grounded || this.y - groundUnder(W, this.x, this.z, this.size()[0] / 2, this.y) < 0.02;
       let speed = L.speed * (sprint ? L.sprint : 1);
       if (carried) speed = L.swimSpeed;
       // a body that hops is thrown forward by the hop; it does not bleed speed
@@ -1120,8 +1127,33 @@
            level for this body above that ground: a pool no deeper than the
            body's own hang depth has no such level, and its ground stays a ground
            to stand on -- which is the answer the herd's bodies take there, and
-           the two bodies are the same animal in the same water. */
-        if (heldUp && fl > bedTop && this.vy < 0 && this.y + this.vy * dt <= bedFloor(bedTop, this.size()[1])) this.vy = 0;
+           the two bodies are the same animal in the same water.
+           The floor is a floor, not only a brake on going down. Cancelling the
+           descent answers a body that travels towards the floor; it says nothing
+           about a floor that travels towards the body, and the floor does move:
+           the surface of one water is level, so the ceiling of the hold cannot
+           come down on a body, while the ground the floor is measured from is
+           not level at all and steps up under a body that swims inshore. Asked
+           as a brake only, a body that swims onto ground higher than the level
+           it is carried at is left *under* its own floor: the leg at (54.5,95.2)
+           crosses from a column whose ground is 7 to one whose ground is 8 while
+           sinking at 2.07 m/s, and the frame leaves it at 8.07 -- feet 0.07 above
+           the ground, 0.18 under the floor that ground states, not standing
+           because no frame ever met the ground and not carried because the level
+           the water holds a body at is above it. Where the brake is the whole of
+           the law, that is where the body stays for the rest of the leg. The
+           water's hold is a support, and a support holds on both sides: the body
+           goes up to the level it is carried at, by the world's own y move, which
+           is also what stops it where a roof is in the way. The step is bounded:
+           the scan of the ground below begins at the feet, so in any state the
+           collision admits the ground a body is told about is a surface its own
+           feet are on or above, and `bedFloor` is half a body above that.
+           The herd's bodies have always had this half: their water branch moves
+           the body *to* the bed level it states, in both directions, and the
+           body you wear and the animal are the same animal in the same water. */
+        const holdFloor = bedFloor(bedTop, this.size()[1]);
+        if (heldUp && fl > bedTop && this.vy < 0 && this.y + this.vy * dt <= holdFloor) this.vy = 0;
+        if (heldUp && fl > bedTop && this.y < holdFloor) this.axis('y', holdFloor - this.y);
       } else {
         /* Feet that are on the bottom are feet that can push off it, water
            around them or not. That is the whole of getting out of a lake: the
@@ -1627,8 +1659,71 @@
      not reading it. */
   const LIFT_REACH = 1.6;
   const STAND_SCAN = 0.6;
+  /* How fast, as opposed as to how far. A body the world is holding inside itself
+     is raised out of it at a rate, and there is one such rate for a frame and not
+     one per rule that notices. Two gates find that body: the ground read, which
+     sees ground above a body's feet, and the correction further down the same step,
+     which sees rock at the body's own height. They agree about what the world is
+     (`rockAt` in both, with crowns and trunks out of both) and about the surface to
+     reach -- the ground read answers the top of the very cell the correction lifts
+     to, or a higher one -- so they are one act asked at two addresses, and a frame
+     that let both have their way would raise the body at twice the rate either
+     states. It is not the animal's walking rate: a body inside a bank has no ground
+     to walk on. Where the walk gate has asked for the step in front of it there is
+     already a rate, and a body whose legs are an arc never has such an ask -- the
+     gate clears it for every hopper, because a hopper takes a step with an arc and
+     not by rising in place -- so those bodies fell through to a lift that closed a
+     fraction of what was left, and a hopper standing in the sand of Mirrorlake was
+     raised 0.325 m in its first frame, 19.5 m/s, before this was written. */
+  const UNSETTLE_RATE = 6;
   function standY(w, x, z, y) {
     return terrainY(w, x, z, Math.floor(y + STAND_SCAN));
+  }
+  /* What ground a body's own box would be standing on: the highest ground of all
+     the columns the box reaches. A body does not rest on the ground under its
+     middle -- a wide body straddling a trough rests on the lip, and the world's
+     own collision says so: the vertical part of `axis` takes the top of the
+     highest solid layer its `colAt` footprint came into, over the same rectangle
+     of columns this walks. So this is that reading, one law asked by the water
+     too: the depth a column has to hold to carry a body (`waterHoldsUp`) and the
+     floor a dive stops above (`bedFloor`) are both about the ground this body
+     would stand on, and a body whose collision reads one ground and whose buoyancy
+     reads another is one body with two floors -- which is what a 1.5 m body at a
+     column of Mirrorlake had: the centre column answered a bed at 6.00 and the
+     box answered a lip at 7.00, and the body was told to stop a quarter of a
+     metre above a floor it was already standing a metre above.
+     A body whose collision is this box is the only body with this box to ask.
+     The herd's bodies stand in a rectangle turned by their own heading, and they
+     ask the ground cell by cell at the places their own asks are about -- the
+     step gate over every column that turned rectangle covers, the water and the
+     altitude at the cell the body is standing in (03 s3) -- so they are asked
+     where they are asked, and not through this function. What is one between the
+     two bodies is the law, not the footprint: the floor of a dive is the ground
+     *that* body's own feet would stand on, and a 1.5 m body and a 0.5 m body at
+     one column have different feet. */
+  function groundUnder(w, x, z, half, y) {
+    const x0 = Math.floor(x - half), x1 = Math.floor(x + half);
+    const z0 = Math.floor(z - half), z1 = Math.floor(z + half);
+    /* The scan starts at the cell the feet are in, which is where the floor read
+       of `axis` starts it and for the reason it gives there: "layers above the
+       feet are a ceiling, not a floor". `standY` is the step's read and starts
+       `STAND_SCAN` above the feet because a body is told about ground it is
+       about to be lifted onto; asked of the ground a body is standing over, that
+       slack reads the block over its head as its floor. It is not a corner case
+       the water never reaches: a frogpear body stood at 6.50 over a bed whose
+       face is at 6, with one block of stone let down so its face is at the
+       body's crown, is told by that scan that its ground is 8.00 and its floor
+       8.25 -- 1.75 m above where it stands, and above the top of the block: the
+       lift below takes a body to the floor it is told about, so that is where it
+       would put it, through the stone. Asked from the feet the same body reads
+       the bed at 6, stops at 6.25 under the block, and never enters it. */
+    const top = Math.floor(y + 0.001);
+    let best = -1;
+    for (let zz = z0; zz <= z1; zz++) for (let xx = x0; xx <= x1; xx++) {
+      const g = terrainY(w, xx, zz, top);
+      if (g > best) best = g;
+    }
+    return best;
   }
   /* Whether a water animal may be in this column at all -- the same test the
      spawn code makes, and the same `waterHoldsUp` every other reader asks: the
@@ -3114,6 +3209,15 @@
         : 0;
       this.bank += (lean - this.bank) * N.ease(4.5, dt);
 
+      /* This frame's whole allowance for raising a body out of the world it is
+         inside (see `UNSETTLE_RATE`): spent by whichever of the two gates below
+         finds the body, and by the first of them to run, so the second may lift it
+         no further this frame. It is `dt`-scaled like every other rate here, not a
+         flat amount per frame: at a 120 Hz screen a per-frame allowance is a rate
+         twice the one this number states. The arc, the stroke and the fall each
+         carry their own rate and spend nothing of it. */
+      let liftLeft = UNSETTLE_RATE * dt;
+
       // altitude
       const y0 = this.y;      // before the altitude is set, so the rate is measurable
       if (this.isAquatic()) {
@@ -3382,7 +3486,7 @@
             const fits = arc ? arc.up : 0;
             const carry = arc ? arc.carry : 0;
             this.wind = fits > 0 ? Math.min(1, this.wind + dt / 0.18) : 0;
-            if (this.hopT <= 0 && fits > 0 && this.y <= gyH + 0.02) {
+            if (this.hopT <= 0 && fits > 0 && Math.abs(this.y - gyH) <= 0.02) {
               /* One push, one arc: the legs give `fits` up and `carry` along the
                  ground, along the heading the body is holding, and that heading is
                  held to the landing because nothing in the air can push it
@@ -3390,6 +3494,19 @@
                  the flight `fits` performs at this frame rate -- the same two
                  numbers the launch and the aim were sized from above, so the
                  ground spent and the ground asked for are one number.
+                 The gate is the ground the feet are ON, both ways. `this.y <=
+                 gyH + 0.02` alone lets a body standing *inside* the ground walk
+                 through it: a frog 0.9 m under the top of the bank has its feet
+                 under its own ground, and the inequality reads "feet down" while
+                 the body is nowhere near down. The arc is then priced, the legs
+                 are wound -- `wind` rises, the body looks ready to spring -- and
+                 the correction below takes the rate straight back in the same
+                 frame because the body is inside rock: measured before this line
+                 asked both ways, at the shelf of
+                 Mirrorlake, the launch asked at feet 13.1 against a ground of 14.0
+                 left the body with a vertical rate of nothing at the end of that
+                 frame. A body under its ground loads and does not spring -- the
+                 same answer a low roof gets -- and comes out at the allowance.
                  `hopT` is the whole of the cycle to the next push-off: the arc's
                  flight is inside that countdown, not deducted from it, and the
                  feet are down for the rest of it and nothing else. Those two
@@ -3431,16 +3548,28 @@
                fraction is an elevator that starts fast and spends the last few
                centimetres creeping (0.15 m in the first frame, 0.008 m in the
                twentieth), and a body that is climbing a step is putting one foot
-               up and pulling itself after it, which is a steady speed.
+               up and pulling itself after it, which is a steady speed. Where the
+               walk gate asked for this step the rate is the one that gate read from
+               the ground and the body's own speed; where nothing asked -- the body
+               is standing *inside* the ground -- the rate is the world's allowance
+               for being raised out of it, the same allowance the correction further
+               down this step spends from the same frame.
                A body in the middle of an arc is not climbing a step: the ground
                under it became the top of the bank while its feet were still below
                it, and easing it up from there is the lift on straight legs that
                the row it hops with forbids. Its own rate is integrated and the
-               landing is the arc arriving at that ground. */
+               landing is the arc arriving at that ground. For the same reason a
+               body that has just pushed off is not climbing either, in an arc or
+               out of one: the legs gave a rate in that frame and this rule took it
+               back -- measured, before the gate above was asked both ways, a frog
+               standing in the sand of Mirrorlake had its countdown expire, the
+               launch priced, and the vertical rate set to nothing, all in one
+               frame, so it never once rose out of a bank on its own legs. */
             const want = gyH - this.y;
             const step = this.climbTo !== null ? Math.min(want, (this.climbRate || 3) * dt)
-                                              : want * Math.min(1, dt * 9);
+                                              : Math.min(want, liftLeft);
             this.y += step;
+            if (this.climbTo === null) liftLeft = Math.max(0, liftLeft - step);
             this.vy = 0;
           } else if (this.vy !== 0 || this.y - gyH > 0.35) {
             /* Not standing: either the body has a vertical rate of its own --
@@ -3499,15 +3628,20 @@
       {
         const gx = Math.floor(this.x), gy2 = Math.floor(this.y), gz = Math.floor(this.z);
         if (rockAt(world, gx, gy2, gz)) {
-          /* Out, and at a rate. The distance is closed at up to 0.1 m a frame:
+          /* Out, and at a rate. The distance is closed at `UNSETTLE_RATE` metres a
+             second -- 0.1 m at the frame rate these windows run at:
              in the running valley every one of these corrections is a body a few
              centimetres under the surface it stands on (measured: 85 of them in
-             three minutes, the largest 0.042 m), and 0.1 clears
+             three minutes, the largest 0.042 m), and that clears
              that in the frame it happens. What the bound is for is a body that is
              *inside* something by a metre -- put down there, or pushed there by a
              rule that has not been thought of -- which is lifted out over a
              quarter of a second instead of being thrown through the bank in one
-             frame.
+             frame. That allowance is the frame's, not this gate's: the ground rule
+             above the arc finds the same kind of body, by the same `rockAt`, and
+             asks it to the same surface or a higher one, so whichever of the two
+             runs first spends the frame's allowance and this one lifts the body no
+             further in that frame.
              The surface it is asked to reach is the top of the cell it is inside:
              the guard above only opens on a rock cell at the body's own height,
              so the column cannot hold anything higher that this body belongs
@@ -3516,7 +3650,7 @@
              a crown lower down in the column could be the floor of a body the
              guard has just found inside rock. */
           const out = gy2 + 1;
-          if (out > this.y) this.y = Math.min(out, this.y + Math.max(0.1, 6 * dt));
+          if (out > this.y) this.y = Math.min(out, this.y + liftLeft);
           this.vy = 0;
         }
       }
@@ -3838,6 +3972,15 @@
   N.groundY = groundY;
   N.terrainY = terrainY;
   N.standY = standY;
+  /* and the same read asked of a body rather than of a column: the ground its own
+     box would stand on. Exported because the water's floor and the world's
+     collision are one law, and a rig that wants to know which ground a body is
+     being told about has to ask the body, not a column. */
+  N.groundUnder = groundUnder;
+  /* and the rate that ground is raised out of, because the bound a rig asks of a
+     body's frame is this number times the frame plus the animal's own stroke, and
+     a rig that guessed it would be checking its own guess. */
+  N.unsettleRate = UNSETTLE_RATE;
   N.waterTop = waterTop;
   N.hoverLevel = hoverLevel;
   /* The two ends of the water's hold, as numbers rather than as a private
