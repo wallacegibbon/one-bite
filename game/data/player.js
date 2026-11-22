@@ -124,7 +124,18 @@
        open second, the same **18** back in **18.0 s** of standing in air at the
        same **1.000** -- so a body that wants to go down again pays for that dive
        with the seconds it spent breathing, and five seconds there buy five
-       seconds down and nothing more. */
+       seconds down and nothing more.
+       The figure is a ceiling asked of every frame and not a target, and the
+       store does not travel across a change of body: a body that stops wearing
+       an animal stops wearing its lungs. Measured in that same water
+       (`out.breathCross` in `test/play.js`'s
+       `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`): the body worn from
+       the sea turtle,
+       emptied to **238** of its **240**, hands this body **238**, and one frame
+       later this body holds **17.98** -- one frame's burn short of its own
+       **18** -- and is empty **17.98 s** later at **1.000** a second; put this
+       body's empty (**0**) on the animal and it stays **0** of its own **240**
+       and pays that debt back a second to the second. */
     breath: 18,
     fov: 76
   };

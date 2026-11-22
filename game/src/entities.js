@@ -867,11 +867,41 @@
          at either end: it is held at a sentinel instead of a ceiling, and the
          only question ever asked of that sentinel is whether it is empty. */
       const rate = this.fright > 0.4 ? 1.6 : 1;
+      /* The ceiling is a bound and not a target, and a bound is asked in every
+         frame. The reason it has to be asked here, where the clock is kept, and
+         not at the places that change the body -- `Game.wear`, `Game.revert`,
+         `Game.load` -- is that those places are not the only ones and cannot be
+         kept a list of: a fruit's clock reaching nought in the middle of a lake
+         is a frame like any other, and a save written by one version of this
+         game arrives in a body it was never written for. The reserve belongs to
+         the body being worn, so the only general ask is the one made here. What
+         it costs, measured in the same open water the paragraph above was
+         measured in: a body worn from the frog pear -- kept at the sentinel of
+         999 rather than at a ceiling, because it breathes this water -- held
+         under until its own clock ran out there handed the person's body that
+         **999**, and the sea turtle's body emptied to **238** of its **240**
+         handed the same person's body **238**; at one unit to the second those
+         are the seconds each body would then hold its head under, for a body
+         whose own record states **18**. With the ask here, one frame later that
+         body holds **17.98** -- one frame's burn short of its own **18** -- and
+         runs out **17.98 s** later at **1.000** a second whichever body it came
+         from. A body that stops wearing an animal stops wearing its lungs, and
+         nothing in the build converts one animal's seconds of holding into
+         another's -- the unit is the animal's own -- so what is left is the
+         bound and not a conversion. The other direction is the same law with the
+         sign changed and is left alone on purpose: putting a bigger body on does
+         not fill it. A person's body run out under that water hands the animal's
+         body **0** of its **240**, and that body pays the debt back the way it
+         pays any other, at a second to the second of breathing -- measured
+         (`test/play.js`, `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`,
+         `out.breathCross`; the same law across a save is at `test/save.js` and
+         docs/07 s3.3). */
+      const ceiling = canBreathe ? 999 : this.maxAir();
+      if (this.air > ceiling) this.air = ceiling;
       if (this.headWater && !canBreathe) {
         this.air -= dt * rate;
         if (this.air <= 0) { this.air = 0; game.damage(0.55 * dt, N.t('log.causeDrown')); }
       } else {
-        const ceiling = canBreathe ? 999 : this.maxAir();
         this.air = Math.min(ceiling, this.air + dt * (canBreathe ? 999 : rate));
       }
       // drowning can end the run here; die() has already moved this body to the

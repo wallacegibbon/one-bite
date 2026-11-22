@@ -144,7 +144,12 @@
          the window began: the figure on this row, plus the time it takes a body to
          rise from the bottom of that sea to the film it lies at. What that costs a
          day is the reason the two ends being equal is not a detail: five seconds at
-         the surface buy five seconds down, and no more. */
+         the surface buy five seconds down, and no more.
+         The figure is a ceiling asked of every frame and not a target: a body
+         that stops wearing this animal stops wearing its lungs, and the store it
+         was handed is held to the record of whichever body it is wearing then.
+         The other direction is the same sentence with the sign changed: putting
+         this body on does not fill it (`out.breathCross`, same step). */
       breath: 240,
       /* The lane it swims: so many metres off the island's own shore, all the
          way round it, at every bearing. `at: 'coast'` is resolved by

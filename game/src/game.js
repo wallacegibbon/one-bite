@@ -1501,7 +1501,13 @@
         const s = {
           id: this.id, name: this.name,
           time: this.time, day: this.day, seed: this.seed,
-          p: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vital: p.vital,
+          /* a body's own clocks are part of the valley it was left in: how much
+             of it is left to stand on, how much of itself it has left to hold,
+             how long that skin has been out of water, and which body is being
+             worn and for how much longer. A day of diving is bought with the
+             seconds spent breathing, so a save that forgot the reserve would
+             hand back a day nobody paid for (`test/save.js`, and 03 s3). */
+          p: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vital: p.vital, air: p.air,
                form: p.form, formT: p.formT, formMax: p.formMax, dry: p.dry },
           inv: this.inv,
           stashes: this.stashes.map(s2 => ({ id: s2.id, slots: s2.slots, decay: s2.decay, items: s2.items, x: s2.x, y: s2.y, z: s2.z, kind: s2.kind, owner: s2.owner })),
@@ -1554,6 +1560,17 @@
       Object.assign(p, { x: num(sp.x, p.x), y: num(sp.y, p.y), z: num(sp.z, p.z),
         yaw: num(sp.yaw, p.yaw), pitch: num(sp.pitch, p.pitch),
         vital: num(sp.vital, p.vital),
+        /* the reserve of breath travels with the body, and nothing converts it
+           here: a save names the body it was written in, and the number it
+           carries is that body's own seconds of holding. The bound that keeps a
+           body from holding more of them than its own record states is asked of
+           every frame, where the clock is kept, and not of this list of fields
+           (the ceiling in the breathing block of `entities.js`). A save written
+           before this line carries no such number: the body wakes holding what
+           the body it woke in was already holding -- on the Continue path, what
+           a body the run starts in holds -- and fills toward its own record at a
+           second to the second of breathing. */
+        air: num(sp.air, p.air),
         // a body wearing a fruit the valley no longer has wakes up as itself: the
         // day, the pack, the cellar and the codex all come back, which is the part
         // a player would actually miss, and the getter every frame reads is safe

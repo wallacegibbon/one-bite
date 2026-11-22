@@ -14160,6 +14160,54 @@ What was measured before any of this was fixed, over 180 frames of walking
     const tBack = refill(300);
     out.breathClock.turtle = { down: tDown, back: tBack };
 
+    /* ---- whose seconds the reserve is made of ----
+       The store belongs to the body being worn. The places a body changes are
+       not a list that can be kept -- a hand on a key, the fruit's own clock
+       running out in the middle of a lake, a save written in another body --
+       and there is no conversion in this build from one animal's seconds of
+       holding into another's, because the unit is the animal's own. So the ask
+       is made of the frame instead: whatever the new body is handed, it holds no
+       more of its own seconds than its own record states. `Game.revert` is the
+       call the fruit's own clock makes when it runs out, so this is the path and
+       not a stand-in for it.
+       The two directions are different claims and both are asked. A body that
+       stops wearing an animal stops wearing its lungs: a body that breathes the
+       water it stands in is held at a sentinel instead of at a ceiling, and the
+       person's body must not go on living at that sentinel. And a body that
+       puts on a bigger animal is not filled by the putting-on: the empty it
+       its previous body had reached is a fact about the frames that have
+       happened, and the new body pays that debt back the way it pays any other,
+       a second to the second of breathing. */
+    out.breathCross = { rows: { human: N.HUMAN_FORM.breath, turtle: ROW.breath } };
+    const oneFrame = () => { p.update(1 / 60, { down: 1 }, g); g.time += 1 / 60; };
+    /* an animal's body, held under that water for `run` seconds, and then the
+       body it was worn by left where it stands: `handed` is what the change was
+       handed, `raw` what the change itself left (nothing, because nothing
+       converts), `bounded` what one frame later the body is holding. */
+    const crossedTo = (form, run) => {
+      put(form, lane.x, lane.y, lane.z, Math.PI / 2);
+      p.air = p.maxAir();
+      for (let i = 0; i < 60 * run; i++) oneFrame();
+      const handed = { air: +p.air.toFixed(2), ceiling: +p.maxAir().toFixed(1), headUnder: !!p.headWater };
+      g.revert('crossing');
+      const raw = +p.air.toFixed(2);
+      oneFrame();
+      const bounded = { air: +p.air.toFixed(2), ceiling: +p.maxAir().toFixed(1) };
+      return { handed, raw, bounded, spent: drain(40) };
+    };
+    out.breathCross.frogToPerson = crossedTo(FROGFORM, 2);
+    out.breathCross.turtleToPerson = crossedTo(FORM, 2);
+    /* the other way, and the claim is the other one: the person's body run out
+       under that same water, and the animal's body put on over it where it
+       stands, with nothing touched but the body. */
+    sea(); p.air = p.maxAir();
+    const ranOut = drain(40);
+    const handedIn = { air: +p.air.toFixed(2), ceiling: +p.maxAir().toFixed(1) };
+    p.form = FORM; p.formT = 9999; p.formMax = 9999;
+    oneFrame();
+    const bigger = { air: +p.air.toFixed(2), ceiling: +p.maxAir().toFixed(1) };
+    out.breathCross.personToTurtle = { ranOut, handed: handedIn, afterOneFrame: bigger, payBack: refill(30) };
+
     /* ---- the skin ----
        Two hundred seconds on dry ground with nobody holding a key. The record
        that states no `dryTimer` never accumulates the clock at all -- that is
@@ -14288,6 +14336,38 @@ What was measured before any of this was fixed, over 180 frames of walking
     Math.abs(drag.breathClock.person.panic.down.per / drag.breathClock.person.down.per -
              drag.breathClock.person.panic.back.per / drag.breathClock.person.back.per) < 0.02,
     drag.breathClock.person);
+
+  /* The reserve is the body's. Nothing here asks what a body's reserve *is* --
+     the rows state those and the checks above already ask a body to wear them.
+     What is asked is that the number one body was holding does not travel into
+     another one as time, and that the empty a body reached does travel. */
+  check('a body that stops wearing an animal stops wearing its lungs: what it was holding is the animal\'s number, and one frame later it holds its own record and no more',
+    drag.breathCross.turtleToPerson.handed.air > drag.breathCross.rows.turtle * 0.9 &&
+    drag.breathCross.turtleToPerson.raw === drag.breathCross.turtleToPerson.handed.air &&
+    drag.breathCross.turtleToPerson.bounded.air <= drag.breathCross.rows.human &&
+    drag.breathCross.turtleToPerson.bounded.air > drag.breathCross.rows.human - 0.05 &&
+    drag.breathCross.frogToPerson.handed.air > drag.breathCross.rows.human &&
+    drag.breathCross.frogToPerson.raw === drag.breathCross.frogToPerson.handed.air &&
+    drag.breathCross.frogToPerson.bounded.air <= drag.breathCross.rows.human &&
+    drag.breathCross.frogToPerson.bounded.air > drag.breathCross.rows.human - 0.05,
+    drag.breathCross);
+  check('so crossing the boundary buys a body no time under that water: it runs out at the seconds its own record states, whether it came from the animal that holds 240 or from the one that breathes the water',
+    Math.abs(drag.breathCross.turtleToPerson.spent.toZero - drag.breathCross.rows.human) < 0.2 &&
+    Math.abs(drag.breathCross.frogToPerson.spent.toZero - drag.breathCross.rows.human) < 0.2 &&
+    drag.breathCross.turtleToPerson.spent.headUnder > 0 &&
+    drag.breathCross.frogToPerson.spent.headUnder > 0 &&
+    drag.breathCross.turtleToPerson.spent.per === 1,
+    { turtle: drag.breathCross.turtleToPerson, frog: drag.breathCross.frogToPerson });
+  check('and a bigger body is not filled by putting it on: the empty the last body reached is the reserve this one wakes with, and it pays that debt back a second to the second and not its whole store at once',
+    drag.breathCross.personToTurtle.ranOut.toZero !== null &&
+    drag.breathCross.personToTurtle.handed.air === 0 &&
+    drag.breathCross.personToTurtle.afterOneFrame.air === 0 &&
+    drag.breathCross.personToTurtle.afterOneFrame.ceiling === drag.breathCross.rows.turtle &&
+    drag.breathCross.personToTurtle.payBack.start === 0 &&
+    drag.breathCross.personToTurtle.payBack.gained < drag.breathCross.rows.turtle * 0.25 &&
+    Math.abs(drag.breathCross.personToTurtle.payBack.per - 1) < 0.01 &&
+    drag.breathCross.personToTurtle.payBack.vital > 0,
+    drag.breathCross.personToTurtle);
 
   /* ---- the stroke the wings draw ----
      The model is data, and a number written in it is a claim: `game/src/models.js`

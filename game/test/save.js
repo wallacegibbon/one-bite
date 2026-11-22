@@ -242,6 +242,53 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
   check('the loaded growth queue still runs', grew.queue === 0, grew);
   check('the planted pit grew into a tree', grew.trunk === 6, grew);
 
+  /* ---------- 2c. the body's clocks come back with the body ----------
+     The payload names the body it was written in and carries that body's own
+     clocks: how much of it is left to stand on, how much of itself it has left
+     to hold, and how long the skin has been out of water. The second of those
+     is the one a save used to forget, and a day of diving is bought with the
+     seconds spent breathing: hand back a body whose reserve was forgotten and the
+     day it had already paid for is gone.
+     The sea turtle's body is the one this can be read on. A person's body at the
+     surface is refilled to its own ceiling inside a frame, so on that body the
+     forgotten number and the remembered one look the same; this one pays back a
+     second to the second, so what comes back is what was written.
+     The body is set rather than eaten into: what is under test is the save, and
+     these are exactly the fields `Game.wear` sets. The page is then taken away
+     the way a real page is taken away, and the valley is continued from the start
+     screen -- the same `load()` the Continue button calls. */
+  const body = await step('writeBodyClocks', () => {
+    const g = window.game, p = g.player, N = window.FRUTARIA;
+    const rows = { human: N.HUMAN_FORM.breath,
+      turtle: N.CREATURE_BY_ID[N.FRUIT_BY_ID.turtlemelon.creature].breath };
+    p.form = 'turtlemelon'; p.formT = 600; p.formMax = 12000;
+    p.air = 137; p.vital = 4; p.dry = 0;
+    g.save();
+    const raw = JSON.parse(localStorage.getItem(N.SAVE_KEY));
+    return { rows, ceiling: +p.maxAir().toFixed(1),
+      payload: { air: raw.p.air, vital: raw.p.vital, form: raw.p.form, dry: raw.p.dry } };
+  });
+  await page.goto(URL_MENU, { waitUntil: 'load' });
+  await page.waitForFunction('window.game && window.game.ready', { timeout: 120000 });
+  await page.waitForFunction("!document.getElementById('startWrap').classList.contains('hidden')", { timeout: 20000 });
+  await page.click('#btnStart');
+  await sim(page, 0.4);
+  const woke = await step('bodyClocksBack', () => {
+    const g = window.game, p = g.player, N = window.FRUTARIA;
+    const raw = JSON.parse(localStorage.getItem(N.SAVE_KEY));
+    return { payloadAir: raw.p.air, air: +p.air.toFixed(2), grew: +(p.air - raw.p.air).toFixed(2),
+      vital: +p.vital.toFixed(1), form: p.form, fraction: +(p.formT / p.formMax).toFixed(3),
+      ceiling: +p.maxAir().toFixed(1), dry: +p.dry.toFixed(1) };
+  });
+  check('the reserve of breath is written with the body it belongs to, and the body that wakes from that save is still holding it',
+    body.payload.air === 137 && Math.abs(woke.payloadAir - 137) < 0.5 &&
+    woke.form === 'turtlemelon' && woke.ceiling === body.rows.turtle &&
+    woke.air >= woke.payloadAir && woke.air < woke.payloadAir + 1, { body, woke });
+  check('and the other clocks of that body come back beside it: the vitality it stood on, the skin out of water, the body itself with its time left',
+    body.payload.vital === 4 && woke.vital === 4 && body.payload.dry === 0 &&
+    woke.dry < 0.1 && woke.form === 'turtlemelon' && woke.fraction > 0 && woke.fraction <= 1,
+    { body, woke });
+
   /* ---------- 3. an old save shape must not lose the town ---------- */
   await step('legacySave', () => {
     const legacy = {
@@ -310,6 +357,8 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
         hour: fin(g.hour) ? +g.hour.toFixed(1) : String(g.hour),
         pos: [p.x, p.y, p.z].map(v => fin(v) ? +v.toFixed(2) : String(v)),
         vital: fin(p.vital) ? +p.vital.toFixed(1) : String(p.vital),
+        air: fin(p.air) ? +p.air.toFixed(1) : String(p.air),
+        ceiling: p.maxAir(),
         form: p.form === null ? 'human' : String(p.form),
         inv: Array.isArray(g.inv) ? g.inv.length : typeof g.inv,
         queues: [g.growQueue, g.drops, g.regrow].map(q => Array.isArray(q) ? q.length : typeof q),
@@ -324,6 +373,12 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
       typeof j.hour === 'number' && typeof j.day === 'number' && typeof j.vital === 'number'), junk);
   check('and queues the update loop can walk', junk.every(j => j.queues.every(n => typeof n === 'number')), junk);
   check('and every one of them is still running a second later', junk.every(j => j.loaded === true && j.frames > 5), junk);
+  /* A save written before the reserve was carried names no number for it. The
+     body is left with what the body it wakes in was already holding -- nothing
+     is invented for it and nothing is converted -- and the frame's bound keeps
+     that inside the record of whichever body is being worn. */
+  check('a save that carries no number for the reserve leaves the body holding a number, and no more of it than its own record states',
+    junk.every(j => typeof j.air === 'number' && j.air >= 0 && j.air <= j.ceiling), junk);
   const gone = junk.find(j => j.name === 'a body from a gone fruit');
   check('a body wearing a fruit the valley no longer has wakes up as itself',
     !!gone && gone.form === 'human' && gone.loaded === true, gone);
