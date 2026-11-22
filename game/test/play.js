@@ -14065,6 +14065,101 @@ What was measured before any of this was fixed, over 180 frames of walking
         airLeft: +p.air.toFixed(1), endedUnder: !!p.headWater };
     }
 
+    /* ---- the other end of that clock ----
+       The figure on the row is a number of the animal's own seconds of quiet
+       holding, so the drain above is not a rate that was chosen: it is what that
+       unit means. The rate back up was chosen, and chosen once for every body
+       that breathes air -- six units of air to the second, animal or not -- which
+       is a claim about how far a body's breathing rises above what it burns, and
+       no row in this valley states an intake. So what is asked here is that the
+       two ends run at one rate, and that the only figure anywhere in either of
+       them is the store on the row.
+       A person's body is asked in three legs, because it is the one body this
+       water will not carry: it empties in the open sea, stands on dry ground with
+       its head in air to pay the debt back, and then goes under that same sea
+       again to spend what the surface bought it. The turtle's body is asked as one
+       window that is never broken: emptied with the dive key, then let go of, and
+       nothing else touched -- it comes up on its own, gets its head out and pays
+       its own debt back. The clock turning itself round with nobody's hand on it
+       is the animal's doing, and it is the whole reason the second dive has a
+       length at all.
+       The panic figure is asked at both ends for the same reason it is asked once
+       in the code: it is the animal's state, and one figure is what keeps it from
+       being two. Nothing here claims what that figure is -- the ask is that a
+       body is not run at two different panics. */
+    out.breathClock = { rows: { human: N.HUMAN_FORM.breath, turtle: ROW.breath } };
+    const dryFace = Math.atan2(spot.bx - spot.x, -(spot.bz - spot.z));
+    const dry = () => put(null, spot.x, spot.gy + 0.0005, spot.z + 1.2, dryFace);
+    const sea = () => put(null, lane.x, lane.y, lane.z, Math.PI / 2);
+    /* one window on one end of the clock. `hold` pins the animal's fright for the
+       duration, because the question is what the state does to the clock and not
+       how fast the state fades; the window ends with the store empty. */
+    const drain = (secs, hold) => {
+      const air0 = p.air;
+      let zero = null, headUnder = 0, firstDamage = null, t = 0;
+      for (let i = 0; i < 60 * secs; i++) {
+        const dt = 1 / 60;
+        if (hold !== undefined) p.fright = hold;
+        const v0 = p.vital;
+        p.update(dt, { down: 1 }, g); g.time += dt; t += dt;
+        if (p.headWater) headUnder++;
+        if (p.vital < v0 && firstDamage === null) firstDamage = +t.toFixed(2);
+        if (p.air <= 0) { zero = +t.toFixed(2); break; }
+      }
+      /* the rate is asked of the seconds this end of the clock was open -- the
+         frames in which the head was under a water this body cannot breathe --
+         and not of the whole window: a body at the surface takes three-fifths of
+         a second to get its head under, and that is a fact about the swim, not
+         about the clock. */
+      const open = headUnder / 60;
+      return { start: +air0.toFixed(2), end: +p.air.toFixed(2), spent: +(air0 - p.air).toFixed(2),
+        per: +(open > 0 ? (air0 - p.air) / open : 0).toFixed(3), toZero: zero, headUnder,
+        firstDamage, frames: Math.round(t * 60), vital: +p.vital.toFixed(2) };
+    };
+    /* the same window on the other end: the head is in air, no key is held, and
+       the window ends when the reserve reads full again. */
+    const refill = (secs, hold) => {
+      const air0 = p.air;
+      let full = null, headOut = null, t = 0, trace = [], breathing = 0;
+      for (let i = 0; i < 60 * secs; i++) {
+        const dt = 1 / 60;
+        if (hold !== undefined) p.fright = hold;
+        p.update(dt, {}, g); g.time += dt; t += dt;
+        if (!p.headWater) breathing++;
+        if (headOut === null && !p.headWater) headOut = +t.toFixed(2);
+        if (full === null && p.air >= p.maxAir() - 1e-9) { full = +t.toFixed(2); break; }
+        if (i % 300 === 299) trace.push({ t: +t.toFixed(1), air: +p.air.toFixed(2) });
+      }
+      const open = breathing / 60;
+      return { start: +air0.toFixed(2), end: +p.air.toFixed(2), gained: +(p.air - air0).toFixed(2),
+        per: +(open > 0 ? (p.air - air0) / open : 0).toFixed(3), toFull: full,
+        headOutFrame: headOut, trace, frames: Math.round(t * 60), vital: +p.vital.toFixed(2) };
+    };
+    sea(); p.air = p.maxAir();
+    const pDown = drain(40);
+    dry(); p.air = 0;
+    const pBack = refill(40);
+    /* and the day, which is the part the shared six was hiding: five seconds of
+       breathing at the surface is what this body has, and the next dive is
+       measured against that and not against the reserve. */
+    dry(); p.air = 0;
+    const pShort = refill(5);
+    const bought = +p.air.toFixed(2);
+    sea(); p.air = bought;
+    const pAgain = drain(40);
+    sea(); p.air = p.maxAir();
+    const fDown = drain(5, 0.9);
+    dry(); p.air = 0;
+    const fBack = refill(5, 0.9);
+    out.breathClock.person = { down: pDown, back: pBack, short: pShort, bought,
+      again: pAgain, panic: { down: fDown, back: fBack } };
+    /* the animal, in one window: emptied by the key, then let go of. */
+    put(FORM, lane.x, lane.y, lane.z, Math.PI / 2);
+    p.air = p.maxAir();
+    const tDown = drain(300);
+    const tBack = refill(300);
+    out.breathClock.turtle = { down: tDown, back: tBack };
+
     /* ---- the skin ----
        Two hundred seconds on dry ground with nobody holding a key. The record
        that states no `dryTimer` never accumulates the clock at all -- that is
@@ -14164,6 +14259,35 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and the body that breathes the water has no reserve to run out at all: 20 s under that sea and its air is untouched',
     drag.breath.frog.breathesWater && drag.breath.frog.toZeroAir === null &&
     drag.breath.frog.airLeft >= drag.breath.frog.startedAt, drag.breath.frog);
+
+  /* the two ends of one clock. Nothing here claims what the rate is -- the ask is
+     that it is one rate, that it is the record's own unit, and that a body's day
+     is therefore bounded by the seconds it spends breathing and not only by the
+     store it started with. */
+  check('the clock at the surface runs back at the rate the clock under it ran down: one unit of breath to the second of breathing, for a person and for the animal a fruit lends',
+    Math.abs(drag.breathClock.person.down.per - drag.breathClock.person.back.per) < 0.005 &&
+    Math.abs(drag.breathClock.turtle.down.per - drag.breathClock.turtle.back.per) < 0.005 &&
+    Math.abs(drag.breathClock.person.back.per - 1) < 0.01 &&
+    Math.abs(drag.breathClock.turtle.back.per - 1) < 0.01, drag.breathClock);
+  check('and the store on the row is the whole of the arithmetic: a body pays back exactly the seconds its own record states, and the window it takes to do it is that store plus the time it takes its head to get out',
+    drag.breathClock.person.back.gained === drag.breathClock.rows.human &&
+    Math.abs(drag.breathClock.person.back.toFull - drag.breathClock.rows.human) < 0.05 &&
+    drag.breathClock.turtle.down.spent === drag.breathClock.rows.turtle &&
+    drag.breathClock.turtle.back.gained === drag.breathClock.rows.turtle &&
+    Math.abs(drag.breathClock.turtle.back.toFull - drag.breathClock.rows.turtle -
+             drag.breathClock.turtle.back.headOutFrame) < 0.2 &&
+    drag.breathClock.turtle.back.vital > 0, drag.breathClock);
+  check('and the next dive is bought with the seconds spent breathing, not with the reserve: five seconds at the surface is five seconds under, and that is all of it',
+    drag.breathClock.person.bought === drag.breathClock.person.short.gained &&
+    drag.breathClock.person.bought < drag.breathClock.rows.human &&
+    Math.abs(drag.breathClock.person.again.spent - drag.breathClock.person.bought) < 0.02 &&
+    drag.breathClock.person.again.toZero < drag.breathClock.person.down.toZero,
+    drag.breathClock.person);
+  check('and the panic figure is one figure and not two: the same state held at both ends moves both ends by the same amount',
+    drag.breathClock.person.panic.down.per > drag.breathClock.person.down.per * 1.2 &&
+    Math.abs(drag.breathClock.person.panic.down.per / drag.breathClock.person.down.per -
+             drag.breathClock.person.panic.back.per / drag.breathClock.person.back.per) < 0.02,
+    drag.breathClock.person);
 
   /* ---- the stroke the wings draw ----
      The model is data, and a number written in it is a claim: `game/src/models.js`

@@ -836,13 +836,43 @@
       /* Held breath is a property of the body, and how long a body of this
          animal holds it is on that animal's row: `breath` there, and the
          person's number on data/player.js. The reserve is spent only while the
-         head is under the surface of a water this body cannot breathe. */
+         head is under the surface of a water this body cannot breathe.
+         And the same clock runs the other way at the same rate, because that is
+         the only thing the records support. The unit of `air` is not free: the
+         figure on the row is a number of *seconds of this animal's own quiet
+         holding*, so one unit of it is one second of what this body burns, and
+         the drain under a surface is that burn with nothing coming in at all. In
+         air the intake is on, and what pays the store back is the surplus over
+         the burn -- so the one figure that could set the two ends apart is how
+         far that surplus is allowed to rise, and no row in this valley states an
+         intake. Rows state stores. So the rate below states the one thing that
+         needs no new number: a body pays a second of breath with a second of
+         breathing at the surface, and the second dive it can then make is bought
+         with the seconds it stood there, which is how a breath-holding animal
+         actually spends its day. What stood here was a figure shared by every
+         body that breathes air, six times the burn, and it is a claim about how
+         far a body's wind rises that no animal in this valley makes; at the
+         water's edge it came to a body emptied at the end of its own record's
+         seconds being full again **a sixth** of that time later -- **3.0 s** for
+         a person's **18**, **40 s** for the animal's **240** -- and with the
+         whole reserve back before it had finished catching its breath
+         (`test/play.js`, `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`,
+         `out.breathClock`, which measures both ends of this and the day between
+         them).
+         The panic multiplier is the animal's state and not a second clock, so it
+         is asked at both ends: one figure is what keeps it from being two. What
+         that figure should be is open -- no row states one for panic, and this
+         one came from nowhere, and it is the last unowned number on this clock.
+         A body that breathes the water has no store to run out and is not asked
+         at either end: it is held at a sentinel instead of a ceiling, and the
+         only question ever asked of that sentinel is whether it is empty. */
+      const rate = this.fright > 0.4 ? 1.6 : 1;
       if (this.headWater && !canBreathe) {
-        this.air -= dt * (this.fright > 0.4 ? 1.6 : 1);
+        this.air -= dt * rate;
         if (this.air <= 0) { this.air = 0; game.damage(0.55 * dt, N.t('log.causeDrown')); }
       } else {
         const ceiling = canBreathe ? 999 : this.maxAir();
-        this.air = Math.min(ceiling, this.air + dt * (canBreathe ? 999 : 6));
+        this.air = Math.min(ceiling, this.air + dt * (canBreathe ? 999 : rate));
       }
       // drowning can end the run here; die() has already moved this body to the
       // town cellar, and the form captured above no longer describes it
@@ -872,8 +902,15 @@
          A body worn from an animal has no burst of its own unless that animal's
          row says it does -- and no animal in the valley has one, because no wild
          animal in the valley sprints. The person's `sprint` is a field of its
-         record and is bought with breath, which is the only reason it is a
-         separate number and not a second cruise. */
+         record and is meant to be bought with breath: it is a separate number
+         rather than a second cruise precisely because it is supposed to cost
+         something. What it costs is not modelled, and the gate below is not that
+         cost: it refuses the burst while the reserve reads empty, which out of
+         water it never does for more than a frame, so as written this field
+         buys speed and pays nothing. Putting a price on it needs a figure for
+         how far a body's breathing can rise above what it burns, and no row in
+         this valley states one -- the rows state stores. Recorded on
+         OPEN-ISSUES rather than filled in with a number nobody has measured. */
       const L = this.moveDef;
       const sprint = inp.sprint && L.sprint && this.air > 0 && !this.inWater;
       /* Whether the feet were on the ground when the frame started. Two things

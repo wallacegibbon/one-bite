@@ -131,7 +131,20 @@
          A row that states no `breath` is a body that holds its breath as long as
          a person's body does -- that is the number `data/player.js` carries, and
          the only other body in the valley that needs a number at all, the frog's,
-         breathes the water and has no reserve to hold. */
+         breathes the water and has no reserve to hold.
+         The figure is the arithmetic at both ends of the clock, and that is the
+         reason it is stated as a number of seconds and not as a bar of some size:
+         one second of it goes to the second with the head under a water this body
+         cannot breathe, and one second of it comes back to the second of breathing
+         with the head in air. Measured end to end in the same water (`test/play.js`,
+         `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`): this body empties its
+         **240** in **240 s** of held dive key -- **1.000** unit to the open second
+         -- is then let go of with nothing else touched, comes up on its own, gets
+         its head out **5.28 s** later, and its store reads full **245.27 s** after
+         the window began: the figure on this row, plus the time it takes a body to
+         rise from the bottom of that sea to the film it lies at. What that costs a
+         day is the reason the two ends being equal is not a detail: five seconds at
+         the surface buy five seconds down, and no more. */
       breath: 240,
       /* The lane it swims: so many metres off the island's own shore, all the
          way round it, at every bearing. `at: 'coast'` is resolved by

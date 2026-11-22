@@ -114,7 +114,17 @@
        animal whose row states none holds its breath for this long, because a
        body that breathes air and has no animal to answer for it is a person's
        body. It is a small number next to the sea turtle's, and that is the
-       point: in the open water this is the body that has to come up. */
+       point: in the open water this is the body that has to come up.
+       It is a number of seconds at both ends of the clock, which is what makes
+       it the whole of the arithmetic there: one second of it goes to the second
+       with the head under a water this body cannot breathe, and one second comes
+       back to the second of breathing with the head in air. Both ends measured
+       in `test/play.js` (`theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`):
+       the **18** gone in **18.0 s** with the head under at **1.000** unit to the
+       open second, the same **18** back in **18.0 s** of standing in air at the
+       same **1.000** -- so a body that wants to go down again pays for that dive
+       with the seconds it spent breathing, and five seconds there buy five
+       seconds down and nothing more. */
     breath: 18,
     fov: 76
   };

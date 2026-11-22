@@ -7,111 +7,71 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one commit, and it is the ground a body is *told about*
-being one ground. It was taken from the queue the last round wrote under its own closed issue (29,
-the third of the questions it left standing): at one column of Mirrorlake the floor a dive stops
-above was measured from the column under the body's middle, while the ground that same body stands
-on was measured from the whole box it is -- a metre apart for a body **1.5 m** across, and no law
-saying which of the two a wide body's floor is. One reading now, and it is the one the world
-already used: `groundUnder` walks the columns the body's own collision walks, its scan begun at that
-body's own feet, and the water's floor, the water's depth and the contact flag are all asked of it.
-Asked that way the floor turned out to *move*, which is the half the field had never seen. The
-user's only words in this round were 继续不要轻易停下来 -- keep going, do not stop at the first
-thing -- so nothing was asked for beyond finishing what the last round wrote down. Every number below
-is the frame's answer.
-That same ground, asked a frame later of a body the world has already closed round it, is a second
-open question, and it came from this round's own gates going red: the step test lets a body into a
-column whose surface is above its feet, and what was meant to raise it out of the rock closed that
-height at a *fraction of what was left*. The same frame had two allowances to spend on that one lift,
-and a body with its feet a metre and a half *under* its own ground was being read as a body standing
-on it. Those three are the second half of this commit; how they were found -- a rig that measured the
-page instead of the law -- is at 2i.
+State at time of writing: this round is one commit, and it is the breath clock being one clock. It
+came off the top of the queue the last round wrote under 29, the first of the three questions it left
+standing, in its own words there: "Spending breath is the animal's; refilling it is nobody's." One end
+of that clock was on the records -- `breath` on the animal's row, the person's number on
+`data/player.js` -- and the other end was a literal shared by every body that breathes air, six units of
+air to the second. The user's only words in this round were 继续不要轻易停下来，我要离开一阵子 -- keep
+going, do not stop at the first thing, I am going away for a while -- so nothing was asked for beyond
+finishing what the last round wrote down. What the physical question turned out to be was not which rate
+but what the unit *is*: the figure on the row is a number of the animal's own seconds of quiet holding,
+so the drain under a surface is not a chosen rate, it is what that unit means, and it is the animal's own
+because the store is stated in that animal's seconds. The one quantity that could have set the two ends
+apart is how far a body's breathing rises above what it burns -- under a surface the intake is nothing at
+all, and in air only the surplus over the burn pays the store back -- and no row in this valley states an
+intake; rows state stores. So the ends were closed at one rate. That asks for no new figure and is the
+conservative reading: a body pays a second of breath with a second of breathing. The part nobody had
+looked for is what the shared six was holding up: not the length of a dive but the length of a *day* of
+diving, because a surface that paid six times faster than the water charged was a surface that reset the
+whole reserve while the body was still catching its breath.
 
-- **The ground a body is told about is the ground its own box would stand on, and a wide body and a
-  narrow one reach different ground in one and the same water** (`groundUnder` in
-  `game/src/entities.js`, exported now; `game/test/play.js`, `theWaterHoldsTheBodiesBuiltForIt`). In
-  the column every other water number in this valley is measured in -- film at **15**, bed at **6** --
-  the body worn from the turtle melon, **1.5 m** across, is told its ground is **7.0**: the lip of the
-  trough that column's middle sits in. The step asks that ground two ways and gets one number, which
-  is the claim: this file's own scan of the highest solid over the box says **7**, the game's reading
-  says **7**, and the middle alone answers **6**. The floor that ground states is **7.225**, and the
-  body asked down for four seconds comes to rest at **7.226** -- grounded in **0** frames, head under,
-  height not moving over the last second. The frog body, **0.5 m** across, reaches the middle's **6**:
-  floor **6.25**, measured **6.251**, grounded in **0** frames. What used to be written in 03 s3 --
-  that the box *wins* where the two readings disagree -- is gone, because there is nothing left to
-  choose between.
-- **The floor follows the ground, and a body the ground has come up under goes up with it** (the water
-  branch of `Player#update`; `game/test/play.js`, `divingBodyNosesDown`). What was there cancelled a
-  descent and said nothing about a floor travelling towards the body, and the floor does travel: the
-  surface of one water is level so the ceiling of the hold cannot come down on a body, while the
-  ground the floor is measured from steps up a block every few columns as a body swims inshore. A
-  frog body driven down and inshore for **12 s** crosses ground that comes up under its box **2**
-  times; in the frame it crosses it is **0.177 m** under the floor the new ground states -- one frame,
-  because a frame asks the ground where the frame starts -- and it ends the leg at **8.25** over a
-  ground of **8**, under its floor for **1** frame of **720** and grounded in **0** of them. Asked as
-  a brake and nothing more, that same leg leaves the body at **8.07** for the rest of its length:
-  feet **0.07 m** above the ground, standing in no frame because no frame ever met the ground, held in
-  no frame because the level the water carries it at is above it -- a state no law in the build had
-  anything to say about. The lift is asked through that body's own y move, so a roof stops it where a
-  roof is in the way, and the herd's bodies have had this half all along: their water branch moves a
-  body *to* the level it states, in both directions.
-- **And that ground is asked from the feet: the block over a body's crown is a ceiling, not the floor
-  under it** (the same function; the rig is built in `theWaterHoldsTheBodiesBuiltForIt`). The scan
-  that sizes a *step* begins `STAND_SCAN` above the feet because a body is being told about ground it
-  is about to be lifted onto; the read of the ground a body is standing over begins where its own
-  collision's floor read begins, at the feet. Built rather than hunted, because the question is about
-  a body under a face: a frogpear body stood **0.5 m** off a bed whose face is at **6**, with one
-  block of stone let down until its face is at that body's crown, is told by the higher scan that its
-  ground is **8.00** and its floor **8.25** -- **1.75 m** above where it stands and on the far side of
-  the stone, which is where a floor that lifts would put it. Asked from the feet it reads **6**, stops
-  at **6.25**, and is inside the block in **0** frames of the four seconds it is asked down. The block
-  is put back: the world's own hash at the end of the run is **1914164928**, the same figure every
-  round's save round trip reports.
-- **Being raised out of the ground a body is standing inside is a rate, and a frame gets one of them,
-  not one per rule that notices** (`UNSETTLE_RATE` in `game/src/entities.js`, exported as
-  `FRUTARIA.unsettleRate`; the ground read of `Creature#update` and the correction that keeps a body
-  out of rock now spend one frame allowance between them; `game/test/play.js`, `aBodyClimbsItsBank`).
-  The red line this came from is kept verbatim at 2i. Measured with the fraction still in, at the
-  shore the rig takes its window from -- a lakebed column at **12** beside a shelf whose top is at
-  **14**, both under water -- a frog put down **1.5 m** inside the bank rose **0.325 m** in its first
-  frame (**19.5 m/s**) and then **0.276, 0.235, 0.200, 0.170, 0.144**: fifteen per cent of whatever
-  was left, every frame, and **0.1 m** of that first frame was the rock correction spent on top of
-  the lift rather than with it. There is now one allowance -- `UNSETTLE_RATE`, **6 m/s**, `dt`-scaled
-  like every other rate in that step, so a 120 Hz screen is not given twice the rate -- spent by
-  whichever of the two gates finds the body, the other spending nothing. The rig asks the shape in
-  both directions: the body put in **1.5 m** deep and the body put in **0.5 m** deep rise the same
-  **0.1 m** in their first frame -- the first frame cannot know how deep the body was put -- and what
-  does know is the number of frames: **14** against **4**, every one of them carrying the body out and
-  none of them leaving it inside the solid. In a frame in which the body is not spending its own legs,
-  nothing moves it vertically further than the rates that are allowed to move it add up to: **0.177 m**
-  at this frame rate, the allowance plus the speed its own row swims, which is the bound the check
-  holds.
-- **A body whose feet are under its own ground does not price an arc against it** (the hop launch gate
-  of the same step, now `Math.abs(this.y - gyH) <= 0.02`). The gate used to ask "is this body at or
-  below the ground of its column", and a body with a metre and a half of bank over its feet answers
-  yes. At that same shore, two frames after the body was put there: its cycle expired at feet **13.1**
-  with the top of the bank at **14.0**, the arc was priced, and the correction below took the rate
-  straight back in the same frame -- kept vertical rate **0**, kept ground rate **0** -- so the legs
-  were wound, the body coiled as if ready to spring, and on those legs it never once rose out of that
-  bank; the frame after that is what placed it on top of the bank, the **0.885 m** of the
-  red line at 2i. The gate asks for the ground the feet are *on*, both ways. Every push-off the rig
-  records now has its feet on the ground its arc was priced against, to the centimetre: **feet 14,
-  ground 14** in all three legs of it.
+- **The clock back up runs at the rate the clock down there ran, and the record's figure is the whole of
+  the arithmetic at both ends** (`rate` in the breathing block of `game/src/entities.js`;
+  `game/test/play.js`, `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`, `out.breathClock`). Measured
+  as units of air to the second in which that end of the clock was open -- the frames with the head under
+  a water this body cannot breathe, the frames with it in air, and not the wall window, because a body at
+  the surface takes **0.9 s** to get its head under and reading the rate off the wall window reported
+  **0.952** for a clock that ran at exactly **1.000**. A person's body: **1.000** down, its **18** gone
+  in **18.0 s**; **1.000** up, the same **18** back in **18.0 s** of standing with its head out. The
+  body worn from the turtle melon: **1.000** down for its own **240 s**; then let go of with nothing else
+  touched, it comes up on its own, its head out **5.28 s** later, and its store reads full
+  **245.27 s** after that window began -- the figure on the row plus the rise to the film it lies at, and
+  it survives the **5.3 s** it is still under with no air left for **2.91** of the damage that costs.
+  Before, the same rig, the same water, the same code on the way down: **1.000** down and **6.000** up.
+- **A second dive is bought with the seconds spent breathing, and that is the whole cost of a diving
+  day.** The ask the change exists for. Five seconds at the surface used to be enough to buy a person's
+  body its **whole** reserve back (**3.0 s** cleared the **18**), and the dive after it was a repeat of the
+  first: **18** spent, **18.9 s** under. Measured on the new tree: those same five seconds buy **5.00**
+  units, and the next dive spends exactly those **5.00** and is over **6.82 s** after the body is put in
+  the same water the first dive was measured in. The animal's **240** used to come back in **40 s**; it
+  now takes its **240**, which is the same ratio read at the other end -- the ratio was one sixth of the
+  store to the second, for every body, animal or not, and no animal was asked.
+- **The panic figure is asked at both ends, because one figure is what keeps it from being two.** Held at
+  one state, the clock runs at **1.600** units a second under the surface and **1.600** a second in air;
+  the standing check holds the *ratio* between the calm clock and the frightened one equal at both ends and
+  claims nothing about the figure itself. It is still a figure no row states -- see below.
 
-**What is next, in the order the queue gives it.** The questions still standing under 29: spending
-breath is the animal's while refilling it is a shared literal (`dt * 6`) that no record owns; and a
-person's body has no buoyancy at all, which is recorded rather than settled -- the thing worth
-knowing first is whether the valley ever asks. Behind them stands the question 2i's rig raises and
-does not answer: at what point does a rig of one body stop measuring a law and start measuring a
-habitat (recorded under 25's open half, the sea's ground, rather than settled here). The documents
-moved in this same commit: 03 s3 now states one ground read, a floor that follows the ground, and the
-feet as the place the scan begins, and it states the rate a body already inside the ground is raised
-out of it and the fact that a frame gets one of them; the contact-flag paragraph of 07 (Creature
-models) names the reading it leans on. The suite's record of the first law is two checks -- the two
-readings of one ground agreeing, and a body ending at the floor the ground under its box states; the
-record of the
-second is the four of the bank rig -- getting out, the bound, the shape of the rate in both
-directions, and no push-off priced under the ground -- all green across two full runs of `all.sh`.
+**What is next, in the order the queue gives it.** Two figures are still standing on this clock with no
+record under them, and they are the same missing quantity. The panic multiplier (**1.6**) states how much
+faster a frightened body burns, and nothing here answers it. The person's burst states, in its own record,
+that it is bought with breath -- and the build charges it nothing: the gate refuses the burst only while
+the reserve reads *empty*, which out of water clears in a frame, so the field buys speed and pays nothing.
+A price for it is arithmetic the moment one figure is known: a body's cruise is by definition the speed
+its own row says it can hold, so running **1.45** times that costs **0.45** of a cruise's burn, and the
+unit this clock is written in is the burn of a body resting under water. What a cruise costs against that
+rest is the figure no row states; with the person's numbers it would empty the **18** in seconds rather
+than minutes, which is the order an all-out sprint does last, and it is recorded rather than invented.
+Behind those stands the question the last round left: a person's body has no buoyancy at all, which is
+recorded rather than settled -- the thing worth knowing first is whether the valley ever asks. And behind
+*that*, at what point a rig of one body stops measuring a law and starts measuring a habitat (recorded
+under 25's open half). The documents moved in this same commit: 03 s3 now states the clock running at one
+rate at both ends, what the day of diving costs, and which figures on it belong to nobody; the two records
+that state a reserve (`data/creatures.js`, `data/player.js`) say what their figure is a number *of*; the
+sprint's comment in `src/entities.js` and the walk-cycle note in `src/models.js` stop claiming a cost the
+build does not charge. The suite's record of it is four checks: one rate at both ends, the store paid back
+in the record's own seconds with the head-out time accounted for, the second dive bought by the surface
+interval, and the panic ratio equal at both ends.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -896,6 +856,82 @@ quotes it.
 
 Status: the rig was the defect, and the rig is rebuilt; the three laws under it are root-caused, fixed
 and pinned by the four checks above. The round-end gates carry the two full runs.
+
+### 2j. Spending breath was the animal's and refilling it was a shared literal -- and what that literal was holding up was the day of a dive (this round's commit; the first of 29's three)
+
+**Where it came from.** The queue the last round wrote named this one first, verbatim: "The clock down
+there is `breath` on the row and one second of air to the second under a surface the body cannot breathe
+(**1.6** times that when the body is frightened). The clock back up is one shared figure in
+`game/src/entities.js` -- six seconds of air back per second of air -- for every body that breathes air,
+animal or not. ... so the pair is half a law: one end on the record, the other end a literal." The user's
+words in this round were 继续不要轻易停下来，我要离开一阵子 -- keep going, do not stop at the first thing,
+I am away for a while -- so the queue was the brief.
+
+**The physical question was never which number. It is what the unit is.** `breath` is stated as a number
+of *the animal's own seconds of quiet holding*, and the drain is one unit of that per second; so the drain
+was never a chosen figure, it is what the row's unit means, and it is already the animal's own -- a person
+and a sea turtle burn at their own rates because their stores are stated in their own seconds. The surface
+end was the one that had been chosen, and chosen once for every body in the valley. The quantity that
+could legitimately tell the two ends apart is **how far a body's breathing rises above what it burns**:
+under a surface the intake is nothing at all and the store falls at the burning rate, and in air the
+intake is on and only its surplus over that burn pays the store back. Nothing in this build states an
+intake -- the rows state stores, not supplies. With no figure for the surplus, the two ends were closed at
+one rate, which introduces no new number and takes the conservative of the two readings: a body pays a
+second of breath with a second of breathing. The panic multiplier moved to being asked at both ends for
+the same reason in one line: it is the animal's state, and a figure that appears at both ends is one
+figure, while a figure that appears at one end and is contradicted at the other is two.
+
+**What the six was holding up was not the dive. It was the day.** A surface that pays six times faster than
+the water charges is a surface that clears the whole store in a sixth of the time it took to empty it, so
+the store alone bounds nothing a diver does: any dive at all could be repeated at full reserve three
+seconds after surfacing, and the reserve -- the one figure the records state -- was the only bound in the
+game. With one rate at both ends, a day of diving is arithmetic about time: what a body spends under water
+is paid for out of the seconds it spends in air, and the surface interval is a real part of the cost of a
+dive, which is how breath-holding divers actually work and was not a law in this build until now.
+
+**Measured at both ends, one rig, one water, the two trees.** The rig is the sea the dive was already
+measured in (`lane` in `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`) and the dry ground that step
+builds its bank on; a person's body is asked in legs because it is the one body this water will not carry,
+and the animal's body in one window that is never broken -- emptied with the dive key, let go of, and after
+that nothing is touched, so the clock turning itself round is the animal getting its own head out.
+- this tree: **1.000** unit to the open second down, **1.000** up, for both bodies; the person's **18**
+  gone in **18.0 s** of head-under and back in **18.0 s** of head-in-air; the animal's **240** gone in
+  **240 s**, and the store full **245.27 s** after the window began, which is the figure on its row plus
+  the **5.28 s** it takes that body to rise from the bottom of that sea to the film it lies at;
+- that tree, same rig: **1.000** down and **6.000** up; the person's whole **18** back in **3.0 s**, the
+  animal's **240** in **40.0 s**;
+- the day, this tree: **5.00** units bought by five seconds at the surface, and the next dive spending
+  exactly those **5.00**, over in **6.82 s** from the same putting-in against the first dive's **18.9 s**;
+- the day, that tree: those same five seconds bought the **whole** reserve and the second dive was a
+  repeat of the first -- **18** spent, **18.9 s**;
+- the panic pair, this tree: **1.600** at either end; that tree: **1.6** down against **6.000** up, which
+  is the same body at two unrelated panics.
+
+**The instrument needed one correction of its own,** and it is the kind that decides whether a number can
+be trusted at all: a rate is asked of the seconds in which that end of the clock was open, not of the wall
+window. A body laid at the surface of water it cannot breathe takes **0.9 s** to get its head under, and
+measuring over the window reported **0.952** units a second for a clock that ran at exactly **1.000**;
+worse, it would have made the drain and the refill incomparable, since the refill window has no such
+getting-under in it.
+
+**What is still open on this clock, and it is one quantity short, not two.** (a) The panic multiplier
+**1.6** is a figure no animal row states; it is now at least the same figure at both ends. (b) The
+person's `sprint` states in its own record comment that it is bought with breath, and the build charges it
+nothing: the gate asks only that the reserve not read *empty*, and out of water a body at the surface is
+back above empty one frame after it was empty, so the gate is not a price. Pricing it is arithmetic the
+moment one figure exists -- a cruise is by definition the speed the row says this body can *hold*, so
+running at **1.45** of it costs **0.45** of a cruise's burn out of store -- and the clock's unit is the
+burn of a body resting under water. The ratio between a run's burn and a rest's burn is the figure no row
+states; with the person's numbers, whatever that ratio is, the sprint would empty **18** seconds of reserve
+in a handful of seconds of running, which is the order an all-out sprint does last, and that is recorded
+rather than filled in with an invented multiple. The comments in `src/entities.js` and `src/models.js` were
+edited to stop claiming the cost is charged. (c) A body that breathes the water is held at a sentinel
+(**999**) rather than a store, and nothing asks it except whether it is empty; it is named here so that it
+is not mistaken for a reserve.
+
+Status: closed for the half that has an answer -- one clock, one rate, both ends on the record's unit, four
+checks pinning the rate, the round trip, the day and the panic ratio, green across the round-end gates'
+full runs. The two figures above are the queue now.
 
 ## 3. POI heights and the teleport waypoint (theme queue item 10)
 
@@ -2644,7 +2680,7 @@ than with itself:
   water are bent nowhere, and a lens inside the liquid is still shown a flat interface, so the
   window has no glitter under it. Both of those are the compositing question, not the law's.
 
-## 29. A worn turtle holds no height in the water, breathes on a person's clock, and rows with flippers standing under the shell (asked for by the user; all three closed in the round whose state is at the top of this file, four questions left standing under it -- three of them still, and the fourth, the floor of a dive asked of one column and the ground of a whole box, closed in the round after)
+## 29. A worn turtle holds no height in the water, breathes on a person's clock, and rows with flippers standing under the shell (asked for by the user; all three closed in the round whose state is at the top of this file, four questions left standing under it -- two of them still, and two closed since: the floor of a dive asked of one column against the ground of a whole box, and the refill of a breath that belonged to nobody)
 
 **Closed, and the numbers are in the state block above rather than repeated here.** The water
 holds a body whose *animal* is built for that water, which is what the user's third sentence
@@ -2665,7 +2701,9 @@ on, the model's own height and the form's box being one figure.
   true. It is not modelled, and it is recorded here as an open question rather than closed with a
   bare number nobody has measured -- a `hover` for the human row would be a second person, and the
   thing worth knowing first is whether the valley ever asks.
-- **Spending breath is the animal's; refilling it is nobody's.** The clock down there is
+- **Spending breath is the animal's; refilling it is nobody's.** (closed in the round after: the two ends
+  were closed at one rate, and what that changed was the length of a day of diving, not the length of a
+  dive -- 2j.) The clock down there is
   `breath` on the row and one second of air to the second under a surface the body cannot breathe
   (**1.6** times that when the body is frightened). The clock back up is one shared figure in
   `game/src/entities.js` -- six seconds of air back per second of air -- for every body that
@@ -2682,7 +2720,38 @@ on, the model's own height and the form's box being one figure.
 
 ## The record of the last rounds (kept as history)
 
-### One round back: the body worn from a sea turtle is asked what its water does (d7ed638)
+### One round back: the ground a body is told about is one ground, and a body the world has closed round is raised out of it at a rate (2bd12e1)
+
+State at time of writing: that round was one commit and two laws, taken from the second of 29's three
+standing questions. At one column of Mirrorlake the floor a dive stops above was measured from the column
+under the body's middle while the ground that same body stands on was measured from the whole box it is --
+a metre apart for a body **1.5 m** across, with no law saying which of the two that body's floor is. One
+reading went in (`groundUnder`: the columns the body's own collision walks, its scan begun where its own
+feet are) and the water's floor, the depth a column must hold, and the contact flag were all asked of it.
+Asked from the feet the floor turned out to *move*: a frog body driven down and inshore for **12 s**
+crosses ground that comes up under its box twice, is **0.177 m** under the floor the new ground states in
+the frame it crosses, and ends at **8.25** over a ground of **8** -- under its floor for **1** frame of
+**720**, grounded in **0** of them. Asked as a brake on going down and nothing more, the same leg leaves
+that body at **8.07** for the rest of its length with nothing in the build left to say about it.
+
+The second law came out of that round's own gates going red. A body already inside the ground is raised
+out of it, and the code was closing that height at a *fraction of what was left*, so the first frame knew
+how deep the body had been put: a body stood **1.5 m** inside a bank was lifted **0.325 m** in its first
+frame -- **19.5 m/s** -- then **0.276, 0.235, 0.2, 0.17, 0.144**. A rate went in (**6** m/s), and one
+frame's worth of it, shared by the two gates that may lift a body, so the shape of the lift is what the
+check holds: **0.1 m** in the first frame whether the body was put in **1.5 m** deep or **0.5 m** deep,
+and **14** frames against **4** to get out. Underneath that was the actual cause of the red line: a body
+whose feet were **13.1** with the top of its bank at **14.0** was being read as a body standing on it,
+wound its legs, and never once got the launch it had priced -- the launch gate now asks for the ground the
+feet are *on*, both ways.
+
+A version of that round also stopped the landing from placing a body at its ground and lifted it there at
+the frame allowance instead. It went red on three standing checks at once and was taken back out: lifting a
+body *through* a face leaves it inside the rock for the frames it takes. That is written out at 2i, with
+the rig that measured the page instead of the law and how it was rebuilt; the numbers of both laws are at
+2i too.
+
+### Two rounds back: the body worn from a sea turtle is asked what its water does (d7ed638)
 
 State at time of writing: this round is one commit, and it is the sea turtle's *body* being asked
 what it does in the water its animal was built for. The user came with three sentences about the
@@ -2778,7 +2847,7 @@ below is the frame's answer.
   which is the preemption the meshing law at 2d already describes; that entry records it, and the
   caps did not move.
 
-### Two rounds back: the window over the lens keeps its stars (36768e2)
+### Three rounds back: the window over the lens keeps its stars (36768e2)
 
 State at time of writing: this round is one commit, and it is that window being asked to hold
 the night as well as the day. The user's only words in it were 继续做，不要轻易停下来 -- keep
@@ -2835,7 +2904,7 @@ water this round bent is now legible enough to be looked at from.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### Three rounds back: the sky above the water stands inside a cone (a5e2802)
+### Four rounds back: the sky above the water stands inside a cone (a5e2802)
 
 Opened on no new demand at all -- 继续做，不要轻易停下来, keep going, and do not stop early -- and
 the next step was taken from what this block lists as its own unfinished half: the stars in the
@@ -2945,7 +3014,7 @@ now states the law, and every number below is the frame's answer, not the arithm
   eighteen seconds, and two front flippers that sit at the sides of the shell instead of under
   it.
 
-### Four rounds back: a lake's face answers with the tilt it has (d20eccf)
+### Five rounds back: a lake's face answers with the tilt it has (d20eccf)
 
 Opened on the user's own screenshot -- 从在海底往上看青蛙，为什么是这种视角，为什么看到的是一个圆环:
 from the sea floor looking up at the frog, why this view, why is what I see a ring -- and it
@@ -2999,7 +3068,7 @@ answered the question with numbers before changing anything.
   state. One run of this round's window rig answered nearly twice the elevation the clock it
   pinned gives.
 
-### Five rounds back: the sea has an animal, and it strokes with both wings at once (04a6572)
+### Six rounds back: the sea has an animal, and it strokes with both wings at once (04a6572)
 
 The user's queue under **25** item 3, spent in one round: 前肢像翅膀一样上下划, a swimmer
 faster in the water than the frog's **4.6**, no clock drying its skin on land, under **1.8**
@@ -3046,7 +3115,7 @@ keeping only the frog's, and 现在海里面啥动物都没有，太冷清了.
   the worn body cannot get up a single riser anywhere in this valley -- which is what the
   absence of a `hop` means.
 
-### Six rounds back: a bar is sand through, a reef is rock through (014b515)
+### Seven rounds back: a bar is sand through, a reef is rock through (014b515)
 
 Not recorded here when it was made, so it is recorded now in two lines. A kind of
 island stated the shape of its shore and not what its ground is made of: the
@@ -3065,7 +3134,7 @@ the tally and the check still passed. The crown rows of all 70 islands are
 byte-identical before and after (sum 1442). Nothing
 lived on any of it yet; the round after it is the one that put something there.
 
-### Seven rounds back: the surface under water hands the light back (160edcf)
+### Eight rounds back: the surface under water hands the light back (160edcf)
 
 The question was the user's, asked over the picture the round before had just
 fixed: 这种远处的水光…水面之上这样显示我理解，但是在水底也是这个样子的吗？物理世界，
@@ -3170,7 +3239,7 @@ and animals in the sea at all, which is currently empty of everything but frogs;
 **28**, the unbent crossing -- no refraction, no Snell's window, no tilt on the surface, no
 caustics, and an underwater mirror that is a colour instead of a picture.
 
-### Ten rounds back: the map becomes a window of ground round the body (29cd91e)
+### Eleven rounds back: the map becomes a window of ground round the body (29cd91e)
 
 State at time of writing, then: this round is one commit, and it changes what the minimap is.
 It was a picture: one canvas of the authored square, 160x160 cells, painted once at boot, and
@@ -3247,7 +3316,7 @@ turtle's fruit in sand, the main island keeping only the frog's, and animals in 
 which is currently empty of everything but frogs. The minimap half of that queue is closed by
 this round.
 
-### Eleven rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
+### Twelve rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
 State at time of writing, then:
 A body whose legs are an arc was sized by the parabola -- launch squared over
 twice the gravity -- and the parabola is what the flight tends to as the frame goes to
@@ -3351,7 +3420,7 @@ no skin-drying clock on land, slower than **1.8** on it -- the island nearest th
 be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
 is currently empty of everything but frogs.
 
-### Twelve rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+### Thirteen rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
 State at time of writing, then:
 the sea. The water the last round opened out is no longer an empty field: it holds
 islands, and it holds more of them the nearer they lie to the island this square sits
@@ -3458,7 +3527,7 @@ finished.
 
 
 
-### Thirteen rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
+### Fourteen rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
 State at time of writing: this round is one commit, and it changes what the world
 *is*. The map stops being the world and becomes a square of ground with an
 address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
@@ -3611,7 +3680,7 @@ round deliberately refused to invent one.
 Read the standing contract below first: it decides whether any of this counts as
 finished.
 
-### Fourteen rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+### Fifteen rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
 State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
@@ -3700,7 +3769,7 @@ the contour probes is still unmeasured). One new one, 22's own seam: **the hand 
 in third person -- the marker now shows only where the key acts, which is what made
 that one distance and that origin visible.
 
-### Fifteen rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### Sixteen rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -3823,7 +3892,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Sixteen rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Seventeen rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -3997,7 +4066,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Seventeen rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Eighteen rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and

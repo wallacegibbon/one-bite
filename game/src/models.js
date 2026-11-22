@@ -787,7 +787,8 @@ centimetre of that moves with the phase the draw happens to be at). Both
      speed, and the rate of the steps comes out a property of the leg alone.
      `move` is therefore the fraction of the speed the body's own record names,
      and it stops there. A body with a sprint -- the body you start in has one,
-     bought with breath -- runs the same 1.97 m steps 45% quicker rather than
+     and no animal in this valley does -- runs the same 1.97 m steps 45% quicker
+     rather than
      longer ones: 3.45 a second at 6.8 m/s. That is the honest end of the blend,
      not a dodge: a stance is interpolated between a walk's 0.62 and a run's
      0.30, and past one the next step down would be a body off the ground two
