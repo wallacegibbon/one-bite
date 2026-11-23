@@ -15294,6 +15294,92 @@ What was measured before any of this was fixed, over 180 frames of walking
         chord: +(Math.abs(plate[5]) * SC).toFixed(3),
         root: +(Math.max.apply(null, rest)).toFixed(3) };
     }
+    /* The plan of the animal, measured off the boxes it is carved from. A shell
+       is read from above -- that is the outline a turtle is known by -- so the
+       body part is walked station by station along its own front-to-back axis
+       and asked how wide it is at each one, and each of the four fins is asked
+       which way it points from its own hinge and how far it reaches along
+       itself. Everything is stated as a proportion of the shell's own length,
+       because that is the animal: a sea turtle's front flipper is a good part
+       of the shell from the beak to the tail, its hind flipper a fraction of
+       it, and its shell is widest in front of its middle and closes to a tail.
+       The three claims the user's own photograph asks of this body are the
+       three readings below: the shell is not a square in plan, the hind
+       flippers run aft rather than out of the animal's widest place, and the
+       front wings are long. */
+    const boxesOf = (e) => (e.part.boxes || []).map(b => ({ x0: b[0], x1: b[0] + b[3], z0: b[2], z1: b[2] + b[5] }));
+    const shell = boxesOf(by.body);
+    const zFront = Math.max(...shell.map(b => b.z1));
+    const zBack = Math.min(...shell.map(b => b.z0));
+    const shellLen = zFront - zBack;
+    const prof = [];
+    for (let z = zFront; z >= zBack - 1e-9; z -= 0.2) {
+      let lo = 1e9, hi = -1e9;
+      for (const b of shell) if (z >= b.z0 - 1e-9 && z <= b.z1 + 1e-9) { lo = Math.min(lo, b.x0); hi = Math.max(hi, b.x1); }
+      if (hi > lo) prof.push({ z, w: hi - lo });
+    }
+    const wide = prof.reduce((a, b) => (b.w > a.w ? b : a), prof[0]);
+    /* A shell that is a foil opens up from the neck to its widest place and
+       closes from there to the tail: what is asked is that it never opens up
+       again aft of that place. The marginals stand one plate's own width
+       outside the wall they sit between -- that is what makes the edge of a
+       shell read as an edge -- so that much of a step is the rim being drawn,
+       not the outline widening. */
+    let grewAft = 0;
+    const aftOf = prof.filter(p => p.z <= wide.z);
+    for (let i = 1; i < aftOf.length; i++) grewAft = Math.max(grewAft, aftOf[i].w - aftOf[i - 1].w);
+    // the stand-off of the rim: how far outside the wall a marginal plate is
+    // built, read off the thinnest plates the shell part is carved from
+    const rimStand = Math.max(...shell.filter(b => b.x1 - b.x0 < 0.3).map(b => b.x1 - b.x0));
+    const at = (frac) => {
+      const z = zFront - frac * shellLen;
+      let lo = 1e9, hi = -1e9;
+      for (const b of shell) if (z >= b.z0 - 1e-9 && z <= b.z1 + 1e-9) { lo = Math.min(lo, b.x0); hi = Math.max(hi, b.x1); }
+      return hi > lo ? (hi - lo) / wide.w : 0;
+    };
+    out.plan = {
+      long: +(shellLen * SC).toFixed(3),
+      across: +(wide.w * SC).toFixed(3),
+      widestAt: +((zFront - wide.z) / shellLen).toFixed(2),
+      widestOverLength: +(wide.w / shellLen).toFixed(2),
+      tailOverWidest: +(prof[prof.length - 1].w / wide.w).toFixed(2),
+      closesBy: +at(0.7).toFixed(2),
+      rimStand: +rimStand.toFixed(2),
+      widensAft: +grewAft.toFixed(2)
+    };
+    /* The same measure test/node-smoke.js holds this model to, read here too:
+       that gate asks how far any corner of the authored model stands from its
+       own middle, because the collision box it is held to is a square that does
+       not turn with the body. This step is the record of the body's size, so
+       the figure that says how much of a limb's allowance the animal's own
+       flippers spend belongs beside the shape, not only in the gate. */
+    let corner = 0;
+    for (const e of parts) for (const b of (e.part.boxes || []))
+      for (const x of [b[0], b[0] + b[3]]) for (const z of [b[2], b[2] + b[5]])
+        corner = Math.max(corner, Math.hypot(x, z) * SC);
+    out.authored = { radius: +corner.toFixed(3), wall: +(p.size()[0] / 2).toFixed(3) };
+
+    const finParts = parts.filter(e => (e.part.swimFlap || e.part.swimPose) && e.part.name !== 'body');
+    out.fins = finParts.map(e => e.part.name);
+    out.limb = {};
+    for (const e of finParts) {
+      const pv = e.pivot, bs = boxesOf(e);
+      let lever = 0, far = null, outX = 0, aft = 1e9;
+      for (const b of bs) for (const x of [b.x0, b.x1]) for (const z of [b.z0, b.z1]) {
+        const dx = x - pv[0], dz = z - pv[2], L = Math.hypot(dx, dz);
+        if (L > lever) { lever = L; far = { dx, dz }; }
+        outX = Math.max(outX, Math.abs(x));
+        aft = Math.min(aft, z);
+      }
+      out.limb[e.part.name] = {
+        len: +(lever * SC).toFixed(3), ofShell: +(lever / shellLen).toFixed(2),
+        reachesBack: +((zFront - aft) / shellLen).toFixed(2),
+        offAftDeg: +(Math.atan2(Math.abs(far.dx), Math.abs(far.dz)) * 180 / Math.PI).toFixed(1),
+        out: +(outX * SC).toFixed(3), end: +(aft * SC).toFixed(3),
+        pastShellRear: aft < zBack - 1e-9
+      };
+    }
+
     /* And the one height the body has. The animal's height is MODEL_H of its own
        model times its row's scale; the body worn from its fruit is asked that
        question by the water (`floatLevel`) and by the world's collision, and both
@@ -15364,17 +15450,17 @@ What was measured before any of this was fixed, over 180 frames of walking
     flap.carved.halfAcross > flap.halfWide,
     { carved: flap.carved, idle: flap.idle.body, stroke: flap.stroke.body, halfWide: flap.halfWide });
   /* A flipper is a sheet. What the user asked for is a proportion and not a
-     metre figure -- a blade whose thickness is a small part of its own chord and
-     of its own reach outboard -- and the other half of the same shape is that it
-     is only thick where it meets the shoulder, which is what the root is for.
-     Measured off this model: the plate is **0.045 m** through, **0.300 m** along
-     its chord and **0.362 m** out from the shoulder it grows out of, and the
-     column of it that meets the body is **0.205 m** through -- four and a half
-     times the blade, and the only thick part of the wing. The body is flat in the
-     same way: the tallest thing on it, its own raised head, stands **0.462 m**
-     above the sand it drags on, against the **1.625 m** the swept wings reach
-     across -- a quarter. The model this one replaces was a brick, and the two
-     checks below are what keep it a brick no more. */
+     metre figure -- a plate whose thickness is a small part of its own chord --
+     and the other half of the same shape is that it is only thick where it meets
+     the shoulder, which is what the root is for. Measured off this model: the
+     plate is **0.045 m** through against **0.287 m** of its own fore-and-aft
+     extent and **0.275 m** of its own outboard extent, and the column of it at
+     the body is **0.205 m** through -- four and a half times the blade, and the
+     only thick part of the wing. The body is flat in the same way: the model as
+     it is carved stands **0.46 m** over the ground line it is built on, against
+     the **1.625 m** it reaches across itself -- a third at most. The model
+     this one replaces was a brick, and the two checks below are what keep it a
+     brick no more. */
   check('the front wings are plates, not bricks: each blade is many times broader than it is thick, and it is only thick at the shoulder it grows out of',
     flap.blade && flap.blade[flap.stroke.wings[0]] && flap.blade[flap.stroke.wings[1]] &&
     flap.stroke.wings.every(nm => {
@@ -15393,12 +15479,36 @@ What was measured before any of this was fixed, over 180 frames of walking
      `test/node-smoke.js` holds a model to against the box it is worn at. What a
      *posed* frame reaches is a third reading and it is not asked to equal them:
      the nod of a head and the bob of a shell carry the tallest frame this step
-     was handed to **0.462 m**, and the bound it is asked to stay inside is the
-     same 6 cm of slack that node-smoke allows a model over its box. */
+     was handed a few millimetres over that figure, and the bound it is asked to
+     stay inside is the same 6 cm of slack that node-smoke allows a model over its
+     box. */
   check('and it is one height: the animal\'s row and the body worn from its fruit state the same figure, and the tallest frame the draw handed stays inside the line the model\'s own gate holds',
     flap.carved && flap.wildTall === flap.formTall &&
     Math.abs(flap.carved.tall - flap.formTall) < 0.06 && flap.carved.tall > flap.formTall * 0.95,
     { drawn: flap.carved && flap.carved.tall, row: flap.wildTall, form: flap.formTall });
+
+  /* The animal's shape, asked as the animal is seen: from above. A sea turtle is
+     known by the outline of its shell and by the reach of its flippers along it,
+     and every figure here is a proportion of the shell's own length -- the one
+     figure that says how big the animal is, and the one the model has to be read
+     against. What this replaces was a shell the same width from end to end with
+     its widest at its own front edge, a pair of hind flippers sticking out of
+     the animal at its widest place, and front wings whose reach was measured
+     sideways off the shoulder: a tortoise drawn at the size of a sea turtle. */
+  check('the shell in plan is a foil and not a square: it is widest in front of its own middle, it never opens up again aft of that place by more than the rim plates stand out, and it closes to a narrow tail',
+    flap.plan && flap.plan.widestAt > 0.15 && flap.plan.widestAt < 0.45 &&
+    flap.plan.widensAft <= flap.plan.rimStand * 2 && flap.plan.tailOverWidest < 0.6 &&
+    flap.plan.closesBy < 0.75 && flap.plan.widestOverLength < 0.95, flap.plan);
+  check('the front wings reach: each one is a good part of the shell\'s own length measured along itself, its end lies behind the middle of the shell, and it is carried swept back along the flank rather than stuck out at the side',
+    flap.limb && flap.stroke.wings.every(nm => {
+      const l = flap.limb[nm];
+      return !!l && l.ofShell > 0.5 && l.reachesBack > 0.5 && l.offAftDeg > 10 && l.offAftDeg < 45;
+    }), flap.limb);
+  check('the rear flippers are rudders and not hind legs: each points aft from its own hinge, stands out behind the shell it grows from, and is a fraction of the shell\'s length and of the front wing\'s',
+    flap.limb && flap.fins.filter(nm => !flap.stroke.wings.includes(nm)).every(nm => {
+      const l = flap.limb[nm], f = flap.limb[flap.stroke.wings[0]];
+      return !!l && !!f && l.offAftDeg < 45 && l.pastShellRear && l.ofShell < 0.5 && l.ofShell < f.ofShell * 0.6;
+    }), flap.limb);
 
   /* ---- the box round the block the crosshair is on ----
      The twelve bars used to be rebuilt in world coordinates every frame and
