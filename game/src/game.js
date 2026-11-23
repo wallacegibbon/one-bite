@@ -807,7 +807,11 @@
     }
     onCreatureTouch(c, dt) {
       const p = this.player;
-      p.fright = Math.min(1, p.fright + dt * 0.9);
+      /* The one place the valley puts fright into a body. The rate is a figure of
+         this body and is stated on its record, not here (`fright.fill`,
+         data/player.js); see that record for what the two ends of this state are
+         worth and for the one call site that reaches this line. */
+      p.fright = Math.min(1, p.fright + dt * N.HUMAN_FORM.fright.fill);
       this.damage(dt * 0.5, N.disp(c.sp));
       if (Math.random() < dt * 2) this.logMsg(N.t('log.chased', { n: N.disp(c.sp) }), 'bad');
     }

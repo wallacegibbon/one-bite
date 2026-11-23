@@ -75,11 +75,27 @@
                   controls ask for when the forward key is held -- and it is the
                   speed the walk cycle is calibrated at, so at that speed the
                   legs are at the fullest stride the model reaches.
-       sprint     the burst on top of it, as a multiple: 1.45, so 6.8 m/s. It is
-                  a separate field and not folded into `speed` because it is
-                  bought: it spends breath, and it is off in water. An animal's
-                  row carries no such field, and the body worn from that animal
-                  has no burst either -- the wild animal has none.
+       sprint     the burst on top of it, as a multiple: 1.45, which is the
+                  **6.815 m/s** this body covers ground at when the key is held,
+                  against the **4.70** the same row gives without it. It is a
+                  separate field and not folded into `speed` because it is meant to
+                  be bought -- and what the build charges for it is nothing, and
+                  cannot charge it anything. In air this body's breath clock only
+                  ever runs up: the same **6 s** on dry ground hands the store back
+                  **+6.0** units at **1.000** a second with the burst held and
+                  **+6.0** with it not, while the burst does run at the multiple
+                  above; and in the one place a body pays breath the burst is
+                  refused outright (**2.90 m/s** at the film of the deepest column,
+                  the row's own swim). A price for it would need a figure for how
+                  far a body takes in above what it burns, and no row of this valley
+                  states one -- so the claim that the burst spends breath is
+                  measured here as a claim the build does not make, at
+                  `test/play.js` (`theFrightABodyCarriesIsOnItsRecordAndPricesNoPartOfADay`,
+                  `out.burstHeld`, `out.burstNone`, `out.burstInWater`), and the
+                  question is kept at OPEN-ISSUES 2m rather than answered with a
+                  number nobody has measured. An animal's row carries no such field,
+                  and the body worn from that animal has no burst either -- the wild
+                  animal has none.
        swim       the fastest this body travels through water, m/s. 2.9 is what
                   0.62 of its land speed used to come to: a body not built for
                   the lake moves through it slowly, and states that as its own
@@ -137,6 +153,53 @@
        body's empty (**0**) on the animal and it stays **0** of its own **240**
        and pays that debt back a second to the second. */
     breath: 18,
+    /* The state that decides whether that clock runs at the figure above or at a
+       multiple of it: the fright this body carries. It is on this row for the same
+       reason `breath` and `life` are. It was written in three places and in none of
+       them it was a record: the rate it fills at (`src/game.js`, the one place the
+       valley puts fright into a body), the rate it drains at (`src/entities.js`),
+       and the level at which it is taken for panic together with the multiple the
+       breath clock is then raised to (`src/entities.js`, in the same line as the
+       question that line answers). An animal has its own startle -- `alarm`,
+       `src/entities.js` -- which is a different state with a different shape and is
+       never asked of the body this game wears, so this is the only record that is
+       asked for it, and no animal row carries one.
+       `fill` and `drain` are units of this state to the second, `panic` is the level
+       of the state at which this body is taken to be panicking, and `breathRate` is
+       what the clock above is multiplied by while it is. Measured end to end in
+       `test/play.js` (`theFrightABodyCarriesIsOnItsRecordAndPricesNoPartOfADay`,
+       every figure below is that step's `out`): a body an animal is in contact with
+       gains the state at **0.79** a second -- `fill` against the `drain` the body is
+       shedding in every frame -- is at the panic level **0.50 s** into that and at
+       the full of the state at **1.27 s**; left alone it is back under the level
+       **4.98 s** later and rid of it at **8.32 s**, because `fill` is **7.5** times
+       `drain`. The branch itself is a switch at that level and not a slope: a body
+       held a hundredth below it runs the clock at **1.000** units of store a second,
+       a hundredth above at **1.600**.
+       `breathRate` prices nothing, and this is the reason its value has never been
+       arguable. The clock runs at one rate at both of its ends (`breath` above), so
+       a multiple of it cancels over any stretch a body spends half under water and
+       half breathing: with the state pinned at one level throughout, **8.5 s** under
+       a surface spends **13.6** of this body's **18** at **1.600** a second and
+       **8.5 s** with the head out hands **13.6** back at **1.600**, the store back
+       where it began -- and the same at **1.000** with the state not pinned. What a
+       dive costs at the surface is the length of the dive, either way. What the
+       figure moves is where in a day the store runs out: on the bed of this valley's
+       deepest column, where there is no surface to reach, **11.25 s** instead of
+       **18.00 s** (the same bed, and the same readings, as
+       `theDeepestWaterIsMeasuredAgainstTheBodyThatFallsIntoIt` below). What it
+       should be is still open, and it is open for a reason now rather than for
+       nobody having tried: nothing that measures a day can decide it.
+       And this valley never fills the state at all. The one call that fills it is
+       made by an animal in the chase state, and an animal is put there only toward a
+       form its row says it is hostile to: of the **2** animal rows this build carries
+       against the **3** forms its fruits can put a body in, **0** of the **6** pairs
+       answers hostile. The state is filled by rigs. So the sentence below about this
+       row's deepest floor being fatal "at the panic figure" is a conditional the
+       valley itself never opens -- and filling the state on a near-drowning, which is
+       what would open it, needs a figure for how fast water frightens a body, and no
+       row states one. */
+    fright: { fill: 0.9, drain: 0.12, panic: 0.4, breathRate: 1.6 },
     /* How much of this body the valley's prices are taken out of. The field the
        body carries it in is `vital`; the page draws one mark for each unit of it
        (`vitals` in src/ui.js, and `test/play.js`
@@ -169,9 +232,11 @@
        valley is survivable by the body the run starts in, with **5.73 s** to
        spare. Held at the panic figure the same floor
        is not: the store is empty at **11.25 s** and the body is dead at
-       **20.33 s** with its head never once out -- which is what that unowned
-       figure is worth here, and it is recorded as an open question at
-       OPEN-ISSUES 2l, not settled by this row. Every figure in this comment is a
+       **20.33 s** with its head never once out -- which is what the state above
+       (`fright.breathRate`) is worth here. It is a conditional this valley never
+       opens, for the reason stated there: nothing in the build ever frightens a
+       body. The figure's value stays an open question at OPEN-ISSUES 2m, and this
+       row does not settle it. Every figure in this comment is a
        rig of `test/play.js`
        (`theDeepestWaterIsMeasuredAgainstTheBodyThatFallsIntoIt`: `out.reach`,
        `out.reachTwice`, `out.climb`, `out.panicked`, `out.swim`). */

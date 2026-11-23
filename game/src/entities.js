@@ -867,14 +867,32 @@
          (`test/play.js`, `theSeaTurtleBodyDragsOnSandAndSwimsThroughWater`,
          `out.breathClock`, which measures both ends of this and the day between
          them).
-         The panic multiplier is the animal's state and not a second clock, so it
-         is asked at both ends: one figure is what keeps it from being two. What
-         that figure should be is open -- no row states one for panic, and this
-         one came from nowhere, and it is the last unowned number on this clock.
+         The panic multiplier is a state of this body and not a second clock, so it
+         is asked at both ends: one figure is what keeps it from being two. It is on
+         this body's record now -- `fright` on data/player.js, which is where the two
+         rates that fill and drain that state, the level at which this branch opens,
+         and the multiple it opens at are all stated -- and what is known about the
+         figure is what it can and cannot do. Because the clock runs at one rate at
+         both of its ends, a multiple of it cancels over any stretch a body spends
+         half under water and half breathing: with the state pinned at one level for
+         the whole of such a stretch, **8.5 s** under that water spends **13.6** of a
+         person's **18** units at **1.600** a second and **8.5 s** with the head out
+         hands **13.6** back at **1.600** -- and the same at **1.000** with the state
+         unpinned. The price of a dive, in seconds of breathing, does not contain
+         this figure at all. What it moves is where in a day the store runs out: on
+         the bed of this valley's deepest column, **11.25 s** rather than **18.00 s**.
+         And this valley never opens the branch: the one call that fills the state
+         needs an animal in the chase state, and of the animal rows this build carries
+         against the forms its fruits can put a body in, none answers hostile (**0** of
+         **6** pairs). What the figure should be is still open, and the reason it is
+         open is now measured rather than assumed -- nothing that measures a day can
+         reach it (`test/play.js`,
+         `theFrightABodyCarriesIsOnItsRecordAndPricesNoPartOfADay`: `out.cycleQuiet`,
+         `out.cyclePanicked`, `out.floorQuiet`, `out.floorPanicked`, `out.census`).
          A body that breathes the water has no store to run out and is not asked
          at either end: it is held at a sentinel instead of a ceiling, and the
          only question ever asked of that sentinel is whether it is empty. */
-      const rate = this.fright > 0.4 ? 1.6 : 1;
+      const rate = this.fright > HUMAN.fright.panic ? HUMAN.fright.breathRate : 1;
       /* The ceiling is a bound and not a target, and a bound is asked in every
          frame. The reason it has to be asked here, where the clock is kept, and
          not at the places that change the body -- `Game.wear`, `Game.revert`,
@@ -940,15 +958,22 @@
          A body worn from an animal has no burst of its own unless that animal's
          row says it does -- and no animal in the valley has one, because no wild
          animal in the valley sprints. The person's `sprint` is a field of its
-         record and is meant to be bought with breath: it is a separate number
-         rather than a second cruise precisely because it is supposed to cost
-         something. What it costs is not modelled, and the gate below is not that
-         cost: it refuses the burst while the reserve reads empty, which out of
-         water it never does for more than a frame, so as written this field
-         buys speed and pays nothing. Putting a price on it needs a figure for
-         how far a body's breathing can rise above what it burns, and no row in
-         this valley states one -- the rows state stores. Recorded on
-         OPEN-ISSUES rather than filled in with a number nobody has measured. */
+         record and is meant to be bought with breath. It is not, and while this
+         clock is built the way it is it cannot be: the burst is refused in water,
+         and out of water the clock only ever runs up. The same **6 s** on dry
+         ground hand the store back **+6.0** units at **1.000** a second with the
+         burst held and **+6.0** with it not -- while the burst does run, at
+         **6.815 m/s** against the **4.70** the row gives without it -- and at the
+         film of a lake the burst is refused and the body moves at the row's own
+         **2.90**. A body with its head in air has no store to spend: that is what
+         the two ends of this clock being one rate means. To charge the burst at
+         all would need a figure for how far a body takes in above what it burns,
+         and no row in this valley states one -- the rows state stores. The gate
+         below is not a price either: it refuses the burst while the store reads
+         empty, which out of water it never does for more than a frame. Measured in
+         `test/play.js` (`theFrightABodyCarriesIsOnItsRecordAndPricesNoPartOfADay`,
+         `out.burstHeld`, `out.burstNone`, `out.burstInWater`); kept open at
+         OPEN-ISSUES 2m rather than filled in with a number nobody has measured. */
       const L = this.moveDef;
       const sprint = inp.sprint && L.sprint && this.air > 0 && !this.inWater;
       /* Whether the feet were on the ground when the frame started. Two things
@@ -1662,8 +1687,10 @@
         this.y = 30; this.vy = 0;
       }
 
-      // ---- fright decay ----
-      this.fright = Math.max(0, this.fright - dt * 0.12);
+      /* ---- fright draining ---- The calm end of the state `Game.onCreatureTouch`
+         fills. Both ends are figures of this body and are stated once, on
+         `fright` in data/player.js; this branch only asks them. */
+      this.fright = Math.max(0, this.fright - dt * HUMAN.fright.drain);
 
       walkGait(this, this.modelId, this.bodyScale(), this.walkMove(),
         this.x - gx, this.z - gz, Math.hypot(this.vx, this.vz), dt);

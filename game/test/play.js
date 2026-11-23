@@ -14583,6 +14583,342 @@ What was measured before any of this was fixed, over 180 frames of walking
     deep.swim.headOutPct < 10 && deep.swim.headOutAt !== null && !deep.swim.alive &&
     deep.swim.diedAt !== null, deep.swim);
 
+  /* ---- the state that decides how fast a body's breath burns ----
+     The breath clock has a branch: a body whose fright is past a level runs its
+     store at a multiple of the rate the record states. Everything on that side of
+     the branch -- the rate the state is filled at, the rate it is shed at, the
+     level, the multiple -- was written in three places across two files and in none
+     of them was it a record: `src/game.js` filled it, `src/entities.js` shed it and
+     asked the level, and the multiple sat in the same line as the question it
+     answers. That is the shape the last three rounds kept being asked to stop, so
+     the state goes onto this body's row (`fright`, data/player.js), next to the
+     breath whose rate it decides, and the three places read it from there. An
+     animal's startle is a different state with a different shape (`alarm`) and is
+     never asked of a body this game wears, so there is no second row for it.
+     What is then worth knowing is what that multiple can and cannot do, and that
+     turns out to be arithmetic rather than opinion. The clock runs at one rate at
+     both of its ends -- the law of the round before last -- so *any* multiple of it
+     cancels over a stretch a body spends half under and half breathing. Measured
+     with the state pinned at one level for the whole of both cycles, which is the
+     only way to have the branch genuinely in force at both ends:
+       - held at that level, **8.5 s** under that water spends **13.6** units of a
+         person's **18** at **1.600** a second, and **8.5 s** with the head out
+         hands back **13.6** at **1.600** a second, the store back where it began;
+         held calm the same cycle spends **8.5** at **1.000** and is handed **8.5**
+         back. The seconds of breathing a dive costs are the length of the dive
+         either way: **8.5 s**. The figure prices no part of a day.
+       - what it does move is where in a day the store runs out. Stood on the bed of
+         this valley's deepest column, where there is no surface to reach, it is
+         empty at **11.25 s** instead of **18.00 s** -- the same bed the step above
+         measures, and the same numbers it measured.
+       - the level is a switch, not a slope: pinned a hundredth below it the clock
+         runs at **1.000** units a second, a hundredth above at **1.600**.
+       - the state's own ends, asked through the one call the valley makes: a body an
+         animal is in contact with gains it at **0.79** a second -- the record's
+         **0.9** against the **0.12** the body is shedding in every frame -- reaches
+         the level at **0.50 s** and the ceiling of the state at **1.27 s**, and
+         left alone is back under the level **4.98 s** later and rid of it at
+         **8.32 s**. The calm takes five seconds where the startle takes a fifth,
+         because the record's fill is **7.5** times its drain, and that is the whole
+         of what a chase does to a body's breath: it holds the multiplied clock open
+         for five seconds after the animal has gone.
+       - the three places read the row: given **0.45** on the row the state rises at
+         **0.33** a second and the level is not reached until **1.20 s**, and given
+         **0.4** as the drain the state is under the level again **1.50 s** later.
+     And the valley never reaches this branch. The one call that fills the state is
+     made by an animal in the chase state, and `Creature.update` puts an animal there
+     only toward a form its own row says it is hostile to: of the **2** animal rows
+     this build carries and the **3** forms its fruits can put a body in, **0** of
+     the **6** pairs answers hostile -- both animals ignore the person and are calm
+     toward their own kind. So the state is filled by rigs and not by this valley,
+     and the deepest floor being fatal "at the panic figure" is a conditional the
+     valley itself never opens. That is recorded as an open question, not fixed here:
+     filling it on a near-drowning would need a figure for how fast the water
+     frightens a body, and no row states one.
+     The burst on this body's record says it is bought with breath. Measured: **6 s**
+     on dry ground hands the store back **+6.0** units at **1.000** a second with the
+     burst held and **+6.0** with it not, while the burst does run -- **6.815 m/s**
+     against the **4.70** the same row gives without it -- and in the only place a
+     body pays breath the burst is refused outright (**2.90 m/s** at the film of that
+     column, the row's own swim). In air this clock only ever runs up, so no act of
+     a body with its head out can be charged breath at all: the price the record
+     claims is one the build cannot charge. */
+  const fear = await step('theFrightABodyCarriesIsOnItsRecordAndPricesNoPartOfADay', (geo) => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, p = g.player;
+    const ROW = N.HUMAN_FORM, F = ROW.fright;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      vx: p.vx, vy: p.vy, vz: p.vz, grounded: p.grounded, inWater: p.inWater, headWater: p.headWater,
+      air: p.air, fright: p.fright, form: p.form, formT: p.formT, formMax: p.formMax,
+      vital: p.vital, dry: p.dry, dead: p.dead, held: p.held, time: g.time, mode: g.mode,
+      deaths: g.stats.deaths, inv: g.inv, creatures: g.creatures };
+    const dropsWas = g.drops.length, logWas = g.log.slice();
+    const rowWas = { fill: F.fill, drain: F.drain, panic: F.panic, breathRate: F.breathRate };
+    const back = () => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        faceYaw: was.faceYaw, vx: was.vx, vy: was.vy, vz: was.vz, grounded: was.grounded,
+        inWater: was.inWater, headWater: was.headWater, air: was.air, fright: was.fright,
+        form: was.form, formT: was.formT, formMax: was.formMax, vital: was.vital,
+        dry: was.dry, dead: was.dead, held: was.held });
+      g.time = was.time; g.mode = was.mode; g.stats.deaths = was.deaths;
+      g.inv = was.inv; g.creatures = was.creatures;
+      g.drops.length = dropsWas;
+      g.log.length = 0; Array.prototype.push.apply(g.log, logWas);
+      Object.assign(F, rowWas);
+      if (g.ui) g.ui.showDead(false);
+    };
+    /* the animal is one the valley built, taken out of the herd before this step
+       parks it; the census below asks every row the data builds regardless. */
+    const native = (g.creatures[0] && g.creatures[0].sp) || N.CREATURES[0];
+    g.creatures = [];
+    const out = { record: { fill: F.fill, drain: F.drain, panic: F.panic, breathRate: F.breathRate },
+      breath: ROW.breath, life: ROW.life, speed: ROW.speed, sprintMultiple: ROW.sprint,
+      swimSpeed: ROW.swimSpeed, animal: native.id };
+    if (!geo || !geo.floor) { back(); return Object.assign(out, { error: 'no deepest column was handed to this step' }); }
+    const floor = geo.floor;
+
+    /* --- the valley's own reach of this state. The one call that fills it is made
+       by an animal in the chase state, and an animal is only put into that state by
+       `Creature.update` toward a form its row says it is hostile to. So the question
+       is how many (animal, form) pairs in this build answer hostile at all -- asked
+       with the game's own reading (`attitudeTo`), over every animal row the data
+       builds and every form its fruits can put a body in. --- */
+    const forms = [null].concat((N.FRUITS || []).map(f => f.id));
+    const attitudes = {}; let pairs = 0, hostile = 0;
+    for (const row of N.CREATURES) {
+      const c = new N.Creature(row, 0, 0, 0);
+      const seen = {};
+      for (const f of forms) {
+        pairs++;
+        const a = c.attitudeTo(f);
+        seen[a] = (seen[a] || 0) + 1;
+        if (a === 'hostile') hostile++;
+      }
+      attitudes[row.id] = seen;
+    }
+    out.census = { animalRows: N.CREATURES.length, forms: forms.length, pairs,
+      hostilePairs: hostile, attitudes };
+
+    /* --- ground. The water end of every rig is the bed of the world's own deepest
+       column, the same one the step above measures; the air end is a straight run of
+       dry, clear, level ground long enough that a body on foot is never stopped by
+       the world on the way. --- */
+    const groundTop = (x, z) => {
+      let gy = 0;
+      for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z)) { gy = y + 1; break; }
+      if (gy < 6) return 0;
+      for (let y = gy; y <= gy + 2; y++) if (W.solidAt(x, y, z) || W.liquidAt(x, y, z)) return 0;
+      return gy;
+    };
+    const runLen = (x, z, dx, dz, want) => {
+      const gy = groundTop(x, z);
+      if (!gy) return null;
+      let n = 0;
+      for (let k = 0; k < want; k++) {
+        const g2 = groundTop(x + dx * k, z + dz * k);
+        if (!g2 || Math.abs(g2 - gy) > 1) break;
+        n++;
+      }
+      return n >= want ? { x: x + 0.5, y: gy + 0.05, z: z + 0.5, dx, dz, gy, clear: n } : null;
+    };
+    let dry = null;
+    {
+      const bearings = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+      for (let r = 3; r < 90 && !dry; r++) {
+        for (let a = 0; a < 24 && !dry; a++) {
+          const th = a * Math.PI / 12;
+          const x = Math.round(floor.x + r * Math.cos(th)), z = Math.round(floor.z + r * Math.sin(th));
+          for (const b of bearings) {
+            if (x < 3 || z < 3 || x >= W.w - 3 || z >= W.d - 3) continue;
+            const spot = runLen(x, z, b[0], b[1], 40);
+            if (spot) { dry = spot; break; }
+          }
+        }
+      }
+    }
+    if (!dry) { back(); return Object.assign(out, { error: 'no straight dry ground near that column' }); }
+    out.ground = { x: dry.x, z: dry.z, gy: dry.gy, clear: dry.clear };
+
+    const put = (x, y, z, airAsked) => {
+      p.form = null; p.formT = 0; p.formMax = 1;
+      p.x = x; p.y = y; p.z = z;
+      p.vx = p.vy = p.vz = 0; p.air = airAsked; p.fright = 0; p.dead = false;
+      p.grounded = false; p.inWater = false; p.headWater = false; p.held = 0; p.dry = 0;
+      p.vital = ROW.life;
+    };
+    /* The body's own frames. `pin` re-sets the state before every frame, which is
+       the only honest way to ask a branch a question about one level of it: the
+       state is shed in every frame, so an unpinned level is a level for one frame.
+       `toucher` makes the frame say the one thing the valley's chase says --
+       `Game.onCreatureTouch` -- and nothing else: the animal stands at the body's
+       feet in the state the touch needs, and its own decision to be there is not
+       what this step asks (the census above answers whether the valley ever asks). */
+    const run = (secs, keys, pin, toucher) => {
+      const a0 = p.air;
+      const rec = { t: 0, frames: 0, headUnder: 0, headOut: 0, maxFright: 0, maxAt: null,
+        crossedAt: null, reachedFullAt: null, fellBelowAt: null, reachedZeroAt: null,
+        airGoneAt: null, diedAt: null, topSpeed: 0, paid: 0, airStart: +a0.toFixed(3) };
+      let above = p.fright >= F.panic;
+      for (let i = 0; i < Math.round(60 * secs); i++) {
+        if (pin !== null && pin !== undefined) p.fright = pin;
+        const v0 = p.vital;
+        if (toucher) g.onCreatureTouch(toucher, 1 / 60);
+        const f0 = p.fright;
+        if (f0 > rec.maxFright) { rec.maxFright = f0; rec.maxAt = rec.t; }
+        if (rec.maxAt === null) rec.maxAt = rec.t;
+        if (rec.crossedAt === null && f0 >= F.panic) rec.crossedAt = rec.t;
+        if (rec.reachedFullAt === null && f0 >= 1) rec.reachedFullAt = rec.t;
+        rec.topSpeed = Math.max(rec.topSpeed, Math.hypot(p.vx, p.vz));
+        if (toucher) { toucher.x = p.x; toucher.z = p.z; toucher.y = p.y; }
+        p.update(1 / 60, keys || {}, g);
+        g.time += 1 / 60; rec.t += 1 / 60; rec.frames++;
+        rec.paid += Math.max(0, v0 - p.vital);
+        if (p.headWater) rec.headUnder++; else rec.headOut++;
+        if (above && p.fright < F.panic && rec.fellBelowAt === null) rec.fellBelowAt = rec.t;
+        if (f0 > 0 && p.fright <= 0 && rec.reachedZeroAt === null) rec.reachedZeroAt = rec.t;
+        if (p.air <= 0 && rec.airGoneAt === null) rec.airGoneAt = rec.t;
+        above = p.fright >= F.panic;
+        if (p.dead) { rec.diedAt = rec.t; break; }
+      }
+      rec.airEnd = +p.air.toFixed(3);
+      rec.delta = +(p.air - a0).toFixed(3);
+      // signed: what the clock did to the store per second of the window
+      rec.rate = rec.t > 0 ? +((p.air - a0) / rec.t).toFixed(4) : null;
+      // the rate the state itself rose at: the highest level it reached over the
+      // time it took to get there. A touched body gains the fill in every frame and
+      // sheds the drain in every frame, so that straight line is the record's two
+      // ends seen together, and the time it reaches the ceiling of the state at is
+      // the time the two of them together take.
+      rec.riseRate = (rec.maxAt && rec.maxAt > 0) ? +(rec.maxFright / rec.maxAt).toFixed(4) : null;
+      for (const k of ['crossedAt', 'reachedFullAt', 'fellBelowAt', 'reachedZeroAt', 'airGoneAt', 'diedAt', 'maxAt'])
+        if (rec[k] !== null) rec[k] = +rec[k].toFixed(2);
+      rec.t = +rec.t.toFixed(2); rec.paid = +rec.paid.toFixed(3);
+      rec.maxFright = +rec.maxFright.toFixed(3);
+      rec.topSpeed = +rec.topSpeed.toFixed(3);
+      rec.alive = !p.dead;
+      return rec;
+    };
+
+    /* 1. the state's two ends, asked through the one call the valley makes. */
+    const beast = new N.Creature(native, 0, 0, 0);
+    beast.state = 'chase';
+    put(dry.x, dry.y, dry.z, ROW.breath);
+    out.touched = run(1.8, {}, null, beast);
+    out.calm = run(10, {}, null);
+
+    /* 2. the three places read the row and not a figure of their own: put a
+       different figure on the row and the state the code runs follows it. */
+    F.fill = 0.45;
+    put(dry.x, dry.y, dry.z, ROW.breath);
+    out.rowFill = run(1.8, {}, null, beast);
+    F.fill = rowWas.fill;
+    put(dry.x, dry.y, dry.z, ROW.breath);
+    p.fright = 1;
+    F.drain = 0.4;
+    out.rowDrain = run(2, {}, null);
+    F.drain = rowWas.drain;
+
+    /* 3. the branch is a switch on that level: one step of the state, one step of
+       the clock. Asked under a surface, the store read every second. */
+    put(floor.x + 0.5, floor.bed + 0.05, floor.z + 0.5, ROW.breath);
+    out.underQuiet = run(4, {}, F.panic - 0.01);
+    put(floor.x + 0.5, floor.bed + 0.05, floor.z + 0.5, ROW.breath);
+    out.underPanicked = run(4, {}, F.panic + 0.01);
+
+    /* 4. and because the clock runs at one rate at both of its ends, any multiple
+       of it cancels over a stretch spent half under and half breathing. The state
+       is held at one level for the whole of both cycles, so the branch is in force
+       at both ends of it -- which is the only way the claim means anything. */
+    const cycle = (pin) => {
+      put(floor.x + 0.5, floor.bed + 0.05, floor.z + 0.5, ROW.breath);
+      const under = run(8.5, {}, pin);
+      p.x = dry.x; p.y = dry.y; p.z = dry.z; p.vx = p.vy = p.vz = 0;
+      p.grounded = false; p.inWater = false; p.headWater = false;
+      const breathe = run(8.5, {}, pin);
+      return { held: (pin === null || pin === undefined) ? 0 : pin, diveSeconds: under.t,
+        surfaceSeconds: breathe.t, diveUnits: -under.delta, paidBack: breathe.delta,
+        diveRate: -under.rate, refillRate: breathe.rate,
+        netStore: +(breathe.airEnd - under.airStart).toFixed(3),
+        secondsOfBreathingThatDiveCosts: breathe.rate ? +((-under.delta) / breathe.rate).toFixed(2) : null };
+    };
+    out.cycleQuiet = cycle(null);
+    out.cyclePanicked = cycle(1);
+
+    /* 5. where that leaves the one body that cannot surface: the same bed as above,
+       left alone, the store watched until it is empty. */
+    put(floor.x + 0.5, floor.bed + 0.05, floor.z + 0.5, ROW.breath);
+    out.floorQuiet = run(22, {}, null);
+    put(floor.x + 0.5, floor.bed + 0.05, floor.z + 0.5, ROW.breath);
+    out.floorPanicked = run(22, {}, 1);
+
+    /* 6. the burst this body's record says is bought with breath. It is aimed down
+       the longest open run it can find; the same window is run with the key held and
+       with it not, and then at the film of the same lake, where the burst is refused.
+       The store is started low so that what it does is the thing being measured. */
+    put(dry.x, dry.y, dry.z, 2);
+    p.yaw = p.faceYaw = Math.atan2(dry.dx, -dry.dz);
+    out.burstHeld = run(6, { fwd: 1, sprint: 1 }, null);
+    put(dry.x, dry.y, dry.z, 2);
+    p.yaw = p.faceYaw = Math.atan2(dry.dx, -dry.dz);
+    out.burstNone = run(6, { fwd: 1 }, null);
+    put(floor.x + 0.5, floor.film - 0.4, floor.z + 0.5, ROW.breath);
+    out.burstInWater = run(6, { fwd: 1, sprint: 1 }, null);
+
+    back();
+    return out;
+  }, { floor: deep.deepest });
+
+  check('the fright a body carries is a figure on its own record: the rate it fills at and the rate it is shed at are read off that row, and a row handed different figures runs a different state',
+    fear.record && fear.touched && fear.calm && fear.rowFill && fear.rowDrain &&
+    Math.abs(fear.touched.riseRate - (fear.record.fill - fear.record.drain)) < 0.02 &&
+    Math.abs(1 / fear.calm.reachedZeroAt - fear.record.drain) < 0.02 &&
+    Math.abs(fear.rowFill.riseRate - (0.45 - fear.record.drain)) < 0.02 &&
+    Math.abs((1 - fear.record.panic) / fear.rowDrain.fellBelowAt - 0.4) < 0.02 &&
+    fear.rowFill.crossedAt > fear.touched.crossedAt, fear);
+
+  check('so a body an animal is in contact with is frightened in parts of a second and calms down over seconds: the panic level is reached at a fifth of a second, the state is full a second later, and it is another five seconds before the breath clock is a calm one again',
+    fear.touched.crossedAt !== null && fear.touched.reachedFullAt !== null &&
+    fear.touched && fear.calm &&
+    Math.abs(fear.touched.crossedAt - fear.record.panic / (fear.record.fill - fear.record.drain)) < 0.05 &&
+    Math.abs(fear.touched.reachedFullAt - 1 / (fear.record.fill - fear.record.drain)) < 0.05 &&
+    fear.touched.maxFright <= 1 &&
+    fear.calm.fellBelowAt !== null && fear.calm.reachedZeroAt !== null &&
+    Math.abs(fear.calm.fellBelowAt - (1 - fear.record.panic) / fear.record.drain) < 0.05 &&
+    Math.abs(fear.calm.reachedZeroAt - 1 / fear.record.drain) < 0.05, fear);
+
+  check('the level is a switch and not a slope: a body held at one hundredth below it burns its store at the rate its record states and one held a hundredth above burns it at the multiple on that same row',
+    fear.underQuiet && fear.underPanicked && fear.underQuiet.rate !== null && fear.underPanicked.rate !== null &&
+    fear.underQuiet.headUnder > 0 && fear.underPanicked.headUnder > 0 &&
+    Math.abs(-fear.underQuiet.rate - 1) < 0.02 &&
+    Math.abs(-fear.underPanicked.rate - fear.record.breathRate) < 0.02, fear);
+
+  check('and a multiple of a clock that runs at one rate at both of its ends prices nothing a day costs: the same body with the same state held all the way spends so many units of store under water and is handed those same units back by those same seconds of breathing, and what a dive costs at the surface is the length of the dive and not the figure',
+    fear.cyclePanicked && fear.cycleQuiet &&
+    Math.abs(fear.cyclePanicked.diveRate - fear.record.breathRate) < 0.02 &&
+    Math.abs(fear.cyclePanicked.refillRate - fear.record.breathRate) < 0.02 &&
+    Math.abs(fear.cyclePanicked.netStore) < 0.05 &&
+    Math.abs(fear.cycleQuiet.netStore) < 0.05 &&
+    Math.abs(fear.cyclePanicked.secondsOfBreathingThatDiveCosts - fear.cyclePanicked.diveSeconds) < 0.05 &&
+    Math.abs(fear.cycleQuiet.secondsOfBreathingThatDiveCosts - fear.cycleQuiet.diveSeconds) < 0.05 &&
+    Math.abs(fear.cyclePanicked.diveUnits - fear.cycleQuiet.diveUnits * fear.record.breathRate) < 0.05, fear);
+
+  check('which is why the figure is not a price but a place: a body that can surface pays the same day with it or without it, and a body stood on the bed of this valley\'s deepest column, which cannot, is emptied at a little over eleven seconds instead of eighteen',
+    fear.floorQuiet && fear.floorPanicked && fear.floorQuiet.airGoneAt !== null && fear.floorPanicked.airGoneAt !== null &&
+    Math.abs(fear.floorQuiet.airGoneAt - fear.breath) < 0.05 &&
+    Math.abs(fear.floorPanicked.airGoneAt - fear.breath / fear.record.breathRate) < 0.05 &&
+    fear.floorPanicked.diedAt !== null && fear.floorQuiet.alive, fear);
+
+  check('and this valley never reaches that branch at all: the one call that fills the state needs an animal in the chase state, and of every animal row the data builds against every form its fruits can put a body in, not one pair answers hostile',
+    fear.census && fear.census.animalRows > 0 && fear.census.forms > 1 && fear.census.pairs > 0 &&
+    fear.census.hostilePairs === 0, fear.census);
+
+  check('so the burst on this body\'s record is not bought with breath and cannot be: the same six seconds on dry ground hand the store back the same at one unit to the second with the burst held as with it not, while the burst does run at the multiple the row states, and in the only place a body pays breath it is refused outright',
+    fear.burstHeld && fear.burstNone && fear.burstInWater &&
+    Math.abs(fear.burstHeld.delta - fear.burstNone.delta) < 0.05 &&
+    Math.abs(fear.burstHeld.rate - 1) < 0.02 &&
+    Math.abs(fear.burstHeld.topSpeed - fear.speed * fear.sprintMultiple) < 0.05 &&
+    Math.abs(fear.burstNone.topSpeed - fear.speed) < 0.05 &&
+    Math.abs(fear.burstInWater.topSpeed - fear.swimSpeed) < 0.2, fear);
+
   /* ---- the stroke the wings draw ----
      The model is data, and a number written in it is a claim: `game/src/models.js`
      states the arc of this wing, the angle the blade swings through, the rate it
