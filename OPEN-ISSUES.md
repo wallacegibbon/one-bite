@@ -7,74 +7,54 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one commit, and it is the third clock a body carries -- the state
-that decides how fast the first of them runs. A body under water is held by a store and by a price, and
-the last two rounds put both of those on the body's record. What was still written in three places and on
-no record was the switch between the two rates that store can be spent at: the rate at which an animal in
-contact fills a body with fright (`game/src/game.js`), the rate at which a body sheds that fright when
-nothing is near (`game/src/entities.js`), and the level at which the state is taken for panic together
-with the multiple the breath clock is then raised to (`game/src/entities.js`, the multiple sitting in the
-same line as the question that line answers). Putting it on the row is the same move as the two rounds
-that put `breath` and `life` there -- one record per body, the record the only place the figures are
-written -- and it is what made the question the last three rounds kept being handed answerable at all:
-what is that multiple worth. It turns out to be arithmetic, and the arithmetic says the figure has never
-been arguable for a reason nobody had stated.
+State at time of writing: this round is one commit, and it answers the question the last round left
+standing at the end of its own list. That round put the state that decides how fast a body's breath burns
+onto the body's record and found that nothing in this valley fills it; the sentence it left was that
+filling the state on a near-drowning -- the thing that actually threatens a body here -- needs a figure for
+how fast water frightens a body, and none was invented. Asked again, that sentence has the wrong shape. It
+asks for a new figure in a place where the valley already has one, because the breath clock *is* the
+water's charge for a second: a state the medium caused multiplies a clock the medium is already running, and
+one second is then priced twice. That is not a taste, because it has consequences, and this round measured
+them both ways instead of refusing them in prose. It also turned up a second law on the way: a multiple that
+provably prices nothing while a body carries its cause becomes a debt the moment the cause is something the
+body walks out of.
 
-- **The state is on the row, and the three places that owned it read it from there** (`fright` on
-  `game/data/player.js`): `fill`, `drain`, `panic`, `breathRate`. No animal row states a state of its
-  own, and it is not a second copy of one: an animal's startle is a different state with a different shape
-  (`alarm`, `game/src/entities.js`) and is never asked of a body this game wears.
-- **A multiple of a clock that runs at one rate at both of its ends prices no part of a day.** Held at one
-  level for a whole stretch, **8.5 s** with the head under spend **13.6** of a person's **18** units at
-  **1.600** a second and **8.5 s** with the head out hand **13.6** back at **1.600** -- the store back
-  where it began -- and the calm cycle's **8.5** at **1.000** costs the same **8.5 s** of breathing. What
-  a dive costs at the surface is the length of the dive, either way. What the figure moves is *where in a
-  day the store runs out*, and it only bites where the body has no surface to reach: on the bed of this
-  valley's deepest column, empty at **11.25 s** instead of **18.00 s**, dead at **20.33 s** where a calm
-  body is still alive at **22 s** having paid **2.209** of its **5**.
-- **The state's own ends: a startle is a fifth of a second and the calm is five.** A body an animal is in
-  contact with gains it at **0.79** a second -- the row's **0.9** against the **0.12** the body is shedding
-  in every frame -- is past the level at **0.50 s** and full at **1.27 s**; left alone it is back under
-  the level **4.98 s** later and rid of it at **8.32 s**, because the fill is **7.5** times the drain.
-  That is the whole of what a chase does to a body's breath: it holds the multiplied clock open for five
-  seconds after the animal has gone. The level is a switch and not a slope: a hundredth below it the clock
-  runs at **1.000** units a second, a hundredth above at **1.600**. And the three places do read the row:
-  given **0.45** as the fill the state climbs at **0.33** a second and the level waits until **1.20 s**;
-  given **0.4** as the drain the body is under the level **1.50 s** later.
-- **This valley never opens that branch.** The one call that fills the state is made by an animal in the
-  chase state, and `Creature.update` puts an animal there only toward a form its own row says it is hostile
-  to: asked with the game's own `attitudeTo` over every animal row the data builds and every form its
-  fruits can put a body in, **0** of the **6** pairs (**2** rows against **3**
-  forms) answers hostile -- both animals ignore the
-  person and are calm toward their own kind. So the state is filled by rigs, and the sentence the last
-  round wrote -- that the deepest floor is fatal "at the panic figure" -- is a conditional the valley
-  itself never opens. Filling the state on a near-drowning is what would open it, and it needs a figure
-  for how fast water frightens a body; no row states one, and none is invented here.
-- **The burst on the person's row is not bought with breath, and while this clock is built as it is it
-  cannot be.** The burst is refused in water, and in air the clock only ever runs up: the same **6 s** on
-  dry ground hand the store **+6.0** units at **1.000** a second with the burst held and **+6.0** with it
-  not -- while the burst does run, at **6.815 m/s** against the **4.70** the row gives without it -- and at
-  the film of the deepest column the burst is refused and the body moves at the row's own **2.90**. A price
-  for a burst needs a figure for how far a body takes in above what it burns; the rows state stores, and
-  none states an intake.
-
-**What is next, in the order the queue gives it.** The panic figure's *value* is still open, and it is now
-open with a reason attached rather than an apology: nothing that measures a day can reach it, because the
-multiple cancels over any day a body can surface in. What it would take is a claim about a body's margin
-inside a single dive -- and the only dive this valley can put a body in that has no surface in it is the
-deepest floor, where the figure is worth **6.75 s** of empty-store time. The question that follows from
-this round is the one before the value: whether the state should have any cause in this valley at all,
-since the one cause the build has is a hostility no animal row states, and the thing that actually
-threatens a body here is the water. Then, behind them as 29 left them: a person's buoyancy (the asking
-half answered at 2l, the figure itself unmodelled), and at what point a rig of one body stops measuring a
-law and starts measuring a habitat (**25**). The documents moved in this same commit: 03 s2 states that the
-switch between the two rates of the breath clock is on the body's row; 03 s3 states the state's two ends,
-the switch, the cancellation, the count that says the valley never fills the state, and the burst; 07's
-record of the test suite carries the new step and its figures. The suite's record of it is seven checks:
-the row driving the fill and the drain, the startle and the calm at the row's ratio, the switch a hundredth
-either side of the level, the cycle that nets nothing at either rate, the floor that empties early when it
-cannot surface, the census of hostile pairs, and the burst that costs nothing. The user's words this round
-were "Continue" -- go on.
+- **The medium is not a cause of that state, measured rather than decided** (`test/play.js`,
+  `theWaterThatTakesASecondOfABodysBreathDoesNotAlsoFrightenTheBodyThatPaysIt`). The rig writes no new
+  number: it fills the state at the row's own `fright.fill` and asks the head the same ask the breathing
+  block asks. On the bed of this valley's deepest column, as the game ships, the state never rises there
+  and the store runs the **18.00 s** the row states; with the water asked as a cause the state is past the
+  level at **0.52 s**, only **0.52 s** of the hold runs at the figure the row states, the store is empty at
+  **11.45 s** instead, and the body lies dead at **20.53 s** where the body this game ships stands alive at
+  **22 s** having paid **2.209** of its **5**. That is the double charge in the only form it can be caught
+  in: the figure on the record stops being the seconds the body gets.
+- **A multiple the body leaves behind is a price, and the state's own calm end sets it.** An **8.5 s** dive
+  with no cause spends **8.5** units of store and is handed them back by **8.50 s** of standing in air
+  (ratio **1.000**, debt **0.00**); the same dive with the water as its cause spends **13.29** and owes
+  **10.32 s** of breathing for them (ratio **1.214**) -- **1.82 s** more than the dive took, and the test
+  asserts that debt is the multiple short of the part of the stretch the state spent below the level at both
+  of its ends. The reason it does not cancel is the state's drain: the multiplied end of the clock stays
+  open **4.98 s** after the head is out of that water, which is `(1 - panic) / drain`, how fast a body
+  calms down from an animal standing next to it. So the price of a body's own drowning would be set by a
+  figure about animals. It is not taken, and the water-frightens-a-body figure 2m left open is closed by
+  being unneeded: no figure is wanted there, because the medium is not to be asked as a cause at all.
+- **What is next, in the order the queue gives it.** Whether the fauna answers a body at all is now the
+  front of the list: the census 2m ran says **0** of the **6** (animal, form) pairs this build carries
+  answers hostile and both rows say `default: 'ignore'`, so the state runs only in rigs. A frog and a sea
+  turtle are not predators of a person, so `hostile` is not the missing word; whether they *flee* a body
+  that is not their kind is a claim about what lives in this valley and about the animals' own `alarm`
+  state, not a figure the ground states, and it is not decided here. Behind it: the panic multiple's value,
+  unchanged and further from reach than before -- with the medium refused as a cause the branch is opened
+  nowhere in the shipped valley, and the deepest floor stays survivable at the figure on the row (empty at
+  **18.00 s**, dead at **27.08 s** with the water taking the life); a person's buoyancy (the asking half
+  answered at 2l, the figure itself unmodelled); and at what point a rig of one body stops measuring a law
+  and starts measuring a habitat (**25**). The documents moved in this same commit: 03 s3 states the
+  refusal and both sets of numbers, and 07's record of the test suite carries the new step. The suite's
+  record of it is four checks: the state never rising there as the game ships and rising at the row's own
+  figure once the medium is asked as a cause, the hold collapsing from the figure on the row to two thirds
+  of it, the dive that pays itself back in the same seconds it took versus the dive that owes more than it
+  took, and the multiplied end of the clock outliving the water by the state's own calm. The user's words
+  this round were "Continue" -- go on.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -753,6 +733,19 @@ claims:
   now asked of each body, which is the complaint 2g's ending makes about a pooled
   number: a mean of 99.5% hid one body at 97.7%.
 
+A fourth instance, on the round that measured the water's own price against the
+fear multiple. The first full-suite run of that tree reported `play` FAIL at a load
+average of 7. The reading that went red was never seen: the harness prints the first
+twelve lines of a failed step's log and the next run overwrites that file, so what
+the step reported is gone. What is known is narrow and is written here rather than
+smoothed over: it was not the step's own timeout (the steps after `play` in that
+batch were already running 240 s into it, and the timeout is 900 s), and it was not
+this round's step -- seven further runs of that step on that same tree, three inside
+the suite and four on their own, printed no `CHECK FAILED` at all, and the two suite
+runs this commit quotes are among them. No bound was lowered and no excuse is
+made: the claim a green suite supports is the claim the harness can actually carry,
+and it is not "no reading ever moved".
+
 A third instance of the same shape, two rounds later, on the line below that one.
 The pace law (`they do not swim it in step`, ~line 8623) went red in one full-suite
 run made at a load average of 7: four of the five bodies came out at their own pace
@@ -1087,7 +1080,7 @@ with the body the run starts in and nothing but its own record under it.
   not as a design.
 
 
-### 2m. The state that decides how fast a body's breath burns was written in three places and on no record -- and once it is on the record it says why its own figure cannot be priced (this round's commit; closes what 2l left standing under the water law)
+### 2m. The state that decides how fast a body's breath burns was written in three places and on no record -- and once it is on the record it says why its own figure cannot be priced (closes what 2l left standing under the water law; its own cause question closed at 2n)
 
 **What was asked.** The last two rounds put a body's breath on the record and closed that clock at one
 rate at both ends; the round before that put the life on the record and measured the pair against the
@@ -1143,18 +1136,83 @@ straight run of dry ground next to it for the air end of the rigs.
   settles it is a claim about a body's margin inside one dive. The only dive in this valley with no surface
   in it is the deepest floor, and there the figure is worth **6.75 s** of empty-store time (**18.00 s** to
   **11.25 s**).
-- **Whether the state should have any cause in this valley.** The one cause the build has is a hostility no
-  animal row states, so the state is filled by rigs alone. The thing that actually threatens a body in this
-  valley is water, and a body within drowning of its breath does become frightened -- but making the model
-  say so needs a figure for how fast the water frightens a body, and no row states one. Left as a question
-  deliberately: this is the one place in the water law where a number would buy a realism the valley does
-  not currently ask for.
+- **Whether the state should have any cause in this valley.**
+  **(closed by 2n:** the water was asked as that cause and measured as one, and it is refused: the breath
+  clock is already the water's price for a second, so a state the medium caused prices that second twice,
+  empties the store at **11.45 s** where the row states **18.00 s**, and turns a multiple that provably
+  prices nothing into a debt of **1.82 s** on an **8.5 s** dive. No figure for how fast water frightens a
+  body is wanted after all. The fauna's own attitude is the question that survives, and it is a content
+  question, not a figure**.)**
 - **The burst price.** Closed as a question about this build, which is what 2l asked: the burst is refused
   in water and in air this clock only runs up, so the same **6 s** on dry ground give **+6.0** units at
   **1.000** a second with the burst and with it not (**6.815 m/s** against **4.70**, and **2.90** at the
   film where the burst is refused). The record's claim that the burst "is bought with breath" was a claim
   the build cannot make; the sentence in `game/data/player.js` and in 03 s3 now says that instead. Making
   it chargeable needs an intake figure, and rows state stores.
+### 2n. The water is not a cause of the state that quickens a body's breath -- the clock is the water's price already, and a cause the body walks out of turns a nothing into a debt (this round's commit; closes the cause question 2m left standing)
+
+**The question had the wrong shape.** 2m ended with the state on the body's record and with this valley
+never filling it: **0** of the **6** (animal, form) pairs answers hostile, so every frightened-body figure
+in that entry is a rig's. The sentence left standing was that filling the state on a near-drowning -- the
+thing that actually threatens a body in this valley -- "needs a figure for how fast water frightens a body,
+and no row states one". Asked again, that asks for a new figure in a place where the valley already has one.
+The breath clock *is* the water's charge for a second: a body with its head under a water it cannot breathe
+spends a unit of its store to the second because the medium is there. A state the medium itself caused
+would multiply a clock the medium is already running, and that one second would be priced twice -- once as
+the figure on the row and once as a multiple of it. Whether that is a real objection is not a matter of
+taste: it has consequences, and they can be measured. So the counterfactual was built and measured rather
+than refused in prose.
+
+**The rig writes nothing new.** While the head is under a water this body cannot breathe, the medium puts
+the state in at `fright.fill` -- the figure already on this body's record for putting the state in -- and the
+ask is the same ask the breathing block asks of the head. The place is the bed of the world's deepest column
+(11 blocks of water, film at y15, bed at y4, (73,83)), the column 2l measured the pair of clocks against, on
+the body the run starts in. Two bodies, one column, the only difference between them the one line of the
+rig. Measured in `test/play.js` (`theWaterThatTakesASecondOfABodysBreathDoesNotAlsoFrightenTheBodyThatPaysIt`:
+`out.shipped`, `out.waterCaused`, `out.cycleShipped`, `out.cycleWaterCaused`).
+
+**What making the water a cause costs.**
+
+- **The figure on the record stops being the seconds the body gets.** As the game ships, on that bed the
+  state never rises at all and the store runs the **18.00 s** the row states. Asked with the medium as a
+  cause, the state is past the panic level **0.52 s** into the dive, **0.52 s** of the whole hold runs at
+  the figure the row states, the store is empty at **11.45 s**, and the body lies dead at **20.53 s** where
+  the body this game ships stands alive at **22 s** having paid **2.209** of its **5**. A row that states
+  eighteen and is never allowed to run eighteen is a record written for show.
+- **A multiple that prices nothing becomes a debt.** The round before this one proved that a multiple of a
+  clock that runs at one rate at both of its ends cancels over any stretch a body can surface in -- the
+  **8.5 s** dive that spends **13.6** units is paid back by **8.5 s** of breathing at the same multiplied
+  rate, and the calm cycle's **8.5** units cost the same **8.5 s**. That cancellation holds for a cause the
+  body carries with it. Cause the state with the medium and the same **8.5 s** dive spends **8.5** units
+  with no cause and is handed them back by **8.50 s** of standing in air (ratio **1.000**, debt **0.00**),
+  while with the water as its cause it spends **13.29** and owes **10.32 s** of breathing for them (ratio
+  **1.214**) -- **1.82 s** more than the dive took. The test asserts what that debt is: the multiple short
+  of the part of the stretch the state spent below the level at both of its ends. A day spent in the water
+  would then cost more breathing than it lasts.
+- **And the figure that sets that price is a figure about animals.** The multiplied end of the clock does not
+  stop at the surface: the state is still above the level **4.98 s** after the head is out of the water,
+  which is `(1 - panic) / drain` -- how fast a body calms down from an animal standing next to it. So "how
+  fast water frightens a body" would not be priced by a figure about water at all.
+
+**The answer: the medium is not asked as a cause.** The water's price stays the figure on the row -- a unit
+of the store to the second with the head under, at both ends of the clock, which is what makes a second of
+breathing buy a second of diving -- and the state keeps the one cause it has: an animal of this valley in the
+chase state, which is a body next to a body. 03 s3 states the refusal with both sets of numbers, and
+`game/data/player.js` and `game/src/entities.js` say it where the figures are kept.
+
+**What is left open under it.**
+
+- **Whether the fauna answers a body at all.** With the medium refused, the only thing that can fill the
+  state is an animal's attitude, and the census says **0** of the **6** pairs is hostile and both rows say
+  `default: 'ignore'`. A frog and a sea turtle are not predators of a person, so `hostile` is not the word
+  that is missing; whether those animals *flee* a body that is not their kind -- which is what would put the
+  animals' own `alarm` state to use and make this one live -- is a claim about what lives in this valley,
+  not a figure the ground states. Not decided here, and it is now the front of the queue.
+- **The multiple's value.** Unchanged, and further from reach: with the medium refused as a cause the branch
+  is opened nowhere in the shipped valley, so the deepest floor stays survivable at the figure on the row
+  (empty at **18.00 s**, and the water taking the life at its own price, 2l's **27.08 s**). Nothing that
+  measures a day reaches the figure, and this round is what says the valley will not manufacture a
+  measurement for it.
 ## 3. POI heights and the teleport waypoint (theme queue item 10)
 
 **Closed (data and docs only; committed, and past the round-end gates, which
@@ -2949,7 +3007,35 @@ on, the model's own height and the form's box being one figure.
 
 ## The record of the last rounds (kept as history)
 
-### One round back: the life a body has is on its record, and this valley's deepest floor is measured against the pair of clocks a body carries under water (3d31f53)
+### One round back: the fright a body carries is on its record, and the multiple it puts on the breath clock prices no part of a day (ab5ee33)
+
+State at time of writing: that round was the third clock a body carries -- not the store and not the price,
+but the state that decides how fast the store runs. It was written in three places and on no record: the rate
+at which an animal in contact fills a body with fright (`game/src/game.js`), the rate at which a body sheds
+it (`game/src/entities.js`), and the level at which the state is taken for panic together with the multiple
+the breath clock is then raised to (`game/src/entities.js`, the multiple sitting inside the line that asks the
+question). Putting those four figures on the row of the body the run starts in was the same move as the two
+rounds that put `breath` and `life` there, and the test proves the row is what runs rather than reading the
+source: given **0.45** as the fill the state climbs at **0.33** a second and the level waits until **1.20 s**;
+given **0.4** as the drain a body is back under the level **1.50 s** later instead of **4.98 s**.
+
+Then the figure the round existed to ask about: what the multiple is worth. A startle is a fifth of a second
+and the calm is five -- a touched body gains the state at **0.79** a second (the row's **0.9** against the
+**0.12** it is shedding every frame), is past the level at **0.50 s** and at the full of the state at
+**1.27 s**, and left alone is back under the level **4.98 s** later and rid of it at **8.32 s**, because the
+fill is **7.5** times the drain; the level is a switch, a hundredth either side of it running the clock at
+**1.000** or **1.600** units of store a second. And a multiple of a clock that runs at one rate at both of
+its ends prices no part of a day: **8.5 s** with the head under spend **13.6** of a person's **18** units at
+**1.600** a second and **8.5 s** with the head out hand **13.6** back at **1.600**, and the calm cycle's
+**8.5** units at **1.000** cost the same **8.5 s** of breathing. What the figure moves is *where in a day the
+store runs out* -- on the bed of this valley's deepest column, empty at **11.25 s** instead of **18.00 s**,
+dead at **20.33 s** where a calm body is alive at **22 s** having paid **2.209** of its **5**. And the valley
+never opens that branch: **2** animal rows against the **3** forms its fruits can put a body in, **6** pairs,
+**0** hostile. The burst on that same row turned out to be unchargeable rather than unpriced (**+6.0** units
+over **6 s** of dry ground with the burst held and **+6.0** without it, at **6.815 m/s** against the **4.70**
+the row gives, and **2.90** at the film of that column where the burst is refused). The law and the numbers
+are at 2m; the question that entry left standing was answered the next round, at 2n.
+### Two rounds back: the life a body has is on its record, and this valley's deepest floor is measured against the pair of clocks a body carries under water (3d31f53)
 
 State at time of writing: that round was one commit, and it came off the queue the previous round wrote.
 A body under water is held by two figures: how long it can hold its breath, and how much of itself the
@@ -2977,7 +3063,7 @@ head never once out. And the valley asks this and does not offer it: **2,958** c
 the film, going forward at the **2.9 m/s** its row states, the head is out in **6.3%** of the frames and
 the body drowns. The law, the numbers and the questions left standing under it are at 2l.
 
-### Two rounds back: the reserve of breath belongs to the body that is wearing it, and a save carries it (63fb773)
+### Three rounds back: the reserve of breath belongs to the body that is wearing it, and a save carries it (63fb773)
 
 State at time of writing: that round was one commit, and it came off the queue the previous round wrote.
 The clock had been closed at one rate at both ends, and the bound it runs inside was still where it had
@@ -3010,7 +3096,7 @@ payload of **2,212** bytes; a payload that names no number for the reserve leave
 body it woke in already held, and no shape the game never wrote put a reserve outside the record of the body
 it woke in. The law, the numbers and the questions left standing under it are at 2k.
 
-### Three rounds back: the breath is one clock, and a day of diving was bought with the seconds spent breathing (110a956)
+### Four rounds back: the breath is one clock, and a day of diving was bought with the seconds spent breathing (110a956)
 
 State at time of writing: that round was one commit, taken from the second of 29's three standing
 questions -- "Spending breath is the animal's; refilling it is nobody's." The figures on the rows are
@@ -3039,7 +3125,7 @@ person's burst "is bought with breath" were reworded: the gate refuses the burst
 reads empty, which clears a frame after the head comes out, and nothing charges it. The law, the numbers
 and the questions left standing under it are at 2j.
 
-### Four rounds back: the ground a body is told about is one ground, and a body the world has closed round is raised out of it at a rate (2bd12e1)
+### Five rounds back: the ground a body is told about is one ground, and a body the world has closed round is raised out of it at a rate (2bd12e1)
 
 State at time of writing: that round was one commit and two laws, taken from the second of 29's three
 standing questions. At one column of Mirrorlake the floor a dive stops above was measured from the column
@@ -3070,7 +3156,7 @@ body *through* a face leaves it inside the rock for the frames it takes. That is
 the rig that measured the page instead of the law and how it was rebuilt; the numbers of both laws are at
 2i too.
 
-### Five rounds back: the body worn from a sea turtle is asked what its water does (d7ed638)
+### Six rounds back: the body worn from a sea turtle is asked what its water does (d7ed638)
 
 State at time of writing: this round is one commit, and it is the sea turtle's *body* being asked
 what it does in the water its animal was built for. The user came with three sentences about the
@@ -3166,7 +3252,7 @@ below is the frame's answer.
   which is the preemption the meshing law at 2d already describes; that entry records it, and the
   caps did not move.
 
-### Six rounds back: the window over the lens keeps its stars (36768e2)
+### Seven rounds back: the window over the lens keeps its stars (36768e2)
 
 State at time of writing: this round is one commit, and it is that window being asked to hold
 the night as well as the day. The user's only words in it were 继续做，不要轻易停下来 -- keep
@@ -3223,7 +3309,7 @@ water this round bent is now legible enough to be looked at from.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### Seven rounds back: the sky above the water stands inside a cone (a5e2802)
+### Eight rounds back: the sky above the water stands inside a cone (a5e2802)
 
 Opened on no new demand at all -- 继续做，不要轻易停下来, keep going, and do not stop early -- and
 the next step was taken from what this block lists as its own unfinished half: the stars in the
@@ -3333,7 +3419,7 @@ now states the law, and every number below is the frame's answer, not the arithm
   eighteen seconds, and two front flippers that sit at the sides of the shell instead of under
   it.
 
-### Eight rounds back: a lake's face answers with the tilt it has (d20eccf)
+### Nine rounds back: a lake's face answers with the tilt it has (d20eccf)
 
 Opened on the user's own screenshot -- 从在海底往上看青蛙，为什么是这种视角，为什么看到的是一个圆环:
 from the sea floor looking up at the frog, why this view, why is what I see a ring -- and it
@@ -3387,7 +3473,7 @@ answered the question with numbers before changing anything.
   state. One run of this round's window rig answered nearly twice the elevation the clock it
   pinned gives.
 
-### Nine rounds back: the sea has an animal, and it strokes with both wings at once (04a6572)
+### Ten rounds back: the sea has an animal, and it strokes with both wings at once (04a6572)
 
 The user's queue under **25** item 3, spent in one round: 前肢像翅膀一样上下划, a swimmer
 faster in the water than the frog's **4.6**, no clock drying its skin on land, under **1.8**
@@ -3434,7 +3520,7 @@ keeping only the frog's, and 现在海里面啥动物都没有，太冷清了.
   the worn body cannot get up a single riser anywhere in this valley -- which is what the
   absence of a `hop` means.
 
-### Ten rounds back: a bar is sand through, a reef is rock through (014b515)
+### Eleven rounds back: a bar is sand through, a reef is rock through (014b515)
 
 Not recorded here when it was made, so it is recorded now in two lines. A kind of
 island stated the shape of its shore and not what its ground is made of: the
@@ -3453,7 +3539,7 @@ the tally and the check still passed. The crown rows of all 70 islands are
 byte-identical before and after (sum 1442). Nothing
 lived on any of it yet; the round after it is the one that put something there.
 
-### Eleven rounds back: the surface under water hands the light back (160edcf)
+### Twelve rounds back: the surface under water hands the light back (160edcf)
 
 The question was the user's, asked over the picture the round before had just
 fixed: 这种远处的水光…水面之上这样显示我理解，但是在水底也是这个样子的吗？物理世界，
@@ -3558,7 +3644,7 @@ and animals in the sea at all, which is currently empty of everything but frogs;
 **28**, the unbent crossing -- no refraction, no Snell's window, no tilt on the surface, no
 caustics, and an underwater mirror that is a colour instead of a picture.
 
-### Fourteen rounds back: the map becomes a window of ground round the body (29cd91e)
+### Fifteen rounds back: the map becomes a window of ground round the body (29cd91e)
 
 State at time of writing, then: this round is one commit, and it changes what the minimap is.
 It was a picture: one canvas of the authored square, 160x160 cells, painted once at boot, and
@@ -3635,7 +3721,7 @@ turtle's fruit in sand, the main island keeping only the frog's, and animals in 
 which is currently empty of everything but frogs. The minimap half of that queue is closed by
 this round.
 
-### Fifteen rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
+### Sixteen rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
 State at time of writing, then:
 A body whose legs are an arc was sized by the parabola -- launch squared over
 twice the gravity -- and the parabola is what the flight tends to as the frame goes to
@@ -3739,7 +3825,7 @@ no skin-drying clock on land, slower than **1.8** on it -- the island nearest th
 be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
 is currently empty of everything but frogs.
 
-### Sixteen rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+### Seventeen rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
 State at time of writing, then:
 the sea. The water the last round opened out is no longer an empty field: it holds
 islands, and it holds more of them the nearer they lie to the island this square sits
@@ -3846,7 +3932,7 @@ finished.
 
 
 
-### Seventeen rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
+### Eighteen rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
 State at time of writing: this round is one commit, and it changes what the world
 *is*. The map stops being the world and becomes a square of ground with an
 address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
@@ -3999,7 +4085,7 @@ round deliberately refused to invent one.
 Read the standing contract below first: it decides whether any of this counts as
 finished.
 
-### Eighteen rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+### Nineteen rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
 State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
@@ -4088,7 +4174,7 @@ the contour probes is still unmeasured). One new one, 22's own seam: **the hand 
 in third person -- the marker now shows only where the key acts, which is what made
 that one distance and that origin visible.
 
-### Nineteen rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### Twenty rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -4211,7 +4297,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Twenty rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Twenty-one rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -4385,7 +4471,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Twenty-one rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Twenty-two rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and

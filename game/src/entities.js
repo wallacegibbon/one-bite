@@ -889,6 +889,29 @@
          reach it (`test/play.js`,
          `theFrightABodyCarriesIsOnItsRecordAndPricesNoPartOfADay`: `out.cycleQuiet`,
          `out.cyclePanicked`, `out.floorQuiet`, `out.floorPanicked`, `out.census`).
+         Nor is the water the cause that should open it, and that is not a matter of
+         taste. This clock is the price the water already takes for a second; a state
+         the water caused would price that one second twice, once through the figure on
+         the row and once through a multiple of it, and the figure would stop being the
+         seconds the body gets. Both ways measured on the bed of this valley's deepest
+         column (`test/play.js`,
+         `theWaterThatTakesASecondOfABodysBreathDoesNotAlsoFrightenTheBodyThatPaysIt`:
+         `out.shipped`, `out.waterCaused`, `out.cycleShipped`, `out.cycleWaterCaused`),
+         the rig filling the state at the record's own fill and asking the head the same
+         ask this block asks: as the game ships, the state never rises there and the
+         store runs **18.00 s**; asked with the water as a cause, the level is reached
+         **0.52 s** into the dive, **0.52 s** of the whole hold run at the figure this
+         row states, the store is empty at **11.45 s** instead, and the body is dead at
+         **20.53 s** where the body this game ships stands alive at **22 s**. And the
+         cancellation two paragraphs above belongs to a cause a body carries with it, not
+         to one it walks out of: the same **8.5 s** dive that spends **8.5** units and is
+         handed **8.50 s** of breathing back by them with no cause spends **13.29** with
+         the water as its cause and owes **10.32 s** of breathing for them -- **1.82 s**
+         more than the dive took, which is the multiple short of the part of that
+         stretch the state spent below the level at both of its ends -- because the state
+         is still above the level for **4.98 s** after the head is out of that water. So
+         what would price a body's own drowning is how fast a body calms down from an
+         animal standing next to it. That price is not taken.
          A body that breathes the water has no store to run out and is not asked
          at either end: it is held at a sentinel instead of a ceiling, and the
          only question ever asked of that sentinel is whether it is empty. */

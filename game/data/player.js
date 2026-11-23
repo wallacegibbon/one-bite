@@ -196,9 +196,32 @@
        against the **3** forms its fruits can put a body in, **0** of the **6** pairs
        answers hostile. The state is filled by rigs. So the sentence below about this
        row's deepest floor being fatal "at the panic figure" is a conditional the
-       valley itself never opens -- and filling the state on a near-drowning, which is
-       what would open it, needs a figure for how fast water frightens a body, and no
-       row states one. */
+       valley itself never opens.
+       And the water is not the cause that should open it. It already charges the
+       second this clock runs on, so a state the medium itself caused would charge the
+       same second twice -- once through the figure above and once through a multiple
+       of it. Asked as a measurement, both ways, in `test/play.js`
+       (`theWaterThatTakesASecondOfABodysBreathDoesNotAlsoFrightenTheBodyThatPaysIt`:
+       `out.shipped`, `out.waterCaused`, `out.cycleShipped`, `out.cycleWaterCaused`) --
+       the rig fills the state at `fill`, this row's own figure, no number written
+       newly anywhere, and asks the head the same question the clock asks --: on the bed
+       of this valley's deepest column the shipped rules leave the state at **0** and
+       the store runs the **18.00 s** this row states, while the same body with the
+       water as its cause is past the level at **0.52 s**, runs at this row's figure
+       for **0.52 s** of it, is empty at **11.45 s** and lies dead at **20.53 s** where
+       the body the game ships is alive at **22 s**. And the nothing proved above stops
+       being nothing the moment the cause is something the body leaves behind: a
+       **8.5 s** dive with no cause spends **8.5** units and is handed back by **8.50 s**
+       of standing in air, while the same dive caused by the water spends **13.29** and
+       owes **10.32 s** of breathing for them, **1.82 s** more than the dive took --
+       which is this row's multiple short of the part of that stretch the state spent
+       below the level at both of its ends (the test asserts the two agree to within a
+       tenth of a second). What would set a body's price for its own drowning is
+       therefore `(1 - panic) / drain`: the multiplied end of the clock stays open
+       **4.98 s** after the body is out of the water, and that is a figure about how
+       fast a body calms down from an animal standing next to it. No figure for how
+       fast water frightens a body is wanted after all: the water is not to be asked as
+       a cause at all. */
     fright: { fill: 0.9, drain: 0.12, panic: 0.4, breathRate: 1.6 },
     /* How much of this body the valley's prices are taken out of. The field the
        body carries it in is `vital`; the page draws one mark for each unit of it
@@ -235,7 +258,8 @@
        **20.33 s** with its head never once out -- which is what the state above
        (`fright.breathRate`) is worth here. It is a conditional this valley never
        opens, for the reason stated there: nothing in the build ever frightens a
-       body. The figure's value stays an open question at OPEN-ISSUES 2m, and this
+       body, and the water above it is not to be asked to, which that same
+       `test/play.js` step measures in both directions. The figure's value stays an open question at OPEN-ISSUES 2m, and this
        row does not settle it. Every figure in this comment is a
        rig of `test/play.js`
        (`theDeepestWaterIsMeasuredAgainstTheBodyThatFallsIntoIt`: `out.reach`,

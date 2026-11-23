@@ -14919,6 +14919,157 @@ What was measured before any of this was fixed, over 180 frames of walking
     Math.abs(fear.burstNone.topSpeed - fear.speed) < 0.05 &&
     Math.abs(fear.burstInWater.topSpeed - fear.swimSpeed) < 0.2, fear);
 
+  /* ---- the water as a cause of the state ----
+     The step above left this state with no cause in the valley and asked whether
+     the water should be one. Asked properly that is not a question about fear: it
+     is a question about who pays for a second. The rig below is the counterfactual
+     and not the shipped rule -- while the head is under a water this body cannot
+     breathe, the medium itself puts the state in, at `fright.fill`, which is the
+     one figure this body's record already states for putting the state in. Nothing
+     is invented: the rate is the row's own, and the ask is the same ask the breath
+     clock makes of the head. What is measured is what it would cost. */
+  const waterCause = await step('theWaterThatTakesASecondOfABodysBreathDoesNotAlsoFrightenTheBodyThatPaysIt', (geo) => {
+    const g = window.game, N = window.FRUTARIA, p = g.player;
+    const ROW = N.HUMAN_FORM, F = ROW.fright;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, faceYaw: p.faceYaw,
+      vx: p.vx, vy: p.vy, vz: p.vz, grounded: p.grounded, inWater: p.inWater, headWater: p.headWater,
+      air: p.air, fright: p.fright, form: p.form, formT: p.formT, formMax: p.formMax,
+      vital: p.vital, dry: p.dry, dead: p.dead, held: p.held, time: g.time, mode: g.mode,
+      deaths: g.stats.deaths, inv: g.inv, creatures: g.creatures };
+    const dropsWas = g.drops.length, logWas = g.log.slice();
+    const back = () => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        faceYaw: was.faceYaw, vx: was.vx, vy: was.vy, vz: was.vz, grounded: was.grounded,
+        inWater: was.inWater, headWater: was.headWater, air: was.air, fright: was.fright,
+        form: was.form, formT: was.formT, formMax: was.formMax, vital: was.vital,
+        dry: was.dry, dead: was.dead, held: was.held });
+      g.time = was.time; g.mode = was.mode; g.stats.deaths = was.deaths;
+      g.inv = was.inv; g.creatures = was.creatures;
+      g.drops.length = dropsWas;
+      g.log.length = 0; Array.prototype.push.apply(g.log, logWas);
+      if (g.ui) g.ui.showDead(false);
+    };
+    g.creatures = [];
+    const out = { record: { fill: F.fill, drain: F.drain, panic: F.panic, breathRate: F.breathRate },
+      breath: ROW.breath, life: ROW.life };
+    if (!geo || !geo.floor || !geo.ground) {
+      back();
+      return Object.assign(out, { error: 'no deepest column and no dry ground were handed to this step' });
+    }
+    const floor = geo.floor, dry = geo.ground;
+
+    const put = (x, y, z) => {
+      p.form = null; p.formT = 0; p.formMax = 1;
+      p.x = x; p.y = y; p.z = z;
+      p.vx = p.vy = p.vz = 0; p.air = ROW.breath; p.fright = 0; p.dead = false;
+      p.grounded = false; p.inWater = false; p.headWater = false; p.held = 0; p.dry = 0;
+      p.vital = ROW.life;
+    };
+    /* The frames, with the only difference between the two bodies being whether the
+       medium is allowed to be a cause. `p.headWater` is the ask the breath clock
+       itself makes, so the rig and the clock are asked the same question at the same
+       moment. `stateAbove` counts the seconds the multiplied branch is open, which
+       under a cause the body can leave goes on past the water. */
+    const watch = (secs, byWater, refillTo) => {
+      const a0 = p.air;
+      const rec = { t: 0, headUnder: 0, headOut: 0, maxFright: 0, crossedAt: null,
+        airGoneAt: null, diedAt: null, underQuietSeconds: 0, underMultipliedSeconds: 0,
+        outQuietSeconds: 0, outMultipliedSeconds: 0, fellBelowAt: null, refillAt: null,
+        paid: 0, airStart: +a0.toFixed(3) };
+      let above = p.fright >= F.panic;
+      for (let i = 0; i < Math.round(60 * secs); i++) {
+        const v0 = p.vital;
+        if (byWater && p.headWater) p.fright = Math.min(1, p.fright + F.fill / 60);
+        if (above) { if (p.headWater) rec.underMultipliedSeconds++; else rec.outMultipliedSeconds++; }
+        else { if (p.headWater) rec.underQuietSeconds++; else rec.outQuietSeconds++; }
+        if (above && p.fright < F.panic && rec.fellBelowAt === null) rec.fellBelowAt = rec.t;
+        if (rec.crossedAt === null && p.fright >= F.panic) rec.crossedAt = rec.t;
+        if (p.fright > rec.maxFright) rec.maxFright = p.fright;
+        p.update(1 / 60, {}, g);
+        g.time += 1 / 60; rec.t += 1 / 60;
+        rec.paid += Math.max(0, v0 - p.vital);
+        if (p.air <= 0 && rec.airGoneAt === null) rec.airGoneAt = rec.t;
+        if (refillTo !== undefined && p.air >= refillTo && rec.refillAt === null) rec.refillAt = rec.t;
+        above = p.fright >= F.panic;
+        if (p.headWater) rec.headUnder++; else rec.headOut++;
+        if (p.dead) { rec.diedAt = rec.t; break; }
+      }
+      rec.airEnd = +p.air.toFixed(3);
+      rec.units = +(a0 - p.air).toFixed(3);
+      for (const k of ['crossedAt', 'airGoneAt', 'diedAt', 'fellBelowAt', 'refillAt'])
+        if (rec[k] !== null) rec[k] = +rec[k].toFixed(2);
+      rec.t = +rec.t.toFixed(2);
+      for (const k of ['underQuietSeconds', 'underMultipliedSeconds', 'outQuietSeconds', 'outMultipliedSeconds'])
+        rec[k] = +(rec[k] / 60).toFixed(2);
+      rec.maxFright = +rec.maxFright.toFixed(3);
+      rec.alive = !p.dead;
+      rec.paid = +rec.paid.toFixed(3);
+      return rec;
+    };
+    /* 1. the same bed, twice. Once with the rules this game ships, where nothing
+       near the body puts the state in, and once with the medium asked as a cause.
+       The only difference between the two runs is the one line above. */
+    put(floor.x + 0.5, floor.bed + 0.05, floor.z + 0.5);
+    out.shipped = watch(22, false);
+    put(floor.x + 0.5, floor.bed + 0.05, floor.z + 0.5);
+    out.waterCaused = watch(22, true);
+
+    /* 2. and the day a body spends moving between that bed and the air it comes
+       back to. The dive is a fixed number of seconds; the surface is watched until
+       the store the dive took is back, which is the question the record asks --
+       whether a second of breath is bought with a second of standing there. */
+    const cycle = (byWater, diveSeconds) => {
+      put(floor.x + 0.5, floor.bed + 0.05, floor.z + 0.5);
+      const startOfDive = p.air;
+      const under = watch(diveSeconds, byWater);
+      p.x = dry.x; p.y = dry.y; p.z = dry.z; p.vx = p.vy = p.vz = 0;
+      p.grounded = false; p.inWater = false; p.headWater = false;
+      const up = watch(40, byWater, startOfDive);
+      return { diveSeconds: under.t, diveUnits: under.units, diveCrossedAt: under.crossedAt,
+        diveStateAtSurface: under.maxFright,
+        surfaceSeconds: up.t, refillSeconds: up.refillAt, paidBack: up.units * -1,
+        paidUnder: under.paid, paidAtSurface: up.paid,
+        stateAtSurface: +p.fright.toFixed(3),
+        multipliedSurfaceSeconds: up.outMultipliedSeconds,
+        ratio: (up.refillAt && under.t) ? +(up.refillAt / under.t).toFixed(3) : null,
+        debt: (up.refillAt !== null) ? +(up.refillAt - under.t).toFixed(2) : null };
+    };
+    out.cycleShipped = cycle(false, 8.5);
+    out.cycleWaterCaused = cycle(true, 8.5);
+
+    back();
+    return out;
+  }, { floor: deep.deepest, ground: fear.ground });
+
+  check('the water this body cannot breathe never puts the state in under the rules this game ships: on the bed of the deepest column the state stays at nought, and a rig that asks the medium as a cause is what first takes it past the panic level, at the rate the body\'s own record states for filling it',
+    waterCause.shipped && waterCause.waterCaused &&
+    waterCause.shipped.headUnder > 0 && waterCause.waterCaused.headUnder > 0 &&
+    waterCause.shipped.maxFright === 0 && waterCause.shipped.crossedAt === null &&
+    waterCause.waterCaused.crossedAt !== null &&
+    Math.abs(waterCause.waterCaused.crossedAt - waterCause.record.panic / (waterCause.record.fill - waterCause.record.drain)) < 0.05, waterCause);
+
+  check('and making it a cause would take the figure off the body\'s record: the same body on the same bed is emptied at the seconds that figure says under the shipped rules and at a little over two thirds of them when the water frightens it, because only the half-second the state spends climbing runs at the figure the row states',
+    waterCause.waterCaused.airGoneAt !== null && waterCause.shipped.airGoneAt !== null &&
+    Math.abs(waterCause.shipped.airGoneAt - waterCause.breath) < 0.05 &&
+    Math.abs(waterCause.waterCaused.airGoneAt - (waterCause.record.panic / (waterCause.record.fill - waterCause.record.drain) +
+      (waterCause.breath - waterCause.record.panic / (waterCause.record.fill - waterCause.record.drain)) / waterCause.record.breathRate)) < 0.1 &&
+    waterCause.waterCaused.airGoneAt < waterCause.breath * 0.75 &&
+    waterCause.waterCaused.underQuietSeconds < 1 && waterCause.waterCaused.underMultipliedSeconds > 5, waterCause);
+
+  check('a multiple is a price exactly when the cause of the state is something the body leaves behind: the same dive pays itself back in the same number of seconds of breathing when nothing caused the state, and when the water caused it the seconds of breathing it owes are longer than the dive by that multiple short of the part of the day the state was below the level at both ends',
+    waterCause.cycleShipped && waterCause.cycleWaterCaused &&
+    waterCause.cycleShipped.refillSeconds !== null && waterCause.cycleWaterCaused.refillSeconds !== null &&
+    Math.abs(waterCause.cycleShipped.ratio - 1) < 0.01 &&
+    waterCause.cycleWaterCaused.ratio > 1.1 &&
+    Math.abs(waterCause.cycleWaterCaused.debt - (waterCause.record.breathRate - 1) *
+      (waterCause.cycleWaterCaused.diveSeconds - waterCause.cycleWaterCaused.diveCrossedAt - waterCause.cycleWaterCaused.multipliedSurfaceSeconds)) < 0.1, waterCause);
+
+  check('so the figure that would price a body\'s own drowning is not a figure about water at all: the multiplied end of the clock outlives the water by the seconds the state takes to fall from its full to that level at the drain the row states, and on the bed where it cannot surface the same body that stands at twenty-two seconds under the shipped rules is dead',
+    waterCause.cycleWaterCaused && waterCause.waterCaused &&
+    Math.abs(waterCause.cycleWaterCaused.multipliedSurfaceSeconds - (1 - waterCause.record.panic) / waterCause.record.drain) < 0.1 &&
+    waterCause.cycleShipped.multipliedSurfaceSeconds === 0 &&
+    waterCause.waterCaused.diedAt !== null && waterCause.shipped.alive, waterCause);
+
   /* ---- the stroke the wings draw ----
      The model is data, and a number written in it is a claim: `game/src/models.js`
      states the arc of this wing, the angle the blade swings through, the rate it
