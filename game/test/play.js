@@ -2894,7 +2894,7 @@ const { sim } = require('./simwait');
       TOP: +TOP.toFixed(3), HIP: +HIP.toFixed(3), MID: +MID.toFixed(3), holdMin: +hold.toFixed(2) };
     out.float = run(lake, lake.top - 1.2, [[4, {}]]);
     out.swim = run(lake, lake.top - 1.2, [[2, { fwd: true }]], 'fast');
-    out.dug = run(lake, lake.top - 1.2, [[6, { down: true }]]);
+    out.dug = run(lake, lake.top - 1.2, [[10, { down: true }]]);
     out.land = run(dry, dry.y + 0.01, [[3, {}]]);
     out.hop = run(dry, dry.y + 0.01, [[0.5, { jump: true }], [0.35, {}]], 'high');
     /* and a wild body crossing the lake: the one a person watches. Its phase is
@@ -4058,7 +4058,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      holds nothing up and a body stands on its bottom, and three blocks is the
      far side, where a body set down on the bottom leaves it. */
   const wade = await step('wadingIsNotFloating', () => {
-    const g = window.game, W = g.world, p = g.player;
+    const N = window.FRUTARIA, g = window.game, W = g.world, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
       form: p.form, formT: p.formT, formMax: p.formMax, air: p.air, held: p.held, tilt: p.tilt, bank: p.bank,
       grounded: p.grounded, airAmt: p.airAmt, vital: p.vital, dry: p.dry, fright: p.fright };
@@ -4133,16 +4133,21 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
       off = { airFrames, airMax: +airMax.toFixed(2), drop: +(y0 - low).toFixed(2), y: +p.y.toFixed(2) };
     }
-    /* A pool two blocks deep is the other end of the same question. A frogpear
-       body hangs 1.6 m under the level the water floats it at and is itself half
-       a metre tall, so in two blocks of water the level the water would hold it
-       at is under its own bottom: this water has no level for this body above
-       that ground, there is no floor there for a dive to stop at, and the ground
-       is a ground to stand on -- feet, dry pose, and the hold off. That is the
-       answer the valley's own frogs take in the same column, and the two bodies
-       are one animal in one water. Three blocks of water is the other side of
-       that line: the level sits above the bottom, the water has a place for the
-       body, and a body set down on the bottom of that pool leaves it. */
+    /* A pool two blocks deep is the other end of the same question, and the line
+       it is measured against is the water's own depth against the body's height,
+       not a depth written in the body's row. The hold the water gives a body it is
+       holding up has two ends -- `surfCeiling`, half a body under the film, and
+       `bedFloor`, half a body above the ground -- and they stand in the right
+       order exactly when the water stands deeper over that ground than the body is
+       tall. A frogpear body is half a metre tall and water comes a metre to a
+       block, so no pool this world builds is shallower than the body in it: the
+       two-block pool and the three-block pool give the same answer, and what
+       differs between them is only how much room the hold has. It used to be the
+       other way, because the boundary was the row's 1.6 m hang depth: the same
+       two-block column answered "stand on the bottom, hold off" and three blocks
+       lifted the body. A pool shallower than the body gives a hold with a floor
+       above its ceiling -- nothing between them -- and that pair is asked of the
+       arithmetic below, not of a column of water the world never builds. */
     const poolAt = (n) => {
       for (let x = 40; x < 120; x++) for (let z = 70; z < 145; z++) {
         let wt = -1, k = 0;
@@ -4151,7 +4156,7 @@ What was measured before any of this was fixed, over 180 frames of walking
           else if (wt >= 0) break;
         }
         if (k !== n || !W.solidAt(x, wt - k, z)) continue;
-        return { x: x + 0.5, z: z + 0.5, wt, top: wt - k + 1 };
+        return { x: x + 0.5, z: z + 0.5, wt, n: k, top: wt - k + 1 };
       }
       return null;
     };
@@ -4163,24 +4168,49 @@ What was measured before any of this was fixed, over 180 frames of walking
       p.x = pool.x; p.z = pool.z; p.y = pool.top + 0.0001; p.yaw = 0;
       p.vx = p.vy = p.vz = 0; p.grounded = false; p.airAmt = 0; p.held = 0;
       p.squash = 0; p.crouch = 0; p.bank = 0; p.tilt = 0;
-      const n = 180;
-      let gr = 0, airMax = 0, heldMax = 0, yLo = p.y, yHi = p.y;
+      const n = 180, settle = 90;
+      let gr = 0, airMax = 0, heldMax = 0, yLo = p.y, yHi = p.y, sLo = null, sHi = null;
       for (let i = 0; i < n; i++) {
         p.update(1 / 60, {}, g);
         if (p.grounded) gr++;
         airMax = Math.max(airMax, p.airAmt);
         heldMax = Math.max(heldMax, p.held);
         yLo = Math.min(yLo, p.y); yHi = Math.max(yHi, p.y);
+        /* the band after the body has been put where its own floor states: the
+           ride from the ground to that floor is the law working, not a body that
+           keeps moving, and the two must not be counted together -- so this band
+           opens at the frame it is read from, not at the ground the body was set
+           down on */
+        if (i >= settle) {
+          if (sLo === null) { sLo = p.y; sHi = p.y; }
+          sLo = Math.min(sLo, p.y); sHi = Math.max(sHi, p.y);
+        }
       }
       return { held: +p.held.toFixed(2), heldMax: +heldMax.toFixed(2), grPct: +(gr / n * 100).toFixed(0),
         y: +p.y.toFixed(2), top: pool.top, span: +(yHi - yLo).toFixed(3),
+        band: +(sHi - sLo).toFixed(3), tall: +p.size()[1].toFixed(3),
+        floor: +N.bedFloor(pool.top, p.size()[1]).toFixed(3),
+        ceil: +N.surfCeiling(pool.wt + 1, p.size()[1]).toFixed(3),
         airMax: +airMax.toFixed(2), inW: p.inWater ? 1 : 0 };
     };
     const shallow = poolAt(2), deep = poolAt(3);
     const shallowRest = shallow ? standIn(shallow) : { error: 'no two-block pool to stand in' };
     const deepRest = deep ? standIn(deep) : { error: 'no three-block pool to be lifted out of' };
+    /* The pair itself, asked where no column of this world can answer it: blocks
+       of water come a metre at a time and every body the water holds up is
+       shorter than that, so a body taller than the water over its ground never
+       occurs. It is still the law the two ends are one pair with, and it is asked
+       of the game's own two functions so the ordering is a tested fact and not a
+       reading of them. */
+    let pair = true, pairBad = null;
+    for (const tall of [0.3, 0.5, 0.9, 1.2, 1.8]) {
+      for (let d = 0.25; d <= 8; d += 0.25) {
+        const room = N.surfCeiling(5 + d, tall) > N.bedFloor(5, tall);
+        if (room !== (d > tall)) { pair = false; pairBad = { tall, d, room }; }
+      }
+    }
     Object.assign(p, was);
-    return { spot, still, wading, dist, off, shallow, deep, shallowRest, deepRest };
+    return { spot, still, wading, dist, off, shallow, deep, shallowRest, deepRest, pair, pairBad };
   });
   check('standing in a one-block-deep shore, the body is on the bottom the whole time',
     wade.still && wade.still.grPct === 100 && wade.still.airMax < 0.05 && wade.still.drift < 0.02, wade);
@@ -4190,20 +4220,21 @@ What was measured before any of this was fixed, over 180 frames of walking
     wade.wading && wade.wading.grPct > 90 && wade.dist > 4, wade);
   check('the flag is not glue: walking off a step leaves the ground at once',
     !wade.off.error && wade.off.airFrames >= 2 && wade.off.airMax > 0.2 && wade.off.drop > 0.3, wade);
-  /* The floor the water gives a dive (entities.js `bedFloor`) exists only where
-     this water has a level for this body above that ground. A frogpear body
-     hangs 1.6 m under the level it floats at and is 0.5 m tall, so two blocks of
-     water give it no such level: the ground there is a ground to stand on, and
-     the body's feet find it -- the same answer the valley's own frogs take in
-     that column, which is the pair the law is written as. Three blocks is the
-     far side of that line, and the same body placed on that bottom leaves it. */
-  check('a pool no deeper than the hang depth of the body in it holds nothing up: it stands on the bottom, hold off',
-    !wade.shallowRest.error && wade.shallowRest.inW === 1 && wade.shallowRest.grPct === 100 &&
-    wade.shallowRest.heldMax < 0.05 && Math.abs(wade.shallowRest.y - wade.shallow.top) < 0.02 &&
-    wade.shallowRest.span < 0.02, wade);
-  check('and three blocks of the same water is the far side of that line: a body set on that bottom is lifted off it',
+  /* Both pools the world builds carry the body: a body the water is holding up is
+     not handed the ground under its feet by one rule and told it is swimming by
+     another. And both hold it at the floor the ground and its own height state --
+     not up at the film, because nothing in this water pulls a body up. */
+  check('a pool two blocks deep carries the body in it: that ground is not a ground to stand on',
+    !wade.shallowRest.error && wade.shallowRest.inW === 1 && wade.shallowRest.grPct === 0 &&
+    wade.shallowRest.held > 0.9 && wade.shallowRest.floor < wade.shallowRest.ceil &&
+    Math.abs(wade.shallowRest.y - wade.shallowRest.floor) < 0.02 && wade.shallowRest.band < 0.02, wade);
+  check('and three blocks of the same water holds it at the same kind of floor, half a body off the bottom',
     !wade.deepRest.error && wade.deepRest.inW === 1 && wade.deepRest.grPct === 0 &&
-    wade.deepRest.held > 0.9 && wade.deepRest.y > wade.deep.top + 0.5, wade);
+    wade.deepRest.held > 0.9 && wade.deepRest.floor < wade.deepRest.ceil &&
+    Math.abs(wade.deepRest.y - wade.deepRest.floor) < 0.02 && wade.deepRest.band < 0.02
+    && wade.deepRest.y < wade.deepRest.ceil - 0.5, wade);
+  check('the ceiling and the floor of the water hold are one pair: they have room between them exactly when the water stands deeper over the ground than the body is tall',
+    wade.pair === true, { pair: wade.pair, pairBad: wade.pairBad });
 
   /* 10x. an underside is not a hole in the sky. 10q fixed the cloud, whose
      deck and law the user cut from the sky afterwards; the same face table
@@ -8092,17 +8123,17 @@ What was measured before any of this was fixed, over 180 frames of walking
      this water. The floor is asked of the ground the body's own box reaches, and
      that ground steps up as the body swims inshore, so the floor moves. A floor
      is not only a brake on going down: a body that swims onto ground higher than
-     the level it is carried at goes up with the floor. This leg's own reading
-     says the ground under the box came up while the body was sinking and left it
-     a fifth of a metre under the floor the new ground stated; it ends at the
-     floor, and was under it for one frame -- the frame that asks the ground
-     where the frame starts. A brake alone left it under that floor for every
-     frame of the rest of the leg: 8.07 with its feet 0.07 above the ground,
-     standing in no frame because no frame ever met the ground, held in no frame
-     because the level the water holds it at is above it. */
-  check('the floor a body is carried above is the ground its own box reaches, and it follows that ground up',
+     the level it is carried at goes up with the floor, and it is never once under
+     it. This leg's own reading says the ground under the box came up three times
+     while the body was sinking; a brake alone left the body under the floor the
+     new ground stated for every frame after the step -- at (54.5,95.2) 8.07 with
+     its feet 0.07 above the ground, 0.18 under that floor, standing in no frame
+     because no frame ever met the ground and held in no frame because the level
+     the water used to hold bodies at was above it. Now: zero frames under, and it
+     ends on the floor. */
+  check('the floor a body is carried above is the ground its own box reaches, and it is carried up to a floor that comes up under it',
     !attitude.error && attitude.sink.g === 0 && attitude.sink.groundUp >= 1
-    && attitude.sink.under <= -0.05 && attitude.sink.underFrames <= 2
+    && attitude.sink.under >= 0 && attitude.sink.underFrames === 0
     && Math.abs(attitude.sink.margin) <= 0.01, attitude);
   check('a body climbing through water noses up',
     !attitude.error && !!attitude.rise.up && attitude.rise.up.tilt < -0.1 && attitude.rise.up.vy > 1, attitude);
@@ -9955,34 +9986,46 @@ What was measured before any of this was fixed, over 180 frames of walking
     lowRoof.wornWalk.coiled === 0 && lowRoof.wornWalk.headThrough === 0 &&
     lowRoof.wornWalk.inRock === 0 && lowRoof.wornWalk.walked > 0.5, lowRoof);
 
-  /* 11j. A body the water holds up floats; it does not settle on the bottom.
-     Every body in the water branch carried the same fixed downward pull,
+  /* 11j. A body the water holds up keeps the depth it is at: it does not settle
+     on the bottom, and it does not climb back to a level written on its own
+     record.
+     Every body in the water branch used to carry the same fixed downward pull,
      whatever it was made of: a frog let go of in mid-water sank at a terminal
      0.89 m/s, landed on the lakebed 3 m below, was reported standing on the
      bottom and stopped there -- a water animal that stopped moving sank. The
-     wild frogs of the valley have always done the opposite: the creature step
-     holds them under the surface and never through the bottom. One rule now, off
-     one number: the water holds a body whose animal is built for that water at
-     `floatLevel(surface, tall, hover)` -- the film of its own column, less the
-     body's own height, less the depth its row asks for, all three in metres --
-     clamped a small gap above the bottom wherever the water can hold a body
-     clear of it, whether or not its feet
-     happen to be on something -- and a wild frog, which is never still, rides a
-     slow cycle of its own between that level and deeper water, so the level the
-     water holds the body you wear at is the shallow end of the band a wild frog
-     holds, and the two bodies are only expected to agree when the frog is up
-     -- which is what brings a frog that has dived to the floor of the water back
-     up when the dive key comes off, and what keeps the dive a dive while the key
-     is held. The gap is not a detail: at the bottom a body finds feet, the hold
-     goes off, and the stroke stops with it -- the body slides along the lakebed
-     with still legs. Whether the water can hold a body at all is a
-     property of the place (the surface above the level the body would stand on),
-     not of the body's distance to the surface: 183 columns of Mirrorlake are a
-     one-block shelf, and a shelf is a bottom to stand on and push off from.
-     Reading it off the body's own depth instead would switch the force law back
-     and forth as the body crossed its own equilibrium and build a sawtooth out of
-     nothing -- the bug this file was last fixing -- so the shelf case is measured
-     for shivering as well as for standing.
+     answer put beside that was a spring back to `floatLevel(surface, tall, hover)`
+     -- the film of the body's own column, less its own height, less the depth its
+     row asks for -- and it stopped the sinking at the price of the depth: every
+     body in the water was pulled back to one written level, so a body taken down a
+     few metres came back up them the moment the key came off, and no depth a body
+     had swum to was its own to keep.
+     A spring to a surface level is the whole of how a cork behaves and none of how
+     an animal built for water does. Such an animal trims its own gas to the depth
+     it has taken, and a body whose mean density is the water's is in equilibrium
+     at every depth in the water: there is no vertical force left for the water to
+     offer it. So the depth a body stops at is the depth it stopped at, and that is
+     what is measured here three windows running: `out.swam` takes a body down a
+     few metres, `out.kept` lets go of the key and asks whether those few metres
+     are still there, and `out.onward` asks the same while the body is going
+     forward with nothing asked of its depth at all. The ground under it at the end
+     of that leg comes back as `out.onwardFloor` because a body that has swum onto
+     higher ground is a body whose own floor has risen, and a depth held above a
+     floor that rose is a different claim from a depth held.
+     What the water does keep is the two ends of the hold: the film a body cannot
+     climb through (`surfCeiling`, half the body under it) and the ground it cannot
+     press through (`bedFloor`, half the body above it) -- and the pair only exists
+     where the water stands deeper over that ground than the body is tall, which is
+     what a body set down in a pool shallower than itself is told: there the ground
+     is a ground to stand on, feet and all. The gap at the bottom is not a detail:
+     at the bottom a body finds feet, the hold goes off, and the stroke stops with
+     it -- the body slides along the lakebed with still legs. Whether the water can
+     hold a body at all is a property of the place (the surface above the level the
+     body would stand on), not of the body's distance to the surface: 183 columns
+     of Mirrorlake are a one-block shelf, and a shelf is a bottom to stand on and
+     push off from. Reading it off the body's own depth instead would switch the
+     force law back and forth as the body crossed its own equilibrium and build a
+     sawtooth out of nothing -- the bug this file was last fixing -- so the shelf
+     case is measured for shivering as well as for standing.
      What the hold is asked of is the animal's record, not the gas in its lungs.
      It used to be asked of `breatheAir`, and that is a different fact wearing
      these clothes: the sea turtle's row says it swims faster through water than
@@ -9990,10 +10033,17 @@ What was measured before any of this was fixed, over 180 frames of walking
      field made the body worn from its fruit sink and stand on the seabed because
      it happens to breathe air. So both animals are asked here, in one column, in
      both of the bodies a record makes: the one walking the valley and the one
-     worn from the fruit. The frog hangs 1.6 m down because it breathes the water
-     it swims in and has no reason to see the sky; the turtle lies at the film
-     with its head out because it is a lung, and that is what its row's `hover`
-     says by being negative. A person's body -- the one body in the valley no
+     worn from the fruit. The worn turtle is the one a spring back to the film
+     would have been most visible on -- it is a lung, and the law would have read
+     as an animal unable to stay down; what bounds how long it may keep a depth is
+     the breath its row states, a clock and not a force. What an animal's `hover`
+     still states is the animal's own choice and not the water's law: a wild frog
+     lies at the depth its row gives it and rides a slow cycle of its own between
+     that and deeper water, and the water supplies for that body exactly what it
+     supplies for the one worn from the fruit -- the two ends, and no opinion about
+     the depth between them. So the herd's band is asked here against those ends
+     rather than against the body you wear.
+     A person's body -- the one body in the valley no
      animal's record describes -- is the one left to gravity, and it is measured
      doing that here beside the other two. */
   const buoy = await step('theWaterHoldsTheBodiesBuiltForIt', () => {
@@ -10025,11 +10075,14 @@ What was measured before any of this was fixed, over 180 frames of walking
          set down at a height by hand, and the first frame of the window answers
          the water question for it all over again */
       const wt0 = N.waterTop(W, Math.floor(p.x), Math.floor(p.z), W.h - 1);
-      let gr = 0, wF = 0, wPrev = (wt0 >= 0 && p.y < wt0 + 1) ? 1 : 0;
+      const film = wt0 + 1;               // the film of the column this body stands in
+      let gr = 0, wF = 0, dist = 0, px = p.x, pz = p.z;
+      let wPrev = (wt0 >= 0 && p.y < wt0 + 1) ? 1 : 0;
       for (let i = 0; i < n; i++) {
         g.input = inp; g.particles.n = 0; g.hover = null;
         p.update(1 / 60, g.input, g);
         if (p.grounded) gr++;
+        dist += Math.hypot(p.x - px, p.z - pz); px = p.x; pz = p.z;
         // how many times the frame changed its mind about whether this body is
         // in the water at all: the draw, the stroke of the legs and the speed the
         // body swims at all hang off that one flag
@@ -10045,18 +10098,33 @@ What was measured before any of this was fixed, over 180 frames of walking
         const a = tail[i] - tail[i - 1], b = tail[i + 1] - tail[i];
         if (a > 1e-4 && b < -1e-4 || a < -1e-4 && b > 1e-4) rev++;
       }
+      /* The depth the body was holding at the start of the window, the depth it is
+         holding once its own stroke has run out, the depth it is holding at the end
+         of the window, and the whole band of height it ran through after that. The
+         water's drag is the only thing left acting on a body the key has come off
+         of, and it takes the speed the stroke was carrying out of it over the first
+         second or so -- so the body travels a little further down before it stops,
+         and a window asking whether a body keeps a depth is asking about the time
+         after that, not through it. The band and `dSettle` therefore start 90
+         frames in. The depth is asked of the film of the body's own column, which
+         is what "a few metres down" means to anyone looking at the lake. */
+      const rest = ys.slice(90);
+      const at = i => +(ys[i] - film).toFixed(3);
       return { y: +p.y.toFixed(3), g: p.grounded ? 1 : 0, grPct: Math.round(gr / n * 100),
         headW: p.headWater ? 1 : 0, spd: +Math.hypot(p.vx, p.vz).toFixed(3),
+        film, dist: +dist.toFixed(2),
+        d0: at(0), dSettle: at(90), d1: at(ys.length - 1),
+        band: rest.length ? +(Math.max(...rest) - Math.min(...rest)).toFixed(4) : 0,
         // the body's own eyes relative to the surface of its column: negative is
         // under the water, and it is the eyes and not the feet that decide what a
         // body standing in a lake can see over the surface of it
-        eye: +(p.eyePos() - (wt0 + 1)).toFixed(3),
+        eye: +(p.eyePos() - film).toFixed(3),
         // and how much of the body itself stands over the film at the end of the
         // window -- the complaint this answers is a whole body out of the water,
         // so it is the share of the body's own height, not a height, that has to
         // be pinned: 1.0 is a body standing on the lake with nothing of it in
-        above: +(p.y + tall - (wt0 + 1)).toFixed(3),
-        share: +((p.y + tall - (wt0 + 1)) / tall).toFixed(3),
+        above: +(p.y + tall - film).toFixed(3),
+        share: +((p.y + tall - film) / tall).toFixed(3),
         wFlips: wF,
         span: +(Math.max(...tail) - Math.min(...tail)).toFixed(4), rev };
     };
@@ -10094,7 +10162,16 @@ What was measured before any of this was fixed, over 180 frames of walking
       out.ground[form] = { across: p.size()[0], tall: +tall.toFixed(3),
         park: parkY(form, lake), law: +law.toFixed(3), column: bed,
         holdFloor: +(N.bedFloor(law, tall)).toFixed(3),
-        rest: +(N.floatLevel(wt + 1, tall, p.hoverDepth())).toFixed(3) };
+        /* the two ends of this column's hold, in the same units as the heights the
+           windows report: nothing below the first and nothing above the second is
+           water this body can be held in */
+        holdCeil: +(N.surfCeiling(wt + 1, tall)).toFixed(3),
+        /* The level that animal's own row states for it -- the depth a wild one
+           of the kind lies at, measured off this column's film. The worn body is
+           not pulled to it; it is printed because two of the claims below are
+           about a body staying *away* from it. */
+        rowLevel: +(N.floatLevel(wt + 1, tall,
+          N.hoverOf(N.CREATURE_BY_ID[N.FRUIT_BY_ID[form].creature]))).toFixed(3) };
     }
     /* And from which cell that ground is asked. A column may be scanned from the
        feet, as the floor read of a body's own collision scans it, or from
@@ -10138,12 +10215,60 @@ What was measured before any of this was fixed, over 180 frames of walking
       y: +p.y.toFixed(3), hi: +roofHi.toFixed(3), inSolid, g: p.grounded ? 1 : 0 };
     W.set(bx, face, bz, wasBlock);
     place('frogpear', bed + 3, lake); out.tall = +p.size()[1].toFixed(3); out.mid = glide(10, {}); // let go of mid-water
-    place('frogpear', wt + 0.6, lake); out.surf = glide(10, {});        // let go of at the surface
+    /* and let go of just under the surface -- wholly under it, the crown a hair
+       below the film. A body set with half of itself over the film is a body the
+       water is not asked about over its own crown, and what is being asked here is
+       about depth: a body near the surface stays near the surface, exactly as one
+       in the middle of the column does, and is not pulled down to the depth its
+       row states. */
+    place('frogpear', wt + 1 - out.tall - 0.05, lake); out.surf = glide(10, {});
     place('frogpear', bed + 0.0001, lake); out.fromBed = glide(12, {}); // put on the bottom, left
     place('frogpear', bed + 3, lake);
     out.dive = glide(4, { down: true });                               // dived to the bottom...
     out.diveLet = glide(8, {});                                         // ...and the key came off
+    /* The thing that was asked for, in the words it was asked in: take a body
+       down a few metres, let go of the key, and it keeps those few metres -- and
+       it goes on forward at the depth it was taken to, rather than climbing back
+       to a level written on its own record. The first window is the taking down,
+       the second is the letting go, the third is going forward with nothing
+       asked of the depth at all. The ground under the body at the end of that
+       leg comes back beside it because a body that has swum into shallower
+       water is a body whose own floor has risen, and a depth held above a rising
+       floor is not the same claim as a depth held. */
+    place('frogpear', bed + 6, lake);
+    out.swam = glide(3, { down: true });
+    out.kept = glide(8, {});
+    /* A leg to swim: the depth is only held if the ground under it stays below it,
+       and this column sits in a trough -- the ground a metre to one side of it is
+       higher than the ground at its middle. A body swimming into that lip is a body
+       a rising floor carries, which is a different claim and is measured by the step
+       called `attitude`. So the leg is aimed down the trough: of the sixteen
+       headings, the first whose ground stays two metres under the depth this body is
+       holding for the whole of the distance the leg will cover. A four second leg at
+       the rate this body swims covers eleven metres, so the probe runs fourteen --
+       a heading probed for less than the leg it is chosen for picks a shore the leg
+       then walks into, and the floor reported at the end of it is the floor of a
+       body standing in the shallows, not the floor of a depth held. */
+    const legMetres = Math.ceil(4 * (p.moveDef.swimSpeed || 3)) + 3;
+    let heading = null;
+    for (let a = 0; a < 16 && heading === null; a++) {
+      const yaw = a / 16 * Math.PI * 2;
+      let deep = true;
+      for (let s = 1; s <= legMetres; s++) {
+        const grd = N.groundUnder(W, p.x + Math.sin(yaw) * s, p.z + Math.cos(yaw) * s,
+          p.size()[0] / 2, p.y);
+        if (grd > p.y - 2) { deep = false; break; }
+      }
+      if (deep) heading = yaw;
+    }
+    if (heading === null) return Object.assign(out, { error: 'no stretch of water this deep to swim down' });
+    p.yaw = heading; p.faceYaw = heading;
+    out.heading = +heading.toFixed(3);
+    out.onward = glide(4, { fwd: true });
+    out.onwardFloor = { bed: +N.groundUnder(W, p.x, p.z, p.size()[0] / 2, p.y).toFixed(3),
+      floor: +N.bedFloor(N.groundUnder(W, p.x, p.z, p.size()[0] / 2, p.y), p.size()[1]).toFixed(3) };
     place('frogpear', bed + 3, lake); out.up = glide(4, { up: true });
+    out.upLet = glide(6, {});                                           // ... and let go at the top
     place(null, bed + 3, lake); out.human = glide(10, {});
     /* the same body let go of at the surface has to be given the time its own
        column asks for: a body that breathes air comes down at 0.82 m/s here, and
@@ -10158,20 +10283,31 @@ What was measured before any of this was fixed, over 180 frames of walking
        in both of the bodies its record makes. This is the one the old field got
        wrong: it breathes air, so the water let go of it and it stood on the bed
        of an ocean, while the row it comes from says it is the fastest swimmer in
-       the valley and lies at the top of the water. Its `hover` is negative, so
-       the level the water holds it at sits above the film: the crown of a body
-       that has stopped moving stands out of the water and its eyes with it, and
-       that is how a body that has to breathe can come to rest in the open sea
-       without drowning. */
+       the valley and lies at the top of the water. Its `hover` is negative -- an
+       animal that rides the film with its head out rather than hanging under it --
+       and that is a statement about the animal, which is asked of the animal's row
+       below; the body worn from its fruit is asked the same thing the frog body is
+       asked here, and it keeps the depth it was put at. */
     const TROW = N.CREATURE_BY_ID[N.FRUIT_BY_ID.turtlemelon.creature];
     out.hoverTurtle = TROW.hover;
     place('turtlemelon', bed + 3, lake);
     out.turtleTall = +p.size()[1].toFixed(3); out.turtleMid = glide(10, {});
-    place('turtlemelon', wt + 0.6, lake); out.turtleSurf = glide(10, {});
+    place('turtlemelon', wt + 1 - out.turtleTall - 0.05, lake); out.turtleSurf = glide(10, {});
     place('turtlemelon', out.ground.turtlemelon.park + 0.0001, lake); out.turtleFromBed = glide(12, {});
     place('turtlemelon', bed + 3, lake);
     out.turtleDive = glide(4, { down: true });                            // asked to go down...
     out.turtleLetGo = glide(8, {});                                      // ...and the key came off
+    /* The same claim asked of the other animal that was named: this body's row
+       puts it at the top of the water with its head out, and it is a lung, so a
+       spring back to that level is exactly the one law that would read to the
+       player as this animal being unable to stay down. It keeps the depth it was
+       taken to; what brings it back to the film is its own stroke, and what
+       bounds how long it may keep that depth is the breath its row states, which
+       is a clock and not a force. */
+    place('turtlemelon', bed + 6, lake);
+    out.turtleSwam = glide(3, { down: true });
+    out.turtleKept = glide(8, {});
+    out.turtleAir = +p.air.toFixed(1);
     place('turtlemelon', shelf.top + 0.0001, shelf); out.turtleShelf = glide(3, {});
     /* The two ends of the water's hold, asked of each animal's own record: the
        level a body comes to rest at has to stay under the height a body that
@@ -10189,9 +10325,13 @@ What was measured before any of this was fixed, over 180 frames of walking
         topUnder: +(N.surfCeiling(wt + 1, tall) - (wt + 1)).toFixed(3),
         restsBelowItsTop: N.floatLevel(wt + 1, tall, hov) < N.surfCeiling(wt + 1, tall) };
     }
-    /* the valley's own frog, in the same column, as the other half of the claim:
-       the level the water holds the body you wear at is the level it holds a
-       wild one at, not a level this file invented for the player */
+    /* the valley's own frog, put in this column to start with: not as the other
+       half of a claim that the two bodies share a depth -- they do not, and the
+       water is what makes that true, holding each of them at whatever depth it has
+       been left at at -- but because the herd is where an animal's own `hover` is
+       acted on, and the band it produces has to lie inside the two ends the same
+       water states for that animal's own body, asked at every frame in the column
+       that animal is standing in at that frame */
     const wild = g.creatures.filter(c => c.sp.id === 'frog')[0];
     if (!wild) return Object.assign(out, { error: 'no frog in the roster' });
     // and nobody for it to run from: a frightened frog leaves the water
@@ -10219,28 +10359,65 @@ What was measured before any of this was fixed, over 180 frames of walking
     /* Two minutes and more, not ten seconds: a frog's dip runs on a cycle of its
        own, and that cycle is between forty seconds and two minutes long, so a
        short window catches one moment of it and calls it the whole of it. Over a
-       whole cycle a frog holds a band of depths; the shallow end of that band is
-       where the water holds a body that stops moving, which is what the body you
-       wear does the moment it stops kicking. */
-    let wLo = -1e9, wHi = 1e9;
-    for (let i = 0; i < 8400; i++) {
-      wild.tx = wild.x; wild.tz = wild.z;        // and no notion of walking off the column
-      wild.update(1 / 60, p, W, g);
-      if (wild.y > wLo) wLo = wild.y; if (wild.y < wHi) wHi = wild.y;
-    }
-    out.wild = { y: +wild.y.toFixed(3), x: +wild.x.toFixed(2), z: +wild.z.toFixed(2),
-      shallow: +wLo.toFixed(3), deep: +wHi.toFixed(3) };
+       whole cycle a frog holds a band of depths -- the shallow end is the depth
+       its own row sets and the deep end is that depth plus the dive it rides out
+       to -- and both ends of that band are the animal's own.
+       The band is read against the water's ends asked of the animal, frame by
+       frame, in the column the animal is standing in at that frame: the ground its
+       own feet would find, its own height, the film over it. It is not read
+       against the ends of the body worn from that animal's fruit, because those
+       are asked of a different box -- a 1.5 m body and a 0.43 m one in one lake
+       reach different grounds and different ceilings, and the herd's frog was
+       never standing in the worn body's box. What the animal drifts to over two
+       minutes is a second column, and an animal that has swum into shallower water
+       has different ends, so a band pinned against one column's numbers is a band
+       that fails for the wrong reason. The pair of ends is still the law: `held`
+       says the water is carrying this body at this frame, and at every one of
+       those frames the body is asked to lie between them. */
+    const bandOf = (c) => {
+      let lo = 1e9, hi = -1e9, held = 0, overCeil = 0, underFloor = 0, deep = null, shallow = null;
+      for (let i = 0; i < 8400; i++) {
+        c.tx = c.x; c.tz = c.z;        // and no notion of walking off the column
+        c.update(1 / 60, p, W, g);
+        if (!c.held) continue;
+        held++;
+        if (c.y > hi) { hi = c.y; shallow = { y: +c.y.toFixed(3), at: [+c.x.toFixed(1), +c.z.toFixed(1)] }; }
+        if (c.y < lo) { lo = c.y; deep = { y: +c.y.toFixed(3), at: [+c.x.toFixed(1), +c.z.toFixed(1)] }; }
+        const cx = Math.floor(c.x), cz = Math.floor(c.z);
+        const wt = N.waterTop(W, cx, cz, W.h - 1);
+        const gy = N.standY(W, cx, cz, c.y);
+        const fl = N.floatLevel(wt + 1, c.tall, N.hoverOf(c.sp));
+        // the animal's own floor, asked as `Creature.update` asks it: the ground's
+        // half-body above it where the animal's own level is above that ground,
+        // and the 5 cm its feet ask for where it is not
+        const bed = fl > gy ? N.bedFloor(gy, c.tall) : gy + 0.05;
+        if (c.y > N.surfCeiling(wt + 1, c.tall) + 1e-6) overCeil++;
+        if (c.y < bed - 1e-6) underFloor++;
+      }
+      return { y: +c.y.toFixed(3), x: +c.x.toFixed(2), z: +c.z.toFixed(2), tall: +c.tall.toFixed(3),
+        shallow: +hi.toFixed(3), deep: +lo.toFixed(3), shallowAt: shallow && shallow.at,
+        deepAt: deep && deep.at, heldFrames: held, overCeil, underFloor };
+    };
+    const wildBand = bandOf(wild);
+    out.wild = wildBand;
     if (g.herdCentres) g.herdCentres.frog = herdWas;
     Object.assign(wild, keep);
-    /* The same claim asked of the valley's own turtle, in this same column: the
-       level the water holds the body you wear at is the level it holds a wild one
-       of the same record at. This pair used to be broken in the other direction
-       -- the animal out in the sea was held up by the water and the body worn
-       from its fruit was not, in the same water, off the same row. And the two
-       bodies take their height from different places: an animal's comes off its
-       model (`MODEL_H` at the row's scale) and a worn body's comes off the form's
-       box, so the two levels agreeing is not a free pass -- it is the claim that
-       those are one height, which is what the water's hold is asked of. */
+    /* The same rig asked of the valley's own turtle, in this same column. What is
+       *not* claimed here is the thing this window used to claim: that the level the
+       water holds the body you wear at is the level it holds a wild one of the same
+       record at. Under the law as it now stands the two bodies have no one level --
+       the animal picks its band out of its own row, the body worn from its fruit
+       keeps the depth it was put at -- and the two bands were never comparable in
+       the first place, because they are asked of different boxes: an animal's height
+       comes off its model (`MODEL_H` at the row's scale) and a worn body's comes off
+       the form's box, and a 1.5 m body and a 0.45 m one at one address reach
+       different grounds and different ceilings.
+       What still has to be one number is the height those ends are asked of, and
+       that is what this window is for: the animal's own height and the height of the
+       body worn from it are one height, model against box. And the animal's band,
+       read frame by frame against the ends of the column it is standing in at that
+       frame, has to stay inside them: a row may send its animal anywhere its own
+       body can lie, and no further. */
     const wildT = g.creatures.filter(c => c.sp.id === 'turtle')[0];
     if (!wildT) out.wildTurtle = { error: 'no turtle in the roster' };
     else {
@@ -10254,17 +10431,11 @@ What was measured before any of this was fixed, over 180 frames of walking
       wildT.x = lake.x; wildT.z = lake.z; wildT.y = bed + 0.05; wildT.vy = 0;
       wildT.homeX = wildT.x; wildT.homeZ = wildT.z; wildT.state = 'wander';
       wildT.sleeping = false; wildT.fright = 0; wildT.pause = 9999; wildT.orbit = null;
-      /* the same two minutes the frog's band is read over: an animal's dip runs
-         on a cycle of its own, and a short window catches one moment of it */
-      let tLo = -1e9, tHi = 1e9;
-      for (let i = 0; i < 8400; i++) {
-        wildT.tx = wildT.x; wildT.tz = wildT.z;
-        wildT.update(1 / 60, p, W, g);
-        if (wildT.y > tLo) tLo = wildT.y; if (wildT.y < tHi) tHi = wildT.y;
-      }
-      out.wildTurtle = { y: +wildT.y.toFixed(3), x: +wildT.x.toFixed(2), z: +wildT.z.toFixed(2),
-        tall: +wildT.tall.toFixed(3), shallow: +tLo.toFixed(3), deep: +tHi.toFixed(3),
-        held: wildT.held, inWater: wildT.inWater ? 1 : 0 };
+      /* the same two minutes the frog's band is read over, and the same reading:
+         an animal's dip runs on a cycle of its own, and a short window catches one
+         moment of it; the ends are asked of the column the animal is in */
+      out.wildTurtle = Object.assign(bandOf(wildT),
+        { held: wildT.held, inWater: wildT.inWater ? 1 : 0 });
       if (g.herdCentres) g.herdCentres.turtle = herdT;
       Object.assign(wildT, keepT);
     }
@@ -10294,21 +10465,60 @@ What was measured before any of this was fixed, over 180 frames of walking
      water animal hangs deeper by exactly its own size and no new number is needed. */
   check('the body worn from a water-breathing animal, let go of mid-water, floats: it does not settle on the bottom',
     !buoy.error && buoy.mid.g === 0 && buoy.mid.y > buoy.bed + 1 && buoy.mid.headW === 1, buoy);
-  check('and it hangs under the surface instead of floating on it: its own height down, plus ' +
-        'the depth its own record says a body of that kind hangs at, and its eyes are in the water',
-    !buoy.error && Math.abs(buoy.mid.y - (buoy.wt + 1 - buoy.tall - buoy.hover)) < 0.05 &&
+  check('and it keeps the height it was let go of: the window ends at the height it started at, its head under it, its eyes in the water',
+    !buoy.error && Math.abs(buoy.mid.d1 - buoy.mid.d0) < 0.02 &&
     buoy.mid.headW === 1 && buoy.mid.eye < -0.2, buoy);
   check('and it comes to rest there: the height does not swing and it never changes its mind',
     !buoy.error && buoy.mid.span < 0.01 && buoy.mid.rev === 0 && buoy.mid.spd < 0.01, buoy);
-  check('the water holds the body you wear at the level a wild frog floats at ' +
-        'when its dip cycle brings it up',
-    !buoy.error && Math.abs(buoy.mid.y - buoy.wild.shallow) < 0.2, buoy);
-  check('and that wild frog holds a band of depths over its cycle, not one layer',
-    !buoy.error && buoy.wild.shallow - buoy.wild.deep > 0.3, buoy);
-  check('a body let go of at the surface stays at the surface instead of sinking through the lake',
-    !buoy.error && buoy.surf.g === 0 && Math.abs(buoy.surf.y - buoy.wild.shallow) < 0.2, buoy);
-  check('a body put on the lakebed and left alone gets off it',
-    !buoy.error && buoy.fromBed.g === 0 && Math.abs(buoy.fromBed.y - buoy.wild.shallow) < 0.2, buoy);
+  /* The thing that was asked for, asked plainly. A body taken down a few metres
+     keeps those few metres. It is not pulled back up -- there is nothing in the
+     water to pull it up -- and it does not go on down either: the stroke stops, the
+     drag takes the speed the stroke was carrying out of the body, and that coast is
+     the only further depth the window contains. After the coast the depth does not
+     move for the rest of the window. The floor under the body at the end of the
+     next leg is reported beside it so that this claim cannot be bought by the
+     ground coming up under the body instead. */
+  check('taken down a few metres and let go of, the body keeps them: it is never pulled back up, the only further depth it takes is the coast its own stroke was already carrying, and after that the depth does not move for the rest of the window',
+    !buoy.error && buoy.swam.d1 < buoy.swam.d0 - 1 &&
+    buoy.kept.d1 <= buoy.swam.d1 && buoy.kept.d1 >= buoy.swam.d1 - 0.5 &&
+    Math.abs(buoy.kept.d1 - buoy.kept.dSettle) < 0.02 && buoy.kept.band < 0.02 &&
+    buoy.kept.g === 0 && buoy.kept.rev === 0, buoy);
+  check('and it swims on forward at the depth it was taken to: over the whole leg it covers metres of ground while its depth under the film moves by less than it was asked to hold',
+    !buoy.error && buoy.onward.dist > 5 &&
+    Math.abs(buoy.onward.d1 - buoy.kept.d1) < 0.05 && buoy.onward.band < 0.05 &&
+    buoy.onward.g === 0, buoy);
+  check('and the floor is nowhere near it: the ground under that body at the end of the leg is metres below its feet, so the depth it held was held and not propped up',
+    !buoy.error && buoy.onwardFloor.floor < buoy.onward.y - 1 &&
+    buoy.onward.y > buoy.onwardFloor.floor, buoy);
+  /* A wild frog is not held at a depth by the water: it chooses one. Its row's
+     `hover` is that choice and its dive cycle runs a band out of it, which is a
+     fact about the animal. The water's part is only ever the two ends, and they
+     are asked of the body and the column at the frame being looked at -- which is
+     why the band is read against them frame by frame instead of against the
+     numbers of the window that measures the body you wear: the herd's frog has a
+     different box from that body, and over two minutes it drifts to a different
+     column. */
+  check('a wild frog holds a band of depths over its cycle, not one layer, and at every frame the water is carrying it that frame it lies between the two ends that water gives a body of its own shape in the column it is standing in',
+    !buoy.error && buoy.wild.heldFrames > 600 &&
+    buoy.wild.shallow - buoy.wild.deep > 0.3 &&
+    buoy.wild.overCeil === 0 && buoy.wild.underFloor === 0, buoy.wild);
+  /* A body set wholly under the film, a hair of its crown under it, and let go of:
+     it stays a hair under. It is not pulled down through the lake to the depth its
+     row states -- that was the old law. The window used to be built the other way
+     round, with the body straddling the surface and the claim being that its head
+     came out; under this law a head only comes out of water a body was put into
+     where the water reaches over its crown, and how a body gets its head out is the
+     up key (asked below) or being put at the film in the first place, both of which
+     are asked where they belong. What is asked here is the sentence that was asked
+     for, at the shallow end of the column. */
+  check('a body let go of wholly under the film stays at that depth: it is not pulled down through the lake to the depth its row states, and it is not pulled up to the film either',
+    !buoy.error && buoy.surf.g === 0 && Math.abs(buoy.surf.d1 - buoy.surf.d0) < 0.02 &&
+    buoy.surf.band < 0.02 && buoy.surf.headW === 1 &&
+    buoy.surf.y > buoy.ground.frogpear.rowLevel + 0.5, buoy.surf);
+  check('a body put on the lakebed is carried to the floor of the water\'s hold and stays there, on no feet',
+    !buoy.error && buoy.fromBed.g === 0 &&
+    Math.abs(buoy.fromBed.y - buoy.ground.frogpear.holdFloor) <= 0.05 &&
+    buoy.fromBed.span < 0.01, buoy);
   /* The ground a body of this shape stands on, asked two ways: this file's own
      scan over the box, and the ground the game reads for the water's hold and the
      floor of a dive. They are one number for both bodies here, and that is the
@@ -10337,9 +10547,10 @@ What was measured before any of this was fixed, over 180 frames of walking
     && Math.abs(buoy.roof.y - buoy.roof.holdFeet) <= 0.01
     && buoy.roof.hi < buoy.roof.face && buoy.roof.inSolid === 0, buoy.roof);
   check('a body the water holds and asks to go down stops a small gap above the lakebed instead of on it, ' +
-        'and the water takes it back when it stops asking',
+        'and stays at that gap when it stops asking',
     !buoy.error && buoy.dive.g === 0 && Math.abs(buoy.dive.y - buoy.ground.frogpear.holdFloor) <= 0.05
-    && buoy.diveLet.g === 0 && Math.abs(buoy.diveLet.y - buoy.wild.shallow) < 0.25, buoy);
+    && buoy.diveLet.g === 0 && Math.abs(buoy.diveLet.y - buoy.ground.frogpear.holdFloor) <= 0.05 &&
+    buoy.diveLet.span < 0.01, buoy);
   /* The water's hold has a top, and it is not the surface: a body the water is
      holding cannot kick itself out of the middle of a lake. It leaves the way a
      body leaves water -- into the shallows where the bottom is, and up off its own
@@ -10349,16 +10560,12 @@ What was measured before any of this was fixed, over 180 frames of walking
      took the stroke off its legs and put it back on again: seen from the bank, its
      feet flickered.
      The ceiling is the surface less half the body, which is not the same thing as
-     the level the water holds a resting body at. Those two were one number only
-     because that level was measured to the feet and happened to land just under
-     the surface; now a body hangs its own height down, and a ceiling taken from
-     the level would mean a frog holding the up key could never bring its head
-     to the top of the water at all. So the level is where a body that stops moving
-     comes to rest, the ceiling is how high a body that keeps asking can get, and
-     between the two a body swims: the key held for 4 s over a column 7 m deep
-     leaves the feet 25 cm under the film, half of a 50 cm body over the water and
-     the eyes 17 cm over it, and the moment the key comes off the water takes the
-     body back down to the level it holds it at. Half the body because a body that
+     the depth a body holds. A body the water is holding keeps whatever depth it has
+     taken, and the ceiling is only how high a body that keeps asking can get: the
+     key held for 4 s over a column 7 m deep leaves the feet 25 cm under the film,
+     half of a 50 cm body over the water and the eyes 17 cm over it, and when the
+     key comes off the body stays exactly there -- it is not taken back down, and it
+     is not taken up through the film either. Half the body because a body that
      has worked half of itself out of the water is no longer being held up by
      water at all -- it is standing on a surface that is not there. The old
      ceiling, the surface less a hair, put the feet at 14.98 against a surface of
@@ -10373,6 +10580,14 @@ What was measured before any of this was fixed, over 180 frames of walking
     !buoy.error && buoy.up.headW === 0 && buoy.up.g === 0 && buoy.up.eye > 0.1 &&
     Math.abs(buoy.up.y - (buoy.wt + 1 - buoy.tall * 0.5)) < 0.05 &&
     buoy.up.share <= 0.52 && buoy.up.share > 0.4, buoy);
+  /* The top of the hold is a ceiling, not a return. A body that has climbed to it
+     and is left alone there stays there: half of it over the film, the film itself
+     never crossed, and nothing taking it back down. */
+  check('and let go of at the top of its own climb it stays at the top of it: the water neither takes it back down nor pushes it through the film',
+    !buoy.error && buoy.upLet.g === 0 &&
+    Math.abs(buoy.upLet.d1 - buoy.up.d1) < 0.02 && buoy.upLet.band < 0.02 &&
+    Math.abs(buoy.upLet.y - (buoy.wt + 1 - buoy.tall * 0.5)) < 0.05 &&
+    buoy.upLet.wFlips === 0, buoy);
   /* and the flag the draw hangs off does not relay. `inWater` used to be put to
      the cells -- is the cell at the body's feet liquid, is the one at its middle
      -- and a body bobbing across its own surface answered that a different way
@@ -10399,27 +10614,49 @@ What was measured before any of this was fixed, over 180 frames of walking
   /* The second body built for water, in the same column: the sea turtle's. This
      is the one the breath used to decide, and deciding it by the breath made an
      animal whose own row puts it at the top of the sea stand on the floor of it.
-     Its row's `hover` is negative, so the level the water holds it at is above
-     the film rather than under it -- the crown of a body that has stopped moving
-     stands out of the water and its eyes with it. That is not a favour: this body
-     has to breathe, and a hold that parked its head under the surface would be a
-     way of drowning it. */
-  check('the body worn from the sea turtle is held up in the same water, at the level its own row states: its own height down, plus the depth its row asks for, and that depth is negative',
-    !buoy.error && buoy.turtleMid.g === 0 &&
-    Math.abs(buoy.turtleMid.y - (buoy.wt + 1 - buoy.turtleTall - buoy.hoverTurtle)) < 0.05 &&
-    buoy.hoverTurtle < 0, buoy);
-  check('and it comes to rest with its head out of the water, still, and never changing its mind about the water: it is a lung lying at the top of it, not a body hanging in it',
-    !buoy.error && buoy.turtleMid.headW === 0 && buoy.turtleMid.eye > 0.05 &&
-    buoy.turtleMid.share < 0.5 && buoy.turtleMid.span < 0.01 && buoy.turtleMid.rev === 0 &&
-    buoy.turtleMid.wFlips === 0 && buoy.turtleMid.spd < 0.01, buoy);
-  check('a body the water holds stays at that level when it was let go of at the surface, and gets off the bottom when it was put on it',
+     Its row's `hover` is negative -- the animal lies at the film with its head
+     out, because it is a lung -- and under the law that pulled every body back to
+     the level its row states, that number was also the depth the *worn* body was
+     dragged to whenever it stopped kicking: the most visible case of the whole
+     defect, an animal that cannot be asked to stay down. The row's `hover` is
+     still what an animal of this kind lies at, and the bound on it -- it may not
+     sit above the ceiling its own body can reach -- is asked of the row, where it
+     belongs. What the worn body is asked here is the same thing the frog body is
+     asked: the depth it was taken to is the depth it keeps, and what brings it
+     back to the film is its own stroke, with the breath its row states as the
+     clock that bounds the keeping. */
+  check('the body worn from the sea turtle is held up in the same water and not left to its breath: let go of mid-water it never reaches the bottom, and it keeps the height it was let go of',
+    !buoy.error && buoy.turtleMid.g === 0 && buoy.turtleMid.y > buoy.bed + 1 &&
+    Math.abs(buoy.turtleMid.d1 - buoy.turtleMid.d0) < 0.02, buoy);
+  check('and it comes to rest still, never changing its mind about the water, with its head under and its own breath running down while it stays',
+    !buoy.error && buoy.turtleMid.headW === 1 && buoy.turtleMid.span < 0.01 &&
+    buoy.turtleMid.rev === 0 && buoy.turtleMid.wFlips === 0 &&
+    buoy.turtleMid.spd < 0.01 && buoy.turtleAir < 240, buoy);
+  check('taken down a few metres and let go of, this body keeps them too: the only further depth it takes is the coast its own stroke was already carrying, and after that it stays metres below the level its own row states instead of climbing back to the film',
+    !buoy.error && buoy.turtleSwam.d1 < buoy.turtleSwam.d0 - 1 &&
+    buoy.turtleKept.d1 <= buoy.turtleSwam.d1 &&
+    buoy.turtleKept.d1 >= buoy.turtleSwam.d1 - 0.5 &&
+    Math.abs(buoy.turtleKept.d1 - buoy.turtleKept.dSettle) < 0.02 &&
+    buoy.turtleKept.band < 0.02 && buoy.turtleKept.g === 0 &&
+    buoy.turtleKept.y < buoy.ground.turtlemelon.rowLevel - 1, buoy);
+  /* The same two ends asked of this body: wholly under the film it stays there with
+     its head in, and set down on the seabed the water carries it to the floor of its
+     own hold and holds it there on no feet. The head-out case for this body -- the
+     one its own row puts it at, at the film -- is asked of that level in the sea
+     step, where it belongs. */
+  check('a body let go of wholly under the film stays there, head in, and a body put on the seabed is carried to the floor of the water\'s hold and stays there',
     !buoy.error && buoy.turtleSurf.g === 0 &&
-    Math.abs(buoy.turtleSurf.y - buoy.ground.turtlemelon.rest) < 0.05 &&
+    Math.abs(buoy.turtleSurf.d1 - buoy.turtleSurf.d0) < 0.02 &&
+    buoy.turtleSurf.band < 0.02 && buoy.turtleSurf.headW === 1 &&
+    buoy.turtleSurf.eye < -0.05 &&
     buoy.turtleFromBed.g === 0 &&
-    Math.abs(buoy.turtleFromBed.y - buoy.ground.turtlemelon.rest) < 0.2, buoy);
+    Math.abs(buoy.turtleFromBed.y - buoy.ground.turtlemelon.holdFloor) <= 0.05 &&
+    buoy.turtleFromBed.span < 0.01, buoy);
   /* Going down is the thing that has to be asked for. This is the shape the user
      asked for in so many words: the animal does not settle to the bottom on its
-     own; it is the player who takes it down, and the water takes it back.
+     own; it is the player who takes it down -- and, now, it is the player who
+     brings it back, because the water has no opinion about the depth between its
+     two ends.
      A body this wide has one floor, not two. The ground its own box stands on at
      this column is the lip of the trough, **7.0 m**, a metre above the lakebed at
      the middle of the same column, and the water's hold and the world's collision
@@ -10429,25 +10666,26 @@ What was measured before any of this was fixed, over 180 frames of walking
      The narrow body reaches the middle of the trough with its box, so its ground
      is the lakebed, and both bodies are then obeying one law rather than being
      settled by whichever of two readings happened to answer first. */
-  check('it goes down only while the down key is held -- down off the level the water holds it at, head under with it, stopping the same gap above the ground its own box reaches that a narrow body keeps above its own -- and the water takes it back up to that level, head out, the moment the key comes off',
-    !buoy.error && buoy.turtleDive.y < buoy.ground.turtlemelon.rest - 1 &&
+  check('it goes down only while the down key is held -- down past any depth its row states, head under with it, stopping the same gap above the ground its own box reaches that a narrow body keeps above its own -- and it stays at that gap when the key comes off',
+    !buoy.error && buoy.turtleDive.y < buoy.ground.turtlemelon.rowLevel - 1 &&
     Math.abs(buoy.turtleDive.y - buoy.ground.turtlemelon.holdFloor) <= 0.05 &&
     buoy.turtleDive.g === 0 &&
     buoy.turtleDive.headW === 1 &&
     buoy.turtleLetGo.g === 0 &&
-    Math.abs(buoy.turtleLetGo.y - buoy.ground.turtlemelon.rest) < 0.2 &&
-    buoy.turtleLetGo.headW === 0, buoy);
-  check('the water holds the turtle body you wear at the level a wild turtle of the same record holds in the same column, and the two bodies are one height',
+    Math.abs(buoy.turtleLetGo.y - buoy.ground.turtlemelon.holdFloor) <= 0.05 &&
+    buoy.turtleLetGo.span < 0.01 && buoy.turtleLetGo.headW === 1, buoy);
+  check('a wild turtle of the same record holds a band of depths and never leaves the ends of the column it is standing in, and the two bodies are one height: the height those ends are asked of is the same for the animal and for the body worn from it',
     !buoy.error && !buoy.wildTurtle.error &&
-    Math.abs(buoy.turtleMid.y - buoy.wildTurtle.shallow) < 0.2 &&
     buoy.wildTurtle.tall === buoy.turtleTall &&
-    buoy.wildTurtle.shallow - buoy.wildTurtle.deep > 0.3, buoy.wildTurtle);
+    buoy.wildTurtle.heldFrames > 600 &&
+    buoy.wildTurtle.shallow - buoy.wildTurtle.deep > 0.3 &&
+    buoy.wildTurtle.overCeil === 0 && buoy.wildTurtle.underFloor === 0, buoy.wildTurtle);
   /* The two ends of the water's hold are one pair, and an animal's row is allowed
      to put its body at the film but not past the reach of its own stroke: a row
-     that rested an animal higher than the highest point its hold can carry it to
+     that set an animal higher than the highest point its hold can carry it to
      would describe an animal lying above its own wings. Nothing else in the build
      would notice. */
-  check('every animal row lies at a level under the top its own hold can carry it to: the level a body rests at and the height it can climb to are one pair, in that order',
+  check('every animal row lies at a level under the top its own hold can carry it to: the level that animal\'s row sets for it and the height its body can climb to are one pair, in that order',
     !buoy.error && Object.values(buoy.ends).every(e => e.restsBelowItsTop), buoy.ends);
   check('a one-block shore shelf is still a bottom to stand on, for every body here, and none of them shivers on it',
     !buoy.error && buoy.frogShelf.grPct === 100 && buoy.humanShelf.grPct === 100 &&
@@ -13907,7 +14145,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const measure = (secs, inp, faceZ) => {
       const n = Math.round(secs * 60);
       let walked = 0, px = p.x, pz = p.z, gnd = 0, air = 0, arcs = [], prevVy = 0, wet = 0;
-      let dryMax = 0, airMin = 1e9, climb = 0, top = -9, y0 = p.y, hi = y0, inWorld = 0, face = 1e9;
+      let dryMax = 0, airMin = 1e9, climb = 0, top = -9, y0 = p.y, hi = y0, lo = y0, inWorld = 0, face = 1e9;
       let surfMax = -9, dryGroundFrames = 0;
       for (let i = 0; i < n; i++) {
         p.update(1 / 60, inp, g); g.time += 1 / 60;
@@ -13919,7 +14157,7 @@ What was measured before any of this was fixed, over 180 frames of walking
         if (p.vy > 0.5 && prevVy <= 0.05) arcs.push(+p.vy.toFixed(3));
         prevVy = p.vy;
         dryMax = Math.max(dryMax, p.dry); airMin = Math.min(airMin, p.air);
-        hi = Math.max(hi, p.y);
+        hi = Math.max(hi, p.y); lo = Math.min(lo, p.y);
         if (faceZ !== undefined) face = Math.min(face, Math.abs(p.z - faceZ));
         const surf = N.standY(W, Math.floor(p.x), Math.floor(p.z), p.y);
         if (surf > surfMax) surfMax = surf;
@@ -13928,6 +14166,10 @@ What was measured before any of this was fixed, over 180 frames of walking
       }
       return { speed: +(walked / (n / 60)).toFixed(2), onFoot: gnd, airborne: air, wet,
         insideSolidFrames: inWorld, arcs, climbFrames: climb, groundGained: +top.toFixed(3),
+        /* the whole band of height this window ran through: a body the water is
+           holding keeps the depth it was left at, and "keeps" is a claim about the
+           band over the window, not about the last frame of it */
+        yBand: +(hi - lo).toFixed(3), yEnd: +p.y.toFixed(3),
         surfMax, dryGroundFrames,
         risen: +(hi - y0).toFixed(3), dryMax: +dryMax.toFixed(1), airMin: +airMin.toFixed(1),
         /* how far the nose of this body ended from the face it was driven at: the
@@ -14128,20 +14370,26 @@ What was measured before any of this was fixed, over 180 frames of walking
       const z = Math.floor(C.cz + Math.sin(th) * (wr + 30)) + 0.5;
       const s = W.liquidSurfaceAt(Math.floor(x), Math.floor(z));
       /* open water, not a shore shelf: the water has to hold a body up here,
-         which is the same two-block question the world asks elsewhere */
-      if (s >= N.WORLD.sea && N.groundY(W, Math.floor(x), Math.floor(z), s) <= s - 2) lane = { x, z, y: s - 0.6 };
+         which is the same two-block question the world asks elsewhere. Six metres
+         of it: the windows below let a body go four metres under the film and ask
+         whether it is still four metres under it at the end of the window, and a
+         column that shallow has a floor in it. */
+      if (s >= N.WORLD.sea && N.groundY(W, Math.floor(x), Math.floor(z), s) <= s - 6)
+        lane = { x, z, y: s - 0.6 };
     }
     if (!lane) { back(); return out; }
     out.seaAt = [lane.x, lane.y, lane.z];
     /* What each body built for this water does when it is simply let go of in it,
-       and what it takes to get it under. The shape of this is what the user asked
-       about: the animal does not settle to the bottom of the sea on its own -- the
-       water holds it at the level its own row states -- and going down is a thing
-       the player asks for, which the water takes back the moment it stops asking.
-       The frog is measured in the same windows because it is the case that already
-       worked: a change that moved the frog's numbers too would be a change to a
-       law nobody was asking about. */
+       and what it takes to get it under. The shape of this is what was asked for:
+       the animal does not settle to the bottom of its own accord, and it is not
+       pulled back up to a level written on its record either -- it keeps the depth
+       it is at. Going down is a thing the player asks for, and the depth the key
+       reached is the depth the body then holds with the key off. The frog is
+       measured in the same windows because it is the case that already worked: a
+       change that moved the frog's numbers too would be a change to a law nobody
+       was asking about. */
     for (const form of [FORM, FROGFORM]) {
+      const FROW = form === FORM ? ROW : FROGROW;
       const r = {};
       put(form, lane.x, lane.y, lane.z, Math.PI / 2);
       r.tall = +p.size()[1].toFixed(3);
@@ -14150,9 +14398,11 @@ What was measured before any of this was fixed, over 180 frames of walking
       r.bedTop = N.groundY(W, Math.floor(p.x), Math.floor(p.z), p.y);
       r.film = W.liquidSurfaceAt(Math.floor(p.x), Math.floor(p.z));
       Object.assign(r, run);
-      /* let go of, nobody on any key, 60 cm under the film: where this body comes
-         to rest, how far its feet hang under the film from there, and whether it
-         can breathe from there. `clearOfTheBed` is the whole of the complaint. */
+      /* let go of, nobody on any key, 60 cm under the film: whether the depth it
+         was let go of is the depth it is still at, how far its feet hang under the
+         film from there, and whether it can breathe from there. `restBedGap` is the
+         whole of the complaint that was made: a body the water was supposed to hold
+         was found standing on the floor of it. */
       put(form, lane.x, lane.y, lane.z, Math.PI / 2);
       r.atRest = measure(6, {});
       r.restY = +p.y.toFixed(3);
@@ -14160,12 +14410,45 @@ What was measured before any of this was fixed, over 180 frames of walking
       r.restHeadOut = !p.headWater;
       r.restGrounded = p.grounded ? 1 : 0;
       r.restBedGap = +(p.y - N.groundY(W, Math.floor(p.x), Math.floor(p.z), p.y)).toFixed(2);
-      /* asked down: the dive key held for 4 s, then taken off */
+      /* the same at a depth the row's own level is nowhere near: four metres under
+         that film, let go of with nothing at all asked of the depth */
+      const film = W.liquidSurfaceAt(Math.floor(lane.x), Math.floor(lane.z));
+      const deepAt = film - 4;
+      r.laneFilm = film;
+      r.laneBed = +N.groundY(W, Math.floor(lane.x), Math.floor(lane.z), film).toFixed(3);
+      r.deepPut = +deepAt.toFixed(3);
+      r.rowHover = N.hoverOf(FROW);
+      r.rowLevel = +N.floatLevel(film, r.tall, r.rowHover).toFixed(3);
+      put(form, lane.x, deepAt, lane.z, Math.PI / 2);
+      r.deepKept = measure(8, {});
+      r.deepY = +p.y.toFixed(3);
+      r.deepHang = +(film - p.y).toFixed(3);
+      r.deepHeadUnder = !!p.headWater;
+      r.deepGrounded = p.grounded ? 1 : 0;
+      r.deepBedGap = +(p.y - N.groundY(W, Math.floor(p.x), Math.floor(p.z), p.y)).toFixed(2);
+      /* and at the level the animal's own row states for it -- not because the
+         water takes a body there, which it no longer does, but because that number
+         is still a statement about the animal and about its head: the sea turtle's
+         row lies at the film, and a body put at that level stands its head in the
+         air and breathes; the frog's row hangs two metres down, and a body put at
+         that level keeps its head under and does not. Nothing carried either body
+         there: they were put there, and the question is whether they stay. */
+      put(form, lane.x, r.rowLevel, lane.z, Math.PI / 2);
+      r.atRow = measure(6, {});
+      r.rowY = +p.y.toFixed(3);
+      r.rowHeadOut = !p.headWater;
+      /* asked down: the dive key held for 8 s -- long enough for either body to
+         reach the floor of the water's hold at its own rate, so what the next
+         window is asked about is a body at rest and not a body still on its way
+         down -- and then the key taken off */
       put(form, lane.x, lane.y, lane.z, Math.PI / 2);
-      r.askingDown = measure(4, { down: 1 });
+      r.askingDown = measure(8, { down: 1 });
       r.downY = +p.y.toFixed(3); r.downHeadUnder = !!p.headWater; r.downGrounded = p.grounded ? 1 : 0;
+      r.downHoldFloor = +N.bedFloor(r.laneBed, r.tall).toFixed(3);
       r.backUp = measure(6, {});
       r.backY = +p.y.toFixed(3); r.backHeadOut = !p.headWater;
+      r.backGrounded = p.grounded ? 1 : 0;
+      r.backBedGap = +(p.y - N.groundY(W, Math.floor(p.x), Math.floor(p.z), p.y)).toFixed(2);
       out['swim' + (form === FORM ? 'Turtle' : 'Frog')] = r;
     }
     out.hover = { turtle: ROW.hover, frog: N.CREATURE_BY_ID.frog.hover };
@@ -14207,12 +14490,11 @@ What was measured before any of this was fixed, over 180 frames of walking
        A person's body is asked in three legs, because it is the one body this
        water will not carry: it empties in the open sea, stands on dry ground with
        its head in air to pay the debt back, and then goes under that same sea
-       again to spend what the surface bought it. The turtle's body is asked as one
-       window that is never broken: emptied with the dive key, then let go of, and
-       nothing else touched -- it comes up on its own, gets its head out and pays
-       its own debt back. The clock turning itself round with nobody's hand on it
-       is the animal's doing, and it is the whole reason the second dive has a
-       length at all.
+       again to spend what the surface bought it. The turtle's body is emptied with
+       the dive key and then left: it stays at the depth the key took it to, and the
+       head comes out while the up key is held -- the water has no opinion about the
+       depth a body is at, so that climb belongs to the player and its seconds are
+       measured, not folded into the clock.
        The panic figure is asked at both ends for the same reason it is asked once
        in the code: it is the animal's state, and one figure is what keeps it from
        being two. Nothing here claims what that figure is -- the ask is that a
@@ -14225,7 +14507,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        duration, because the question is what the state does to the clock and not
        how fast the state fades; the window ends with the store empty. */
     const drain = (secs, hold) => {
-      const air0 = p.air;
+      const air0 = p.air, y0 = p.y;
       let zero = null, headUnder = 0, firstDamage = null, t = 0;
       for (let i = 0; i < 60 * secs; i++) {
         const dt = 1 / 60;
@@ -14244,12 +14526,16 @@ What was measured before any of this was fixed, over 180 frames of walking
       const open = headUnder / 60;
       return { start: +air0.toFixed(2), end: +p.air.toFixed(2), spent: +(air0 - p.air).toFixed(2),
         per: +(open > 0 ? (air0 - p.air) / open : 0).toFixed(3), toZero: zero, headUnder,
-        firstDamage, frames: Math.round(t * 60), vital: +p.vital.toFixed(2) };
+        firstDamage, frames: Math.round(t * 60), vital: +p.vital.toFixed(2),
+        /* the height this window started and ended at: which end of the clock is
+           running is a question about the head, and where the head is is a question
+           about the depth the body is holding */
+        yStart: +y0.toFixed(3), yEnd: +p.y.toFixed(3) };
     };
     /* the same window on the other end: the head is in air, no key is held, and
        the window ends when the reserve reads full again. */
     const refill = (secs, hold) => {
-      const air0 = p.air;
+      const air0 = p.air, y0 = p.y;
       let full = null, headOut = null, t = 0, trace = [], breathing = 0;
       for (let i = 0; i < 60 * secs; i++) {
         const dt = 1 / 60;
@@ -14263,7 +14549,23 @@ What was measured before any of this was fixed, over 180 frames of walking
       const open = breathing / 60;
       return { start: +air0.toFixed(2), end: +p.air.toFixed(2), gained: +(p.air - air0).toFixed(2),
         per: +(open > 0 ? (p.air - air0) / open : 0).toFixed(3), toFull: full,
-        headOutFrame: headOut, trace, frames: Math.round(t * 60), vital: +p.vital.toFixed(2) };
+        headOutFrame: headOut, trace, frames: Math.round(t * 60), vital: +p.vital.toFixed(2),
+        yStart: +y0.toFixed(3), yEnd: +p.y.toFixed(3) };
+    };
+    /* the way up for a body the water has no opinion about: the up key, held until
+       the head is out of it. The old window had none of this -- the body floated up
+       by itself on the way to paying its breath back -- so the climb is measured
+       here, in seconds, because the arithmetic below adds those seconds to the
+       window the store takes to refill. */
+    const toSurface = (maxSecs) => {
+      const y0 = p.y;
+      let t = 0, up = false;
+      for (let i = 0; i < 60 * maxSecs && !up; i++) {
+        p.update(1 / 60, { up: 1 }, g); g.time += 1 / 60; t += 1 / 60;
+        up = !p.headWater;
+      }
+      return { from: +y0.toFixed(3), to: +p.y.toFixed(3), rose: +(p.y - y0).toFixed(3),
+        secs: +t.toFixed(2), headOut: up ? 1 : 0 };
     };
     sea(); p.air = p.maxAir();
     const pDown = drain(40);
@@ -14283,12 +14585,21 @@ What was measured before any of this was fixed, over 180 frames of walking
     const fBack = refill(5, 0.9);
     out.breathClock.person = { down: pDown, back: pBack, short: pShort, bought,
       again: pAgain, panic: { down: fDown, back: fBack } };
-    /* the animal, in one window: emptied by the key, then let go of. */
+    /* the animal, emptied by the dive key -- and then what brings its head back to
+       the air. This used to be the water's doing: the body was let go of and floated
+       back to the level its row states, got its head out, and the clock turned
+       itself round with nobody's hand on it. Under the law as it now stands the
+       water has no opinion about the depth this body is at, so it stays at the depth
+       the key left it at -- which is first measured as it stands, and then the way
+       up is the up key, and the seconds the climb takes are measured rather than
+       assumed away, because the arithmetic below adds them. */
     put(FORM, lane.x, lane.y, lane.z, Math.PI / 2);
     p.air = p.maxAir();
     const tDown = drain(300);
+    const tStay = refill(5);
+    const tRise = toSurface(60);
     const tBack = refill(300);
-    out.breathClock.turtle = { down: tDown, back: tBack };
+    out.breathClock.turtle = { down: tDown, stay: tStay, rise: tRise, back: tBack };
 
     /* ---- whose seconds the reserve is made of ----
        The store belongs to the body being worn. The places a body changes are
@@ -14336,7 +14647,14 @@ What was measured before any of this was fixed, over 180 frames of walking
     p.form = FORM; p.formT = 9999; p.formMax = 9999;
     oneFrame();
     const bigger = { air: +p.air.toFixed(2), ceiling: +p.maxAir().toFixed(1) };
-    out.breathCross.personToTurtle = { ranOut, handed: handedIn, afterOneFrame: bigger, payBack: refill(30) };
+    /* and the head gets to the air the same way it does for any other body in this
+       water now: the up key. The body was left on the floor of that sea by the
+       person's body that was wearing it, and the water does not carry it off the
+       bottom on its own -- that is the claim of the window, and the climb is what
+       makes the pay-back window measurable at all. */
+    const paidUp = toSurface(60);
+    out.breathCross.personToTurtle = { ranOut, handed: handedIn, afterOneFrame: bigger,
+      rise: paidUp, payBack: refill(30) };
 
     /* ---- the skin ----
        Two hundred seconds on dry ground with nobody holding a key. The record
@@ -14385,37 +14703,57 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and it is the faster body through water: over the frog worn from its own record, and over what the frog row states',
     drag.swimTurtle.wet > 0 && drag.swimTurtle.speed > drag.row.frogSwim &&
     drag.swimTurtle.speed > drag.swimFrog.speed, drag);
-  /* The level a body is held at is the level its own row states: its feet hang
-     `tall + hover` under the film, and the sign of `hover` is the whole
-     difference between these two animals -- the frog hangs 1.6 m below the film
-     with its head under, the sea turtle is kept so high that a 0.45 m body
-     breaks the film and its head stands in the air. Neither of them is anywhere
-     near the bottom of that sea. */
-  check('let go of in the sea, each body comes to rest at the level its own row states, with its feet well off the bottom',
-    Math.abs(drag.swimTurtle.restHang - (drag.swimTurtle.tall + drag.hover.turtle)) < 0.05 &&
-    Math.abs(drag.swimFrog.restHang - (drag.swimFrog.tall + drag.hover.frog)) < 0.05 &&
-    drag.swimTurtle.restGrounded === 0 && drag.swimFrog.restGrounded === 0 &&
-    drag.swimTurtle.restBedGap > 1 && drag.swimFrog.restBedGap > 1,
-    { turtle: drag.swimTurtle, frog: drag.swimFrog, rows: drag.hover });
-  check('and the level the sea turtle is held at is the surface of the water itself: the body through it, the head in the air, breathing; the frog body hangs a metre and a half under its own surface, head under, which is where its animal lives',
-    drag.swimTurtle.restHeadOut && drag.swimFrog.restHeadOut === false,
-    { turtle: { hang: drag.swimTurtle.restHang, headOut: drag.swimTurtle.restHeadOut },
-      frog: { hang: drag.swimFrog.restHang, headOut: drag.swimFrog.restHeadOut } });
-  /* Going down is a thing the player asks for, and the water takes it back the
-     moment the asking stops. This is the second half of the user's sentence: the
-     body does not sink to the bottom of its own accord, and it is not stuck at
-     the top either -- the dive key reaches the bottom, the head goes under with
-     it, and letting go of the key brings it back up to its own level by itself.
-     The same two windows are run on the frog's body because the hold is the
-     water's law and not the turtle's: the only thing that may differ between
-     these two bodies is the level. */
-  check('it only goes down while the dive key is held -- under the film, head under with it -- and comes back up to its own level, head out, the moment the key is let go',
+  /* What the sea does with a body built for it: it keeps it at the depth it is
+     at. The old reading of these windows was that each body came to rest at the
+     level its own row states -- the frog's feet two metres under the film, the sea
+     turtle's body held so high its head stood in the air -- and the sign of the
+     row's `hover` was the whole difference between the two. That is the level a
+     wild animal of that kind lies at, and it is still what the row states; it is no
+     longer where the water takes the body worn from the fruit. What the water keeps
+     is the bottom away from the body, and nothing else. */
+  check('let go of four metres under the film of the open sea, each body stays there: the window runs at one depth, the bottom of that sea stays metres below its feet, and the level its own row states is metres away from it',
+    [['turtle', drag.swimTurtle], ['frog', drag.swimFrog]].every(([name, r]) =>
+      r.deepGrounded === 0 && Math.abs(r.deepY - r.deepPut) < 0.02 && r.deepKept.yBand < 0.02 &&
+      r.deepHeadUnder && r.deepBedGap > 1 &&
+      Math.abs(r.deepHang - (r.tall + r.rowHover)) > 1),
+    { turtle: drag.swimTurtle, frog: drag.swimFrog });
+  check('and let go of 60 cm under that film, a body stays 60 cm under it: the head-out case belongs to the level a body is put at, not to the water carrying it there',
+    [['turtle', drag.swimTurtle], ['frog', drag.swimFrog]].every(([name, r]) =>
+      r.restGrounded === 0 && Math.abs(r.restY - (r.laneFilm - 0.6)) < 0.02 &&
+      r.atRest.yBand < 0.02 && r.restBedGap > 1 && r.restHeadOut === false),
+    { turtle: drag.swimTurtle, frog: drag.swimFrog });
+  /* The level a row states is still a level, and a body put at it stays there with
+     the head that level gives it. This is where the sea turtle's head-out case now
+     lives: not as something the water does to the body by itself, but as what the
+     animal's own depth is -- the film -- and what a body of that shape stands there
+     with. */
+  check('and the level a row states is where that animal lies, with the head that level gives it: a body put at the sea turtle\'s level stands its head in the air and breathes, a body put at the frog\'s keeps its head under, and neither is moved from where it was put',
+    drag.swimTurtle.rowHeadOut && drag.swimFrog.rowHeadOut === false &&
+    [['turtle', drag.swimTurtle], ['frog', drag.swimFrog]].every(([name, r]) =>
+      Math.abs(r.rowY - r.rowLevel) < 0.02 && r.atRow.yBand < 0.02),
+    { turtle: { level: drag.swimTurtle.rowLevel, y: drag.swimTurtle.rowY, headOut: drag.swimTurtle.rowHeadOut },
+      frog: { level: drag.swimFrog.rowLevel, y: drag.swimFrog.rowY, headOut: drag.swimFrog.rowHeadOut } });
+  /* Going down is the thing that has to be asked for. This is the shape that was
+     asked for in so many words: the body does not sink to the bottom of its own
+     accord, it is the player who takes it down -- and it is the player who brings
+     it back, because the water has no opinion about the depth between its two ends.
+     The same two windows are run on the frog's body because the hold is the water's
+     law and not the turtle's: the only thing that may differ between these two
+     bodies is the rate they swim at and the height their boxes are. */
+  check('it only goes down while the dive key is held -- down to the gap above the ground that a body of its own height keeps, under the film, head under with it -- and when the key comes off it stays at that gap, head still under: the water does not take it back up',
     drag.swimTurtle.downHeadUnder && drag.swimTurtle.downY < drag.swimTurtle.restY - 0.5 &&
-    Math.abs(drag.swimTurtle.backY - drag.swimTurtle.restY) < 0.05 &&
-    drag.swimTurtle.backHeadOut, drag.swimTurtle);
-  check('and the frog body is asked down and let go of the same way, and comes back to its own level: the hold belongs to the water, not to one animal',
-    drag.swimFrog.downY < drag.swimFrog.restY - 0.5 && drag.swimFrog.downY > drag.swimFrog.bedTop &&
-    Math.abs(drag.swimFrog.backY - drag.swimFrog.restY) < 0.05, drag.swimFrog);
+    Math.abs(drag.swimTurtle.downY - drag.swimTurtle.downHoldFloor) <= 0.05 &&
+    drag.swimTurtle.downGrounded === 0 && drag.swimTurtle.backGrounded === 0 &&
+    Math.abs(drag.swimTurtle.backY - drag.swimTurtle.downY) < 0.05 &&
+    drag.swimTurtle.backUp.yBand < 0.05 && drag.swimTurtle.backHeadOut === false &&
+    drag.swimTurtle.laneFilm - drag.swimTurtle.backY > 1, drag.swimTurtle);
+  check('and the frog body is asked down and let go of the same way, and stays at the gap it was taken to: the hold belongs to the water, not to one animal',
+    drag.swimFrog.downY < drag.swimFrog.restY - 0.5 &&
+    Math.abs(drag.swimFrog.downY - drag.swimFrog.downHoldFloor) <= 0.05 &&
+    drag.swimFrog.downY > drag.swimFrog.laneBed &&
+    Math.abs(drag.swimFrog.backY - drag.swimFrog.downY) < 0.05 &&
+    drag.swimFrog.backUp.yBand < 0.05 && drag.swimFrog.backGrounded === 0 &&
+    drag.swimFrog.laneFilm - drag.swimFrog.backY > 1, drag.swimFrog);
   check('no clock dries this skin: on dry ground for 200 s it never accumulates one, while the body whose record does runs past its own',
     drag.row.dryTimer === null && drag.skin.turtlemelon.dryMax === 0 && !drag.skin.turtlemelon.dead &&
     drag.skin.frogpear.dryMax > drag.row.frogDryTimer, drag.skin);
@@ -14447,11 +14785,27 @@ What was measured before any of this was fixed, over 180 frames of walking
     Math.abs(drag.breathClock.turtle.down.per - drag.breathClock.turtle.back.per) < 0.005 &&
     Math.abs(drag.breathClock.person.back.per - 1) < 0.01 &&
     Math.abs(drag.breathClock.turtle.back.per - 1) < 0.01, drag.breathClock);
+  /* The animal's body pays its debt back at the same unit the clock burned at. It
+     does not come up of its own accord to do it: the water keeps a body at the depth
+     it is at, so the head reaching the air is the up key's doing, and that is the
+     first thing asked here -- the body left where the dive key left it, and only the
+     key brings it up. */
+  check('and it does not come up of its own accord: when the dive key comes off the body lies at the depth it was taken to, head under, and the head only reaches the air while the up key is held',
+    Math.abs(drag.breathClock.turtle.stay.yEnd - drag.breathClock.turtle.stay.yStart) < 0.02 &&
+    drag.breathClock.turtle.stay.headOutFrame === null &&
+    drag.breathClock.turtle.rise.headOut === 1 && drag.breathClock.turtle.rise.rose > 1,
+    { stay: drag.breathClock.turtle.stay, rise: drag.breathClock.turtle.rise });
   check('and the store on the row is the whole of the arithmetic: a body pays back exactly the seconds its own record states, and the window it takes to do it is that store plus the time it takes its head to get out',
     drag.breathClock.person.back.gained === drag.breathClock.rows.human &&
     Math.abs(drag.breathClock.person.back.toFull - drag.breathClock.rows.human) < 0.05 &&
     drag.breathClock.turtle.down.spent === drag.breathClock.rows.turtle &&
-    drag.breathClock.turtle.back.gained === drag.breathClock.rows.turtle &&
+    /* the empty the climb left it holding plus what the window paid back is the
+       store on the row, to the hundredth: the head came out on the last frame of
+       the up key, so the clock had already started by 0.02 of a second, and the
+       arithmetic is asked over the two together rather than pretending the window
+       opened at a round number */
+    Math.abs(drag.breathClock.turtle.back.start + drag.breathClock.turtle.back.gained -
+             drag.breathClock.rows.turtle) < 0.01 &&
     Math.abs(drag.breathClock.turtle.back.toFull - drag.breathClock.rows.turtle -
              drag.breathClock.turtle.back.headOutFrame) < 0.2 &&
     drag.breathClock.turtle.back.vital > 0, drag.breathClock);
@@ -14488,12 +14842,17 @@ What was measured before any of this was fixed, over 180 frames of walking
     drag.breathCross.frogToPerson.spent.headUnder > 0 &&
     drag.breathCross.turtleToPerson.spent.per === 1,
     { turtle: drag.breathCross.turtleToPerson, frog: drag.breathCross.frogToPerson });
-  check('and a bigger body is not filled by putting it on: the empty the last body reached is the reserve this one wakes with, and it pays that debt back a second to the second and not its whole store at once',
+  check('and a bigger body is not filled by putting it on: the empty the last body reached is the reserve this one wakes with, and it pays that debt back a second to the second -- on the up key, like every other body in this water, and not its whole store at once',
     drag.breathCross.personToTurtle.ranOut.toZero !== null &&
+    drag.breathCross.personToTurtle.rise.headOut === 1 &&
     drag.breathCross.personToTurtle.handed.air === 0 &&
     drag.breathCross.personToTurtle.afterOneFrame.air === 0 &&
     drag.breathCross.personToTurtle.afterOneFrame.ceiling === drag.breathCross.rows.turtle &&
-    drag.breathCross.personToTurtle.payBack.start === 0 &&
+    /* the window opens at the empty it was handed -- within the one frame of the
+       climb that had already brought the head out, which is the 0.02 s the frame
+       of breathing buys, and no more than that */
+    drag.breathCross.personToTurtle.payBack.start < 0.05 &&
+    drag.breathCross.personToTurtle.payBack.gained > 29.9 &&
     drag.breathCross.personToTurtle.payBack.gained < drag.breathCross.rows.turtle * 0.25 &&
     Math.abs(drag.breathCross.personToTurtle.payBack.per - 1) < 0.01 &&
     drag.breathCross.personToTurtle.payBack.vital > 0,

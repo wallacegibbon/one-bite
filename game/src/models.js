@@ -227,8 +227,8 @@
        dragging -- the row says as much, and the row and the model are one
        animal. The tallest thing on it is its head, which is raised: that is the
        pose this animal lies in at the top of the water, head out, breathing, and
-       it is the pose the worn body is drawn in the moment it stops moving (the
-       row's own `hover`, and `floatLevel` in src/entities.js).
+       it is the pose the row states for an animal of this kind by the depth it
+       gives it there (the row's own `hover`, and `floatLevel` in src/entities.js).
        The front wings are the reach of the animal. Each is a thick root at the
        shoulder and then three thin plates running back along the flank -- upper
        arm, elbow, and the tapering end -- so that the limb is measured along
@@ -254,9 +254,10 @@
        Two of them are worth stating where the model is, because they are the
        bounds the model is carved to. The tallest point of the authored body is
        **0.450 m**, and that is the height the form's box states and the height
-       the water's hold is asked of -- `floatLevel` for the body worn from this
-       fruit and `MODEL_H` for the animal itself, and a body that hangs one
-       number in the water and stands another on the sand is two animals. The
+       the water's hold is asked of -- `surfCeiling` and `bedFloor` for the body
+       worn from this fruit and `MODEL_H` for the animal itself, and a body that
+       hangs one number in the water and stands another on the sand is two
+       animals. The
        other is the plan: the shell is **0.850 m** across at its widest and the
        flippers reach **0.813 m** out from the middle of it, so the model as
        authored stands past the wall of the box the world enforces for this form

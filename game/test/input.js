@@ -192,7 +192,9 @@ const { sim } = require('./simwait');
       const p = window.game.player, l = window.__lake;
       p.x = l.x; p.z = l.z; p.y = l.wt - 1.0; p.vx = p.vy = p.vz = 0;
     });
-    await sim(page, 2.0);                 // let the water hold it at the level it holds a body at
+    await sim(page, 2.0);                 // two frames of the water answering about this body:
+                                         // it keeps the depth it was put at, so the depth the
+                                         // key windows start from is the depth it was put at
     return page.evaluate(() => +window.game.player.y.toFixed(2));
   };
   const hold = async (key, secs) => {
@@ -210,7 +212,11 @@ const { sim } = require('./simwait');
   const rest = await inWater();
   const tryKey = async (key, secs) => { await inWater(); return hold(key, secs); };
   const roseK = await tryKey('k', 3.0);
-  const sankJ = await tryKey('j', 4.0);
+  /* six seconds of the dive key, not four: the rate a body goes down at is the
+     rate its own stroke swims at, and at that rate the floor of this column's hold
+     is five metres of water away. Four seconds stopped it a metre short of the
+     floor, which is a body still on its way down and not a body the water stopped */
+  const sankJ = await tryKey('j', 6.0);
   const heldSpace = await tryKey(' ', 3.0);
   const heldCtrl = await tryKey('Control', 2.0);
   const movedW = await tryKey('w', 0.4);
@@ -219,15 +225,19 @@ const { sim } = require('./simwait');
     held: { k: roseK, j: sankJ, space: heldSpace, control: heldCtrl, w: movedW },
     rise: +(roseK.y - rest).toFixed(2), sink: +(rest - sankJ.y).toFixed(2),
     spaceDrift: +(heldSpace.y - rest).toFixed(2),
-    /* where the water's own laws say a body ends up: the level it holds a body
-       that stops asking at, the ceiling a body that keeps asking up to climbs to,
-       and the floor a body that keeps asking down to reaches */
-    hold: +(lakeAt.wt + 1 - 0.5 - 1.6).toFixed(2),
+    /* where the water's own laws put the ends of a body's reach: the ceiling a
+       body that keeps asking up climbs to, and the floor a body that keeps asking
+       down reaches. The level the row states for that animal (`rowLevel`) is
+       printed beside them because it is the number the old version of this file
+       measured the keys against: it is where a wild animal of that kind lies, and
+       it is not where the water takes a body it is holding -- the depth the body
+       was put at, `rest`, is where that body is */
+    rowLevel: +(lakeAt.wt + 1 - 0.5 - 1.6).toFixed(2),
     ceiling: +(lakeAt.wt + 1 - 0.25).toFixed(2),
     floor: +(lakeAt.bed + 0.25).toFixed(2),
     shortOfCeiling: +(lakeAt.wt + 1 - 0.25 - roseK.y).toFixed(2),
     offTheFloor: +(sankJ.y - (lakeAt.bed + 0.25)).toFixed(2),
-    spaceOffHold: +(heldSpace.y - (lakeAt.wt + 1 - 0.5 - 1.6)).toFixed(2) };
+    spaceOffHold: +(heldSpace.y - rest).toFixed(2) };
   out.push('keys ' + JSON.stringify(keys));
   check('K lifts a body through the water to the top the water allows it',
     keys.rise > 0.8 && keys.held.k.up && !keys.held.k.down && keys.shortOfCeiling < 0.2, keys);

@@ -24,11 +24,11 @@
      many rad/s of heading there is no turn at all. */
   const BEND_DEAD = 0.12;   // rad/s
 
-  /* How far under the surface the water holds a body it is holding up, measured
-     to the **crown** of that body and not to its feet. One number for every such
-     body: the twelve wild frogs of the valley and the body you wear while you are
-     one float at the same depth, and the creature step and the player step both
-     read this.
+  /* How far under the surface a body that cannot trim itself lies, measured to
+     the **crown** of that body and not to its feet: the waterline of a cork. It
+     is the default an animal's own record falls back on (`hoverOf` below) when
+     the row states no depth of its kind, and it is what the wild animals of the
+     valley are held at when they have no number to ask with.
      The reference point is the whole of the matter. This used to be measured to
      the feet, and a body half a metre tall therefore hung with its head 20 cm out
      of the water: seen from the bank it was a cork with four legs under it, and
@@ -41,23 +41,28 @@
      height plus that 30 cm, so a bigger water animal hangs deeper by exactly its
      own size and nobody has to remember a new number. */
   const FLOAT_UNDER = 0.3;
-  /* The level the water holds a body at: the surface of the column it is in, less
-     the height of that body, less the 30 cm its crown hangs under the surface.
-     A height, not a cell -- see `liquidSurfaceAt` in world.js.
-     The last term is the animal's own, not the water's. A body built for the lake
-     does not lie under the surface film: it hangs at a depth of its kind and
-     comes up when it wants the sky, and `hover` on the animal's record says how
-     far under that floating level a body of that kind rests. A body with nothing
-     to say -- a human, or any body that has to come up for air -- keeps the 30 cm
-     its back hangs under the surface, which is what it has always kept.
-     That term is allowed to be negative, and a row that makes it negative is an
-     animal that does not hang under the film but rides it: the sea turtle's row
+  /* The level at which the surface of a column would float a body: the surface of
+     the column, less the height of that body, less the 30 cm its crown hangs
+     under the surface. A height, not a cell -- see `liquidSurfaceAt` in world.js.
+     This is what the water does for a body that cannot trim itself: it holds such
+     a body up at one level and no other, which is the whole of how a cork behaves
+     and none of how a fish does. An animal built for water trims its own gas to
+     the depth it has taken, so the depth it lies at is its own; `hover` on the
+     animal's record is that choice, and this function turns the choice into a
+     height in the column the animal is standing in. That is all it answers now.
+     The body you wear is not pulled back to this level: a body the water is
+     holding up keeps the depth it was moved to, and that is the sentence the
+     water branch of `Player.update` states. What is left here is the animal's own
+     level -- the level a wild frog hangs at, the top of the band its dive cycle
+     runs between, and the shallow end of what the herd shows of itself.
+     The depth term is allowed to be negative, and a row that makes it negative is
+     an animal that does not hang under the film but rides it: the sea turtle's row
      does, because it is a lung and lies at the top of the water with its head
      out. The one bound on the number is `surfCeiling` a few lines below -- the
-     level a body comes to rest at has to stay under the highest point a body the
-     water is holding can climb, or the two ends of this law change places and a
-     resting body sits above the reach of its own stroke. Both animal rows are
-     asked whether they keep that bound in test/play.js. */
+     level an animal lies at has to stay under the highest point a body the water
+     is holding can climb, or the two ends of this law change places and the animal
+     is asked to sit above the reach of its own stroke. Both animal rows are asked
+     whether they keep that bound in test/play.js. */
   function floatLevel(wSurf, tall, hover) { return wSurf - tall - (hover === undefined ? FLOAT_UNDER : hover); }
   /* The depth an animal's own row states, or the 30 cm a body hangs under the
      surface when its row states none. Asked as a function because a row that
@@ -76,11 +81,10 @@
      the water: a frog standing on the middle of a lake. Against this ceiling the
      same body stops with its feet **25 cm** in, half of it over the film and its
      eyes **17 cm** over it, which is still the head out of the water the animal
-     needs, and the water takes it back down to the level it holds it at the
-     moment the key comes off. Half the body is the collision box's half, the same
-     height `floatLevel` above measures, so the two ends of the water's hold are
-     told in the same units and a bigger water animal is carried up just as far
-     over the film as it is hung down under it.
+     needs, and it stays there when the key comes off. Half the body is the
+     collision box's half, asked in the same units as `bedFloor` below, so the two
+     ends of the water's hold are one pair and a bigger water animal is carried up
+     just as far over the film as it is kept off the floor under it.
      Whether a body is in the water at all is decided by its feet being under the
      surface (`inWater`, far above), and this leaves them half a body under it, so
      that answer cannot change its mind on the frame the body stops climbing. */
@@ -93,21 +97,25 @@
      dive and becomes a body sliding along the mud with still legs. Half the body,
      asked in just the units `surfCeiling` is asked in, so the two ends of the
      water's hold are one pair: a bigger water animal is kept as far off the floor
-     as it is hung under the film. And it is a floor only where the water has a
-     level for that body above that ground -- where `floatLevel` sits above it. A
-     pool no deeper than the body's own hang depth has no such level: there the
-     ground is a ground to stand on, feet and all. Both bodies ask the question of
-     the same number, so neither is held up in water the other stands in. */
+     as it is carried over the film. And the hold is a hold only where those two
+     ends are in the right order -- the ceiling above the floor -- which is the
+     same thing as the water standing deeper over that ground than the body is
+     tall. A pool shallower than the body has no hold to keep: there the ground is
+     a ground to stand on, feet and all. The body you wear is asked that question
+     of its own two ends; the herd's bodies ask the older form of it, their own
+     level against the ground, because an animal does have a level of its own
+     (`hover`, and the water branch of `Creature.update`). Both ask it of the same
+     ground, so neither is held up in water the other stands in. */
   function bedFloor(bedTop, tall) { return bedTop + tall * 0.5; }
   /* Whether the water of a column is holding a body up, rather than being a
      bottom it stands on: the film of it has to stand at least **two whole
      blocks** over the surface that body's feet would find there. One block is a
      shore shelf -- 183 columns of Mirrorlake are that shelf -- and a body
      standing in one has feet: it wades, it walks, it pushes off with its legs.
-     Two is water a body can hang in: its own height plus the depth its row
-     states, clear of the bottom. The count is asked of the place and never of
-     where the body happens to sit in it, because a rule that turns on the
-     body's own height switches the force law back and forth as the body crosses
+     Two is water a body can hang in: deeper than a body has to be to be wholly
+     inside it and clear of the bottom. The count is asked of the place and never
+     of where the body happens to sit in it, because a rule that turns on the
+     body's own depth switches the force law back and forth as the body crosses
      its own equilibrium and builds a sawtooth out of nothing -- that was the
      bug the water branch of this file was last fixing.
      Four readers ask it and they are one law: whether a water animal may be
@@ -623,16 +631,6 @@
        the human body takes it from the form def above. */
     bodyScale() {
       return this.form ? N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature].scale : HUMAN.scale;
-    }
-    /* How far under the level the water floats a body of this shape the water
-       holds this body when nobody is swimming it. The animal's own record says
-       it, so the body you wear and the animal walking the shore are the same
-       animal and hang at the same depth; a body with nothing to say keeps the
-       30 cm its back hangs under the surface film. */
-    hoverDepth() {
-      if (!this.form) return FLOAT_UNDER;
-      const c = N.CREATURE_BY_ID[N.FRUIT_BY_ID[this.form].creature];
-      return c ? hoverOf(c) : FLOAT_UNDER;
     }
     /* How hard this body is asking for a stride, 0..1. The draw sizes the swing
        by this and `walkGait` sizes the stride by it, and they have to be the same
@@ -1168,40 +1166,55 @@
            is a body the water holds up: the wild frogs of the valley hang at a
            depth of their own and never touch the bottom of the deep part, and the
            body you wear was the only water-breathing body in the valley that
-           went down. So the pull is the water's now: a body the water is holding
-           is pushed back toward the level it holds it at, harder the further
-           below that level it is, and the same drag that takes its forward speed
-           takes the arrival -- it comes up and stops, instead of coming up only
-           to be pulled down again. The hold is a level, not a leash. A body that
-           is *asking* to go down is a body swimming down: it keeps the dive it
-           always had, the lakebed stays in reach -- up to a small gap above it,
-           where the stroke can keep running -- and the water takes it back up the
-           moment the key comes off, including off the bottom, which is why the
-           branch is picked by `heldUp` and not by `!grounded`. What decides
-           `heldUp` is the body's record and not its breath, so the other body
-           built for this water -- the sea turtle's, worn as a form, breathing
-           air -- is held up as well, and going down is a thing it has to be
-           *asked* to do. A person's body is the one that states nothing about
-           the water anywhere, and so it is the one left to gravity here: it has
-           to kick to stay off the bottom, and that is what it costs to wear a
-           body that was not built for the lake. That a person's body floats a
-           little in real water is true and is not modelled here, and the
-           sentence is left standing as an open question rather than settled by
-           a bare number (OPEN-ISSUES 29). */
+           went down. The answer put in beside it was a spring back to the level
+           the water would float that body at, and it was half right: it stopped
+           the sinking, and it took the depth away. Every body in the water was
+           pulled back to one written level, so a body that swam down a few
+           metres came back up them the moment the key came off, and no depth a
+           body reached was its own to keep. A spring to a surface level is the
+           answer for a body that cannot trim itself -- a cork -- and an animal
+           built for water is not one. The water's hold is therefore neither a
+           pull down nor a pull up: it is the absence of a vertical force, and
+           what is left is the drag that takes a stroke's speed back and the two
+           ends of the hold below. A body that is *asking* to go down is a body
+           swimming down: it keeps the dive it always had, the lakebed stays in
+           reach -- up to a small gap above it, where the stroke can keep running
+           -- and it stays where it stopped when the key comes off, including at
+           the bottom, which is why the branch is picked by `heldUp` and not by
+           `!grounded`. What decides `heldUp` is the body's record and not its
+           breath, so the other body built for this water -- the sea turtle's,
+           worn as a form, breathing air -- is held up as well, and going down is
+           a thing it has to be *asked* to do; what brings it back is its own
+           stroke, and the price of staying down is the breath its row states. A
+           person's body is the one that states nothing about the water anywhere,
+           and so it is the one left to gravity here: it has to kick to stay off
+           the bottom, and that is what it costs to wear a body that was not
+           built for the lake. That a person's body floats a little in real water
+           is true and is not modelled here, and the sentence is left standing as
+           an open question rather than settled by a bare number (OPEN-ISSUES 29). */
         const push = speed * 1.5;
-        // the level the water holds a body at is a height, not a cell: the body's
-        // own height, the depth a body of that animal's kind rests at under the
-        // level it floats at, and for a body whose animal has no such number the
-        // 30 cm its back hangs under the surface
-        const fl = heldUp ? floatLevel(wSurf, this.size()[1], this.hoverDepth()) : -1;
-        /* Read once and kept, because the floor asked for below asks a question
-           about this same number: whether the level the water would hold this
-           body at is above the ground under it at all. A pool no deeper than the
-           body's own hang depth has no such level -- there the ground is a ground
-           to stand on, feet and dry pose and all, which is the answer the herd's
-           bodies take in that same water. */
-        if (heldUp && !inp.down) this.vy += (fl - this.y) * 2.2 * dt;
-        else this.vy -= 5.2 * dt * 0.55;
+        /* The water holds a body it is holding up at whatever depth that body is
+           at. It does not hold it *up*, as a cork is held up: an animal built
+           for water trims its own gas to the depth it has taken -- that is how a
+           frog and a fish sit still in the middle of a lake without a stroke --
+           and a body whose mean density has been made the water's is in
+           equilibrium at every depth in the water, so there is no vertical force
+           left for the water to offer it. The depth a swimming body stops at is
+           therefore the depth it stopped at: the stroke ends, the drag below
+           takes the speed back, and the body hangs there until it is asked for
+           another stroke. This is the whole of what was asked for: a body moved
+           down a few metres keeps those few metres, and swims on forward at the
+           depth it was moved to.
+           A spring back to one written level is the answer for a body that
+           cannot trim itself -- a cork, a log, a body that has stopped living --
+           and that is what this line was: every body in the water was pulled
+           back to `floatLevel`, the level its row would float at, so the depth a
+           body had swum to was never its own to keep. For a body the water is
+           not holding up at all there is no trim either, and it keeps the pull
+           it has always had: a person's body has to kick to stay off the bottom,
+           and that is what it costs to wear a body that was not built for the
+           lake. */
+        if (!heldUp) this.vy -= 5.2 * dt * 0.55;
         if (inp.up) this.vy += push * dt;
         if (inp.down) this.vy -= push * 0.6 * dt;
         this.vy -= this.vy * Math.min(0.9, 3.2 * dt);
@@ -1219,18 +1232,19 @@
            its legs and put it back on again.
            The ceiling is not the surface itself but `surfCeiling` -- the surface
            less half the body -- and that is what the player asked for. The two
-           were one number only because the level the water holds a resting body
-           at used to be measured to the feet and happened to land just under the
-           surface; now a body hangs its own height down, and a ceiling taken from
-           that level would mean a frog holding the up key could never bring
-           its head to the top of the water at all. So: the level is where a body
-           that stops moving comes to rest, the ceiling is how high a body that
-           keeps asking can get, and between the two a body swims. A frog at rest
-           hangs 80 cm down with its eyes 38 cm under; the key held for 5 s over a
-           column 7 m deep stops it with its feet 25 cm under the film -- half of
-           its 50 cm body over the water, eyes 17 cm over it, and the surface
-           itself never crossed once in 300 frames -- and the moment the key comes
-           off the water takes it back down to the level it holds it at.
+           were one number only because the water's hold used to be told by a
+           level measured to the body's feet, which happened to land just under
+           the surface; a body's own height is what the hold is asked of now, and
+           a ceiling taken a whole body under the film would mean a frog holding
+           the up key could never bring its head to the top of the water at all.
+           So the ceiling is how high a body that keeps asking can get, and the
+           floor below is how low a body the water is holding can be pressed;
+           between the two a body holds whatever depth it has taken. A frog that
+           stops in the middle of a column stays in the middle of it. The key
+           held for 5 s over a column 7 m deep stops it with its feet 25 cm under
+           the film -- half of its 50 cm body over the water, eyes 17 cm over it,
+           and the surface itself never crossed once in 300 frames -- and when the
+           key comes off it stays there.
            The ceiling is asked of where the frame is about to put the body, not of
            where the body happens to be: the velocity decided here is spent later,
            over the substeps of the move, and a body at 14.93 with 4.6 m/s of climb
@@ -1246,27 +1260,29 @@
            as long as the key is held the body slides along the mud with a dry
            pose and still legs -- what `bedFloor` above argues. The floor is
            asked of where the frame is about to put the body, over the substeps,
-           exactly as the ceiling is, and only where `fl` says this water has a
-           level for this body above that ground: a pool no deeper than the
-           body's own hang depth has no such level, and its ground stays a ground
-           to stand on -- which is the answer the herd's bodies take there, and
-           the two bodies are the same animal in the same water.
+           exactly as the ceiling is, and only where the hold has any room in it
+           at all: the two ends of the hold are asked of the body's own height,
+           so they are in the right order exactly when the water stands deeper
+           over that ground than the body is tall. A pool shallower than the body
+           has no hold to keep -- its ground stays a ground to stand on, feet and
+           dry pose and all -- which is the answer the herd's bodies take in that
+           same water, and the two bodies are the same animal.
            The floor is a floor, not only a brake on going down. Cancelling the
            descent answers a body that travels towards the floor; it says nothing
            about a floor that travels towards the body, and the floor does move:
            the surface of one water is level, so the ceiling of the hold cannot
            come down on a body, while the ground the floor is measured from is
            not level at all and steps up under a body that swims inshore. Asked
-           as a brake only, a body that swims onto ground higher than the level
-           it is carried at is left *under* its own floor: the leg at (54.5,95.2)
+           as a brake only, a body that swims onto ground higher than the depth it
+           is holding is left *under* its own floor: the leg at (54.5,95.2)
            crosses from a column whose ground is 7 to one whose ground is 8 while
            sinking at 2.07 m/s, and the frame leaves it at 8.07 -- feet 0.07 above
            the ground, 0.18 under the floor that ground states, not standing
-           because no frame ever met the ground and not carried because the level
-           the water holds a body at is above it. Where the brake is the whole of
+           because no frame ever met the ground and not carried because the floor
+           the water's hold states is above it. Where the brake is the whole of
            the law, that is where the body stays for the rest of the leg. The
            water's hold is a support, and a support holds on both sides: the body
-           goes up to the level it is carried at, by the world's own y move, which
+           goes up to the floor it is held at, by the world's own y move, which
            is also what stops it where a roof is in the way. The step is bounded:
            the scan of the ground below begins at the feet, so in any state the
            collision admits the ground a body is told about is a surface its own
@@ -1275,8 +1291,9 @@
            the body *to* the bed level it states, in both directions, and the
            body you wear and the animal are the same animal in the same water. */
         const holdFloor = bedFloor(bedTop, this.size()[1]);
-        if (heldUp && fl > bedTop && this.vy < 0 && this.y + this.vy * dt <= holdFloor) this.vy = 0;
-        if (heldUp && fl > bedTop && this.y < holdFloor) this.axis('y', holdFloor - this.y);
+        const holdRoom = surfCeiling(wSurf, this.size()[1]) > holdFloor;
+        if (heldUp && holdRoom && this.vy < 0 && this.y + this.vy * dt <= holdFloor) this.vy = 0;
+        if (heldUp && holdRoom && this.y < holdFloor) this.axis('y', holdFloor - this.y);
       } else {
         /* Feet that are on the bottom are feet that can push off it, water
            around them or not. That is the whole of getting out of a lake: the
@@ -1999,8 +2016,8 @@
      the surface: the wild frogs of Mirrorlake hang just under the surface and
      down into deeper water (see the dive cycle below) and at (56.5,94.5) they
      were 1.3 m down and 4 m down, and the body you wear with them. Three reads
-     have now been pulled off this index and onto the film: the level the water
-     holds a body at, and the level a wild aquatic animal hovers at -- each of
+     have now been pulled off this index and onto the film: the level a body of
+     that shape would float at, and the level a wild aquatic animal hovers at -- each of
      which subtracts or compares a number of metres, and each of which was
      therefore a block wrong while it was reading a cell. Anything that counts
      blocks or asks about a cell keeps using this one. */
@@ -3496,26 +3513,27 @@
              came up 0.47 m in its very first frame -- 28 m/s -- every frame after
              it slower than the one before. */
           const cyc = 0.5 + 0.5 * Math.sin(this.t * this.diveRate + this.phase);
-          /* the shallowest a frog goes is the level the water holds a resting
-             body at -- its own height down, plus the depth its own record says a
-             body of its kind hangs at -- and it is measured off the surface, not
-             off the top block of the water (the film of a column and the top of
-             its water are one height). The depth comes off the same animal record the body you wear
-             reads, so the herd and the body you wear are the same animal and hang
-             in the same water the same way. */
+          /* the shallowest a frog goes is the level its own row states a body of
+             its kind lies at -- its own height down, plus the depth its own
+             record says -- and it is measured off the surface, not off the top
+             block of the water (the film of a column and the top of its water
+             are one height). The depth is the animal's, not the water's: the
+             water holds a body it is carrying at whatever depth that body is at
+             (see the water branch of `Player.update`), and this is the depth an
+             animal of this kind has settled on for itself. */
           const fl = floatLevel(wSurf, this.tall, hoverOf(this.sp));
-          /* The floor of a dive is a gap above the ground wherever the water has
-             a level for this body above that ground. `held` just above says a
+          /* The floor of a dive is a gap above the ground wherever the animal's
+             own level is above that ground. `held` just above says a
              body above `gy + 0.2` is a body with no feet under it, and a dive
              floor at the ground turns that body back into a standing one: the
              hold goes off, the stroke stops, and a frog working its dive cycle
              along the deep edge of the shallows stood up and swam again once a
-             cycle. So the floor is the one the body you wear dives to --
-             `bedFloor` above, asked of this body's own height and of the same
-             `floatLevel` -- because the herd and the body you wear are the same
-             animal in the same water. Where the water has no level for the body
-             above the ground -- the one-block shelf it stands and wades in, a
-             pool no deeper than its own hang depth -- the ground is a bottom to
+             cycle. So the floor is `bedFloor` above, asked of this body's own
+             height -- the same floor the body you wear is held at, because the
+             herd and the body you wear are the same animal in the same water.
+             Where the animal's own level is not above the ground -- the one-block
+             shelf it stands and wades in, a pool no deeper than the depth its row
+             states -- the ground is a bottom to
              stand on, and the gap there is only the 5 cm its own feet ask for. */
           const bed = fl > gy ? bedFloor(gyH, this.tall) : gyH + 0.05;
           const target = Math.max(bed, fl - this.diveTo * Math.pow(cyc, 0.4));
