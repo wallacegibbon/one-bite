@@ -7,78 +7,88 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one commit, and what it changed is a body rather than a law. The
-user sent a photograph of a real green turtle with three sentences about it: 「海龟的后腿是朝向后面的，
-或者至少是斜后方. 身体也不是方的，身体应该是前宽后窄或者是类似的形状, 前肢太短了」 -- the hind flippers
-point aft, or at least diagonally aft; the body is not square in plan, it is wide in front and narrow
-behind; the front flippers are too short. Read against the animal it claims to be, this build's model was
-none of those things and nothing anywhere could see it: the shell was one width from end to end with its
-widest place at its own front edge, its hind flippers left the animal sideways out of its widest place, and
-a front wing reached 0.27 of the shell's own length, measured sideways off the shoulder. It was a tortoise
-drawn at a sea turtle's size. What the round did was carve the animal to the photograph, and what it
-refused to do was invent a figure to cover for it: the collision box, the row's scale, the shoulder pivots
-and the stroke table were left exactly where they were, and the shape had to come out of the room that
-already exists.
+State at time of writing: this round is a law, and a picture asked for it. The
+user sent a screenshot of the game with one sentence: 「查看最近的一张系统截图，这里面天
+上的那个圆环太扯了，太扯了，不要跟我说它是合理的」 -- the ring out in the sky of the most
+recent screenshot is absurd, absurd, do not tell me it is reasonable. Read the
+frame rather than the complaint: a lens under the open sea, everything the sea is
+drawn as the sea's own colour, and above a clean arc across the top of the picture
+the day sky at its brightest -- pale blue with no water in it at all. Nothing about
+the arc was a shading choice. The quad that answers "nothing was drawn here" was
+being asked about the water only along directions that stay inside the liquid past
+the edge of what the frame draws, and was paid nothing for a direction that reaches
+this liquid's own surface *inside* that edge, on the argument that the face drawn
+there already carries the water the light climbs out of. A face is asked of
+geometry. Where the geometry is not in the frame, that argument holds nothing, and
+the whole of the sky above the eye line answered raw -- which is what an arc with no
+water's face anywhere along it is.
 
-- **The shell, asked from above, which is the view a turtle is known by.** Six plan stations, a dome over
-  the same outline, four tapering crown plates, marginals standing off each station's wall and a tapered
-  plastron under it. Measured off the authored boxes by `theSeaTurtleStrokesBothWingsTogether`: **0.963 m**
-  long, **0.850 m** across, its widest place at **0.31** of its own length, closing to **0.41** of that
-  width at the tail and to **0.65** at 0.7 of the length, and never opening again aft of its widest place
-  by more than the rim plates stand out (**0.3** measured against a **0.15** stand-off). A square in plan
-  fails every part of that reading at once.
-- **The four fins, asked which way they point from their own hinges and how far they reach along
-  themselves.** A front wing is **0.671 m** measured along itself -- **0.70** of the shell's length -- its
-  end lies **0.75** of the shell's length back from the shell's front edge, and it is carried **26.6 deg**
-  off straight aft. A rear fin is **0.364 m**, **0.38** of the shell, **22.2 deg** off straight aft, and it
-  stands out *behind* the shell's rear edge. The check on the rear pair is a rudder test, not a length
-  test: shorter than half the shell and shorter than 0.6 of the front wing, pointing aft and reaching past
-  the shell. Both pairs are mirrored to the digit and both are measured from the same boxes the draw
-  uploads.
-- **The box round this animal, which the new shape runs up against, resolves rather than changes.**
-  The world enforces a **1.5 m** square footprint and **0.45 m** of height for a body worn from this fruit,
-  and the model's own gate lets a corner cross that line by 0.1 m. The animal's body is nowhere near the
-  line: its shell is **0.850 m** across, **0.425 m** half, inside the **0.75 m** the world enforces by half
-  again. The fins are what the room is for -- the widest corner of the authored model now stands **0.834 m**
-  from its own middle against the **0.85 m** the gate permits, so **8.4** of the **10 cm** a limb is given
-  is spent on the limbs. That is also the ceiling on the user's third sentence: no longer *outward* reach
-  is available at all, because the box's inscribed circle bounds every corner at 0.85 m, and the only
-  direction left for a flipper as long as this one is aft -- which is the direction the photograph shows
-  anyway. Why the record is a span and not a body is now issue **30**.
-- **The stroke is the same table read by the same matrices, and its numbers moved with the shape** (all of
-  them printed by the step, none of them kept in the test): each wingtip goes **0.471 m** up and down
-  against **0.056 m** fore and aft, the blade swings from **22 deg** above the level of its own shoulder to
-  **48 deg** below it -- **70 deg** of arc -- and carries about **2.5 m** of water a second at **2.38**
-  strokes a second, which is still the table's own clock; a body turning puts one wing through about **3.8 m**
-  a second and the other through about **1.2**, and negating the one sign the draw is handed exchanges them
-  digit for digit.
-  The blade is **0.045 m** through against **0.287 m** and **0.275 m** of its own extent, and **0.205 m**
-  where it meets the body. The span the pair sweeps: **0.813 m** as carved, **0.833 m** held up by the
-  water, **0.876 m** at the top of a stroke.
-- **What this round needed from the tools.** The first cut of the new shell left the colour off every box of
-  the body part, and `MeshBuilder.v` read `c[0]` of `undefined` -- a TypeError from inside `render()` at the
-  `flap` step, which the suite's own render wrapper reports with no frame in it. Twenty lines that open the
-  page, put the player in the form in open sea, force third person and call `g.render()` in a try/catch
-  printed the whole trace at once (kept out of the tree, as a probe always is). The other thing this round
-  met twice was its own noise. One suite run on a machine reading **9.71** in the first field of
-  `/proc/loadavg` failed the meshing-budget bound at **13.8 ms** against its **12 ms**; the same tree at an
-  idle load gave **7.6** and **9.3 ms** and stood. A second run, started at a load of **2.6** and overtaken
-  by the machine (**8.8** while its play page was up), failed three of the ring step's checks at once with
-  one of the five bodies covering **19.6 m** in its thirty seconds instead of the **52-70 m** its own pace
-  buys, spending **68** of its **600** frames pressed against something and closing **0.36 rad** instead of a
-  quarter turn -- the drawn lane and the stone in the south arm that the step's own record in 07 already
-  names. Both are the same family as the two moved flock readings at 2h, and the answer has not changed: a
-  long run belongs below a load of 3, and a red read off a busy machine is recorded rather than fixed.
-- **What is next, in the order the queue gives it.** Unchanged from last round except for the new item: the
-  collision box being the animal's span rather than its body (**30**); whether the fauna answers a body at
-  all (**0** of the **6** (animal, form) pairs this build carries answers hostile, both rows saying
-  `default: 'ignore'`); the panic multiple's value, still unreachable now that no shipped valley opens the
-  branch; a person's buoyancy (asked at 2l, the figure unmodelled); and at what point a rig of one body
-  stops measuring a law and starts measuring a habitat (**25**). The documents moved in this same commit:
-  03 s3 carries the animal -- the plan, the four fins, and the box -- and 07's record of the stroke carries
-  the new figures. The suite's record of it is three checks and three measurements: the shell is a foil and
-  not a square, the front wings reach, the rear flippers are rudders, and beside them the plan profile, the
-  reach of every fin along itself, and the corner radius the model gate itself asks for.
+- **The law, which is one line and no new mechanism.** The same
+  `fogK: [1.40, 0.40, 0.15]` and the same colour that eat a lakebed are handed to
+  the sky pass, and the quad mixes its own colour into that water over the road this
+  ray walks inside the liquid: `walk = lensUnder / d.y` for a direction that climbs
+  towards the surface the lens stands under, without end for one that never climbs
+  out. `1 - exp(-k * walk)` is the term the world's own faces and the motes already
+  use, so nothing in the frame is priced twice by two laws. What the clause before
+  it charged *instead* -- a walk asked out to the nearer of the far plane and a ring
+  edge -- is gone: `uEdge` is out of the sky program and `env.groundEdge` out of the
+  environment, because asked along the ray the choice of an edge is unobservable and
+  a number nothing reads is a number that drifts.
+- **The hole, drawn by the step and drawn twice.** The state the picture was taken
+  in is a frame whose ring of meshes is not whole -- what a body *put* out at sea is
+  shown while the streamer works, and what a hole in that ring is. `theSeaKeepsItsOwnColourToItsOwnHorizon`
+  now takes the meshes out of the **49** chunks round a lens standing 4 m under that
+  sea and asks the frame twice. With the walk asked of the liquid: **0** pixels of
+  open sky in the half whose rays point above the eye line, that half's brightest
+  **60**, and the sharpest side-by-side cut in the whole frame **1.6** of the 255
+  with no pair over 25. With the sky pass told nothing about the liquid -- the old
+  clause's answer, pixel for pixel: **216,694** pixels of open sky filling that half
+  from the top edge of the frame down to within three rows of the eye line, the
+  bluest of them **232** in its blue channel, the brightest **193**, and the boundary
+  cutting the frame by **152.8** of the 255 at **291** places. And the same lens with
+  its ring whole cuts the frame by that same **1.6** in **0** pairs: the water's
+  answer adds no edge of its own where the surface is drawn.
+- **Where the term is inert, and why three rigs had to be told so.** Where a
+  liquid's surface *is* drawn, a lens standing in that liquid is shown no background
+  at all -- the pane's first pass multiplies the frame behind it by nothing wherever
+  a ray was bent, and outside the cone the face hands the light back entire -- so the
+  leg up to that surface is charged by the face, once, and the quad answers only the
+  directions no face answers. Three water rigs build a control frame by asking the
+  faces for an index of **1**, which is the renderer's word for a frame holding no
+  liquid and the only way to take the turn out of a frame; that switch leaves the
+  face's survival in place, so the background of such a frame is multiplied along the
+  same leg. Asked for that leg too, the quad counts the water twice along one road.
+  It was not a harmless doubling: with it, two of the night-window checks' figures
+  moved and two of the chapter's check names stopped describing what the suite
+  printed. Those three controls now leave the sky pass uncharged, and all three of
+  those steps print byte for byte what they printed before this round -- read off the
+  two logs, not from a desk.
+- **Two figures the same law moved, and the record follows the run.** The
+  lens-standing-on-the-sea-floor frame, which is the case the retired edge was
+  invented for, now keeps **0** pixels over its water above its eye line with its
+  brightest at the water's own **53** -- that half of the frame is the colour of the
+  sea the lens stands in. With the wave left on the face the same frame's count of
+  pixels over that water is **960**, not the **961** the chapter carried: one less
+  pixel where the tilted face lets a little of the background through, and that
+  background is now water instead of sky. The chapter's numbers for this round are
+  the two committed runs' (docs/07, the sky bullet), and the step's check names carry
+  them.
+- **What this round refused to claim.** It did not find why a *played* frame has a
+  hole in its meshed ring. The complaint's own frame is a large, near hole; no swim
+  reproduced one. What an unkept probe found is that raw sky under water appears in a
+  played frame only while the streamer still has chunks left -- cold start, or a body
+  set down at an address the lens had never walked to -- and that those gaps are far
+  and few. That is recorded as issue **31**, with the reproduction this round has: a
+  hole held open by hand. The alternative answer -- that the frame should be told
+  where the liquid ends sideways and pay nothing beyond it -- is not available without
+  a geometry the renderer does not have, and the chapter says so where the law stands.
+- **What is next, in the order the queue gives it.** Unchanged: the collision box
+  being the animal's span rather than its body (**30**); whether the fauna answers a
+  body at all (**0** of the **6** (animal, form) pairs this build carries answers
+  hostile, both rows saying `default: 'ignore'`); the panic multiple's value, still
+  unreachable now that no shipped valley opens the branch; a person's buoyancy (asked
+  at 2l, the figure unmodelled); and at what point a rig of one body stops measuring a
+  law and starts measuring a habitat (**25**). New above them: **31**.
 
 ## 1. Night sky read as black blocks when looking up out of the lake
 
@@ -3067,9 +3077,118 @@ the *drawn* body is outside its own box at the top of a stroke, 0.813 m as carve
 water, 0.876 m at the top of a stroke, against a half-width of 0.75 m -- is already recorded in 07 s1; what
 is new here is that the box is nearer the animal's own size than the animal's own limbs.
 
+## 31. A lens standing in a liquid has nothing to stand on until the ring round it is meshed (found reading the arc out of the user's screenshot)
+
+The law is closed -- a frame's background is asked about the liquid the lens stands
+in, along the ray, and the arc the user sent cannot come back while that is true
+(07, the sky bullet; `theSeaKeepsItsOwnColourToItsOwnHorizon` draws the hole and its
+opposite, and the numbers are in the state block above). What is **not** closed is
+the question underneath it, which the user's own words point at: why was that frame
+showing the sea's own surface nowhere near the lens at all?
+
+- **What the suite holds.** A hole held open by hand: the meshes taken out of the
+  **49** chunks round a lens standing 4 m under the open sea. That is the state a body
+  *put* at an address is in while the ring is streamed, and it is what a hole in a
+  ring is, but it is a hole made to be read, not one the game was seen to make.
+- **What a probe found, and what that finding is worth.** An unkept desk probe
+  (`/tmp/audit.cjs`, one rendered frame per step of a scripted swim, sampling pixels
+  whose rays point above the eye line and asking the world whether the surface they
+  meet is inside a meshed chunk) reported raw sky under water in a *played* frame only
+  while the streamer still had chunks left -- a cold start, or a body set down at an
+  address the lens had never walked to -- and never in a frame at rest. It found no
+  near, stable hole, and none of its counts are reproducible by anything in the tree,
+  so they are quoted here as a direction and not as a fact. The screenshot's arc sat
+  where no surface was drawn anywhere near that lens, which is a bigger hole than a
+  cold start explains and smaller than the 49 this round draws by hand.
+- **Why this is not fixed by the answer that is nearest to hand.** The frame could be
+  told where the liquid ends sideways and pay nothing past that edge. That needs a
+  geometry the renderer does not have: the sea has no boundary, and the only edge the
+  frame holds is the edge of the meshes, which is the thing that was missing. The
+  retired `uEdge`/`env.groundEdge` pair was an attempt at exactly this and it was
+  removed rather than repaired: asked along the ray, the choice of where to stop is
+  unobservable, and a number nothing reads is a number that drifts.
+- **What would settle it.** A census, not an argument: over a played session, how many
+  frames answer an underwater lens's above-eye-line half with the background quad, and
+  how far out the surfaces those directions meet are. The first fill of a ring is
+  measured in 07's streamer bullet (**737-743** chunks over **153-162** budgeted
+  calls, **1.0-1.1 s** of wall time), so an answer of "only ever the first second
+  after a body is put down" is a possible one -- and if it is, the thing to change is
+  where the budget goes, not what the frame assumes. Nothing runs that census today.
+
 ## The record of the last rounds (kept as history)
 
-### One round back: the water already prices a second of a body's breath, so it does not also cause the state that quickens it (3dab46a)
+### One round back: a sea turtle is a foil with its flippers swept aft, and the suite reads the plan (d993cd5)
+
+That round was one commit, and what it changed was a body rather than a law. The
+user sent a photograph of a real green turtle with three sentences about it:
+「海龟的后腿是朝向后面的，或者至少是斜后方. 身体也不是方的，身体应该是前宽后窄或者是类似的形状,
+前肢太短了」 -- the hind flippers point aft, or at least diagonally aft; the body is
+not square in plan, it is wide in front and narrow behind; the front flippers are
+too short. Read against the animal it claims to be, that build's model was none of
+those things and nothing anywhere could see it: the shell was one width from end to
+end with its widest place at its own front edge, its hind flippers left the animal
+sideways out of its widest place, and a front wing reached 0.27 of the shell's own
+length, measured sideways off the shoulder. It was a tortoise drawn at a sea
+turtle's size. What the round did was carve the animal to the photograph, and what
+it refused to do was invent a figure to cover for it: the collision box, the row's
+scale, the shoulder pivots and the stroke table were left exactly where they were,
+and the shape had to come out of the room that already exists.
+
+- **The shell, asked from above, which is the view a turtle is known by.** Six plan
+  stations, a dome over the same outline, four tapering crown plates, marginals
+  standing off each station's wall and a tapered plastron under it. Measured off the
+  authored boxes by `theSeaTurtleStrokesBothWingsTogether`: **0.963 m** long,
+  **0.850 m** across, its widest place at **0.31** of its own length, closing to
+  **0.41** of that width at the tail and to **0.65** at 0.7 of the length, and never
+  opening again aft of its widest place by more than the rim plates stand out
+  (**0.3** measured against a **0.15** stand-off). A square in plan fails every part
+  of that reading at once.
+- **The four fins, asked which way they point from their own hinges and how far they
+  reach along themselves.** A front wing is **0.671 m** measured along itself --
+  **0.70** of the shell's length -- its end lies **0.75** of the shell's length back
+  from the shell's front edge, and it is carried **26.6 deg** off straight aft. A
+  rear fin is **0.364 m**, **0.38** of the shell, **22.2 deg** off straight aft, and
+  it stands out *behind* the shell's rear edge. The check on the rear pair is a
+  rudder test, not a length test: shorter than half the shell and shorter than 0.6 of
+  the front wing, pointing aft and reaching past the shell. Both pairs are mirrored to
+  the digit and both are measured from the same boxes the draw uploads.
+- **The box round that animal, which the new shape ran up against, resolved rather
+  than changed.** The world enforces a **1.5 m** square footprint and **0.45 m** of
+  height for a body worn from this fruit, and the model's own gate lets a corner
+  cross that line by 0.1 m. The animal's body is nowhere near the line: its shell is
+  **0.850 m** across, **0.425 m** half, inside the **0.75 m** the world enforces by
+  half again. The fins are what the room is for -- the widest corner of the authored
+  model stood **0.834 m** from its own middle against the **0.85 m** the gate
+  permits, so **8.4** of the **10 cm** a limb is given is spent on the limbs. That is
+  also the ceiling on the user's third sentence: no longer *outward* reach is
+  available at all, because the box's inscribed circle bounds every corner at 0.85 m,
+  and the only direction left for a flipper as long as that one is aft -- which is
+  the direction the photograph shows anyway. Why the record is a span and not a body
+  is issue **30**.
+- **The stroke is the same table read by the same matrices, and its numbers moved
+  with the shape** (all of them printed by the step, none of them kept in the test).
+  The blade is **0.045 m** through against **0.287 m** and **0.275 m** of its own
+  extent, and **0.205 m** where it meets the body; the span the pair sweeps is
+  **0.813 m** as carved, **0.833 m** held up by the water, **0.876 m** at the top of
+  a stroke.
+- **What that round needed from the tools.** The first cut of the new shell left the
+  colour off every box of the body part, and `MeshBuilder.v` read `c[0]` of
+  `undefined` -- a TypeError from inside `render()` at the `flap` step, which the
+  suite's own render wrapper reports with no frame in it. Twenty lines that open the
+  page, put the player in the form in open sea, force third person and call
+  `g.render()` in a try/catch printed the whole trace at once (kept out of the tree,
+  as a probe always is). The other thing it met twice was its own noise: one suite
+  run on a machine reading **9.71** in the first field of `/proc/loadavg` failed the
+  meshing-budget bound at **13.8 ms** against its **12 ms**; the same tree at an idle
+  load gave **7.6** and **9.3 ms** and stood. A second run, started at a load of
+  **2.6** and overtaken by the machine (**8.8** while its play page was up), failed
+  three of the ring step's checks at once with one of the five bodies covering
+  **19.6 m** in its thirty seconds instead of the **52-70 m** its own pace buys. Both
+  are the same family as the two moved flock readings at 2h, and the answer has not
+  changed: a long run belongs below a load of 3, and a red read off a busy machine is
+  recorded rather than fixed.
+
+### Two rounds back: the water already prices a second of a body's breath, so it does not also cause the state that quickens it (3dab46a)
 
 State at time of writing: that round was asked for by the sentence the round before it had left standing --
 that filling the fright state on a near-drowning needs a figure for how fast water frightens a body. Asked
@@ -3091,7 +3210,7 @@ after it was not the next item on that list: the user came back with a photograp
 sentences about the body this build draws for it, and a body that is the wrong shape outranks a queue.
 The user's words that round were "Continue" -- go on.
 
-### Two rounds back: the fright a body carries is on its record, and the multiple it puts on the breath clock prices no part of a day (ab5ee33)
+### Three rounds back: the fright a body carries is on its record, and the multiple it puts on the breath clock prices no part of a day (ab5ee33)
 
 State at time of writing: that round was the third clock a body carries -- not the store and not the price,
 but the state that decides how fast the store runs. It was written in three places and on no record: the rate
@@ -3119,7 +3238,7 @@ never opens that branch: **2** animal rows against the **3** forms its fruits ca
 over **6 s** of dry ground with the burst held and **+6.0** without it, at **6.815 m/s** against the **4.70**
 the row gives, and **2.90** at the film of that column where the burst is refused). The law and the numbers
 are at 2m; the question that entry left standing was answered the next round, at 2n.
-### Three rounds back: the life a body has is on its record, and this valley's deepest floor is measured against the pair of clocks a body carries under water (3d31f53)
+### Four rounds back: the life a body has is on its record, and this valley's deepest floor is measured against the pair of clocks a body carries under water (3d31f53)
 
 State at time of writing: that round was one commit, and it came off the queue the previous round wrote.
 A body under water is held by two figures: how long it can hold its breath, and how much of itself the
@@ -3147,7 +3266,7 @@ head never once out. And the valley asks this and does not offer it: **2,958** c
 the film, going forward at the **2.9 m/s** its row states, the head is out in **6.3%** of the frames and
 the body drowns. The law, the numbers and the questions left standing under it are at 2l.
 
-### Four rounds back: the reserve of breath belongs to the body that is wearing it, and a save carries it (63fb773)
+### Five rounds back: the reserve of breath belongs to the body that is wearing it, and a save carries it (63fb773)
 
 State at time of writing: that round was one commit, and it came off the queue the previous round wrote.
 The clock had been closed at one rate at both ends, and the bound it runs inside was still where it had
@@ -3180,7 +3299,7 @@ payload of **2,212** bytes; a payload that names no number for the reserve leave
 body it woke in already held, and no shape the game never wrote put a reserve outside the record of the body
 it woke in. The law, the numbers and the questions left standing under it are at 2k.
 
-### Five rounds back: the breath is one clock, and a day of diving was bought with the seconds spent breathing (110a956)
+### Six rounds back: the breath is one clock, and a day of diving was bought with the seconds spent breathing (110a956)
 
 State at time of writing: that round was one commit, taken from the second of 29's three standing
 questions -- "Spending breath is the animal's; refilling it is nobody's." The figures on the rows are
@@ -3209,7 +3328,7 @@ person's burst "is bought with breath" were reworded: the gate refuses the burst
 reads empty, which clears a frame after the head comes out, and nothing charges it. The law, the numbers
 and the questions left standing under it are at 2j.
 
-### Six rounds back: the ground a body is told about is one ground, and a body the world has closed round is raised out of it at a rate (2bd12e1)
+### Seven rounds back: the ground a body is told about is one ground, and a body the world has closed round is raised out of it at a rate (2bd12e1)
 
 State at time of writing: that round was one commit and two laws, taken from the second of 29's three
 standing questions. At one column of Mirrorlake the floor a dive stops above was measured from the column
@@ -3240,7 +3359,7 @@ body *through* a face leaves it inside the rock for the frames it takes. That is
 the rig that measured the page instead of the law and how it was rebuilt; the numbers of both laws are at
 2i too.
 
-### Seven rounds back: the body worn from a sea turtle is asked what its water does (d7ed638)
+### Eight rounds back: the body worn from a sea turtle is asked what its water does (d7ed638)
 
 State at time of writing: this round is one commit, and it is the sea turtle's *body* being asked
 what it does in the water its animal was built for. The user came with three sentences about the
@@ -3336,7 +3455,7 @@ below is the frame's answer.
   which is the preemption the meshing law at 2d already describes; that entry records it, and the
   caps did not move.
 
-### Eight rounds back: the window over the lens keeps its stars (36768e2)
+### Nine rounds back: the window over the lens keeps its stars (36768e2)
 
 State at time of writing: this round is one commit, and it is that window being asked to hold
 the night as well as the day. The user's only words in it were 继续做，不要轻易停下来 -- keep
@@ -3393,7 +3512,7 @@ water this round bent is now legible enough to be looked at from.
 > the state they describe is not the current tree, and the block at the top of
 > this file is.
 
-### Nine rounds back: the sky above the water stands inside a cone (a5e2802)
+### Ten rounds back: the sky above the water stands inside a cone (a5e2802)
 
 Opened on no new demand at all -- 继续做，不要轻易停下来, keep going, and do not stop early -- and
 the next step was taken from what this block lists as its own unfinished half: the stars in the
@@ -3503,7 +3622,7 @@ now states the law, and every number below is the frame's answer, not the arithm
   eighteen seconds, and two front flippers that sit at the sides of the shell instead of under
   it.
 
-### Ten rounds back: a lake's face answers with the tilt it has (d20eccf)
+### Eleven rounds back: a lake's face answers with the tilt it has (d20eccf)
 
 Opened on the user's own screenshot -- 从在海底往上看青蛙，为什么是这种视角，为什么看到的是一个圆环:
 from the sea floor looking up at the frog, why this view, why is what I see a ring -- and it
@@ -3557,7 +3676,7 @@ answered the question with numbers before changing anything.
   state. One run of this round's window rig answered nearly twice the elevation the clock it
   pinned gives.
 
-### Eleven rounds back: the sea has an animal, and it strokes with both wings at once (04a6572)
+### Twelve rounds back: the sea has an animal, and it strokes with both wings at once (04a6572)
 
 The user's queue under **25** item 3, spent in one round: 前肢像翅膀一样上下划, a swimmer
 faster in the water than the frog's **4.6**, no clock drying its skin on land, under **1.8**
@@ -3604,7 +3723,7 @@ keeping only the frog's, and 现在海里面啥动物都没有，太冷清了.
   the worn body cannot get up a single riser anywhere in this valley -- which is what the
   absence of a `hop` means.
 
-### Twelve rounds back: a bar is sand through, a reef is rock through (014b515)
+### Thirteen rounds back: a bar is sand through, a reef is rock through (014b515)
 
 Not recorded here when it was made, so it is recorded now in two lines. A kind of
 island stated the shape of its shore and not what its ground is made of: the
@@ -3623,7 +3742,7 @@ the tally and the check still passed. The crown rows of all 70 islands are
 byte-identical before and after (sum 1442). Nothing
 lived on any of it yet; the round after it is the one that put something there.
 
-### Thirteen rounds back: the surface under water hands the light back (160edcf)
+### Fourteen rounds back: the surface under water hands the light back (160edcf)
 
 The question was the user's, asked over the picture the round before had just
 fixed: 这种远处的水光…水面之上这样显示我理解，但是在水底也是这个样子的吗？物理世界，
@@ -3728,7 +3847,7 @@ and animals in the sea at all, which is currently empty of everything but frogs;
 **28**, the unbent crossing -- no refraction, no Snell's window, no tilt on the surface, no
 caustics, and an underwater mirror that is a colour instead of a picture.
 
-### Sixteen rounds back: the map becomes a window of ground round the body (29cd91e)
+### Seventeen rounds back: the map becomes a window of ground round the body (29cd91e)
 
 State at time of writing, then: this round is one commit, and it changes what the minimap is.
 It was a picture: one canvas of the authored square, 160x160 cells, painted once at boot, and
@@ -3805,7 +3924,7 @@ turtle's fruit in sand, the main island keeping only the frog's, and animals in 
 which is currently empty of everything but frogs. The minimap half of that queue is closed by
 this round.
 
-### Seventeen rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
+### Eighteen rounds back: a jump is measured by the frames it takes, not by the parabola (ad9af5a)
 State at time of writing, then:
 A body whose legs are an arc was sized by the parabola -- launch squared over
 twice the gravity -- and the parabola is what the flight tends to as the frame goes to
@@ -3909,7 +4028,7 @@ no skin-drying clock on land, slower than **1.8** on it -- the island nearest th
 be a sand isle carrying the turtle's fruit in sand, and animals in the sea at all, which
 is currently empty of everything but frogs.
 
-### Eighteen rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
+### Nineteen rounds back: the sea is given ground and ids, and nothing on it (dea2f31, 7ad7cc0)
 State at time of writing, then:
 the sea. The water the last round opened out is no longer an empty field: it holds
 islands, and it holds more of them the nearer they lie to the island this square sits
@@ -4016,7 +4135,7 @@ finished.
 
 
 
-### Nineteen rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
+### Twenty rounds back: the map stops being the world and becomes a square of ground with an address (f1f6970)
 State at time of writing: this round is one commit, and it changes what the world
 *is*. The map stops being the world and becomes a square of ground with an
 address: `game/src/world.js` keeps one rule -- `columnInto`, the function that
@@ -4169,7 +4288,7 @@ round deliberately refused to invent one.
 Read the standing contract below first: it decides whether any of this counts as
 finished.
 
-### Twenty rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
+### Twenty-one rounds back: the box is drawn only on what the hand can act on (73fc182, 2474404, a237f80)
 State at time of writing: this round is three commits. The first is the whole of the
 work: `73fc182` the box is drawn only on what the hand can act on -- one answer,
 `aimed()` in `game/src/game.js`, now read by the prompt, the marker and the key,
@@ -4258,7 +4377,7 @@ the contour probes is still unmeasured). One new one, 22's own seam: **the hand 
 in third person -- the marker now shows only where the key acts, which is what made
 that one distance and that origin visible.
 
-### Twenty-one rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
+### Twenty-two rounds back: an animal asked the ground as the rectangle it is drawn with (0d88846, d0975b2)
 
 > The record that round ended on, which was the block at the top of this file until
 > the round above superseded it. Its 15, 17, 18 and 19 stand as written and its 16
@@ -4381,7 +4500,7 @@ because its walls have ends; and the width of the contour probes -- an animal lo
 **`spd*dt`**, **3 cm**, to one side -- is what makes it turn at the end of a wall
 and never before, and nothing measures what that costs.
 
-### Twenty-two rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
+### Twenty-three rounds back: a shore, a wall and a ceiling, asked with the legs (49848f6, f57af60, f76f0e4, c8255e3, d0ee9b6, bc37235)
 
 > The record that round ended on, which was the block at the top of this file
 > until the round above superseded it. What it left open is closed on this tree:
@@ -4555,7 +4674,7 @@ columns -- is quoted in the chapters and in the code comments and is computed by
 nothing that runs; the census `docs-sync` keeps is pointed at the map chapter and
 counts the lake's depths, not the shores. It is a number three laws now rest on.
 
-### Twenty-three rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
+### Twenty-four rounds back: a hop sized to the step (35e6191, d26223c, fb22b3c, 4f63e6f)
 
 > This was the block at the top of the file until the audit above superseded it.
 > Of the issues it names, 15 is closed and 16 -- an animal moved as a point and

@@ -487,20 +487,7 @@
         liqK: W.liquidAbsorb(),
         liqIor: W.liquidIor(),
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
-        far: 260,
-        /* Where the frame's ground is certain to stop. The world holds ground
-           round the lens out to `keep` chunks (its own square is always drawn),
-           but that ring is whole chunks cut on a disc: along one bearing the
-           last chunk reaches past `keep` chunk widths and along another a hole
-           opens short of it. Measured for a lens standing on the floor of the
-           open sea: the surface its eye line meets is at 237 m one way and 244
-           m the next, and the frame painted sky at one and water at the other.
-           So the question is asked at the edge that is ground in every
-           direction -- one chunk width short of the held ring, which is the
-           nearest a hole in that ring can stand. Past that the liquid is walked
-           to the edge and no further, whatever the far plane does: the far plane
-           stops the geometry, not the water. */
-        groundEdge: (W.keep - 1) * W.cs
+        far: 260
       };
     }
 

@@ -5155,6 +5155,43 @@ What was measured before any of this was fixed, over 180 frames of walking
         p99: Math.round(lums[Math.floor(n * 0.99)]), blueMinusRed: +(br / n).toFixed(1),
         brighterThanWater: over, over200: hi };
     };
+    /* A pixel that reads as open sky: blue a long way over red -- the water and
+       its own mirror never leave that much room between the two, and it is the
+       shape of the complaint a person made from a screenshot rather than a
+       threshold invented for it -- and bright enough to be sky rather than
+       anything lit by it. The rows are counted from the top of the frame, which
+       is where the picture they were sent in showed the thing. */
+    const skyRead = (s) => {
+      let n = 0, hi = -1, lo = -1, maxBlue = 0, maxL = 0;
+      for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+        const i = (y * s.w + x) * 4;
+        const l = 0.2126 * s.px[i] + 0.7152 * s.px[i + 1] + 0.0722 * s.px[i + 2];
+        if (s.px[i + 2] > 130 && s.px[i + 2] - s.px[i] > 60 && l > 75) {
+          n++;
+          if (hi < 0) hi = y;
+          lo = y;
+          if (s.px[i + 2] > maxBlue) maxBlue = s.px[i + 2];
+          if (l > maxL) maxL = l;
+        }
+      }
+      return { n, rows: hi < 0 ? [] : [s.h - 1 - hi, s.h - 1 - lo],
+        maxBlue, maxLum: Math.round(maxL) };
+    };
+    /* The sharpest edge a frame holds: two pixels side by side and the difference
+       between them, and how many such pairs a frame cuts by more than a tenth of
+       its range. A law the frame draws is a colour that changes where the thing
+       changes; a hard edge across a whole quarter of the frame with nothing on
+       either side of it is the picture of a boundary the world does not have. */
+    const cutRead = (s) => {
+      const lum = (i) => 0.2126 * s.px[i] + 0.7152 * s.px[i + 1] + 0.0722 * s.px[i + 2];
+      let max = 0, over = 0;
+      for (let y = 0; y < s.h; y++) for (let x = 1; x < s.w; x++) {
+        const e = Math.abs(lum((y * s.w + x) * 4) - lum((y * s.w + x - 1) * 4));
+        if (e > max) max = e;
+        if (e > 25) over++;
+      }
+      return { maxEdge: +max.toFixed(1), cuts: over };
+    };
 
     // 1. 4 m under a flat sea, level, and 2. that half of it on its own
     const sea = put(spot.surface - 4, 0);
@@ -5207,26 +5244,18 @@ What was measured before any of this was fixed, over 180 frames of walking
     g.env.veil = veilWas;
     const split = read(splitFrame, 'above');
     /* 8. a lens standing on the floor of that sea, level, wearing nothing: the
-       deeper a lens sits, the wider the fan of directions whose surface lies out
-       past the edge of the frame's ground. Above its eye line every ray of this
-       frame ends at the surface, so every one of those pixels has to be the
-       water's colour -- the strip along the eye line is the only place in the
-       frame where a sky can stand. What sits a metre below the lens is the floor
-       of the sea, lit by the sun through a metre of water: it is sand, and it is
-       not what this is asking about. */
+       water is over its head in every direction above its eye line, and the road
+       through it is long, so every one of those pixels has to be the water's own
+       colour -- the strip along the eye line is the only place in such a frame
+       where a sky could stand at all. What sits a metre below the lens is the
+       floor of the sea, lit by the sun through a metre of water: it is sand, and
+       it is not what this is asking about. */
     p.form = null; p.formT = 0;
     const deepUnder = Math.min(spot.depth - 1, 9);
     const deep = put(spot.surface - deepUnder, 0);
     const deepAbove = read(frame(), 'above');
-    /* 9. the same lens, the same frame, with the charge asked of the far plane
-       alone -- what the code did until this round. */
-    const edgeWas = g.env.groundEdge;
-    g.env.groundEdge = 1e9;
-    const deepFarFrame = frame();
-    g.env.groundEdge = edgeWas;
-    const deepFarAbove = read(deepFarFrame, 'above');
-    /* 10. and the same lens again with the wave put back on the water's own
-       face -- the other half of what this frame showed. A ray along the eye
+    /* 9. and the same lens again with the wave put back on the water's own
+       face -- what that frame showed. A ray along the eye
        line of a lens 7 m under the sea climbs 3 cm per metre; the wave moves
        the surface 8 cm up and down about every 9 m of it. So that ray meets the
        surface three or four times within a few metres, and since the face adds
@@ -5241,21 +5270,62 @@ What was measured before any of this was fixed, over 180 frames of walking
     const wavedFrame = frame();
     g.R.drawMesh = paneWas;
     const deepWaved = read(wavedFrame, 'above');
-    /* 11. both at once: the frame exactly as this round's code found it -- the
-       charge asked of the far plane and the wave left on the face. That is the
-       picture a body standing on the floor of an open sea was shown, and the
-       count the chapter quotes is read off this one and not off a desk probe. */
-    g.R.drawMesh = waveOn;
-    g.env.groundEdge = 1e9;
-    const beforeFrame = frame();
-    g.env.groundEdge = edgeWas;
-    g.R.drawMesh = paneWas;
-    const deepBefore = read(beforeFrame, 'above');
+    /* 10. a lens standing in that sea with the sea's own face taken out from
+       under it: the same liquid, the same numbers, the same lens, and no
+       geometry where its surface should be. That is the state a body *put* out at
+       sea stands in while the ring round it is being meshed -- a lens set down
+       out at sea starts with the whole of that ring unmeshed -- and it is what a
+       hole in that ring is. Nothing can answer those pixels but the quad that
+       stands for "nothing was drawn here", and the picture a person sent in was
+       what it answered: the sea's own colour under a curve and the sky at its
+       brightest above one, the edge between them hard enough to read a ruler by.
+       `skyRead` counts the pixels of a frame that read as open sky -- blue far
+       over red and brighter than the water it stands in, which is the shape of
+       the complaint rather than a threshold invented for it -- and says between
+       which rows of the frame they run. `cutRead` is the sharpest edge in the
+       frame: two pixels side by side and the difference between them.
+       11. the same frame, the same hole, with the sky pass told nothing about
+       the liquid. The clause this round replaced asked the walk only of
+       directions that stay inside the liquid past the edge of what is drawn, and
+       paid nothing for the directions that reach the liquid's own surface inside
+       it -- on the argument that the face drawn there carries that water
+       already. A face is asked of geometry; where there is no geometry the
+       argument holds nothing, and those directions were the sky. Every one of
+       them has its surface inside the drawn range, so this shot is that clause's
+       answer for the hole, pixel for pixel. */
+    const gapLens = put(spot.surface - 4, 0);
+    const heldFrame = frame();
+    const heldCut = cutRead(heldFrame);
+    const chx = Math.floor(p.x / W.cs), chz = Math.floor(p.z / W.cs);
+    const pulled = [];
+    for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
+      const cx = chx + dx, cz = chz + dz;
+      const m = W.inChunkGrid(cx, cz) ? W.chunks[cz * W.cx + cx]
+        : (W.far.get(W.ckey(cx, cz)) || {}).mesh;
+      if (m && m[2]) { pulled.push([m, m[2]]); m[2] = null; }
+    }
+    let gapFrame, gapOffFrame;
+    try {
+      gapFrame = frame();
+      const skyOff = function () {
+        const keep = this.env.inWater; this.env.inWater = 0;
+        skyWas.call(this); this.env.inWater = keep;
+      };
+      g.R.drawSky = skyOff;
+      gapOffFrame = frame();
+    } finally {
+      g.R.drawSky = skyWas;
+      for (const [m, keep] of pulled) m[2] = keep;
+    }
+    const gap = read(gapFrame, 'above');
+    const gapSky = skyRead(gapFrame), gapOffSky = skyRead(gapOffFrame);
+    const gapCut = cutRead(gapFrame), gapOffCut = cutRead(gapOffFrame);
     return back({ spot, water: { row: W.liquidVeil(), lum: Math.round(luma(W.liquidVeil())),
         blueMinusRed: Math.round((W.liquidVeil()[2] - W.liquidVeil()[0]) * 255) },
       sea, skin, upLens, washed, under, below, off, offAll, dry, up, washedBelow,
-      mirror, split, deep, deepUnder, edge: g.env.groundEdge, deepAbove, deepFarAbove,
-      deepWaved, deepBefore, held: W.far.size });
+      mirror, split, deep, deepUnder, deepAbove, deepWaved,
+      gapLens, pulledChunks: pulled.length,
+      gap, gapSky, gapOffSky, gapCut, gapOffCut, heldCut, held: W.far.size });
   });
   check('the sea keeps its own colour to its own horizon: nothing under the eye line is brighter than the water',
     !openSea.error && openSea.below.brighterThanWater === 0 && openSea.below.over200 === 0 &&
@@ -5317,12 +5387,7 @@ What was measured before any of this was fixed, over 180 frames of walking
 
   /* A lens standing on the floor of that sea, level, has no sky anywhere in its
      frame: every direction it can see is water at one end or the other. What it
-     met instead was a line along its eye line, and that line has two causes,
-     each drawn by its own shot here. The nearer one is the edge of the ground:
-     the frame holds ground out to a ring of `World.keep` chunks, cut on a disc
-     out of whole chunks, so along one bearing the sea's surface is drawn to 244 m
-     and along the next it is gone at 237 m; asked of the far plane, as the code
-     did, the directions in between answered with the sky. The other is the wave:
+     met instead was a dotted line along its eye line, and the wave put it there:
      the face is asked how hard a ray meets it and which way it points, never how
      it is tilted, so a lens inside the liquid was made to cross a surface it is
      shaded as a plane three or four times in a few metres, and every crossing
@@ -5333,22 +5398,36 @@ What was measured before any of this was fixed, over 180 frames of walking
     openSea.deep && openSea.deepAbove && openSea.deep.lensUnder === openSea.deepUnder &&
     openSea.deepAbove.brighterThanWater === 0 && openSea.deepAbove.over200 === 0 &&
     openSea.deepAbove.maxLum <= openSea.deepAbove.ref + 6, openSea);
-  check('the edge the liquid is walked to is the edge the frame is certain of, not the far plane: the same lens asked of the far plane alone leaves 517 pixels brighter than its water above its eye line, the brightest 198',
-    openSea.deepFarAbove && openSea.edge === 224 &&
-    openSea.deepFarAbove.brighterThanWater > 300 &&
-    openSea.deepFarAbove.brighterThanWater > openSea.deepAbove.brighterThanWater + 300 &&
-    openSea.deepFarAbove.maxLum > openSea.deepAbove.ref + 100, openSea);
-  check('a lens inside the liquid is shown the interface its own numbers describe: with the wave left on that face the same frame meets the surface again and again, 961 pixels over its water and 107 at the brightest of them',
+  check('a lens inside the liquid is shown the interface its own numbers describe: with the wave left on that face the same frame meets the surface again and again, 960 pixels over its water and 107 at the brightest of them',
     openSea.deepWaved && openSea.deepAbove &&
     openSea.deepWaved.brighterThanWater > openSea.deepAbove.brighterThanWater + 300 &&
     openSea.deepWaved.maxLum > openSea.deepAbove.maxLum + 30, openSea);
-  /* Both halves together are the frame this round's code was handed: the charge
-     asked of the far plane and the wave left on the water's face. The step draws
-     it so that the figure the chapter quotes for what a body standing on the
-     floor of an open sea was shown is a number the suite prints. */
-  check('the frame this round found is drawn by the step, not remembered from a probe: with both halves of the defect in it that half of the frame keeps 1,403 pixels over the water it stands in and 198 at the brightest of them',
-    openSea.deepBefore && openSea.deepBefore.brighterThanWater > openSea.deepAbove.brighterThanWater + 300 &&
-    openSea.deepBefore.maxLum > openSea.deepAbove.ref + 100, openSea);
+
+  /* A frame's background is what stands where nothing was drawn, and a body put
+     down out at sea is shown that background for a while: the ring of ground is
+     streamed nearest first, and until it is whole the sea's own surface is not
+     in the frame. Those directions reach the liquid's surface -- they are inside
+     the drawn range, so under the law this valley keeps the walk is a short one
+     -- and the quad answers for the liquid, not past it. The shot takes the
+     meshes out of the 49 chunks round a lens standing 4 m under the open sea,
+     which is that state held open to be read, and draws it twice: once as the
+     code answers it and once with the sky pass told nothing about the liquid,
+     which is what this round replaced. The hole's own rim is measured too: the
+     frame with its ring whole cuts the frame no more than the frame with the
+     hole in it, so the answer is not a new boundary drawn where the old one was. */
+  check('a lens set down in a liquid whose surface is not drawn yet is still shown its liquid: with the meshes of the 49 chunks round it out of the frame, 0 of the 252,000 pixels above its eye line read as open sky, and that half of the frame reads 60 at its brightest',
+    openSea.gap && openSea.gapSky && openSea.pulledChunks === 49 &&
+    openSea.gapSky.n === 0 && openSea.gap.brighterThanWater === 0 &&
+    openSea.gap.maxLum <= openSea.gap.ref + 10, openSea);
+  check('the same hole with the sky told nothing about the liquid is the picture that was sent in: 216,694 pixels of open sky from the top edge of the frame down to 3 rows short of the eye line, 193 at the brightest, and a cut of 152.8 in the 255 at 291 places',
+    openSea.gapOffSky && openSea.gapOffCut && openSea.gapOffSky.n > 200000 &&
+    openSea.gapOffSky.rows[1] === 0 && openSea.gapOffSky.rows[0] > 270 &&
+    openSea.gapOffSky.maxLum > 150 && openSea.gapOffCut.maxEdge > 120 &&
+    openSea.gapOffCut.cuts > 200, openSea);
+  check('and the water\'s answer has no edge of its own to draw: the frame with its ring whole cuts 1.6 in the 255 at 0 places, and the frame with a hole in it cuts 1.6 at 0 places',
+    openSea.gapCut && openSea.heldCut && openSea.gapCut.cuts === 0 &&
+    openSea.heldCut.cuts === 0 && openSea.gapCut.maxEdge < 5 &&
+    Math.abs(openSea.gapCut.maxEdge - openSea.heldCut.maxEdge) < 0.5, openSea);
 
   /* A lens under the skin of a lake is under a mirror, not under a window --
      except inside a cone. Light climbing out of water is turned back into it
@@ -5473,7 +5552,21 @@ What was measured before any of this was fixed, over 180 frames of walking
         skyStartElev: edge, rows: rows.filter((r, i) => i % 16 === 0) };
     };
     const iorWas = g.env.liqIor;
-    const withAir = (fn) => { g.env.liqIor = 1; const r = fn(); g.env.liqIor = iorWas; return r; };
+    const withAir = (fn) => {
+      g.env.liqIor = 1;
+      /* In a frame with no turn in it the face multiplies the sky quad by its
+         own survival along the lens's leg to that surface, so the quad is told
+         nothing here: asked for the same leg it would count one road twice. The
+         night-window step states the whole of this. */
+      const skyWas = g.R.drawSky;
+      g.R.drawSky = function () {
+        const keep = this.env.inWater; this.env.inWater = 0;
+        skyWas.call(this); this.env.inWater = keep;
+      };
+      const r = fn();
+      g.env.liqIor = iorWas; g.R.drawSky = skyWas;
+      return r;
+    };
 
     /* 1. level, 30 cm under: the whole of the frame above the eye line is
        inside the fan, so it is the water's colour and nothing else. */
@@ -5677,7 +5770,21 @@ What was measured before any of this was fixed, over 180 frames of walking
       return { n, max: Math.round(mx) };
     };
     const iorWas = g.env.liqIor;
-    const withAir = (fn) => { g.env.liqIor = 1; const r = fn(); g.env.liqIor = iorWas; return r; };
+    const withAir = (fn) => {
+      g.env.liqIor = 1;
+      /* In a frame with no turn in it the face multiplies the sky quad by its
+         own survival along the lens's leg to that surface, so the quad is told
+         nothing here: asked for the same leg it would count one road twice. The
+         night-window step states the whole of this. */
+      const skyWas = g.R.drawSky;
+      g.R.drawSky = function () {
+        const keep = this.env.inWater; this.env.inWater = 0;
+        skyWas.call(this); this.env.inWater = keep;
+      };
+      const r = fn();
+      g.env.liqIor = iorWas; g.R.drawSky = skyWas;
+      return r;
+    };
     const sd = g.env.sunDir;
     const ior = iorWas;
     const D2R = Math.PI / 180, R2D = 180 / Math.PI;
@@ -6033,7 +6140,30 @@ What was measured before any of this was fixed, over 180 frames of walking
       return set;
     };
     const iorWas = g.env.liqIor;
-    const withAir = (fn) => { g.env.liqIor = 1; const r = fn(); g.env.liqIor = iorWas; return r; };
+    /* An index of 1 is the renderer's own word for a frame that holds no
+       liquid: it closes the fan at 0 and takes the turn out of every face in the
+       frame. What it leaves alone is the face's survival -- the water between
+       this lens and that surface, which the first pane pass multiplies whatever
+       lies behind the face by. And in a frame with no turn in it, what lies
+       behind every face is the sky quad, asked along the very line the face
+       measures that leg along. So the sky pass is told nothing for these frames:
+       asked for that leg as well it counts the water twice along one road, and
+       the straight frame stops holding the sky the window folds up. Where this
+       game draws a liquid's surface a lens inside it is shown no background at
+       all -- a turned ray multiplies it by nothing, and the window's sky is the
+       turned one the face lays down -- so the question only a control frame can
+       ask is which of the two charges the leg. */
+    const skyWas = g.R.drawSky;
+    const withAir = (fn) => {
+      g.env.liqIor = 1;
+      g.R.drawSky = function () {
+        const keep = this.env.inWater; this.env.inWater = 0;
+        skyWas.call(this); this.env.inWater = keep;
+      };
+      const r = fn();
+      g.env.liqIor = iorWas; g.R.drawSky = skyWas;
+      return r;
+    };
     const sd = g.env.sunDir, md = [-sd[0], -sd[1], -sd[2]];
     const ior = iorWas, D2R = Math.PI / 180, R2D = 180 / Math.PI;
     const critical = Math.asin(1 / ior) * R2D;

@@ -655,7 +655,7 @@
      colour that leaves, and how deep the lens sits under that liquid's surface.
      The same numbers the world's faces and the motes are drawn with. */
   uniform vec3 uHazeK, uFogCol;
-  uniform float uInWater, uLensUnder, uEdge;
+  uniform float uInWater, uLensUnder;
   ${GLSL_SKY}
   void main(){
     vec3 d = normalize(vDir);
@@ -663,22 +663,45 @@
     /* A lens standing in a liquid has no sky in front of it. This quad is not a
        thing in the world: it is the frame's answer for "nothing was drawn
        here", and out in open sea that answer was the sky at its brightest --
-       measured at noon through 4 m of sea and 260 m along it: 3,702 pixels over
-       the water's own colour, its 99th percentile at 204, against a water that
-       reads 53 (the step in game/test/play.js that draws this frame twice).
-       What stands between this lens and that nothing is the liquid, and the
-       liquid runs on past where the frame stops asking about ground: the ray
-       walks it to the edge of what is drawn, and the same absorption that eats
-       a lakebed eats this. That edge is the nearer of the far plane and the
-       ground the frame is certain of -- one chunk width short of the ring it
-       holds, not the far plane and not the ring's own radius, which is a ring
-       of whole chunks cut on a disc and stops at 237 m one way and 244 m the
-       next. Asked of the far plane instead, as it was, a lens standing on the
-       floor of that sea met 517 pixels brighter than its own water along its
-       eye line, the brightest 198. */
+       3,702 pixels over the water's own colour, its 99th percentile at 204,
+       against a water that reads 53, at a lens standing 4 m under the sea with
+       the sky pass told nothing about the water (the step in game/test/play.js
+       that draws this frame twice).
+       What stands between this lens and that nothing is the liquid, and this
+       term asks the same absorption the world's own faces ask of themselves,
+       along the road this ray walks inside it: to the surface the lens stands
+       under where that surface lies above it, and without end for a direction
+       that never climbs out, which lands on the colour the liquid leaves.
+       It was asked differently before, and one clause of the difference was
+       wrong. The walk was charged only to directions that stay inside the
+       liquid past the edge of what the frame draws, and paid for nothing at
+       all -- on the argument that the liquid's own face, drawn there, already
+       carries the water the light climbs out of. A face is asked of geometry.
+       Where the geometry is not in the frame, that argument holds nothing, and
+       the whole of the sky above the eye line answered raw: at a lens 4 m
+       under the sea with the meshes of the 49 chunks round it taken out of the
+       frame, 216,694 of the 252,000 pixels of the half whose rays point above
+       that line read as open sky, filling it from the top edge of the frame
+       down to 3 rows short of the line, one of them blue 232 of the 255 and
+       the brightest 193, and the boundary between that and the sea's own
+       colour cut the frame by 152.8 of the 255 at 291 places -- a curve across
+       the frame with no water's face anywhere along it. Drawn with the walk
+       asked of the liquid the same frame holds no such pixel: that half of it
+       reads 60 at its brightest and its sharpest side-by-side cut is 1.6, with
+       nothing over 25 anywhere in the whole frame. And the same lens with its
+       ring whole cuts the frame by that same 1.6 in that same 0 places, so
+       nothing is added at the hole's rim either: where a face is drawn this
+       quad is not what the pixel ends up being.
+       What is not modelled is where the liquid ends sideways. The walk is asked
+       of the liquid's own surface plane, so a lens standing in a pool narrow
+       enough to see out of the side of is charged for water it is not in the
+       way this says; and a lens standing in a liquid whose surface is not drawn
+       is shown the sky through the water, which is what the road is, rather
+       than a surface that is not there. Why that ring has holes in it at all is
+       a question about the world, not about what this frame costs. */
     if (uInWater > 0.5) {
-      float meet = d.y > 0.0 ? uLensUnder / max(d.y, 1e-4) : 1e9;
-      if (meet > uEdge) col = mix(col, uFogCol, 1.0 - exp(-uHazeK * uEdge));
+      float walk = d.y > 0.0 ? uLensUnder / max(d.y, 1e-4) : 1e18;
+      col = mix(col, uFogCol, 1.0 - exp(-uHazeK * walk));
     }
     gl_FragColor = vec4(col, 1.0);
   }`;
@@ -869,11 +892,6 @@
       gl.uniform1f(P.u.uInWater || (P.u.uInWater = gl.getUniformLocation(P.p, 'uInWater')), e.inWater || 0);
       gl.uniform1f(P.u.uLensUnder || (P.u.uLensUnder = gl.getUniformLocation(P.p, 'uLensUnder')),
         e.inWater ? Math.max(0, (e.waterY || 0) - this.cam.y) : 0);
-      /* How far the frame's ground goes: the nearer of the far plane and the
-         ring of ground held round the lens. Past both nothing is drawn at all,
-         and the liquid the lens stands in is still in front of it. */
-      gl.uniform1f(P.u.uEdge || (P.u.uEdge = gl.getUniformLocation(P.p, 'uEdge')),
-        Math.min(e.far, e.groundEdge === undefined ? e.far : e.groundEdge));
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
     }
