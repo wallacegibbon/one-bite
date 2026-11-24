@@ -82,6 +82,13 @@ const DRIFTS = [
   ['03-characters-and-creatures.md', '| 1.45 (swim 6.4; no hop at all) |', '| 1.45 (swim 6.5; no hop at all) |', 'the swim speed the turtle row prints'],
   ['03-characters-and-creatures.md', '| turtle | 0.25 |', '| turtle | 0.26 |', 'the scale the turtle row prints'],
   ['03-characters-and-creatures.md', '| 0.6 | 16 | 3 | Turtle Melon |', '| 0.6 | 16 | 2 | Turtle Melon |', 'the herd the turtle row prints'],
+  // the shore shelf: the number of lake columns that are one cell of water over
+  // ground, which is the line `waterHoldsUp` is written at. No table carries it;
+  // only the world the data generates answers it, and the movement chapter and
+  // seven comments in the entity code both state it
+  ['03-characters-and-creatures.md', 'Mirrorlake has **138** of those columns out of the **2,958**', 'Mirrorlake has **137** of those columns out of the **2,958**', 'the one-block shore shelf the movement chapter counts'],
+  ['03-characters-and-creatures.md', 'finds **2,958** water columns, all of them the lake', 'finds **2,959** water columns, all of them the lake', 'that the lake is all the water the authored map holds'],
+  ['07-art-audio-technical.md', 'the shore of Mirrorlake is 138 such columns', 'the shore of Mirrorlake is 137 such columns', 'the one-block shelf count quoted in the technical chapter'],
   // what the island under that door holds, and the room the town's door does
   // open onto: the chapter states both as counts, and the counts are what say
   // which of the two places may carry the word for a room
@@ -162,6 +169,25 @@ fs.unlinkSync(path.join(ROOT, 'docs', 'stray.md'));
   if (r.code === 0) missed++;
   else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).join(' | '));
   plant(p, bak);
+}
+
+// the shore shelf quoted by the code that leans on it: seven comments in
+// entities.js state how many lake columns are one cell of water over ground, and
+// docs-sync asks every one of those numbers of the world. Mutating one of them in
+// the source -- not in a chapter -- is the only way to show that guard has teeth.
+{
+  const p = path.join(ROOT, 'game', 'src', 'entities.js');
+  const bak = fs.readFileSync(p, 'utf8');
+  const drifted = bak.replace('138 columns of Mirrorlake are that shelf', '137 columns of Mirrorlake are that shelf');
+  if (drifted === bak) { console.log('SETUP FAIL: the shelf count is not where entities.js states it'); missed++; }
+  else {
+    let r;
+    fs.writeFileSync(p, drifted);
+    try { r = run(); } finally { fs.writeFileSync(p, bak); }
+    console.log(`${r.code !== 0 ? 'caught ' : 'MISSED '} [the one-block shore shelf the entity code quotes] exit=${r.code}`);
+    if (r.code === 0) missed++;
+    else console.log('        ' + r.out.split('\n').filter(l => l.trim().startsWith('- ')).slice(0, 2).join(' | '));
+  }
 }
 
 fs.rmSync(BAK, { recursive: true, force: true });

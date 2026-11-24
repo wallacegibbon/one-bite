@@ -457,17 +457,30 @@ for (const L of LANGS) {
 
   /* the lake: every water column of its disc that the world holds */
   const MK = N.ZONE_BY_ID.mirrorlake;
-  let wet = 0, sh4 = 0, deep8 = 0, minD = 99, maxD = -1, deepAt = null, lowestBed = 99;
+  let wet = 0, sh4 = 0, deep8 = 0, shore1 = 0, minD = 99, maxD = -1, deepAt = null, lowestBed = 99;
   for (const [x, z] of disc(MK)) {
     const top = filmAt(x, z); if (top < 0) continue;
     const g = bedAt(x, z, top); if (g < 0 || top - g <= 0) continue;
     const d = top - g;
     wet++;
+    if (d === 1) shore1++;          // the shore shelf: one cell of water over ground
     if (d <= 4) sh4++;
     if (d >= 8) deep8++;
     if (d < minD) minD = d;
     if (d > maxD) { maxD = d; deepAt = [x, z, g + 1, top]; }
     if (g < lowestBed) lowestBed = g;
+  }
+
+  /* The scope of that count, asked rather than assumed. The same walk over every
+     column the authored array holds: if the map ever grows a second pool, the
+     lake's number stops being the valley's number, and the chapter's sentence
+     about a world with no other water says so in the same breath. */
+  let wetAll = 0, oneAll = 0;
+  for (let z = 0; z < SZ.d; z++) for (let x = 0; x < SZ.w; x++) {
+    const top = filmAt(x, z); if (top < 0) continue;
+    const g = bedAt(x, z, top); if (g < 0 || top - g <= 0) continue;
+    wetAll++;
+    if (top - g === 1) oneAll++;
   }
 
   /* the ridge: its own ground, over the columns the world has */
@@ -798,7 +811,12 @@ for (const L of LANGS) {
       (N.ISLE_TYPES[k].ground ? `pile block ${N.ISLE_TYPES[k].ground.pile}, crown block ${N.ISLE_TYPES[k].ground.crown}` : 'no pile: the height table')).join('; '));
 
     const crateRow = (p) => { for (let y = SZ.h - 1; y > 0; y--) if (at(p.x, y, p.z) === DOOR) return y; return -1; };
-  const H = (label, cnRe, cnWant, enRe, enWant) => ({ label, cnRe, cnWant, enRe, enWant });
+  /* A claim names which chapter its words are read out of. It defaults to the map
+     chapter because that is where the set's figures live, but it has to be
+     nameable at all: the shore shelf is stated as a count in the movement chapter
+     and quoted from the code, and a census that can only read one file leaves
+     that number standing on nothing while three laws lean on it. */
+  const H = (label, cnRe, cnWant, enRe, enWant, file = 'zones') => ({ label, cnRe, cnWant, enRe, enWant, file });
   const CLAIMS = [
     H('the row the lake surface stands at',
       /镜湖面 = y(\d+)/, [towerFilm],
@@ -824,6 +842,22 @@ for (const L of LANGS) {
     H('the deepest bed this world carves',
       /湖底最深只能到 y(\d+)/, [lowestBed],
       /the bed cannot go below y(\d+)/, [lowestBed]),
+    /* ---- the shore shelf: the count three laws lean on (03 s6) ----
+       The movement chapter states the depth of a shore as a number of columns,
+       and the bound of `waterHoldsUp`, the step gate and seven places in the
+       entity code all quote that number as the reason a rule is written where it
+       is. No table in the set carries it: only the world the data generates can
+       say how many of the lake's columns are one cell of water over ground, so
+       that is where it is asked -- and asked out of the chapter that states it,
+       which is not the one the rest of this census reads. */
+    H('how many of the lake\'s columns are a shore one block of water over ground',
+      /Mirrorlake has \*\*([\d,]+)\*\* of those columns out of the \*\*([\d,]+)\*\* its own zone holds/, [shore1, wet],
+      /Mirrorlake has \*\*([\d,]+)\*\* of those columns out of the \*\*([\d,]+)\*\* its own zone holds/, [shore1, wet],
+      'creatures'),
+    H('that the lake is all the water the authored map holds, and how much of it is a shore',
+      /finds \*\*([\d,]+)\*\* water columns, all of them the lake's, and \*\*([\d,]+)\*\* of them one cell deep/, [wetAll, oneAll],
+      /finds \*\*([\d,]+)\*\* water columns, all of them the lake's, and \*\*([\d,]+)\*\* of them one cell deep/, [wetAll, oneAll],
+      'creatures'),
     H('the band the ridge surface falls in, and its mean',
       /地面是 \*\*y(\d+)[–-](\d+)\*\*（平均 (\d+)/, [rlo, rhi, Math.round(rsum / rn)],
       /surface is \*\*y(\d+)[–-](\d+)\*\* \(mean (\d+)/, [rlo, rhi, Math.round(rsum / rn)]),
@@ -946,6 +980,8 @@ for (const L of LANGS) {
     'what share of them is eight blocks or deeper': `${(deep8 / wet * 100).toFixed(1)}%`,
     'where the deepest column stands and what rows it runs over': `(${deepAt[0]},${deepAt[1]}) y${deepAt[2]}..y${deepAt[3]}`,
     'the deepest bed this world carves': lowestBed,
+    'how many of the lake\'s columns are a shore one block of water over ground': `${shore1} of ${wet} water columns in the lake's own disc`,
+    'that the lake is all the water the authored map holds, and how much of it is a shore': `${wetAll} water columns in all ${SZ.w}x${SZ.d} authored columns, ${oneAll} of them one cell over ground`,
     'the band the ridge surface falls in, and its mean': `y${rlo}-${rhi} mean ${(rsum / rn).toFixed(2)} over ${rn} in-world columns`,
     'the rows the sunken tower shell spans, and the shell plan it spans': `y${shellLo}..y${shellHi}, ${towerSpan}x${towerSpan}`,
     'the rows the spire stands at': spireRows.join('/'),
@@ -982,17 +1018,55 @@ for (const L of LANGS) {
   let badHeights = 0;
   for (const c of CLAIMS) {
     for (const L of LANGS) {
-      const md = readIn(L, L.files.zones);
+      const md = readIn(L, L.files[c.file]);
+      const chap = L.files[c.file].slice(0, 2);
       const m = md.match(L.tag === 'cn' ? c.cnRe : c.enRe);
       const want = L.tag === 'cn' ? c.cnWant : c.enWant;
-      if (!m) { bad(`${L.tag} 02 height: ${c.label}`, 'the chapter no longer says it in words this check can read', String(measured[c.label])); badHeights++; continue; }
+      if (!m) { bad(`${L.tag} ${chap}: ${c.label}`, 'the chapter no longer says it in words this check can read', String(measured[c.label])); badHeights++; continue; }
       for (let i = 0; i < want.length; i++) {
         const got = read(m[i + 1]);
-        if (want[i] === null || got !== want[i]) { bad(`${L.tag} 02 height: ${c.label}`, got, want[i]); badHeights++; }
+        if (want[i] === null || got !== want[i]) { bad(`${L.tag} ${chap}: ${c.label}`, got, want[i]); badHeights++; }
       }
     }
   }
-  if (!badHeights) good(`${CLAIMS.length} heights in the map chapter, asked of the world the data generates (seed ${SEED}): ` +
+  /* The same count, quoted by everything that leans on it: comments in the
+     entity code (the step gate, the buoyancy answer, the launch branch, the
+     standing test, the gait figure, the dive floor), comments in the movement
+     rigs that were built on that shelf, and sentences in these chapters all state
+     how many of the lake's columns are one cell of water over ground.
+     A figure only a census can answer has no business living in prose unasked,
+     so every one of those phrasings is searched for -- in the chapters and in the
+     code -- and each number found is compared with what the world gives. The
+     places that quote it are counted and named, so a quiet deletion is visible
+     too, and the phrasings are the guarded ones: a bare "one hundred and thirty
+     eight columns" beside an unrelated subject would be a false reading, so the
+     sentences that quote the shelf name the shelf while they do it. */
+  const SHELF_PHRASES = [
+    /\b(\d+)\s+columns\s+of\s+Mirrorlake/g,
+    /\b(\d+)\s+one-block\s+columns/g,
+    /\b(\d+)\s+such\s+columns/g,
+    /\b(\d+)\*{0,2}\s+columns\s+of\s+one-block/g,
+    /\b(\d+)\s+columns\s+of\s+it\b/g
+  ];
+  const quoted = [];
+  for (const f of ['src/entities.js', 'test/play.js']
+      .map(f => path.join(base, f))
+      .concat(['00', '01', '02', '03', '04', '05', '06', '07'].map(n =>
+        path.join(base, '..', 'docs', fs.readdirSync(path.join(base, '..', 'docs')).find(g => g.startsWith(n + '-')))))) {
+    const text = fs.readFileSync(f, 'utf8');
+    for (const re of SHELF_PHRASES) {
+      let qm;
+      while ((qm = re.exec(text)))
+        quoted.push({ file: path.relative(path.join(base, '..'), f), n: +qm[1],
+          line: text.slice(0, qm.index).split('\n').length });
+    }
+  }
+  if (!quoted.length) bad('the one-block shore shelf quoted across the code and the chapters',
+    'nothing states that count anywhere any more', `${shore1} columns, which is what the world gives`);
+  for (const q of quoted) if (q.n !== shore1) bad(`${q.file} line ${q.line}: the one-block shore shelf`, q.n, shore1);
+  if (quoted.length && quoted.every(q => q.n === shore1))
+    good(`the one-block shelf count is quoted at ${quoted.length} places (${quoted.map(q => `${q.file}:${q.line}`).join(', ')}) and every one of them is the ${shore1} the world gives`);
+  if (!badHeights) good(`${CLAIMS.length} figures in the chapters, asked of the world the data generates (seed ${SEED}): ` +
     CLAIMS.map(c => measured[c.label]).join(' | '));
 
   /* ---- a name the player reads states a room, and the world answers it ----

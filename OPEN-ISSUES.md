@@ -7,8 +7,9 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one number the suite was measuring about itself.
+State at time of writing: this round is two numbers that meant something other than what they were quoted for.
 
+- **The one-block shore was quoted fifteen times and counted by nothing; it is counted now, and it is 138.** `183` stood in seven comments of `src/entities.js`, five of the movement rigs and three sentences of 03 and 07 as the number of Mirrorlake's columns with exactly one cell of water over ground -- the depth `waterHoldsUp` is written at, and the premise of the step gate, the float law and the launch branch. `test/docs-sync.js`'s lake census answers **138**, and the same walk over every one of the authored 160x160 columns answers 2,958 water columns for the whole map, all of them that one lake's, so the scope of the figure is pinned beside it. 183 is not that count on this map or on the map of the commit where those sentences were written (there the census says **187**, the zone having grown from r34 to r38 and the lake from 2,029 columns to 2,958 since); no variant of the definition gives it on either -- the zone's square for its disc, the whole map for the lake, a bed that lets the water-line block count as ground, or the ground read as `surface()`. The fifteen quotations now carry 138 and each is searched for by phrase and compared with the census, in the chapters and in the code alike, with one drift injection mutating a `.js` file so that guard is known to have teeth. The chapter's claim that one cell is "the depth of every shore this valley has" is gone: the shelf is graded -- 138 columns at one cell, 178 at two, 982 at eleven -- and one cell is what a shore *is* where depth is counted in whole cells, the next cell up being already the line where the water holds a body off its bottom. Item 19 carries the rest.
 - **A frame-rate floor in the suite was measuring this machine, and it has been replaced with a clock.** `test/save.js` held that each of the eight saves the game never wrote leaves a world still drawing at least 5 frames a second. Of the eight rounds of suite runs recorded since that floor was written it was red in seven, and its eight numbers repeated to 0.2 fps run after run -- which is not how a machine under a shared load behaves. The control those numbers point at has now been read, and the answer is neither the payload nor the load average. The eight payloads all put the body at the same address, so the only thing that changes across the step is how long that page has been standing there; a page that is never offered a save at all falls the same way (at the desk, over eight seconds of its own clock: 13.6, 12.9, 11.9, 10.1, 9.1, 8.5, 7.9, 7.4 fps, then flat), and so does one payload loaded eight times over (28.2 down to 5.1). What falls with the frame rate is the ground the world is holding: at a standing address the world streams the disc of chunk addresses its own haze reaches (`World.keep`), a millisecond budget's worth of geometry per frame, and the frame rate stops falling the moment that fill stops. The step now records both counts beside its frame rate, so the relation is in the log and not in this file: a run of it gives 131 chunk meshes at 25.6 fps and 609 at 5.0. What `Game.update` takes per frame does not move across that fill -- about 8 ms, its own draw call 1 to 2 of them -- so the growth is in what the page spends outside the game's code, a software rasteriser over more geometry, and it belongs to where a lens is standing, not to what it was asked to load. The check asks the world's own clock now: the update loop must have been handed a full second after every one of the loads, which is what "still running" was trying to say. `test/simwait.js` gained `trySim()` so those readings stay in one record and the verdict stays in the check that reads them. The other frame ratio the bullet below named -- the frogs keeping the water nine frames of every ten -- is a claim about a body staying under a surface and not about a machine, and is untouched.
 - **On top of the commit above, item 31 was measured and closed.** The question underneath
   the hole -- whether a played frame ever answers a submerged lens's above-eye-line
@@ -94,7 +95,7 @@ and about the ring a lens under the water is shown: is there nothing past it?
   hold both. The probes that found both are in the step, not in this file.
 - **What is next.** Item **31** is closed (above), so the head of the queue is item **28**'s
   remaining item -- caustics, the one light effect that item shipped without -- and its
-  remainders; then **29**, **24**, **19**, **25**, the panic multiple's value, and whether
+  remainders; then **29**, **24**, **25**, the panic multiple's value, and whether
   `fogEmis` is really the same **0.15** under both waters -- a number the game states and no
   measurement here has yet defended.
 - **Two of the suite's checks were frame-rate counters, and this machine decided one of them.** That one is closed above; what is kept here is the sequence that made it visible, because a flake that repeats is the evidence. `test/save.js` held that every junk save leaves a world that still runs ("frames > 5" for each of eight), and the rounds of suite runs since that floor was written give, in order: 9/10 with only `save` red, 9/10 with only `save` red, 8/10 with `save` and the frog-lane check red, 9/10 and 9/10 with only `save` red, and then 9/10, 10/10 and 9/10 -- `play` green with no failed check in any of them. The step's eight loads in one page decayed monotonically every time, and the last of them landed on either side of the floor by a hair: 24, 10, 12.3, 9.5, 7.7, 6.3, 5.6, 5.2 measured at the commit an earlier round started from, then 22.1-4.7 and 24.1-4.8, then 23.4-4.7, 23.2-4.8, 24-4.8, 26.4-5.1 and 26.1-5.0, and 25.6-5.0 on the tree this round closed it on. Those sequences agree with one another to 0.2 fps: a load-driven flake wanders, this one repeated, and the load average through a suite run (9.6-17, with the desktop's own indexer at a third of a core) was only why the margin was thin, not why the curve was there -- which is what the bullet above went and measured. The other check that bullet named, the frogs keeping the water in nine frames of every ten, is a claim about a body staying under a surface: it has been red exactly once in that whole sequence and green in every run since, and it stands as it is.
@@ -471,41 +472,43 @@ and how many of them a particular valley holds. The second is honest and leaves 
 data field carrying a number nothing reads, which is the kind of thing `reach.js`
 was written to notice.
 
-## 19. The one-block shore is quoted by three laws and counted by nothing that runs (found measuring the shore)
+## 19. The one-block shore is quoted by three laws and counted by nothing that runs (found measuring the shore; closed -- the count is 138, and the number that stood there was never this count)
 
-**Open, and it is a test gap rather than a wrong number.**
+**It was a test gap, and the gap had a wrong number in it.** `183` -- the columns of Mirrorlake whose water is
+exactly one block over ground -- was the premise of three things: the bound `waterHoldsUp` puts at two cells
+rather than one, the float law's "a body standing in a two-block pool has no floating level at all", and the
+shore shelf the chapters and the entity code describe. Nothing computed it.
 
-`183` -- the columns of Mirrorlake whose water is exactly one block over ground --
-is the premise of three things now. It is why `waterHoldsUp` bounds at two metres
-rather than one: those columns are ground to a body with legs, and the valley's only
-animal lives on their edge. It is why the float law can say a body standing in a
-two-block pool has no floating level at all. It is the "shore shelf" the chapters
-describe twice and the number the entity comments quote when they explain why a rule
-that switches on the body's own depth builds a sawtooth at the edge of a lake.
+**The census computes it now, and the answer is 138.** `test/docs-sync.js`'s lake walk -- the same walk that
+answers the map chapter's 2,958 water columns, its depth range and its shares -- counts the columns of the
+lake's own disc whose water stands one cell over ground: **138**. The same walk over every one of the authored
+160x160 columns returns **2,958** water columns for the whole map, all of them that one lake's, **138** of them
+one cell deep: the scope of the figure is no longer something a sentence can be vague about.
 
-Nothing computes it. The census `docs-sync` keeps generates the world and reads
-twenty measured claims -- the lake's surface row, its depth range, "over all 2958
-water columns", what share of them is four blocks or shallower -- and every one of
-those claims lives in the map chapter, which is the file that census is pointed at.
-The shore figure lives in the movement chapter and in the code, and the count it
-needs ("columns inside the lake's zone where the water is one cell over ground") is
-not in the census. A map change that moved the shore shelves would leave the
-chapters, the comments and the bound of a law all standing on an unmeasured number,
-which is how the creature table came to print the valley's population under the word
-`herd` in the first place.
+**183 is not that number on either map this repository has.** Run against the tree at the commit where those
+sentences were written (b5e569b), the census answers **187** there and 138 here -- the zone has grown from r34
+to r38 and the lake from 2,029 columns to 2,958 in between. No variant of the definition reproduces 183 on
+either tree: the zone's square rather than its disc, the whole authored map rather than the lake, a bed that
+lets the water-line block count as ground, or the ground taken as `surface()` (the highest solid block a body
+would stand on). So it is not a stale reading of this quantity; it is a different quantity, or an untraceable
+one, and it has been removed rather than corrected in place.
 
-What closes it is small but not free: a claim in that census whose words are read
-out of the movement chapter rather than the map one, counting one-block shelves over
-the lake's own zone, plus a drift injection so the check is known to work. The
-census is written as one file and one vocabulary today, so the honest cost is a
-second file threaded through it, and that belongs in a round of its own rather than
-at the end of this one.
+**What was changed.** The places that quote the count -- seven comments in `src/entities.js` (the step gate,
+the buoyancy answer, the launch branch, the standing test, the gait figure, the dive floor), five in the
+movement rigs built on that shelf, and three sentences in 03 and 07 -- now carry 138, and every one of them is
+found by phrase and compared with the census, in the chapters and in the code alike; the check names how many
+places quote it, so a quiet deletion is visible. The chapter sentence that states it was rewritten to say what
+the number is: one cell of water over ground is not "the depth of every shore this valley has" -- the shelf is
+graded, 138 columns at one cell, 178 at two, down to 982 at eleven -- it is what a shore *is* in a world that
+counts depth in whole cells, because the next cell up is already the line where the water holds a body off the
+bottom of it. Three drift injections keep the guard honest: a chapter's census figure, a chapter's quotation,
+and -- the only mutation of a `.js` file anywhere in the suite -- one number changed in `entities.js`.
 
-Not in question: the law itself, which is read off the place and holds whatever the
-count turns out to be; and the rigs, which build a one-block shore themselves
-(`aBodyWalkedIntoABankStandsOnItsFeet` floods a shelf with one block of water and
-asks both bodies about it) rather than trusting a census of the valley.
-
+**What is left standing.** The count belongs to the map, so a map change turns this red on purpose, and 03 and
+07 follow the census rather than lead it. What the census does not answer is the shelf outside the authored
+square: the sea's beaches round the island are ground the same column rule builds, and a census of them would
+walk streamed chunks, so the valley-wide half of the old sentence -- "every shore this valley has" -- was
+dropped rather than measured.
 ## 20. An animal at a wall with no way round gives the errand up (found with a desk probe; the wall rig does not ask it)
 
 **Open, and the only part of the old complaint that is still unmeasured.** The

@@ -4080,7 +4080,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     !!lean.swim && lean.diff > 300, lean);
 
   /* 10w. a body wading is standing in water, not hanging above the bottom.
-     The lake shore is one block of water deep for 183 columns around Mirrorlake:
+     The lake shore is one block of water deep for 138 columns of Mirrorlake:
      the bed is solid, the water sits on it, and the surface is level with the
      top of the bed. A body there has its feet on the bottom and its head in the
      air, which is wading. What the physics used to report was airborne: the
@@ -9108,7 +9108,7 @@ What was measured before any of this was fixed, over 180 frames of walking
 
   /* 11e. Feet on the bottom are feet that can push off it, water around them or
      not. That is the whole of getting out of a lake: the shore of Mirrorlake is
-     one block of water deep for 183 columns, so the way out is to swim into the
+     one block of water deep for 138 such columns, so the way out is to swim into the
      shallows, stand up, and go. The water branch used to be picked by `inWater`
      alone, which left a body standing on the lakebed with the water at its chest
      no ground under it and no way to launch. */
@@ -10984,7 +10984,7 @@ What was measured before any of this was fixed, over 180 frames of walking
      at the bottom a body finds feet, the hold goes off, and the stroke stops with
      it -- the body slides along the lakebed with still legs. Whether the water can
      hold a body at all is a property of the place (the surface above the level the
-     body would stand on), not of the body's distance to the surface: 183 columns
+     body would stand on), not of the body's distance to the surface: 138 columns
      of Mirrorlake are a one-block shelf, and a shelf is a bottom to stand on and
      push off from. Reading it off the body's own depth instead would switch the
      force law back and forth as the body crossed its own equilibrium and build a
@@ -13124,7 +13124,7 @@ What was measured before any of this was fixed, over 180 frames of walking
        The second thing that is built is a shore: one block of water over the
        shelf the body stands and walks on, everywhere but the row the bank
        stands in. One block is what a shore is in this valley -- Mirrorlake has
-       183 columns of exactly that -- and it is the depth at which the water is
+       138 such columns -- and it is the depth at which the water is
        over an animal's back and its feet are still on the bottom: a body
        standing in it has feet, and the question this asks is whether it uses
        them. Two blocks would be a different question, and the answer to that
@@ -13436,8 +13436,8 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and no body is left inside the bank, or the bank inside the world',
     wall.restored && ['bank2', 'bank1', 'bank0'].every(k =>
       ['human', 'frogpear', 'frog'].every(f => wall[k][f] === null || wall[k][f].boxIn === 0)), wall);
-  /* The same shelf with one block of water over it, which is the depth of every
-     shore of this valley (183 columns of Mirrorlake alone): the water is over
+  /* The same shelf with one block of water over it -- what a shore is, in a world
+     that counts depth in whole cells (138 columns of Mirrorlake): the water is over
      this animal's back and its feet are still on the bottom. Two of its bodies
      used to answer that differently from the dry ground a metre away -- the
      animal was handed the lift, the body worn from it the unsized launch --

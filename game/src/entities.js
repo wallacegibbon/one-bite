@@ -110,7 +110,7 @@
   /* Whether the water of a column is holding a body up, rather than being a
      bottom it stands on: the film of it has to stand at least **two whole
      blocks** over the surface that body's feet would find there. One block is a
-     shore shelf -- 183 columns of Mirrorlake are that shelf -- and a body
+     shore shelf -- 138 columns of Mirrorlake are that shelf -- and a body
      standing in one has feet: it wades, it walks, it pushes off with its legs.
      Two is water a body can hang in: deeper than a body has to be to be wholly
      inside it and clear of the bottom. The count is asked of the place and never
@@ -810,7 +810,7 @@
          or of its breath: the depth at which water has
          enough of a body in it to hold one up is a fact about the water
          (`waterHoldsUp`, the same two-block line the animals' step gate, the dive
-         floor and the 183 one-block columns of Mirrorlake's shore are all read
+         floor and the 138 one-block columns of Mirrorlake's shore are all read
          with), and the three things it decides here are one question -- what the
          body's speed is, whether the body steers by bending a course through the
          fluid or by pushing on the ground with its feet, and whether a leg that
@@ -1137,7 +1137,7 @@
          surface this body's feet would stand on, asked of the place rather than
          of the distance from the body to its own surface. A lake is a body of
          water the animal floats in; a one-block shore shelf is a bottom it
-         stands on and pushes off from, and 183 columns of Mirrorlake are that
+         stands on and pushes off from, and 138 columns of Mirrorlake are that
          shelf. A body must not be told it is swimming by one rule and handed
          the ground under its feet by another; `bedTop` is kept from there
          because the floor of a dive is asked of it below, and the cell
@@ -1297,7 +1297,7 @@
       } else {
         /* Feet that are on the bottom are feet that can push off it, water
            around them or not. That is the whole of getting out of a lake: the
-           shore of Mirrorlake is one block of water deep for 183 columns, so
+           shore of Mirrorlake is one block of water deep for 138 such columns, so
            the way out is to swim into the shallows, stand up, and go. The
            branch used to be picked by `inWater` alone, which left a body
            standing on the lakebed with the water at its chest no ground under
@@ -1658,7 +1658,7 @@
          of the weight and the drag leaves a terminal speed of about
          0.05 m/s, 0.0008 m a frame, so the cell below is sampled once every
          three frames. A body wading where the lake is one block deep -- and the
-         shore of Mirrorlake is 183 such columns -- is then reported airborne the
+         shore of Mirrorlake is 138 such columns -- is then reported airborne the
          whole time it stands on the bottom: air pose, and a third of the push it
          should have (accel 12 against 34). So after the displacement, feet
          within 2 cm of a solid and the body not rising means it is standing.
@@ -2609,7 +2609,7 @@
            speed in the water (docs/03 s3), and which of them a frame is asked
            with is what `carried` answers: the water's figure for a body the water
            is holding up, the figure on foot for a body standing on the bottom of
-           a one-block shore shelf -- 183 columns of Mirrorlake where the animal
+           a one-block shore shelf -- 138 columns of Mirrorlake where the animal
            was swimming along at a speed its body was not using and its legs were
            not either. */
         const cruise = carried ? (sp.swimSpeed || sp.speed || 3) : (sp.speed || 3);
@@ -2945,7 +2945,7 @@
              it is the answer `carried` gave at the top of this block, asked once
              there so that nothing here can be told it is swimming by one rule and
              lifted up a bank like a crate by another: a frog wading the one-block
-             shelf of Mirrorlake (183 columns of it) is in the water and is not
+             shelf of Mirrorlake (138 columns of it) is in the water and is not
              held up by it, its feet are on the bottom, and an animal with feet at
              the foot of a bank takes that bank the way it takes every other bank,
              which for this one is a hop. Being lifted up it on straight legs was
