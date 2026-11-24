@@ -7,7 +7,22 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is two sentences about the same blue. 「现在的水
+State at time of writing: this round is two sentences about the same blue.
+
+- **On top of the commit above, one measurement.** The question underneath the hole --
+  whether a played frame ever answers a submerged lens's above-eye-line directions with
+  nothing but the background -- now has a census instead of a probe (`test/play.js`,
+  `aSubmergedLensIsShownNothingAtAnAddressItHasNotReached`): set a body down at an address
+  the run has never been at, **540** m from the map's centre, and all **156** of those
+  directions meet the sea's skin at an address holding no mesh (nearest **5** m, farthest
+  **52**, with **2,310** chunks of the outside held elsewhere and none of them here); one
+  frame of the loop later **35**, by the twentieth -- a third of a second -- **0**, and
+  **0** across the **480** frames the body is held there. A person asked to swim is carried
+  **2.2** m in twelve seconds and crosses no chunk address; wearing a body built for the
+  water the same body is carried **108.5** m across **8** chunk addresses, and neither finds
+  a direction unanswered, the farthest surface any of them meets at **76** m. Item **31**
+  carries what that leaves open. The numbers are in 07 §3.2.
+ 「现在的水
 太浑浊了，我希望它透明度变高一点……现实世界中湖是比海清澈还是浑浊?我们也遵循现实」
 and 「那个圆环很奇怪呀, 而且真的在海底就看不见天空或者别的东西吗？」 -- the water is too
 muddy, make it clearer, and let the world say which of its waters is the clear one;
@@ -70,24 +85,33 @@ and about the ring a lens under the water is shown: is there nothing past it?
   run of the two-liquid step called the valley's lakes and seas one water at **100** of
   **100** rings: the census was sampling the island's own square, where one column can
   hold both. The probes that found both are in the step, not in this file.
-- **What is next.** Item **28**'s remaining item (caustics) and its remainders, then
-  **31**, **29**, **24**, **19**, **25**, the panic multiple's value, and whether
-  `fogEmis` is really the same **0.15** under both waters -- a number the game states and
-  no measurement here has yet defended.
+- **What is next.** Item **31**'s remaining question -- a frame drawn *inside* the first
+  third of a second after a cold start, read against the no-mesh frame, which is the only
+  window left in which the arc of the screenshot can be made -- then item **28**'s remaining
+  item (caustics) and its remainders, then **29**, **24**, **19**, **25**, the panic
+  multiple's value, and whether `fogEmis` is really the same **0.15** under both waters -- a
+  number the game states and no measurement here has yet defended.
 - **Two of the suite's checks are frame-rate counters, and this machine decides them.**
   `test/save.js` holds that every junk save leaves a world that still runs ("frames > 5"
   for each of eight), and `test/play.js` holds that the frogs in a lane keep the water in
-  nine frames of every ten. This round ran the whole suite three times: the first two gave
-  9/10 with only `save` red, the third gave 8/10 with `save` and the frog-lane check red.
-  In every one of them `play.js` itself reported no failed check except that lane one, and
-  the load average through the runs was 15-18. The frame rate in the junk-save step decays
-  monotonically across its eight worlds -- 24, 10, 12.3, 9.5, 7.7, 6.3, 5.6, 5.2 measured
-  at the commit this round starts from, 22.1-4.7 and 24.1-4.8 measured here -- so the
-  decay belongs to the step itself, and the 5 fps floor sits exactly where this machine
-  sits. Nothing was shipped to chase that floor; the two reds are reported, not explained
-  away. What would settle it is either running the suite on an idle machine (the rule this
-  project keeps: under 3 on `/proc/loadavg`) or restating the junk-save check as something
-  that does not measure a shared CPU -- both open.
+  nine frames of every ten. The three rounds of suite runs since that floor was written
+  give, in order: 9/10 with only `save` red, 9/10 with only `save` red, 8/10 with `save`
+  and the frog-lane check red, then 9/10 and 9/10 with only `save` red and `play` reporting
+  no failed check at all in either. The junk-save step's eight loads in one page decay
+  monotonically every time, and the last of them lands on either side of the floor by a
+  hair: 24, 10, 12.3, 9.5, 7.7, 6.3, 5.6, 5.2 measured at the commit an earlier round
+  started from, then 22.1-4.7 and 24.1-4.8, then 23.4-4.7 and 23.2-4.8 -- the last two
+  from one tree, agreeing with each other to 0.2 fps. So the decay belongs to the step,
+  not to a change, and the 5 fps floor sits exactly where this machine sits: the load
+  through a suite run is 9.6-17 even when the machine is under 3 before it starts, and the
+  desktop's own indexer was measured at a third of a core while they ran. Nothing was
+  shipped to chase that floor; the reds are reported, not explained away. What would
+  settle it is either running the suite on an idle machine (the rule this project keeps:
+  under 3 on `/proc/loadavg`) or restating the junk-save check as something that does not
+  measure a shared CPU -- both open. What has not been asked at all is whether the decay
+  is the game leaving something behind across the eight loads in one page, or the page
+  paying for them: eight loads never reload the page, so a control that runs them in
+  fresh pages, or in the other order, would say which.
 - **A debt this round found and did not pay.** Every figure in the two water bullets
   above was taken from a green run of this tree and re-checked against that run's log.
   A scan of 07 §3.2 against the same logs shows about fifteen figures elsewhere in that
@@ -996,7 +1020,7 @@ the *drawn* body is outside its own box at the top of a stroke, 0.813 m as carve
 water, 0.876 m at the top of a stroke, against a half-width of 0.75 m -- is already recorded in 07 s1; what
 is new here is that the box is nearer the animal's own size than the animal's own limbs.
 
-## 31. A lens standing in a liquid has nothing to stand on until the ring round it is meshed (found reading the arc out of the user's screenshot)
+## 31. A lens standing in a liquid has nothing to stand on until the ring round it is meshed (found reading the arc out of the user's screenshot; the census now runs)
 
 The law is closed -- a frame's background is asked about the liquid the lens stands
 in, along the ray, and the arc the user sent cannot come back while that is true
@@ -1009,16 +1033,33 @@ showing the sea's own surface nowhere near the lens at all?
   **49** chunks round a lens standing 4 m under the open sea. That is the state a body
   *put* at an address is in while the ring is streamed, and it is what a hole in a
   ring is, but it is a hole made to be read, not one the game was seen to make.
-- **What a probe found, and what that finding is worth.** An unkept desk probe
-  (`/tmp/audit.cjs`, one rendered frame per step of a scripted swim, sampling pixels
-  whose rays point above the eye line and asking the world whether the surface they
-  meet is inside a meshed chunk) reported raw sky under water in a *played* frame only
-  while the streamer still had chunks left -- a cold start, or a body set down at an
-  address the lens had never walked to -- and never in a frame at rest. It found no
-  near, stable hole, and none of its counts are reproducible by anything in the tree,
-  so they are quoted here as a direction and not as a fact. The screenshot's arc sat
-  where no surface was drawn anywhere near that lens, which is a bigger hole than a
-  cold start explains and smaller than the 49 this round draws by hand.
+- **The census runs now** (`test/play.js`, `aSubmergedLensIsShownNothingAtAnAddressItHas-
+  NotReached`): the game's own loop is stepped with no frame asked for -- the ring comes in
+  inside `update()` -- and every twentieth frame asks the frame's own 156 directions above the
+  eye line where they meet the skin of the water, and whether the game holds a mesh at the
+  address they meet it. The desk probe's numbers, which were read out of a rig that holds its
+  own chunks and points its own lens, are replaced by the suite's: a body set down at an
+  address the run has never been at, 540 m from the map's centre, is in the state the item
+  described -- 156 of 156 directions meet the sea's surface at an address with nothing meshed
+  there, the nearest 5 m from the lens and the farthest 52, with 2,310 chunks of the outside
+  held elsewhere and none of them here. One frame of the loop later it is 35; by the
+  twentieth -- a third of a second -- it is 0, and it stays 0 in every one of the 25 answers
+  asked across the 480 frames the body is held there. A person asked to swim is carried
+  2.2 m in twelve seconds and crosses no chunk address, and none of the 37 answers asked
+  across those 720 frames finds a direction unanswered. Wearing a body built for the water
+  the same body is carried 108.5 m in twenty-four seconds across 8 chunk addresses, and the
+  73 answers asked across its 1,440 frames find none either, the farthest surface any
+  direction meets at 76 m while the ring runs ahead of it; 1,056 chunks are held at the end
+  of it. The numbers are in 07 §3.2; the step holds the ordering -- cold frame total, one
+  frame later partial, twentieth frame none, none ever after -- rather than the counts.
+- **What the census leaves open.** It never asks for a frame, so it says nothing about
+  pixels: the one window in which the arc the user's screenshot showed can still be made
+  is a frame drawn *inside* the first third of a second at an address the ring has not
+  reached, and whether that frame leaves background on screen is unmeasured. Two ways of
+  closing that window were tried at the desk and neither is honest: drawing the liquid's
+  own surface out to where the ray says it ends needs a geometry the renderer does not
+  have, and giving the pane a second fill would paint over the very thing the census is
+  measuring.
 - **Why this is not fixed by the answer that is nearest to hand.** The frame could be
   told where the liquid ends sideways and pay nothing past that edge. That needs a
   geometry the renderer does not have: the sea has no boundary, and the only edge the
@@ -1026,15 +1067,6 @@ showing the sea's own surface nowhere near the lens at all?
   retired `uEdge`/`env.groundEdge` pair was an attempt at exactly this and it was
   removed rather than repaired: asked along the ray, the choice of where to stop is
   unobservable, and a number nothing reads is a number that drifts.
-- **What would settle it.** A census, not an argument: over a played session, how many
-  frames answer an underwater lens's above-eye-line half with the background quad, and
-  how far out the surfaces those directions meet are. The first fill of a ring is
-  measured in 07's streamer bullet (**737-743** chunks over **153-162** budgeted
-  calls, **1.0-1.1 s** of wall time), so an answer of "only ever the first second
-  after a body is put down" is a possible one -- and if it is, the thing to change is
-  where the budget goes, not what the frame assumes. Nothing runs that census today.
-
-## Standing contract (every session, in order)
 
 Human instructions, verbatim, still in force:
 

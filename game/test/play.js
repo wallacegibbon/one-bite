@@ -5754,6 +5754,155 @@ What was measured before any of this was fixed, over 180 frames of walking
     Math.abs(openSea.band.on.minLum - openSea.band.veilLum) < 2 &&
     openSea.band.on.maxLum > openSea.band.off.maxLum + 5, openSea);
 
+
+  /* The question underneath the hole. The law is closed -- a frame asked about a
+     liquid answers along the ray -- and the hole this file draws by hand (the meshes
+     taken out of the 49 chunks round a submerged lens) is a hole made to be read, not
+     one the game was ever seen to make. This is the census that item asks for: over a
+     played session, how many of a submerged lens's above-eye-line directions meet the
+     skin of its water at an address the game holds no mesh for, and how far out those
+     addresses are. The directions are the frame's own -- the camera's field of view,
+     above its eye line -- and the asking is done of the world, since what is being
+     asked is where the surfaces stand, not what the frame happened to paint. */
+  const seaRingCensus = await step('aSubmergedLensIsShownNothingAtAnAddressItHasNotReached', () => {
+    const g = window.game, W = g.world, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, formT: p.formT, formMax: p.formMax, third: g.thirdPerson, time: g.time,
+      mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
+      camReady: g.camReady, input: g.input };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, formT: was.formT, formMax: was.formMax });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover; g.camReady = was.camReady;
+      g.input = was.input;
+      return r;
+    };
+    p.form = null; g.mode = 'play'; g.thirdPerson = false; g.input = {};
+    const topOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) return y + 1; return -1; };
+    const floorOf = (x, z) => { const s = topOf(x, z); if (s < 0) return -1;
+      for (let y = s; y >= 0; y--) if (W.solidAt(x, y, z)) return y + 1; return -1; };
+    /* Open sea, eight metres deep and no ground standing near it for a hundred and
+       thirty metres. Farther from land than the colour step's place on purpose: what
+       is being measured is the ring the game has not reached yet. */
+    let spot = null, best = 1e9;
+    /* South of the island, because the rest of this file has walked the sea to the
+       north and east of it: the cold start this census asks for is an address the
+       lens of the run has not been at. */
+    for (let z = -520; z <= -300; z += 9) for (let x = -300; x <= 500; x += 9) {
+      const out = Math.max(Math.max(x - 159, -x), Math.max(z - 159, -z));
+      if (out < 130 || out >= best) continue;
+      const s = topOf(x, z), b = floorOf(x, z);
+      if (s < 0 || b < 0 || s - b < 8 || s - b > 12) continue;
+      let land = 1e9;
+      for (let dz = -60; dz <= 60; dz += 10) for (let dx = -60; dx <= 60; dx += 10) {
+        const bb = floorOf(x + dx, z + dz);
+        if (bb >= 0 && bb >= s - 2) land = Math.min(land, Math.hypot(dx, dz));
+      }
+      if (land < 130) continue;
+      best = out; spot = { x, z, surf: s, floor: b, fromCentre: Math.round(Math.hypot(x - 79.5, z - 79.5)) };
+    }
+    if (!spot) return back({ error: 'no open sea far enough from land to hold a ring out' });
+
+    /* Is anything meshed at this address? Inside the valley's square a chunk is an
+       array of its passes; outside it the ring is held in `far`. A surface stands at
+       an address the frame has nothing to draw only when neither is there. */
+    const meshedAt = (x, z) => {
+      const cx = Math.floor(x / W.cs), cz = Math.floor(z / W.cs);
+      if (W.inChunkGrid(cx, cz)) { const m = W.chunks[cz * W.cx + cx]; return !!(m && m.some(Boolean)); }
+      const c = W.far.get(W.ckey(cx, cz));
+      return !!(c && c.mesh && c.mesh.some(Boolean));
+    };
+    const fov = (g.cam.fov || 64) * Math.PI / 180;
+    const census = () => {
+      const eye = { x: p.x, y: p.eyePos(), z: p.z };
+      if (!W.liquidAt(Math.floor(eye.x), Math.floor(eye.y), Math.floor(eye.z)))
+        return { error: 'the lens is not standing in a liquid' };
+      const o = { dirs: 0, surface: 0, sky: 0, unmeshed: 0, farthest: 0, nearestUnmeshed: null,
+        reached: 0, held: W.far.size };
+      for (let iy = 1; iy <= 12; iy++) {
+        const up = (iy / 12) * (fov / 2);
+        for (let ia = -6; ia <= 6; ia++) {
+          const az = p.yaw + (ia / 6) * (fov / 2);
+          const dy = Math.sin(up), dh = Math.cos(up);
+          const dx = Math.cos(az) * dh, dz = Math.sin(az) * dh;
+          let hit = null;
+          for (let t = 1; t <= 260; t++) {
+            const X = eye.x + dx * t, Y = eye.y + dy * t, Z = eye.z + dz * t;
+            if (Y >= W.h) break;
+            if (!W.liquidAt(Math.floor(X), Math.floor(Y), Math.floor(Z))) { hit = { t, X, Z }; break; }
+          }
+          o.dirs++;
+          if (!hit) { o.sky++; continue; }
+          o.surface++;
+          if (hit.t > o.reached) o.reached = hit.t;
+          if (!meshedAt(hit.X, hit.Z)) {
+            o.unmeshed++;
+            if (hit.t > o.farthest) o.farthest = hit.t;
+            if (o.nearestUnmeshed === null || hit.t < o.nearestUnmeshed) o.nearestUnmeshed = hit.t;
+          }
+        }
+      }
+      o.unmeshedPct = +(100 * o.unmeshed / Math.max(1, o.surface)).toFixed(2);
+      return o;
+    };
+    const put = (y) => {
+      p.x = spot.x + 0.5; p.z = spot.z + 0.5; p.y = y;
+      p.vx = p.vy = p.vz = 0; p.air = p.maxAir(); p.fright = 0; p.dead = false;
+      p.grounded = false; p.headWater = false; p.held = 0; p.dry = 0; p.vital = 5;
+    };
+    /* the game's own loop, one frame at a time, with the census taken every
+       twentieth frame: the streamer spends its budget inside update(), whether or not
+       anyone is drawing, so the frames are the honest unit here */
+    /* each phase also records how far the body was carried and how many chunk
+       addresses it crossed: the claim being made is about addresses the ring has not
+       reached, so a phase that never crosses one is worth saying so about */
+    const run = (secs, input) => {
+      const frames = [];
+      const seen = new Set();
+      const x0 = p.x, z0 = p.z;
+      seen.add(Math.floor(p.x / W.cs) + ',' + Math.floor(p.z / W.cs));
+      g.input = input || {};
+      for (let i = 0; i < 60 * secs; i++) {
+        g.update(1 / 60);
+        seen.add(Math.floor(p.x / W.cs) + ',' + Math.floor(p.z / W.cs));
+        if (i % 20 === 0) frames.push(Object.assign({ frame: i }, census()));
+      }
+      g.input = {};
+      frames.push(Object.assign({ frame: 60 * secs }, census()));
+      return { frames, moved: +Math.hypot(p.x - x0, p.z - z0).toFixed(1), chunks: seen.size };
+    };
+    const out = { spot, fovDeg: +((fov * 180) / Math.PI).toFixed(1), keptBefore: W.far.size };
+    put(spot.surf - 4);
+    out.cold = Object.assign({ frame: 0 }, census());
+    /* 1. held at that address for eight seconds of the game's own loop: the ring
+          round a body comes in whether or not a frame is asked for it */
+    out.held = run(8, {});
+    /* 2. and swimming across chunks at the person's own pace, which is the case the
+          ring was built for */
+    out.swum = run(12, { fwd: true });
+    /* 3. and wearing a body built for the water: the question this item's own text
+          leaves open is a body crossing chunks faster than a swimming person does. A
+          frog's cruise is more than twice a person's, so the ring is asked whether it
+          keeps up with that. */
+    put(spot.surf - 4);
+    p.form = 'frogpear'; p.formT = p.formMax; p.air = p.maxAir();
+    out.fast = run(24, { fwd: true });
+    p.form = null; p.formT = 0;
+    out.end = { x: +p.x.toFixed(1), z: +p.z.toFixed(1) };
+    out.keptAfter = W.far.size;
+    return back(out);
+  });
+
+  check('a lens set down in open water is shown nothing at an address it has not reached, and only for as long as the ring takes to arrive: the cold frame has such directions, and from the twentieth frame of the loop on, held or swimming, it has none',
+    !!seaRingCensus.spot && seaRingCensus.cold.surface > 0 && seaRingCensus.cold.unmeshed > 0
+    && seaRingCensus.cold.nearestUnmeshed <= 8
+    && seaRingCensus.held.frames.slice(1).every(f => f.unmeshed === 0)
+    && seaRingCensus.swum.frames.every(f => f.unmeshed === 0)
+    && seaRingCensus.fast.frames.every(f => f.unmeshed === 0)
+    && seaRingCensus.held.frames.length > 10 && seaRingCensus.swum.frames.length > 10
+    && seaRingCensus.fast.chunks > 1 && seaRingCensus.fast.moved > 20, seaRingCensus);
+
   /* A lens under the skin of a lake is under a mirror, not under a window --
      except inside a cone. Light climbing out of water is turned back into it
      past 48.6 degrees from the vertical (asin(1/1.333), the index the water's
