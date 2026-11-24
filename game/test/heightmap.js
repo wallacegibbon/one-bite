@@ -20,7 +20,7 @@ for (let z = 0; z < W.d; z += step) {
     else if (b === 2) ch = '.';
     else if (b === 3) ch = ',';
     else if (b === 4) ch = '^';
-    else if (b === 5) ch = '#';
+    else if (N.BLOCKS[b] && N.BLOCKS[b].liquid) ch = '#';
     else if (b === 6) ch = 'c';
     else if (b === 7) ch = 'C';
     else if (b === 8) ch = 'w';

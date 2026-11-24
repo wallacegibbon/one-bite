@@ -15,6 +15,11 @@ require(path.join(base, 'src', 'models.js'));
 require(path.join(base, 'src', 'entities.js'));
 
 const F = window.FRUTARIA;
+/* Which cells a liquid fills. The world carries two liquids now -- the sea and
+   the island's lake, under two ids -- and every water figure in this file is a
+   figure about the authored square, where only the one of them exists. Asking an
+   id here is how a check ends up counting nothing and calling that a result. */
+const isLiquid = (b) => !!(b && F.BLOCKS[b] && F.BLOCKS[b].liquid);
 
 // every language table must cover exactly the same keys: a missing translation
 // would otherwise only surface as a raw dotted key sitting in the UI
@@ -363,7 +368,7 @@ for (const p of F.POIS) console.log('POI', p.cn, 'topY=', topAt(p.x, p.z));
   const town = range((x, z) => inZone('lanternrow')(x, z) || inZone('orchard')(x, z), true);
   const canopyFloor = leafTop(floor), canopyTown = leafTop(inZone('lanternrow'));
   let wlo = 999, whi = -1;
-  for (let i = 0; i < w.blocks.length; i++) if (w.blocks[i] === 5) { const y = (i / (w.w * w.d)) | 0; if (y < wlo) wlo = y; if (y > whi) whi = y; }
+  for (let i = 0; i < w.blocks.length; i++) if (isLiquid(w.blocks[i])) { const y = (i / (w.w * w.d)) | 0; if (y < wlo) wlo = y; if (y > whi) whi = y; }
   console.log('层 地面', JSON.stringify(ground), '镇/果园', JSON.stringify(town));
   console.log('层 树冠', '谷地最高', canopyFloor, '镇上方', canopyTown, '水', `${wlo}..${whi}`);
   console.log('层 北岭', JSON.stringify(ridge));
@@ -381,7 +386,7 @@ const chest = w.get(136, 21, 134);
 console.log('果窖箱(136,21,134) =', chest, chest === 78 ? 'OK' : '!!');
 
 // water check
-let water = 0; for (let i = 0; i < w.blocks.length; i++) if (w.blocks[i] === 5) water++;
+let water = 0; for (let i = 0; i < w.blocks.length; i++) if (isLiquid(w.blocks[i])) water++;
 console.log('水方块', water);
 
 /* The sunken tower: worldgen declares three rows of windows and then, a few lines
@@ -427,7 +432,7 @@ console.log('水方块', water);
   let cols = 0, sum = 0, deepest = 0, deep8 = 0, minBed = 99;
   for (let z = 0; z < WD; z++) for (let x = 0; x < WW; x++) {
     let top = -1;
-    for (let y = WH - 1; y > 0; y--) if (w.get(x, y, z) === 5) { top = y; break; }
+    for (let y = WH - 1; y > 0; y--) if (isLiquid(w.get(x, y, z))) { top = y; break; }
     if (top < 0) continue;
     const bed = solidUnder(x, z, top - 1);
     if (bed < 0 || top - bed <= 0) continue;
@@ -567,7 +572,13 @@ console.log('水方块', water);
   // and the valley: the array this world builds, cell for cell
   const hashOf = (W) => { let h = 0; for (let i = 0; i < W.blocks.length; i++) h = (Math.imul(h, 31) + W.blocks[i]) >>> 0; return h >>> 0; };
   const hashHere = hashOf(w), hashAgain = hashOf(again);
-  const PINNED = 1271637568;        // read out of seed 20261008 at f1f6970, before islands existed
+  /* Re-read this round, and the reason it moved is not the one this check is
+     about: the island's lake is a block row of its own now and not the sea's, so
+     every water cell of this square carries a different number. What the check
+     holds is determinism -- two builds of one seed agreeing, and a change to the
+     island rule not reaching the authored square -- and a pinned value only says
+     which world was built and when the liquid rows were split. */
+  const PINNED = 418283224;        // seed 20261008, read on the tree that split sea from lake
 
   if (!raised.length) bad.push('no island is raised at all');
   if (leaked) bad.push(`${leaked} islands answered from the wrong world's seed`);
@@ -730,7 +741,7 @@ console.log('水方块', water);
       if (h <= SEA) continue;                       // the foot: under the sea, nothing bears
       dry++; t.dry++; mineDry++;
       const b = w.get(x, h + 1, z);
-      if (b === 5) { onWet++; continue; }           // a dry crown with water over it: never
+      if (isLiquid(b)) { onWet++; continue; }       // a dry crown with water over it: never
       const f = BY_BLOCK[b];
       if (!f) continue;
       crop++; mine++; t.crop[f.id] = (t.crop[f.id] || 0) + 1;

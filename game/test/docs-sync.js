@@ -436,9 +436,14 @@ for (const L of LANGS) {
     for (let y = SZ.h - 1; y > 0; y--) { const b = w.get(x, y, z); if (b && BK[b].solid && !isPlant(b)) return y; }
     return -1;
   };
-  const filmAt = (x, z) => { for (let y = SZ.h - 1; y >= 0; y--) if (w.get(x, y, z) === 5) return y; return -1; };
+  /* Which cells hold water, and which hold the lake's bed: asked of the block
+     rows' flags, because the world now has two liquids (the sea and the
+     island's lake) and a chapter's figure about the lake is not allowed to
+     depend on which of the two numbers happens to be written here. */
+  const liquidCell = b => !!(b && BK[b] && BK[b].liquid);
+  const filmAt = (x, z) => { for (let y = SZ.h - 1; y >= 0; y--) if (liquidCell(w.get(x, y, z))) return y; return -1; };
   const bedAt = (x, z, top) => {
-    for (let y = top - 1; y >= 0; y--) { const b = at(x, y, z); if (b && b !== 5 && b !== 75 && BK[b]) return y; }
+    for (let y = top - 1; y >= 0; y--) { const b = at(x, y, z); if (b && !liquidCell(b) && b !== 75 && BK[b]) return y; }
     return -1;
   };
   // the columns of a zone's disc that the world actually has -- see the trap above
@@ -510,7 +515,7 @@ for (const L of LANGS) {
   /* the water body as a whole: the rows it ever occupies */
   let wl0 = 99, wl1 = -1;
   for (let y = 0; y < SZ.h; y++) for (let z = 0; z < SZ.d; z++) for (let x = 0; x < SZ.w; x++)
-    if (at(x, y, z) === 5) { if (y < wl0) wl0 = y; if (y > wl1) wl1 = y; }
+    if (liquidCell(at(x, y, z))) { if (y < wl0) wl0 = y; if (y > wl1) wl1 = y; }
 
   /* the keep's greenhouse case: the glass the generator builds inside the keep's
      disc. The chapter says the fruit inside it is a demonstration, so the shape

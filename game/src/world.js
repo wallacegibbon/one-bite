@@ -28,50 +28,63 @@
   def(2, { cn: '泥土', c: [0.40, 0.31, 0.22] });
   def(3, { cn: '石头', c: [0.50, 0.50, 0.54] });
   def(4, { cn: '沙', c: [0.80, 0.74, 0.53] });
-  def(5, { cn: '水', solid: false, opaque: false, liquid: true, c: [0.13, 0.34, 0.52],
-           fogC: [0.06, 0.24, 0.32], fogT: 0.85,
+  /* The world's two liquids, and the sea is the first of them: `columnInto`
+     hands every column that stands under the sea line to this row, and the
+     island's own lake -- `def(31)`, below the plant rows -- is the one
+     exception, inside the circle the zone data names as Mirrorlake.
+
+     One pair of terms in the two rows is deliberately the same number. How
+     fast the red goes is the chemistry of water itself: a litre of the sea and
+     a litre of the lake absorb red at the same rate, so **1.40** stands in
+     both rows and nothing may ever edit them apart. What the green and the
+     blue measure is what is *floating* in the stuff -- sediment, algae, the
+     wash of an island into a basin that does not drain to the sea -- and that
+     is where the two differ, by a factor of about four. The order is not a
+     style choice and it is the whole answer to the question this round was
+     asked with: per metre, an open sea is the clearest water on this island's
+     coast, and a shallow lake fed by the island's own rain, with kelp on its
+     bed and frogs in it, is one of the murkiest things in it. Written as an
+     absorption per metre, this row's green -- the colour the eye reads
+     brightest and the one that decides how far down one can see -- is
+     **0.085**, which ends a sea at about **12 m** of visibility: open ocean.
+     The lake's ends at about **3 m**: a living lake.
+
+     What the lens bends by, and the fan of sky a lens under either surface is
+     shown through, is the same **1.333** in both rows: that is the water, not
+     the dirt in it. */
+  def(5, { cn: '海水', solid: false, opaque: false, liquid: true,
+           c: [0.05, 0.22, 0.40], fogC: [0.02, 0.13, 0.25], fogT: 0.85,
            /* How much of a light's own glow this stuff lets through at full
               haze. Air lets through 0.75, which is what makes a lantern across
               the valley still read as a lantern; the same 0.75 inside the lake
               put a lanternfish 3.6 m away back at luminance 246 -- a sun
               sitting on the lakebed. A lamp under water is a lamp seen through
-              water, so the water gets to say how much of it survives. */
+              water, so the water gets to say how much of it survives. Both
+              rows carry the same number today, which is the one water term
+              that has not followed the split: the clearer sea should let more
+              of a lamp through than the lake does, and nothing in the valley
+              stands a light under the sea to measure it with. Held open in
+              OPEN-ISSUES rather than settled with a bare number. */
            fogEmis: 0.15,
            /* How fast this stuff eats daylight, per metre, colour by colour.
-              Red goes about nine times faster than blue, which is the whole
-              reason a lake floor two metres down is teal and not pale sand.
-              This one number answers every journey light makes through water,
-              and that is the point of writing it once. The sunlight coming down
-              to a surface is baked into that surface's vertices; the light
-              coming back from that surface to a lens over it is asked of the
-              surface itself, in the vertex shader; the light coming from a
-              surface to a lens that is already inside the water is the haze. One
-              law, three journeys, and the lake is the same water from either
-              side of its skin.
+              Red goes forty times faster than blue here, which is the whole
+              reason a floor under water is teal and not pale sand. This one
+              number answers every journey light makes through water: the
+              sunlight coming down to a surface is baked into that surface's
+              vertices; the light coming back from that surface to a lens over
+              it is asked of the surface itself, in the vertex shader; the light
+              coming from a surface to a lens that is already inside the water
+              is the haze. One law, three journeys, and a sea is the same water
+              from either side of its skin.
               There used to be three unlinked answers instead. `fogDen` 0.14 was
               a haze density on the air's squared-exponential law, and it barely
-              ate the red at the range a lakebed is at; `alpha` 0.72 was painted
+              ate the red at the range a seabed is at; `alpha` 0.72 was painted
               flat over every face of the surface, and only when the lens was
-              above the water line. At two metres of water the three disagreed by
-              48 luminance, which is the whole of "the lake is a different water
-              seen from the top than from the bottom".
-              How fast these numbers eat is a decision about how clear this lake
-              is, and it was made twice. The first pass put in clear-water
-              numbers -- 0.16 per metre for the green the eye reads brightest --
-              which is a mountain tarn, and the frame showed the bottom of a
-              lake 6 m down as a set of blocks you could count, mean luminance
-              62 with 3.2 of spread across the patch against the water's own 49.
-              The report said the lakebed was far too easy to see from outside
-              the water, and a lake with something living in it does not look
-              like that. Green at 0.4 per metre puts this lake's own visibility
-              near 2.5 m, and the same bed 6 m down comes back at 48.5 with 0.5
-              of spread, which is the water and not the bed; a bed 3 m down keeps
-              2.8 of its spread where it kept 5.8, and a bed a metre down is
-              still the sand you are standing on. The ratio between the colours
-              is the one this row has always had, because that ratio is why the
-              floor is teal and not grey -- only how fast the whole thing happens
-              was the part that was wrong. */
-           fogK: [1.40, 0.40, 0.15],
+              above the water line. At two metres of water the three disagreed
+              by 48 luminance, which is the whole of "the water is a different
+              thing seen from the top than from the bottom". That is why this
+              row is the only place any of it is written. */
+           fogK: [1.40, 0.085, 0.035],
            /* The other thing this stuff does to light is bend it, and for a
               lens inside the water that bends one whole fan of the view out of
               existence. Light climbing out is turned back into it past 48.6
@@ -103,6 +116,44 @@
   def(28, { cn: '柳叶', c: [0.33, 0.45, 0.23], soft: 1 });
   def(29, { cn: '干草', c: [0.72, 0.66, 0.36] });
   def(30, { cn: '地毯苔', c: [0.20, 0.38, 0.24] });
+  /* The island's own water: a basin the sea does not reach, fed by the rain
+     that falls on the island, 11 m deep at its middle, with kelp on its bed
+     and frogs in it. It is a liquid of its own and not a colour variant of the
+     sea, which is why it is a row here and not an argument somewhere else: a
+     lens standing in it, a surface standing under it and a mote floating in it
+     all get their answer out of this row, and no environment code is edited to
+     add it.
+
+     The number this row carries has been decided three times, and the record
+     of that is kept here because each of the three was asked for.
+
+     The first pass put in clear-water numbers -- **0.16** per metre for the
+     green the eye reads brightest -- and that is a mountain tarn: the frame
+     showed the bottom of a lake 6 m down as a set of blocks you could count,
+     mean luminance 62 with 3.2 of spread across the patch against the water's
+     own 49, and the report said the lakebed was far too easy to see from
+     outside the water. So the row went to **0.40**, which puts this lake's own
+     visibility near 2.5 m and brings that same bed back at 48.5 with 0.5 of
+     spread -- the water, and not the bed.
+
+     This round the ask was the other way, and it came with a question: is a
+     lake clearer than a sea or murkier, and follow whichever the world does.
+     The sea has its own row now and the sea's is the water of an open coast,
+     so the lake takes the smaller share of the correction: **0.40 -> 0.30**
+     green and **0.15 -> 0.11** blue, an end of visibility near **3.3 m**
+     instead of 2.5. It stays the murkier water per metre by about four,
+     because a basin that holds kelp, frogs and the island's runoff is not the
+     open ocean, and the ordering is the part of this the question asked for.
+     The red did not move at all, in either row: that is water's own chemistry.
+
+     What was *not* re-measured this round is the lake's colour -- `c` and
+     `fogC` are the pair the chapters' lake figures were read out of -- and the
+     two rows' colours now differ for the same reason their absorption does. */
+  def(31, { cn: '湖水', solid: false, opaque: false, liquid: true,
+           c: [0.13, 0.34, 0.52], fogC: [0.06, 0.24, 0.32], fogT: 0.85,
+           fogEmis: 0.15,
+           fogK: [1.40, 0.30, 0.11],
+           ior: 1.333 });
 
   /* ---- fruit blocks (micro: small in-cell boxes, emissive) ---- */
   const FRUIT_BLOCK = {};   // blockId -> fruitId
@@ -155,7 +206,12 @@
   def(78, { cn: '果窖箱', store: true, c: [0.44, 0.31, 0.19], ct: [0.66, 0.48, 0.24] });
   def(79, { cn: '窖树', c: [0.40, 0.31, 0.21] });
 
-  const WATER = 5;
+  /* The two liquids' ids, named for the two bodies of water they fill: every
+     column under the sea line is the sea, and the island's lake -- the circle
+     the zone data names -- is the exception `columnInto` writes. Nothing else
+     is allowed to ask an id: "is this a liquid" is the block row's `liquid`
+     flag, and "what is this liquid made of" is `liquidRowUnder`. */
+  const SEA_WATER = 5, LAKE_WATER = 31;
 
   /* The blocks the game itself places and breaks. A block number is what a save
      file stores, so it is named once here rather than written out at every call
@@ -226,6 +282,7 @@
       this.dirty = new Uint8Array(this.cx * this.cz).fill(1);
       /* the outside, held by address */
       this.column = null;          // (x, z, put): what a column of ground is made of, at any address
+      this.liquid = null;          // (x, z) -> block id: which liquid the ground at an address holds
       this.far = new Map();        // ckey -> { cx, cz, vox, mesh }
       this.farDirty = new Set();
       /* ckey -> how many times the ground at that chunk address has been written.
@@ -316,7 +373,13 @@
       this.markChunk(cx, cz);
     }
     solidAt(x, y, z) { const b = B[this.get(x | 0, y | 0, z | 0)]; return !!(b && b.solid); }
-    liquidAt(x, y, z) { return this.get(x | 0, y | 0, z | 0) === WATER; }
+    /* Which cells a liquid fills. Asked of the block row's flag and not of one
+       id, because the world holds two liquids: the sea and the island's lake
+       are as different in what they do to light as two bodies of water can be,
+       and they are one another's only difference in what they do to a body. A
+       rule that asks an id is a rule that has silently stopped covering one of
+       them. */
+    liquidAt(x, y, z) { const b = B[this.get(x | 0, y | 0, z | 0)]; return !!(b && b.liquid); }
     /* The haze a lens takes on when it is sitting inside a liquid. It lives on
        the block row because it is the same fact as that block's colour and
        transparency: what the stuff is made of. It used to be written a second
@@ -333,26 +396,51 @@
       const b = B[this.get(x | 0, y | 0, z | 0)];
       return b && b.liquid && b.fogC ? { c: b.fogC, t: b.fogT, den: b.fogDen, emis: b.fogEmis, k: b.fogK } : null;
     }
-    /* The colour a liquid scatters into the line of sight once the haze has
-       taken all it can take. The same fact the haze is made of, and the colour
-       the water's own surface adds to whatever lies behind it -- which is why
-       there is one of them and not one for the haze and one for the surface. */
-    liquidVeil() { const b = B[WATER]; return (b && b.fogC) || [0, 0, 0]; }
-    /* How much of each colour of daylight a metre of the valley's liquid eats.
-       The depth each surface sits under is baked into its vertices when the
-       mesh is built, so the renderer needs the coefficient once for the frame
-       rather than per lens, and it is the same fact as the block's own colour:
-       what the stuff is made of. There is one liquid in the valley; a second
-       one would need its coefficient baked alongside the depth, not read here. */
-    liquidAbsorb() { const b = B[WATER]; return (b && b.fogK) || [0, 0, 0]; }
-    /* The index of refraction of the valley's liquid, air to it. The surface's
-       law follows from this one number -- light climbing out of the water is
-       turned back into it past asin(1/ior) from the vertical -- and the pane
-       asks it as a cosine, sqrt(1 - 1/ior^2), because the angle it has is the
-       one between the ray and the surface's normal. Same reason as the
-       absorption: the stuff is what the stuff is, whatever side of its skin the
-       lens is on. */
-    liquidIor() { const b = B[WATER]; return (b && b.ior) || 1; }
+    /* What the liquid whose surface stands at `surfaceY` in a column is *made
+       of*: the block row, and with it the colour it scatters into a line of
+       sight, how fast it eats daylight, and how far it bends the view. Asked of
+       the cell under the surface the caller is already holding rather than by
+       walking the column again, so the two answers are one read of one column
+       and cannot disagree about whether there is water there at all, or of what
+       kind.
+
+       This is the half of the question that has two answers now. The haze a
+       lens takes on is keyed to the cell the lens is inside (`liquidFogAt`),
+       because that is a property of where the lens is; what a surface does to
+       the light coming back out of it, and what it adds of its own to the view,
+       are properties of that water -- and the world has two of them. A frame
+       drawn on the island's shore looking at the open sea must answer with the
+       sea, and a frame on the lake's bank with the lake: on this tree their
+       greens differ by a factor of three and a frame that mixed them would be
+       describing a body of water that exists nowhere. */
+    liquidRowUnder(x, surfaceY, z) {
+      const b = B[this.get(x | 0, (surfaceY | 0) - 1, z | 0)];
+      return b && b.liquid ? b : null;
+    }
+    /* The surface of the liquid in a column **and** what it is made of, out of
+       one walk of that column. These are one question -- a frame standing on a
+       beach wants to know how deep the water it is looking at is and what that
+       water does to light, and the two answers come off the same cells. */
+    liquidColumnAt(x, z) {
+      for (let y = this.h - 1; y >= 0; y--) {
+        const b = B[this.get(x | 0, y, z | 0)];
+        if (b && b.liquid) return { surf: y + 1, row: b };
+      }
+      return null;
+    }
+    /* Which liquid an address holds, without walking it: the generator's own rule
+       (`worldgen` installs it beside `column`, and it is the rule `columnInto`
+       fills a column with), because what liquid a place holds is a fact about the
+       place and a place is an address. This is the half of the question a lens
+       standing in air still has to answer: the water at the shore a frame is
+       drawn from is drawn, and its colour and its rate are asked of it, while
+       walking the column under a dry lens would answer "no water here" and leave
+       the faces of a lake painted with nothing. */
+    liquidRowAt(x, z) {
+      const id = this.liquid ? this.liquid(x | 0, z | 0) : 0;
+      const b = B[id];
+      return b && b.liquid ? b : null;
+    }
     /* The height of the surface of the liquid a lens is sitting in: the top of
        the liquid column it is inside. The renderer needs it because the light
        reaching a surface under water has come down through that much water,
@@ -602,18 +690,32 @@
          cost 21.8 ms of frame. */
       const wTop = new Int16Array(RW * RW), wBot = new Int16Array(RW * RW);
       wTop.fill(-1); wBot.fill(-1);
-      let wet = 0;
+      let wet = 0, wId = 0, wTwo = 0, wBed = 0;
       for (let z = RZ; z < RZ + RW; z++) {
         for (let x = RX; x < RX + RW; x++) {
           let top = -1, bot = -1;
           for (let y = H - 1; y >= 0; y--) {
             const bd = B[at(x, y, z)];
-            if (bd && bd.liquid) { if (top < 0) top = y; }
+            if (bd && bd.liquid) { if (top < 0) top = y; wId = wId || bd.id; }
             else if (top >= 0) { bot = y + 1; break; }
           }
+          if (top >= 0 && wId && B[at(x, top, z)].id !== wId) wTwo++;
           if (top >= 0) {
             const k = (z - RZ) * RW + (x - RX);
             wTop[k] = top + 1; wBot[k] = bot; wet++;
+            /* How deep this chunk's own floor sits under its own surface. The
+               ring is walked for the depth over a face; this is the other end of
+               the same column, and only the columns inside the chunk count --
+               a face is the skin of the water this chunk holds, and the floor a
+               ray turned back at that face finds is under the water next to it.
+               The deepest of them, for the same reason `under` below takes the
+               deepest of five: a face whose far side goes deeper must not light
+               up as though the floor were shallow. A column with no floor in the
+               world at all (water down to the bottom row) is its whole depth. */
+            if (x >= x0 && x < x0 + cs && z >= z0 && z < z0 + cs) {
+              const d = top + 1 - (bot >= 0 ? bot : 0);
+              if (d > wBed) wBed = d;
+            }
           }
         }
       }
@@ -788,7 +890,20 @@
       function occ(b) { return b && B[b] && B[b].opaque ? 1 : 0; }
 
       const mk = (mb) => mb.empty() ? null : mb.upload(gl);
-      return [mk(op), mk(em), mk(wa), mk(mi), mk(miE), mk(tr)];
+      const out = [mk(op), mk(em), mk(wa), mk(mi), mk(miE), mk(tr)];
+      /* Which liquid the depths baked into these vertices belong to. The depth
+         of water over a face is useless on its own: what it costs in light is
+         that water's own rate, per colour, and the valley has two of them. It
+         is carried here, on the chunk, because this is where the columns were
+         walked -- and one chunk's worth of vertices takes its depth from the
+         ring of columns it stands on, so the answer is only sound if that whole
+         ring is one liquid. It is: the nearest approach of the island's lake to
+         the sea is over 100 m, and a ring is 18 columns wide, which is what
+         game/test/play.js holds -- a world that ever put the two within a ring
+         of each other would have to say which of them this chunk's vertices
+         stand under, and `wTwo` is the count that would tell it. */
+      if (wId) out.liq = { id: wId, k: B[wId].fogK, ior: B[wId].ior, two: wTwo, bed: wBed };
+      return out;
     }
 
     /* ---- DDA raycast ----
@@ -819,7 +934,8 @@
   }
 
   N.BLOCKS = B;
-  N.WATER = WATER;
+  N.SEA_WATER = SEA_WATER;
+  N.LAKE_WATER = LAKE_WATER;
   N.BLOCK_ID = BLOCK_ID;
   N.TREE_BLOCK = TREE_BLOCK;
   /* Which blocks a body on foot does not stop against: the material the mesher

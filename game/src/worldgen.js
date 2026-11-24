@@ -418,7 +418,7 @@
       const a = rnd() * 6.28, r = rnd() * LAKE.r;
       const x = Math.round(LAKE.x + Math.cos(a) * r), z = Math.round(LAKE.z + Math.sin(a) * r);
       const y = gy(x, z);
-      if (y + 1 < SEA && y > 4 && get(x, y, z) && get(x, y + 1, z) === 5) set(x, y + 1, z, 75);
+      if (y + 1 < SEA && y > 4 && get(x, y, z) && W.liquidAt(x, y + 1, z)) set(x, y + 1, z, 75);
     }
     // frogpear bushes in the reeds all round the shore
     for (let i = 0; i < 30; i++) {
@@ -848,6 +848,16 @@
     }
     return 0;
   }
+  /* Which liquid an address holds. This is the rule, and it is asked from two
+     places: `columnInto`, laying a column out, and `World.liquidRowAt`, which a
+     frame asks about the place it is standing at without walking anything. A lake
+     is a place -- the circle the zone data names, the one body of water here the
+     sea does not reach -- and the sea is every other address under the sea line.
+     The question has to be answerable from an (x, z) alone, because the ground
+     beyond the authored square is filled by address and not by being visited. */
+  function liquidAtPlace(x, z) {
+    return dist(x, z, LAKE.x, LAKE.z) < LAKE.r ? N.LAKE_WATER : N.SEA_WATER;
+  }
   function columnInto(x, z, put) {
     const g = groundAt(x, z);
     const h = g.h;
@@ -863,7 +873,10 @@
       else if (ground && y >= pileFrom) b = ground.pile;
       put(x, y, z, b);
     }
-    for (let y = h + 1; y <= SEA; y++) put(x, y, z, 5);
+    /* The water over that ground is two different substances, and which one a
+       column holds is decided by `liquidAtPlace` -- once, the same answer the
+       frame asks and the mesher carries. */
+    for (let y = h + 1; y <= SEA; y++) put(x, y, z, liquidAtPlace(x, z));
     /* The fruit stands over the ground it grew in, in the open air above it: a
        melon on a beach, with no stem and no leaves, because there is nothing out
        there that needs a tree to be grown first. Asked after the ground and the
@@ -881,6 +894,8 @@
     for (let z = 0; z < W.d; z++) for (let x = 0; x < W.w; x++) columnInto(x, z, set);
     // and the ground beyond this square is answered by the same rule, by address
     W.column = (x, z, put) => columnInto(x, z, put);
+    // ... and so is the one question of which liquid an address holds
+    W.liquid = liquidAtPlace;
     cave(); castle(); village(); orchard(); lakebed(); forest();
     /* spawn: Lanternrow, on the street outside the main cellar.
        A spawn is only good if the player starts out with somewhere to look. The

@@ -493,10 +493,11 @@
        from the bank and a window from a boat, and it is what keeps a grazing
        view of a shallow shelf from showing the sand through the far side of
        the lake: at a flat angle the surface gives back the sky instead.
-       Seen from under the water the surface reflects the lake rather than the
-       sky, so the mirror takes the water's own colour there; what it would
-       really show outside Snell's window is the lakebed at that angle, and
-       this is the cheap version of that -- the same colour, not the picture.
+       Seen from under the water the surface has no sky to reflect: a ray turned
+       back at that face goes down into the water, and what it meets is the
+       bottom. That is drawn as the bottom, at the end of the doubled road the
+       angle sets -- see the mirror clause below -- and not as one flat colour
+       standing in for a picture it cannot reach.
        And Schlick is the air-to-glass number, which only fades towards 1 as
        the view grazes the surface and never gets there. From inside the water
        that is wrong by a whole fan of the view: light climbing out is turned
@@ -576,7 +577,31 @@
     // -v.y, which is the abs() this line used to be
     float ry = mix(v.y, v.y - 2.0 * dn * vPanN.y, vPan.x);
     vec3 mir = mix(uHorizon, uZenith, clamp(ry, 0.0, 1.0));
-    mir = mix(mir, uVeil, vPan.y);
+    /* What is on the far side of that mirror. A lens out of the water has the
+       sky there, and the line above is all this case ever was. A lens inside the
+       liquid has no sky there: a ray the surface turns back -- past the fan its
+       own index closes, or inside it and reflected at the few per cent the law
+       leaves -- goes down, and what it finds is the floor. It finds it at the
+       end of the whole doubled road: up the leg this ray climbed to the face,
+       then down the leg the turned ray walks from the face to the floor, which
+       for a face level with the water's own surface is that floor's depth over
+       the cosine of the turned ray. Nothing is invented here: the depth comes in
+       with the mesh that owns the water (World.meshRegion), and the colour of
+       the floor is the ground this frame's sky already carries. What the term is
+       for is the shape of the band past the window's edge: a ray along the eye
+       line of a lens under water never reaches a floor at all and so sends
+       nothing back, while one at the edge of the fan reaches it at a metre and a
+       half the depth of the water, and the band runs between those two instead of
+       being one flat colour to the horizon. What is not modelled is that the sun
+       lighting that floor came down through the water itself, so a deep floor is
+       painted brighter here than the frame in front of it shows it; and a floor
+       is treated as level across a chunk. Both are held open in OPEN-ISSUES. */
+    if (vPan.y > 0.5) {
+      vec3 back = vec3(0.0);
+      if (dn > 0.0 && uBedDepth > 0.0)
+        back = exp(-uLiqK * (vPan.z + uBedDepth / max(0.05, -ry)));
+      mir = uGround * back + uVeil * (1.0 - back);
+    }
     /* The window is laid down by the pass that was told a lens stands inside the
        liquid: uPane 3. Above the surface nothing is turned at all, and whether
        anything could be is a question the whole frame answers alike, so it is
@@ -620,6 +645,7 @@
   uniform float uNight, uTime;
   uniform vec3 uVeil;
   uniform float uPane, uIor;
+  uniform float uBedDepth;   // how deep this chunk's floor sits under its own surface
   ${GLSL_SKY}
   void main(){
   ${GLSL_PANE}  }`;
@@ -925,6 +951,7 @@
         u.uSunCol = gl.getUniformLocation(P.p, 'uSunCol');
         u.uGround = gl.getUniformLocation(P.p, 'uGround');
         u.uNight = gl.getUniformLocation(P.p, 'uNight');
+        u.uBedDepth = gl.getUniformLocation(P.p, 'uBedDepth');
         u._done = 1;
       }
       gl.uniformMatrix4fv(u.uProj, false, this.proj);
@@ -939,13 +966,18 @@
       // what the stuff the lens is sitting in does to a light's own glow: 0.75
       // is the air's answer, and leaves a dry frame untouched
       gl.uniform1f(u.uEmisKeep, e.emisKeep === undefined ? 0.75 : e.emisKeep);
-      // the liquid's own absorption, against the depth baked into every vertex
-      // of the static world: a dry frame has 0 everywhere, and exp(0) is 1
-      gl.uniform3fv(u.uLiqK, e.liqK || [0, 0, 0]);
+      /* The liquid's own absorption, against the depth baked into every vertex of
+         the static world: a dry frame has 0 everywhere, and exp(0) is 1. A draw
+         may be told a different one from the frame's, and the world's own meshes
+         always are: the depth over a face was measured out of the columns that
+         face stands in when the mesh was built, so the rate has to come from
+         those columns too. The valley has two liquids, and the light reaching a
+         lakebed is not the light reaching a seabed. */
+      gl.uniform3fv(u.uLiqK, opts.liqK || e.liqK || [0, 0, 0]);
       // and the same stuff's index, which the water's own face reads as the one
       // angle past which it hands everything back: only the pane pass uses it,
       // and only when the lens is inside the liquid.
-      gl.uniform1f(u.uIor, e.liqIor || 1);
+      gl.uniform1f(u.uIor, opts.ior || e.liqIor || 1);
       // the other half of the same law, for the things that are not baked: a
       // body's vertices are built every frame, so the caller hands over the
       // surface of the water that body stands in -- and a column with no water
@@ -977,6 +1009,10 @@
         gl.uniform3fv(u.uSunCol, e.sunCol);
         gl.uniform3fv(u.uGround, e.ground);
         gl.uniform1f(u.uNight, e.night);
+        /* The floor a lens inside the liquid would see, carried by the mesh that
+           owns the water. 0 says there is none to ask about, and the face then
+           answers what it answered before: the water's own colour. */
+        gl.uniform1f(u.uBedDepth, opts.bed || 0);
       }
       gl.uniform1f(u.uDay, opts.day !== undefined ? opts.day : e.day);
       gl.uniform1f(u.uTime, e.time);

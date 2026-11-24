@@ -109,8 +109,13 @@
       let water = 0, depth = 0;
       /* The run of water is counted **down** from the cell the scan stopped at,
          which is the top of it: counting up from there asks the sky how much
-         water is above the lake and always answers one. */
-      if (b === N.WATER) { water = 1; for (let yy = y; yy >= 0 && W.liquidAt(x, yy, z); yy--) depth++; }
+         water is above the lake and always answers one. And it is asked of the
+         row's flag rather than of an id, because the world holds two liquids:
+         the map paints the island's lake and the sea as one thing because on a
+         map they are one thing -- water, with its depth shown by how light the
+         blue is -- and they differ in what light does under their surfaces, not
+         in how deep either of them is. */
+      if (bd.liquid) { water = 1; for (let yy = y; yy >= 0 && W.liquidAt(x, yy, z); yy--) depth++; }
       const sh = 0.55 + Math.min(0.45, (y - 5) / 40);
       if (water) { const t = Math.min(1, depth / 12); return [30 + (1 - t) * 60, 80 + (1 - t) * 70, 120 + (1 - t) * 60]; }
       return [c[0] * 255 * sh, c[1] * 255 * sh, c[2] * 255 * sh];

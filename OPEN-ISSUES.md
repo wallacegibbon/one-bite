@@ -7,85 +7,96 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is one sentence about a body worn from a
-fruit, and the removal of a force. 「所有的游泳动物……他们现在有一个写死的默认高度。当用
-户上下移动之后，只要松开就会回到那个高度。我不希望这个样子。」 -- every swimming
-animal, frog or sea turtle, carries a written default height, and whatever the
-player moves it to, the moment the key comes off it goes back there. It should
-keep the depth it was moved to and go on forward at it.
+State at time of writing: this round is two sentences about the same blue. 「现在的水
+太浑浊了，我希望它透明度变高一点……现实世界中湖是比海清澈还是浑浊?我们也遵循现实」
+and 「那个圆环很奇怪呀, 而且真的在海底就看不见天空或者别的东西吗？」 -- the water is too
+muddy, make it clearer, and let the world say which of its waters is the clear one;
+and about the ring a lens under the water is shown: is there nothing past it?
 
-- **The law, which is a subtraction.** A body whose animal is built for that water
-  has a trim of its own: a frog and a fish sit still in the middle of a lake with
-  no stroke, and a body whose mean density has been made the water's is in
-  equilibrium at every depth in it, so no vertical force is left for the water to
-  offer it. What the water supplies is the two ends of a hold and no opinion about
-  the depth between them: `surfCeiling`, the film of the column less half the body,
-  and `bedFloor`, the ground that body's own box would stand on plus half the body.
-  The pair is a hold only where the ceiling stands above the floor, which is the
-  same inequality as the water standing deeper over that ground than the body is
-  tall. The spring that pulled a held body back to `floatLevel` is gone and
-  `Player.hoverDepth()` with it; `floatLevel` now answers one question only --
-  where an animal of that kind lies -- which is what a wild animal's own drive
-  seeks and what `hover` on its row states.
-- **What the run measured** (`test/play.js`, `test/input.js`; two clean runs of the
-  whole suite on the tree being committed). In a column of Mirrorlake 9 blocks deep,
-  film **15**, bed **6**: let go of **6 m** under the film it stays **6 m** under it,
-  its height moving by **0** with **0** changes of direction and its eyes **5.58 m**
-  under the surface; let go of wholly under the film it stays there, head in; put on
-  the bed it is carried to the floor of the hold, **6.25**, and stays there on **0**
-  frames of feet. Taken down **3 m** further with its own stroke and let go of there,
-  it keeps them -- the only further depth it takes is the **0.36 m** its stroke was
-  already carrying -- and then covers **16.15 m** of ground at that depth with its
-  depth under the film moving by **0.000 m**, over ground standing at **4**. The
-  level a row states survives as the animal's own: a wild frog's band runs
-  **12.897** to **6.28** over the **8398** frames the water carries it, over its
-  ceiling in **0** of them and under its floor in **0**; a wild turtle's runs
-  **14.634** to **6.37** with the same two zeros, and the animal and the body worn
-  from its fruit are one height, **0.45 m**. Put a worn body at the level its row
-  states and it stays there: in open sea (film **15**, sand **9**) the turtle row's
-  level is **14.75** and its head is out at it, while the frog's is **12.9** and its
-  head is **1.6 m** under at it. In that sea, let go of **4 m** under the film a body
-  is still **4 m** under it eight seconds later, **2 m** above the sand and on no
-  feet; asked down for eight seconds it stops at **9.225**, the floor that sand
-  states, and is at **9.225** six seconds after the key left, its height moving by
-  **0.000**. `input.js` asks the keys against the two ends now and not against a
-  level: the up key lands on the ceiling **14.75** to **0.00**, the dive key on the
-  floor **8.25** to **0.00**, and the jump key moves a swimming body **0.00 m** in
-  height from the depth it was put at. The two ends are one pair: a **two**-block
-  pool (film **15**, ground **13**) states a ceiling of **14.75** and a floor of
-  **13.25**, and a body set down on that ground leaves it and rests at **13.25**; a
-  **three**-block pool states the same pair with more room (**12.25**). That
-  ordering -- ceiling above floor exactly when the water stands deeper over the
-  ground than the body is tall -- is asked over bodies **0.3-1.8 m** tall in water
-  **0.25-8 m** deep, because no column this world builds is anywhere near that
-  shallow.
-- **What the same removal moved in the breath law, and what it did not.** A body at
-  the bottom of its hold with its head under buys nothing: an emptied sea turtle
-  stays at **9.225** through five seconds with no key, its height moving **0.000 m**,
-  and gains **0.00** units of air. The surface is not a place the water takes a body
-  to, so the way up is the player's own stroke -- **5.503 m** in **2.23 s** with the
-  up key -- and there the clock runs back at **1.000** a second, **239.98** units
-  over the **239.98 s** the window gives it. Nothing about the price of a breath, the
-  panic multiple, or a reserve crossing between bodies changed; only the road back to
-  the air did, and the chapters say so.
-- **What this round refused to claim.** No figure for a person's buoyancy, which is
-  still unmodelled and still the open half of issue **29**. No restatement of the
-  herd's depth distribution: the band of one animal against the ends of the column it
-  stands in is what a rig can hold, and the older per-herd percentages were dropped
-  from the chapters rather than repeated without a rig behind them. And no claim that
-  the meshed ring of issue **31** is any nearer an answer.
-- **What is next, in the order the queue gives it.** The water-clarity ask that came
-  in beside this one -- the sea's water reads too turbid, raise its transparency, and
-  the island lake with it, with the ordering between them following reality. That work
-  has not started; its first finding is that the sea and the lake are one liquid
-  record today, which is the whole of why one shared murk is what the picture shows.
-  Then, unchanged: the collision box being the animal's span rather than its body
-  (**30**); whether the fauna answers a body at all (**0** of the **6** (animal,
-  form) pairs this build carries answers hostile); the panic multiple's value,
-  unreachable while no shipped valley opens that branch; a person's buoyancy; and at
-  what point a rig of one body stops measuring a law and starts measuring a habitat
-  (**25**).
-
+- **Two liquids where there was one.** The valley had a single water record, so the
+  sentence "the sea is clearer than the lake" could not be written, let alone tested.
+  A sheet of open sea is the clearest water on this coast and a shallow rain-fed lake
+  with kelp and frogs in it is markedly murkier: the sea row absorbs at green **0.085**
+  a metre -- an absorption length of **11.76 m** -- and the island lake at **0.30**,
+  **3.33 m**, the red term the same **1.40** in both because that is water's own
+  chemistry and not a paint choice. The row is chosen by the column the lens or the
+  ray stands in, read off the map's own records (`liquidRowAt`/`liquidColumnAt`), and
+  the mesher hands every chunk of a face the row of the water its own columns stand
+  under, counting the columns of that face that belong to a different one -- a count
+  the two-liquid step now reads, and finds **0**: no chunk of a face the game holds
+  stands in two waters at once. Of **100** sampled rings
+  around the valley, **0** hold columns of both waters, and the nearest lake column to
+  a sea column stands **127 m** away -- so this is not a difference anyone can step
+  across; it is what the same lens reads at the end of a long road over one water or
+  the other. The kelp in the lake is asked the same question and now reads against the
+  lake's own **3.33 m** reach instead of the sea's.
+- **What a mirror under water is a picture of.** The ring was right and is unchanged:
+  both waters carry index **1.333**, so the window closes at the same **41.4 deg** above
+  the eye line of a submerged lens in either. What was missing was the fill outside it,
+  which was a colour. Every chunk of a face now carries one more number -- the metres
+  between the film over its water and the ground under it -- and the pane lengthens the
+  doubled road by that depth before it asks the water what sits at the end of it. On an
+  open sea **8 m** deep, a lens **4 m** down and **131 m** from land, the frame's
+  brightness over the pixels the mirror owns agrees with what the straight path says of
+  that same floor to **1.4** worst and **0.59** mean over **37,282** rays; the same
+  measurement with the depth asked away is a flat **29.3** across all of them. Where the
+  floor is graded -- the lens standing **7 m** down in that sea, where the water's own
+  bed walks -- the mirror runs **29.8 / 32.9 / 36.0** across three bands of it in the
+  order the road says, and its brightest pixel, **37.8**, stands where the row of that
+  sea at **250 m** says the brightest can be, **37.9**. In that same frame the sun's
+  image is **0** pixels and the brightest thing anywhere in it is **38**: a lens on the
+  floor of a clear sea is shown its floor, and the sky stays inside the window.
+- **What it does not pretend.** The surface's wave is still withheld from a lens under
+  the water, and that is measured rather than asserted: at the lens on the sea floor,
+  asking the wave back puts **832** pixels over the water's own colour, **27** of them at
+  the brightest -- the multiple-crossing artefact, not a glitter. The lake's own bed is
+  asked twice where the two pictures cannot be told apart: straight down at an ungraded
+  floor, and over the water at the same distance. And the room the mirror reaches is the
+  room the straight path reaches -- a body standing out there is not in it, and the floor
+  it shows is not charged for the sunlight that came down through the water onto it.
+- **The lake was made clearer, and the chapter's numbers moved with it.** The row the
+  lake absorbs at is **1.875** times what it was, so the figures for how much of a bed
+  survives the surface were re-pinned from the same run: a bed **6 m** down keeps
+  **0.14** of the spread it has dry and comes to within **0.5** of luminance of the
+  colour the water scatters back; a bed **4 m** down keeps **0.297**. Four controls this
+  file has been quoting -- "with the water's faces asked dry", "with the water asked for
+  air" -- only ever touched the valley's own chunks, so a lens standing over open water
+  held an island in its far ring and every "nothing of it drawn" figure it quoted was a
+  control with no teeth. Both now cover the far chunks as well.
+- **Two things the run said before it was believed.** The wave's effect at the sea floor
+  was first read as a loss of **230** pixels and the mirror's agreement as a failure of
+  **30**; both were the measurement, not the frame -- a mean is not a difference and
+  comparing the frame against itself is not comparing it against the law. And the first
+  run of the two-liquid step called the valley's lakes and seas one water at **100** of
+  **100** rings: the census was sampling the island's own square, where one column can
+  hold both. The probes that found both are in the step, not in this file.
+- **What is next.** Item **28**'s remaining item (caustics) and its remainders, then
+  **31**, **29**, **24**, **19**, **25**, the panic multiple's value, and whether
+  `fogEmis` is really the same **0.15** under both waters -- a number the game states and
+  no measurement here has yet defended.
+- **Two of the suite's checks are frame-rate counters, and this machine decides them.**
+  `test/save.js` holds that every junk save leaves a world that still runs ("frames > 5"
+  for each of eight), and `test/play.js` holds that the frogs in a lane keep the water in
+  nine frames of every ten. This round ran the whole suite three times: the first two gave
+  9/10 with only `save` red, the third gave 8/10 with `save` and the frog-lane check red.
+  In every one of them `play.js` itself reported no failed check except that lane one, and
+  the load average through the runs was 15-18. The frame rate in the junk-save step decays
+  monotonically across its eight worlds -- 24, 10, 12.3, 9.5, 7.7, 6.3, 5.6, 5.2 measured
+  at the commit this round starts from, 22.1-4.7 and 24.1-4.8 measured here -- so the
+  decay belongs to the step itself, and the 5 fps floor sits exactly where this machine
+  sits. Nothing was shipped to chase that floor; the two reds are reported, not explained
+  away. What would settle it is either running the suite on an idle machine (the rule this
+  project keeps: under 3 on `/proc/loadavg`) or restating the junk-save check as something
+  that does not measure a shared CPU -- both open.
+- **A debt this round found and did not pay.** Every figure in the two water bullets
+  above was taken from a green run of this tree and re-checked against that run's log.
+  A scan of 07 §3.2 against the same logs shows about fifteen figures elsewhere in that
+  section -- the streamer's counts, the mesher's sweep figures from a round or two ago,
+  the cull hole's pixel counts -- that no current run prints: some of them are stated as
+  history and are honest, some are simply stale. `test/docs-drift.js` guards the data
+  against the prose; it does not read prose against a frame buffer. Re-pinning that
+  section is a round of its own, and the scan that produced this count is a grep of the
+  chapter's bold figures against `/tmp/frutaria-*.log` -- a proxy, not a tool yet.
 ## 2. What the soak hunt left standing: the life a body has, the rate a breath burns, and whether water is a cause of either (2l, 2m, 2n)
 
 The soak flake itself is closed -- the three laws that went red are root-caused,
@@ -814,7 +825,7 @@ mechanism to fill the hole -- an invented mechanism is exactly the over-design t
 standing contract rules out. If a cause is ever wanted, it has to come out of
 something the game already has; nothing in it does yet.
 
-## 28. The crossing itself is not bent: no window, no tilt, no bed in the mirror (found while closing 27; two of its four shipped)
+## 28. The crossing itself is not bent: no window, no tilt, no bed in the mirror (found while closing 27; three of its four shipped)
 
 **What is missing, stated as four things the frame does not do.** They belong together
 because they are all consequences of one absence -- the surface is a place where light
@@ -826,8 +837,8 @@ changes direction, and this renderer has no place where it does.
   asks the vector form of the law of the face's own normal now, and the frame answers with the
   window: a sun standing **29.55 deg** up is seen at **40.73 deg** off the vertical where the
   law puts it at **40.74**, its image is nowhere in the frame when the bending is asked away,
-  and the window's rim is its brightest ring (**74.6** at the middle, **96.7** at the rim, and
-  nothing above **53** -- the water the lens stands in -- from **51 deg** out). The figures,
+  and the window's rim is its brightest ring (**75.7** at the middle, **99.5** at the rim, and
+  nothing above **54** -- the water the lens stands in -- from **51 deg** out). The figures,
   the rig, and
   what it costs are in the state block above and in 07 §3.2; the step is
   `theSurfaceUnderWaterBendsTheWorldIntoItsWindow`.
@@ -838,16 +849,31 @@ changes direction, and this renderer has no place where it does.
   therefore shown the lake's own cells instead of one flat gradient -- measured in
   `theWaterFaceAnswersWithItsOwnTilt`, and the figures are in the state block above and in
   07 §3.2. What it deliberately does **not** reach is a lens *inside* the liquid: the wave is
-  asked only of lenses outside the liquid (the multiple-crossing artefact -- **961** pixels at
-  the eye line of a lens standing on the sea floor), so under water the mirror is still flat,
-  the window still has no glitter, and nothing yet moves on the bed. Getting the tilt under
-  the skin means solving that compositing first, which is the same obstacle as item 1.
+  withheld from a lens under the water (the multiple-crossing artefact it caused is the reason
+  the surface is shown flat there, and it is also item 1's obstacle), so under water the
+  mirror is still flat, the window still has no glitter, and nothing yet moves on the bed.
+  Getting the tilt under the skin means solving that compositing first, which is the same
+  obstacle as item 1.
 - **No caustics.** The bed's `aUnder` term asks how much daylight got *down* through a
   column of water; nothing asks what the moving surface did to where that light lands.
-- **The mirror under water is a colour, not a picture.** Over the closed fan the pane
-  returns `uVeil` -- the water's own colour, which is the honest cheap answer and is named
-  as such in the shader and in 07 §3.2. What it should show is the lakebed at that angle:
-  the same lake the lens is standing in, seen again.
+- ~~**The mirror under water is a colour, not a picture.**~~ **Shipped this round.** Over the
+  closed fan the pane returned `uVeil` -- the water's own colour, named as such in the shader
+  and in 07 §3.2 -- because the mirrored ray's answer would have been paid for along the
+  straight line. The question was answered at the mesh instead: every chunk of a face now
+  carries its own depth, the metres between the film over the water and the ground under it,
+  and the pane lengthens the mirrored road by that depth before it asks the water what sits
+  at the end of it. A lens 4 m under the open sea looking up at 1.2 rad is shown, beyond the
+  window's rim, the bed of the sea it stands in: the frame's brightness over those pixels
+  agrees with what the straight path says of that same floor to **1.4** worst and **0.59**
+  mean over **37,282** rays, and where the floor is graded the mirror walks with it -- a
+  lens **7 m** down in that sea sees its bed in three bands of **29.8, 32.9, 36.0**, in the
+  order the road says, its brightest pixel **37.8** standing where the row of that sea at
+  **250 m** says the brightest can be, **37.9**; the same measurement with the depth asked
+  away is a flat **29.3** across every one of those rays, and in that frame the sun's image
+  is **0** pixels and the brightest thing anywhere in it is **38**.
+  `theSeaKeepsItsOwnColourToItsOwnHorizon` measures it, and the figures are in the state
+  block above and in 07 §3.2. What remains of the bullet is written under "what the one
+  that remains costs".
 
 **Why the rest of it is worth keeping in the queue rather than in a comment.** The frame the
 user was standing in is the one this round fixed: a lens under the water is inside a window
@@ -857,24 +883,22 @@ past its rim should show, which is the bottom of the same lake. And the body the
 for next is a turtle's (**29**): it will be worn, and it will be looked at from inside the
 water it swims in.
 
-**What the two that remain cost.** The bed in the mirror is one expression, and it is the
-expression this round paid for: the reflected direction is already computed and already used
-for the sky above the water, and what it would sample is the water's own bottom -- but the
-frame drew that bottom along the straight line, so sampling it along the mirrored one is the
-second-lens question over again. Caustics want the surface's normal, which has existed since
-last round, and an answer to where the light lands, which does not: the bed's `aUnder` is
-baked into the vertices when the mesh is built, so a pattern that moves with the surface wants
-either a term computed at the draw or a re-bake of the column.
+**What the one that remains costs.** Caustics want the surface's normal, which has existed
+since last round, and an answer to where the light lands, which does not: the bed's `aUnder`
+is baked into the vertices when the mesh is built, so a pattern that moves with the surface
+wants either a term computed at the draw or a re-bake of the column. The bed in the mirror
+turned out to cost neither: the depth the mirrored road needs is a number the mesh already
+knows, and asking it at the draw is one more multiply.
 
-Status: two of its four are shipped and measured -- item 2 (the face's own tilt) and item 1
-(the bending). Items 3 and 4 stand, and item 1 left a remainder that belongs with them rather
-than with itself:
+Status: three of its four are shipped and measured -- item 1 (the bending), item 2 (the face's
+own tilt) and item 4 (the bed in the mirror). Item 3 stands, and the shipped ones left
+remainders that belong here rather than with themselves:
 
 - **The window holds the analytic sky and nothing else.** A turned ray asks `skyAt()`, so a
   thing standing out there is not in the window: a block of stone laid **3 m** out along the
   sun's azimuth and **3 m** above the lake -- **3.2 m** out and **3.8 m** above a lens **30 cm**
   under the water, so **39.8 deg** off the vertical -- inside it, beside where the sun's image
-  stands -- is in **0** pixels of the frame the bend draws and **17,097** of the frame the
+  stands -- is in **0** pixels of the frame the bend draws and **19,457** of the frame the
   straight path draws. So there is no shore in the window, no body, no gull, no cloud. That
   is not a matter of taste -- a lake's own shore is the brightest thing most of its windows
   would hold. ~~No stars either, and that one is simply unwritten now.~~ **Written the next

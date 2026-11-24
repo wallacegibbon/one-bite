@@ -8,15 +8,18 @@ const W = new N.World(N.WORLD.w, N.WORLD.h, N.WORLD.d);
 N.generate(W, 20261008);
 
 const SKIP = { 6: 1, 7: 1, 8: 1, 9: 1, 22: 1, 27: 1, 28: 1 };   // leaves / plants etc. are not standable
-const WATER = 5;
+/* Which cells a liquid fills. Asked of the block row's flag: the world holds
+   the sea and the island's lake under two ids, and a rig that asks one of them
+   by number has quietly stopped covering the other. */
+const WATER = b => b === 5 || b === 31;
 
 function topSolid(x, z) {                       // topmost standable solid block
-  for (let y = 44; y > 0; y--) { const b = W.get(x, y, z); if (b && b !== WATER && !SKIP[b] && b < 40) return { y, b }; }
+  for (let y = 44; y > 0; y--) { const b = W.get(x, y, z); if (b && !WATER(b) && !SKIP[b] && b < 40) return { y, b }; }
   return null;
 }
 const stand = (x, z) => { const s = topSolid(x, z); return s ? { y: s.y + 1, b: s.b } : null; };
 function waterTop(x, z) {
-  for (let y = 44; y > 0; y--) if (W.get(x, y, z) === WATER) return y;
+  for (let y = 44; y > 0; y--) if (WATER(W.get(x, y, z))) return y;
   return -1;
 }
 const openWater = (x, z) => {                   // open water: the lakebed lies below the surface

@@ -106,9 +106,16 @@
      comes from the body, not from the lens: a frog hovering three metres down
      is three metres down whether or not the one looking at it has its head in
      the water. A body with no water in its column hands over nothing, and the
-     shader's answer for "nothing" is the same one air gives. */
-  function bodyWater(c, liqK) {
-    return c.wSurf >= 0 ? { waterY: c.wSurf, waterK: liqK } : {};
+     shader's answer for "nothing" is the same one air gives.
+     The coefficient comes out of the same column as the surface does, because
+     they are one fact: how far the light has come down, and through what. The
+     valley holds two of that "what" -- the sea eats the green of daylight at
+     under a third of the rate the island's lake does -- and a body wading one
+     is not lit like a body swimming the other. */
+  function bodyWater(c, W) {
+    if (c.wSurf < 0) return {};
+    const row = W.liquidRowUnder(c.x, c.wSurf, c.z);
+    return { waterY: c.wSurf, waterK: row ? row.fogK : [0, 0, 0] };
   }
 
   class Game {
@@ -435,6 +442,7 @@
          haze, daylight stays white, and there is no surface overhead -- so a
          frame drawn in air is bit for bit what it was. */
       let emisKeep = 0.75, waterK = [0, 0, 0], waterY = 0, hazeK = [0, 0, 0], hazeOn = 0, inWater = 0;
+      const lrow = W.liquidRowAt(Math.floor(lens.x), Math.floor(lens.z));
       if (wf) {
         if (wf.emis !== undefined) emisKeep = wf.emis;
         /* A liquid that states a per-colour law replaces the air's haze outright
@@ -483,9 +491,31 @@
            eye with nothing worn they were equal already, which is why no rig had
            seen it. Out of the water the lens is in a different stuff, and the
            air's answer stays the air's. */
-        veil: inWater ? fogCol : W.liquidVeil(),
-        liqK: W.liquidAbsorb(),
-        liqIor: W.liquidIor(),
+        /* What the water at this place is made of: the rate at which it eats the
+           daylight coming back out of a surface, and the angle that surface's own
+           face closes the sky behind it. The haze above is keyed to the cell the
+           lens stands in, because that is a fact about the lens; these are facts
+           about the water, and the world has two of them -- the island's lake and
+           the open sea, three times apart in how fast they eat green. Out of the
+           water the two questions part company: a lens standing on the shore of
+           Mirrorlake is in air, and the faces it draws are the lake's. So this is
+           asked of the place, with the one rule the generator fills a column with
+           (`worldgen`), and it does not need a wet lens to be answerable.
+           The colour the water lays over the view keeps the eye in it: a lens
+           standing inside a liquid is shown that liquid's own haze, which already
+           came out of its row (the haze is keyed to the lens's cell), and a lens
+           outside one is handed the raw colour of the water at this place. The
+           faces themselves are asked a rate and an index per chunk, which are not
+           eye-dependent and do not need a fallback (`World.buildChunk`); this
+           frame-level answer is what the sky's background and the motes get.
+           A frame that can see both waters at once -- they are never nearer than
+           about 120 m here, and past that the air has taken almost all the
+           contrast off -- gets one answer for the veil, the background and the
+           motes. That is the limit of the current design and it is held open in
+           OPEN-ISSUES rather than argued away. */
+        veil: inWater ? fogCol : (lrow ? lrow.fogC : [0, 0, 0]),
+        liqK: lrow ? lrow.fogK : [0, 0, 0],
+        liqIor: lrow ? lrow.ior : 1,
         sunDir, sunCol: mix([0.4, 0.5, 0.8], [1.0, 0.95, 0.8], Math.max(0, el * 2)),
         far: 260
       };
@@ -1178,10 +1208,17 @@
       const drawChunk = (cx, cz, m) => {
         // a chunk is a box 16 x 48 x 16, and it is culled as one
         if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) return;
-        R.drawMesh(m[0], IDENT, {});
-        R.drawMesh(m[1], IDENT, { emisBoost: 0.15 });
-        R.drawMesh(m[3], IDENT, {});
-        R.drawMesh(m[4], IDENT, { emisBoost: 0.2 });
+        /* The depth of water over a face of this chunk was measured out of the
+           columns it stands in when the mesh was built; so is the rate at which
+           that water eats the light coming down through it, and it travels with
+           the mesh (`World.buildChunk`). The environment's own answer is the
+           water the *lens* is standing in, which is a different question out
+           here on the shore, and the wrong one for a lakebed seen from its bank. */
+        const k = m.liq ? m.liq.k : [0, 0, 0];
+        R.drawMesh(m[0], IDENT, { liqK: k });
+        R.drawMesh(m[1], IDENT, { liqK: k, emisBoost: 0.15 });
+        R.drawMesh(m[3], IDENT, { liqK: k });
+        R.drawMesh(m[4], IDENT, { liqK: k, emisBoost: 0.2 });
         if (m[5]) glass.push(m[5]);
       };
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
@@ -1233,8 +1270,14 @@
           const col = N.RARITY[(FRU[d.item.id] || PLANT[d.item.id] || { rarity: 'common' }).rarity].color;
           const m = N.M4.create();
           N.M4.trans(m, d.x, d.y + 0.35 + Math.sin(this.time * 2 + d.x) * 0.08, d.z);
+          /* A dropped fruit is not baked either, so it is asked the same
+             question as a body: the surface of the column it is lying in, and
+             what the water of that column is made of. A fruit that fell into the
+             lake is lit through the lake. */
+          const dc = W.liquidColumnAt(Math.floor(d.x), Math.floor(d.z));
+          const dSurf = dc ? dc.surf : 0, dK = dc ? dc.row.fogK : [0, 0, 0];
           R.drawMesh(this._dropMesh, m, { tint: col, tintA: 1, emisBoost: 0.5, day: Math.max(0.6, this.daylight),
-            waterY: W.liquidSurfaceAt(Math.floor(d.x), Math.floor(d.z)), waterK: this.env.liqK });
+            waterY: dSurf, waterK: dK });
         }
       }
       // creatures
@@ -1279,7 +1322,7 @@
           // signed rad/s of heading: the outside leg of a turn does the work
           turn: c.bend || 0
         };
-        const wopt = bodyWater(c, this.env.liqK);
+        const wopt = bodyWater(c, W);
         for (const e of parts) {
           const m = N.partMatrix(N.M4.create(), base, e, st, parts);
           R.drawMesh(e.mesh, m, wopt);
@@ -1339,7 +1382,7 @@
           turn: p.bend || 0
         };
         // The body's own water.
-        const bw = bodyWater(p, this.env.liqK);
+        const bw = bodyWater(p, W);
         for (const e of parts)
           R.drawMesh(e.mesh, N.partMatrix(N.M4.create(), base, e, st, parts),
             { waterY: bw.waterY, waterK: bw.waterK });
@@ -1370,8 +1413,20 @@
          A lake is a closed volume and the mesher only ever emits a face where
          water meets air, so no pixel can ever see both sides of one quad --
          un-culling it costs nothing in blending and adds no geometry. */
-      const drawWater = (cx, cz, m) => {
+      const drawWater = (cx, cz, m, lq) => {
         if (!R.visibleBox(cx * W.cs, 0, cz * W.cs, cx * W.cs + W.cs, W.h, cz * W.cs + W.cs)) return;
+        /* This face is one water's skin and not the other's: the rate at which
+           the light it lets through has been eaten on the way up, and the fan of
+           sky its own index closes, are facts about the water this chunk holds,
+           and they travel with the mesh (`World.buildChunk`) -- and so does the
+           depth of the floor under this chunk's own water, which is the only
+           thing a lens inside the liquid can have on the far side of a ray the
+           surface turns back. What the face adds
+           of its own does not travel: that colour carries what the eye standing
+           here has been through, and only the environment knows that, so it
+           stays one answer per frame -- the same limit the sky's background and
+           the motes share, held open in OPEN-ISSUES. */
+        const k = lq ? lq.k : [0, 0, 0], ior = lq ? lq.ior : 1, bed = lq ? (lq.bed || 0) : 0;
         /* The wave is a fact about the surface, and the surface now answers for
            it: the vertex shader writes the slope of the same two sines at the
            vertex it displaces, and the pane is asked that normal -- how hard the
@@ -1387,13 +1442,15 @@
            the pane writes no depth, its two passes multiply and then add, and
            every crossing it is handed lays the water's colour over the last.
            Measured at a lens standing on the floor of the open sea, with the
-           wave on that face: 961 pixels along its eye line over the colour of
-           the water it stands in, the brightest at 107 against that water's 53
-           -- a dotted line, twice the colour of the sea, at the height of its
-           own eye. (game/test/play.js draws that lens with and without the wave,
-           and with and without the edge.) So a lens inside the liquid is shown
-           the interface this frame can compose: a flat one, and a flat one whose
-           shading agrees with it. Flat, and turned: the same index that closes
+           wave on that face: hundreds of pixels along its eye line over the
+           colour of the water it stands in where the level face has not one, and
+           its brightest tens above that level frame's brightest -- a dotted
+           line, twice the colour of the sea, at the height of its own eye.
+           (game/test/play.js draws that lens with and without the wave, holds
+           that count and that ceiling, and with and without the edge.) So a lens
+           inside the liquid is shown the interface this frame can compose: a
+           flat one, and a flat one whose shading agrees with it. Flat, and
+           turned: the same index that closes
            that 48.6 degree fan is Snell's law, and the pane reads it the other
            way as well -- every ray of a lens inside the liquid that gets out is
            bent on the way, so the whole sky above the water stands inside that
@@ -1415,14 +1472,14 @@
            way the test goes. It is told because which side of the surface the
            lens is on is a fact the whole frame shares, and this function has
            had it since before a single pixel was drawn. */
-        R.drawMesh(m, IDENT, { pane: 1, wave: wv, noCull: true });
-        R.drawMesh(m, IDENT, { pane: env.inWater ? 3 : 2, wave: wv, noCull: true });
+        R.drawMesh(m, IDENT, { pane: 1, wave: wv, noCull: true, liqK: k, ior: ior, bed: bed });
+        R.drawMesh(m, IDENT, { pane: env.inWater ? 3 : 2, wave: wv, noCull: true, liqK: k, ior: ior, bed: bed });
       };
       for (let cz = 0; cz < W.cz; cz++) for (let cx = 0; cx < W.cx; cx++) {
         const m = W.chunks[cz * W.cx + cx];
-        if (m && m[2]) drawWater(cx, cz, m[2]);
+        if (m && m[2]) drawWater(cx, cz, m[2], m.liq);
       }
-      for (const c of W.far.values()) if (c.mesh && c.mesh[2]) drawWater(c.cx, c.cz, c.mesh[2]);
+      for (const c of W.far.values()) if (c.mesh && c.mesh[2]) drawWater(c.cx, c.cz, c.mesh[2], c.mesh.liq);
       // particles: the world goes along, because what eats a mote's light is
       // the water it sits in, and only the world knows where the water is
       this.particles.draw(R, this.world);
