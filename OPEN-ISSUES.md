@@ -7,8 +7,9 @@ live in `docs/` (the single English set, with the bilingual index beside it);
 round-by-round history lives in the commit log. Update this file the moment a
 problem is found or closed, and commit it.
 
-State at time of writing: this round is two sentences about the same blue.
+State at time of writing: this round is one number the suite was measuring about itself.
 
+- **A frame-rate floor in the suite was measuring this machine, and it has been replaced with a clock.** `test/save.js` held that each of the eight saves the game never wrote leaves a world still drawing at least 5 frames a second. Of the eight rounds of suite runs recorded since that floor was written it was red in seven, and its eight numbers repeated to 0.2 fps run after run -- which is not how a machine under a shared load behaves. The control those numbers point at has now been read, and the answer is neither the payload nor the load average. The eight payloads all put the body at the same address, so the only thing that changes across the step is how long that page has been standing there; a page that is never offered a save at all falls the same way (at the desk, over eight seconds of its own clock: 13.6, 12.9, 11.9, 10.1, 9.1, 8.5, 7.9, 7.4 fps, then flat), and so does one payload loaded eight times over (28.2 down to 5.1). What falls with the frame rate is the ground the world is holding: at a standing address the world streams the disc of chunk addresses its own haze reaches (`World.keep`), a millisecond budget's worth of geometry per frame, and the frame rate stops falling the moment that fill stops. The step now records both counts beside its frame rate, so the relation is in the log and not in this file: a run of it gives 131 chunk meshes at 25.6 fps and 609 at 5.0. What `Game.update` takes per frame does not move across that fill -- about 8 ms, its own draw call 1 to 2 of them -- so the growth is in what the page spends outside the game's code, a software rasteriser over more geometry, and it belongs to where a lens is standing, not to what it was asked to load. The check asks the world's own clock now: the update loop must have been handed a full second after every one of the loads, which is what "still running" was trying to say. `test/simwait.js` gained `trySim()` so those readings stay in one record and the verdict stays in the check that reads them. The other frame ratio the bullet below named -- the frogs keeping the water nine frames of every ten -- is a claim about a body staying under a surface and not about a machine, and is untouched.
 - **On top of the commit above, item 31 was measured and closed.** The question underneath
   the hole -- whether a played frame ever answers a submerged lens's above-eye-line
   directions with nothing but the background -- has a census (`test/play.js`,
@@ -96,27 +97,7 @@ and about the ring a lens under the water is shown: is there nothing past it?
   remainders; then **29**, **24**, **19**, **25**, the panic multiple's value, and whether
   `fogEmis` is really the same **0.15** under both waters -- a number the game states and no
   measurement here has yet defended.
-- **Two of the suite's checks are frame-rate counters, and this machine decides them.**
-  `test/save.js` holds that every junk save leaves a world that still runs ("frames > 5"
-  for each of eight), and `test/play.js` holds that the frogs in a lane keep the water in
-  nine frames of every ten. The rounds of suite runs since that floor was written give, in
-  order: 9/10 with only `save` red, 9/10 with only `save` red, 8/10 with `save` and the
-  frog-lane check red, 9/10 and 9/10 with only `save` red, and then 9/10, 10/10 and 9/10 --
-  `play` green with no failed check in any of them. The junk-save step's eight loads in one
-  page decay monotonically every time, and the last of them lands on either side of the
-  floor by a hair: 24, 10, 12.3, 9.5, 7.7, 6.3, 5.6, 5.2 measured at the commit an earlier
-  round started from, then 22.1-4.7 and 24.1-4.8, then 23.4-4.7, 23.2-4.8, 24-4.8, and
-  26.4-5.1 and 26.1-5.0 here. Those sequences agree with one another to 0.2 fps, which is
-  not how a shared CPU behaves: a load-driven flake wanders, this one repeats. So the decay
-  is something accumulating across the eight loads taken in one page, and the 5 fps floor
-  happens to sit exactly where the eighth of them lands. Nothing was shipped to chase that
-  floor; the reds are reported, not explained away. The control the numbers point at is the
-  one that has not been run: put the same eight payloads in the other order, or take each in
-  a fresh page, and see whether the decay follows the place in the sequence or the payload.
-  Whichever it follows says whether the game is leaving something behind on `load()` or the
-  page is paying for them; until that is run this stays open, and the load average through a
-  suite run (9.6-17, with the desktop's own indexer at a third of a core) is only why the
-  margin is thin, not why the curve is there.
+- **Two of the suite's checks were frame-rate counters, and this machine decided one of them.** That one is closed above; what is kept here is the sequence that made it visible, because a flake that repeats is the evidence. `test/save.js` held that every junk save leaves a world that still runs ("frames > 5" for each of eight), and the rounds of suite runs since that floor was written give, in order: 9/10 with only `save` red, 9/10 with only `save` red, 8/10 with `save` and the frog-lane check red, 9/10 and 9/10 with only `save` red, and then 9/10, 10/10 and 9/10 -- `play` green with no failed check in any of them. The step's eight loads in one page decayed monotonically every time, and the last of them landed on either side of the floor by a hair: 24, 10, 12.3, 9.5, 7.7, 6.3, 5.6, 5.2 measured at the commit an earlier round started from, then 22.1-4.7 and 24.1-4.8, then 23.4-4.7, 23.2-4.8, 24-4.8, 26.4-5.1 and 26.1-5.0, and 25.6-5.0 on the tree this round closed it on. Those sequences agree with one another to 0.2 fps: a load-driven flake wanders, this one repeated, and the load average through a suite run (9.6-17, with the desktop's own indexer at a third of a core) was only why the margin was thin, not why the curve was there -- which is what the bullet above went and measured. The other check that bullet named, the frogs keeping the water in nine frames of every ten, is a claim about a body staying under a surface: it has been red exactly once in that whole sequence and green in every run since, and it stands as it is.
 - **A debt this round found and did not pay.** Every figure in the two water bullets
   above was taken from a green run of this tree and re-checked against that run's log.
   A scan of 07 §3.2 against the same logs shows about fifteen figures elsewhere in that

@@ -1,7 +1,7 @@
 /* save round trip: write a save, reload the page, continue from the start screen */
 const puppeteer = require('puppeteer-core');
 const path = require('path');
-const { sim } = require('./simwait');
+const { sim, trySim } = require('./simwait');
 
 const URL_AUTO = 'file://' + path.join(__dirname, '..', 'index.html') + '?auto';
 const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
@@ -347,8 +347,13 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
       localStorage.setItem(k, JSON.stringify(s));
       return { offered: window.game.saveInfo() !== null, loaded: window.game.load() };
     }, payload);
-    const ran = await sim(page, 1.0);
-    junk.push(Object.assign({ name, frames: ran.fps }, r, await page.evaluate(() => {
+    /* The second is asked for in the world's own clock and the answer is kept,
+       not swallowed: `worldSeconds` is how much of that clock the update loop
+       was handed after the load, `fps` is what this machine managed on the way
+       there. Those are different questions -- see the note above the liveness
+       check below, which is why only the first one is asserted. */
+    const ran = await trySim(page, 1.0);
+    junk.push(Object.assign({ name, fps: ran.fps, worldSeconds: ran.sim, ms: ran.ms }, r, await page.evaluate(() => {
       const g = window.game, p = g.player, W = g.world;
       const fin = v => typeof v === 'number' && isFinite(v);
       return {
@@ -362,7 +367,14 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
         form: p.form === null ? 'human' : String(p.form),
         inv: Array.isArray(g.inv) ? g.inv.length : typeof g.inv,
         queues: [g.growQueue, g.drops, g.regrow].map(q => Array.isArray(q) ? q.length : typeof q),
-        diffs: g.diffs.length
+        diffs: g.diffs.length,
+        /* The ground the world holds outside its own array and how much of that
+           has geometry. This is what the frame rate above follows, and counting
+           it here is what makes the note above the liveness check a reading
+           rather than an assertion: the number of meshes and the frame rate
+           belong to each other across a run of these loads. */
+        farHeld: W.far.size,
+        farMeshed: Array.from(W.far.values()).filter(c => c.mesh).length
       };
     })));
   }
@@ -372,7 +384,22 @@ const URL_MENU = 'file://' + path.join(__dirname, '..', 'index.html');
     junk.every(j => j.pos.every(v => typeof v === 'number') && typeof j.time === 'number' &&
       typeof j.hour === 'number' && typeof j.day === 'number' && typeof j.vital === 'number'), junk);
   check('and queues the update loop can walk', junk.every(j => j.queues.every(n => typeof n === 'number')), junk);
-  check('and every one of them is still running a second later', junk.every(j => j.loaded === true && j.frames > 5), junk);
+  /* Liveness, in the world's own clock. A save that does break stops the update
+     loop -- a queue holding a null is thrown over inside it every frame -- and
+     how much of its own time the loop was handed after the load is the answer to
+     "is it still running". The frame rate the page managed on the way there is
+     kept in the record and not asserted, because it is not the save's number.
+     It is the number of chunk meshes the world is holding: at one standing place
+     the world streams the ground its own haze reaches -- the disc of chunk
+     addresses `World.keep` describes, filled a millisecond-budget's worth per
+     frame -- and the frame rate falls as that fill goes and stops falling once
+     the fill stops. Read the `farHeld`/`farMeshed` counts this step records
+     against the `fps` it records and the two are each other's curve: the eighth
+     load of a step that has been running at one address for a while lands on the
+     far side of that fill, and a floor set on the frame rate there measures this
+     machine's software rasteriser rather than the save it was meant to test. */
+  check('and every one of them leaves a world whose own clock still runs a full second',
+    junk.every(j => j.loaded === true && j.worldSeconds >= 1.0), junk);
   /* A save written before the reserve was carried names no number for it. The
      body is left with what the body it wakes in was already holding -- nothing
      is invented for it and nothing is converted -- and the frame's bound keeps

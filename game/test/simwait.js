@@ -25,10 +25,11 @@ const COUNT = () => {
   g.update = dt => { window.__sim += dt; return step(dt); };
 };
 
-/* Wait until the game has been updated for `seconds` of its own time.
-   Returns { sim, ms, fps, ok } -- `fps` is the frame rate the page actually
-   managed, which is the number that used to decide whether these tests passed. */
-async function sim(page, seconds, capMs = 60000) {
+/* The same wait without the verdict: it hands back what the page managed instead
+   of throwing. A step that wants eight loads' numbers side by side in one record
+   uses this, so a world that stopped moving is answered by the check that reads
+   that record -- with the record -- rather than by the step ending early. */
+async function trySim(page, seconds, capMs = 60000) {
   await page.evaluate(COUNT);
   const r = await page.evaluate((secs, cap) => new Promise(res => {
     const from = window.__sim, t0 = performance.now();
@@ -44,9 +45,15 @@ async function sim(page, seconds, capMs = 60000) {
     };
     requestAnimationFrame(tick);
   }), seconds, capMs);
+  return r;   // the verdict is the caller's: `ok` says the time was handed
+}
+
+/* Wait, and fail the run if the world was not handed that time. */
+async function sim(page, seconds, capMs = 60000) {
+  const r = await trySim(page, seconds, capMs);
   if (!r.ok) throw new Error(`the page ran only ${r.sim} s of world time in ${r.ms} ms ` +
     `(${r.fps} fps) while waiting for ${seconds} s`);
   return r;
 }
 
-module.exports = { sim, COUNT };
+module.exports = { sim, trySim, COUNT };
