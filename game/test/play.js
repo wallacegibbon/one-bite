@@ -5903,6 +5903,169 @@ What was measured before any of this was fixed, over 180 frames of walking
     && seaRingCensus.held.frames.length > 10 && seaRingCensus.swum.frames.length > 10
     && seaRingCensus.fast.chunks > 1 && seaRingCensus.fast.moved > 20, seaRingCensus);
 
+  /* Whether a frame drawn *inside* that third of a second is worth anything. The
+     census above never asks for a picture, so it cannot say how many pixels such a
+     frame leaves as the frame's own background; and the complaint that opened this
+     item was a picture, not a count of directions. So this step puts a lens at an
+     address nothing is meshed at -- found by searching for one that is still cold,
+     which is why it is not the address the census above stands at -- and draws the
+     frame as the loop arrives at it, once at the cold frame itself and then as the
+     ring walks in. What is read is the shape of the complaint: a sky where the sea
+     should be, and an edge across the frame with nothing standing on either side of
+     it. Both are read the same way the sky/sea step reads them. */
+  const coldFrame = await step('aFrameDrawnBeforeTheRingArrivesIsTheLiquidAndNotASky', () => {
+    const g = window.game, N = window.FRUTARIA, W = g.world, gl = g.R.gl, p = g.player;
+    const was = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, vx: p.vx, vy: p.vy, vz: p.vz,
+      form: p.form, formT: p.formT, formMax: p.formMax, third: g.thirdPerson, time: g.time,
+      mode: g.mode, lens: g._lens, frame: g._camFrame, env: g.env, hover: g.hover,
+      camReady: g.camReady, input: g.input, camD: g.cam.d, camFov: g.cam.fov,
+      creatures: g.creatures, drops: g.drops };
+    const back = (r) => {
+      Object.assign(p, { x: was.x, y: was.y, z: was.z, yaw: was.yaw, pitch: was.pitch,
+        vx: was.vx, vy: was.vy, vz: was.vz, form: was.form, formT: was.formT, formMax: was.formMax });
+      g.thirdPerson = was.third; g.time = was.time; g.mode = was.mode; g._lens = was.lens;
+      g._camFrame = was.frame; g.env = was.env; g.hover = was.hover; g.camReady = was.camReady;
+      g.input = was.input; g.cam.d = was.camD; g.cam.fov = was.camFov;
+      g.creatures = was.creatures; g.drops = was.drops;
+      return r;
+    };
+    p.form = null; g.mode = 'play'; g.thirdPerson = false; g.input = {};
+    g.time = N.DAY_LEN * (13 / 24);
+    const topOf = (x, z) => { for (let y = W.h - 1; y >= 0; y--) if (W.liquidAt(x, y, z)) return y + 1; return -1; };
+    const floorOf = (x, z) => { const s = topOf(x, z); if (s < 0) return -1;
+      for (let y = s; y >= 0; y--) if (W.solidAt(x, y, z)) return y + 1; return -1; };
+    const meshedAt = (x, z) => {
+      const cx = Math.floor(x / W.cs), cz = Math.floor(z / W.cs);
+      if (W.inChunkGrid(cx, cz)) { const m = W.chunks[cz * W.cx + cx]; return !!m && m.some(Boolean); }
+      const c = W.far.get(W.ckey(cx, cz));
+      return !!(c && c.mesh && c.mesh.some(Boolean));
+    };
+    /* A cold address: deep open sea, no ground near, and nothing meshed anywhere the
+       frame could reach from it -- so this is not the address the census above just
+       warmed, and the state being drawn is the one a body is put into. */
+    let spot = null, best = 1e9;
+    for (let z = -520; z <= 520; z += 13) for (let x = -300; x <= 700; x += 13) {
+      const out = Math.max(Math.max(x - 159, -x), Math.max(z - 159, -z));
+      if (out < 130 || out >= best) continue;
+      const s = topOf(x, z), b = floorOf(x, z);
+      if (s < 0 || b < 0 || s - b < 8 || s - b > 12) continue;
+      let land = 1e9;
+      for (let dz = -60; dz <= 60; dz += 10) for (let dx = -60; dx <= 60; dx += 10) {
+        const bb = floorOf(x + dx, z + dz);
+        if (bb >= 0 && bb >= s - 2) land = Math.min(land, Math.hypot(dx, dz));
+      }
+      if (land < 130) continue;
+      let warm = false;
+      for (let dz = -140; dz <= 140 && !warm; dz += 20)
+        for (let dx = -140; dx <= 140; dx += 20) if (meshedAt(x + dx, z + dz)) { warm = true; break; }
+      if (warm) continue;
+      best = out; spot = { x, z, surf: s, floor: b, fromCentre: Math.round(Math.hypot(x - 79.5, z - 79.5)) };
+    }
+    if (!spot) return back({ error: 'no cold open sea left to draw at' });
+
+    /* The lens the game itself shoots: the eye, no distance eased in front of it
+       (the arc step above explains why a rig that never runs a frame has to set
+       the shot rather than wait for it). `streaming` is the whole question of
+       this step: with it the ring is built to completion before the frame is
+       asked, which is the settled state; without it the frame is asked at an
+       address the loop has never run at, which is the state the census measured.
+       The environment is derived either way -- the loop's own step derives it
+       before it streams anything, and a frame drawn without it would be shot
+       through the water some other address was standing in. */
+    const put = (lensY, streaming) => {
+      g.camReady = true; g.cam.d = 0; g.cam.fov = p.fov();
+      p.x = spot.x + 0.5; p.z = spot.z + 0.5; p.vx = p.vy = p.vz = 0;
+      p.yaw = 0; p.pitch = 0;
+      p.y = lensY; p.y = lensY - (p.eyePos() - p.y);
+      p.air = p.maxAir(); p.fright = 0; p.dead = false;
+      p.grounded = false; p.headWater = false; p.held = 0; p.dry = 0; p.vital = 5;
+      g._camFrame = g.shootCamera(p);
+      g.creatures = []; g.drops = []; g.hover = null;
+      if (streaming) {
+        const chx = Math.floor(p.x / W.cs), chz = Math.floor(p.z / W.cs);
+        let left = 1, guard = 0;
+        while (left > 0 && guard++ < 400) left = W.stream(gl, chx, chz, 6);
+      }
+      g.updateEnv();
+    };
+    /* What a frame is made of. `atTheLiquid` is the share of the half whose rays
+       point above the eye line that answers at the colour this liquid's own row
+       states -- the colour the frame's background leaves when nothing stands
+       where it was asked. `texture` counts neighbouring pixels that differ at all,
+       which is what a surface with a wave on it is; `cuts` counts the ones that
+       differ by a tenth of the range, which is what an edge is. `skyPx` is the
+       complaint itself, read the way the sea/colour step reads it. */
+    const shot = (frame) => {
+      g.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const row = W.liquidRowAt(spot.x, spot.z);
+      const ref = (0.2126 * row.fogC[0] + 0.7152 * row.fogC[1] + 0.0722 * row.fogC[2]) * 255;
+      const half = Math.floor(h / 2);
+      const lum = (i) => 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+      let n = 0, sum = 0, max = -1, min = 1e9, over = 0, sky = 0, flat = 0;
+      for (let y = half; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4, l = lum(i);
+        n++; sum += l;
+        if (l > max) max = l;
+        if (l < min) min = l;
+        if (l > ref + 12) over++;
+        if (Math.abs(l - ref) <= 2) flat++;
+        if (px[i + 2] > 130 && px[i + 2] - px[i] > 60 && l > 75) sky++;
+      }
+      let edge = 0, cuts = 0, texture = 0;
+      for (let y = 0; y < h; y++) for (let x = 1; x < w; x++) {
+        const e = Math.abs(lum((y * w + x) * 4) - lum((y * w + x - 1) * 4));
+        if (e > edge) edge = e;
+        if (e > 25) cuts++;
+        if (e > 2) texture++;
+      }
+      return { frame, lensY: +(g._lens ? g._lens.y : p.y).toFixed(2),
+        under: +(g.env.waterY - (g._lens ? g._lens.y : p.y)).toFixed(2), ref: Math.round(ref),
+        halfPx: n, pairPx: (w - 1) * h,
+        meanLum: +(sum / n).toFixed(1), maxLum: Math.round(max), minLum: Math.round(min),
+        atTheLiquid: Math.round(100 * flat / n), brighterThanWater: over, skyPx: sky,
+        maxEdge: +edge.toFixed(1), cuts, texture, held: W.far.size };
+    };
+    /* the cold frame first: the lens is at the address, the environment is the one
+       that address stands in, and nothing of the loop has run there yet */
+    put(spot.surf - 4, false);
+    const out = { spot, row: { fogC: g.env.fogCol.map(v => +v.toFixed(3)),
+        hazeK: g.env.hazeK.map(v => +v.toFixed(3)) },
+      keptBefore: W.far.size, cold: shot(0) };
+    /* and then the loop itself, with a frame asked of it at the points the census
+       says matter: one frame in, a third of a second in, a second in, two in.
+       Each is shot at the same depth and the same level, so what changes between
+       them is only the ground arriving under the water. When that happens is a
+       property of the machine -- the streamer spends a few milliseconds a frame,
+       so a loaded machine meshes less per frame than an idle one -- so the frame
+       on which a surface first appears in the picture is recorded, and the check
+       holds the ordering instead: the cold frame holds none of it, and two seconds
+       of the loop later the frame holds a surface and not that sky. */
+    const marks = new Set([1, 5, 10, 20, 40, 60, 120]);
+    out.shots = [];
+    for (let i = 1; i <= 120; i++) {
+      g.update(1 / 60);
+      if (marks.has(i)) { put(spot.surf - 4, false); out.shots.push(shot(i)); }
+    }
+    const firstSurface = out.shots.find(s => s.texture > 0);
+    out.surfaceAtFrame = firstSurface ? firstSurface.frame : null;
+    out.surfaceAtSeconds = firstSurface ? +(firstSurface.frame / 60).toFixed(2) : null;
+    put(spot.surf - 4, true);          // the ring built out to its full ring
+    out.settled = shot(-1);
+    out.keptAfter = W.far.size;
+    return back(out);
+  });
+
+  check('and the frame asked of that moment is the light through the water with nothing standing in it: where the sea should be it shows the sky, it holds no edge anywhere and nothing of a surface, and within two seconds of the loop it holds a surface again and not that sky',
+    !!coldFrame.spot && coldFrame.cold.under >= 3 && coldFrame.cold.skyPx > 0
+    && coldFrame.cold.maxEdge < 25 && coldFrame.cold.cuts === 0 && coldFrame.cold.texture === 0
+    && coldFrame.settled.texture > 0
+    && coldFrame.shots[coldFrame.shots.length - 1].texture > 0
+    && coldFrame.shots[coldFrame.shots.length - 1].skyPx * 20 < coldFrame.cold.skyPx,
+    coldFrame);
+
   /* A lens under the skin of a lake is under a mirror, not under a window --
      except inside a cone. Light climbing out of water is turned back into it
      past 48.6 degrees from the vertical (asin(1/1.333), the index the water's
