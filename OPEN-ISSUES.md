@@ -582,7 +582,7 @@ can pick at all, standing where it can stand -- which no rig reads today.
 
 Status: open. Found while closing 22; deliberately not acted on this round.
 
-## 24. An animal may be born in water shallower than the dive its own record states (found by a suite flake)
+## 24. An animal may be born in water shallower than the dive its own record states (found by a suite flake; closed -- the depth is the shallower of the ask and the room the column gives, and the lake is counted at that law)
 
 Open. Two full runs of `all.sh` in this round came back 9/10 with
 `theFrogsSwimTheRingOfTheKeep` red: one of five bodies covering **4.7 m** and,
@@ -699,7 +699,98 @@ the column still allows, asked of the game's own `floatLevel` and `bedFloor`)
 instead of from a second arithmetic written beside it, because two restatements
 of one law drift, and one of them was already wrong by the hang depth.
 
-Status: open. The rig is closed; the birth is not.
+Status: closed. The rig was closed last round; the birth is closed by the law.
+
+**Closed by the law, not by the rig.** The ask stays the animal's and the water
+bounds it: in the dive branch of `Creature.update` the depth reached is
+`fl - Math.min(this.diveTo, room) * pow(cyc, 0.4)`, with `room = max(0, fl - bed)`
+and both ends the same `floatLevel` / `bedFloor` that branch already asks. A body
+in water shallower than its dive works the room there is; a body in water deeper
+than its dive is untouched, term for term, because `min` returns the ask.
+`waterColumn` still asks only the ground, and that is deliberate: the shallows are
+this kind's niche, and a frog standing in a two-metre shelf is not out of its
+habitat. What asks the animal is the dive, which is where the animal's own number
+is; a habitat gate would have turned a wading frog into an animal outside its own
+lake.
+
+Measured by `theDiveAsksTheAnimalAndTheWater` in `game/test/play.js` -- one body
+of the valley's own (0.43 m tall, `hover` 1.6), its cycle set to 0.1 rad/s,
+inside the 0.05-0.15 the constructor draws, one cycle to settle and two measured,
+the body held in one column so that the window is about that column -- four
+columns of Mirrorlake answer in one run: a **3 m** column, room **0.757 m**, where
+a **1.5 m** ask and a **4.0 m** ask both reach **0.756**; a **5 m** column, room
+**2.757 m**, where the **1.5 m** ask keeps its own **1.500** and is at the floor
+in **0** frames of **2,514** while the **4.0 m** ask is answered by the floor at
+**2.756**; an **11 m** column, room **8.756 m**, where both asks come out their
+own, **1.500** and **3.999**; and a **2 m** pool, room nil, where the body is held
+up in **0** frames and sits at **13.05** -- the ground and the 5 cm its own feet
+ask -- for the whole window. Under the floor: **0** frames in every case. Over the
+ceiling: **0**. Frames with the hold on, the stroke running and the height not
+changing: **1**, in a run of **1**, which is the cycle turning at the bottom of a
+dive. `diveTo` left exactly as drawn in every case: the water bounds the dive and
+never rewrites the animal.
+
+That last sentence is what a rig of one's own is for. The first version of this
+window went red on itself, in the shallow column only, and only sometimes: an
+animal at the foot of a bank sets `climbTo` for the step it is asking for, the
+dive floor is asked of that ground when there is one (the same `gyH` the standing
+branch uses, so a body climbing out of the lake does not dive through the bank it
+has its front feet on), and a body the rig pins in place never finishes the step --
+so that bank stood there for the rest of the window as the floor of every dive,
+two metres up. Three runs after the rig was made to hold the ground it was
+climbing onto as well as the body: bit for bit identical.
+
+The symptom before the change was read with `/tmp/diveprobe.js` (untracked, the
+same body and the same columns with the old line in place): in a **3 m** column a
+**4 m** ask left the body at the floor in **1356** of **1600** frames and held up
+and not moving at all in **1131** of them; the 5 m column **1130** and **905**; the
+6 m column **371** and **139**; the 7 m column and deeper **0** and **0**. That is
+the shape of the defect, and those zeros at the deep end are the no-harm half of
+it -- the same band bottoms, before and after, in every column whose room is at
+least the ask.
+
+The census now comes from the committed window rather than from a probe, and it
+supersedes the one this item carried: **2,795** of the lake's disc are columns
+`waterColumn` accepts, their depths run **2 m** to **11 m** with a median of **8**;
+**13.3%** give less room than the least dive the kind is born with and **37.3%**
+less than the deepest; in **178** of them -- the two-block ones -- the animal's own
+level stands under the floor, so it stands. The 07 §3.6 row that printed **22.9%**
+and **37%** and "4.3 m of water for the shortest dive" is gone with the item: the
+terms that row itself states (`1.5 x 0.43 m` of body, the **1.6 m** hang, the ask)
+give **3.75 m**, not **4.3**, and the threshold the game answers at is depth 3.
+The pairing figures (**30.1%** of pairings, an **83%** chance across five frogs)
+measured a cost the bounded ask removes, and they go with it.
+
+The rig is shorter now. `theFrogsSwimTheRingOfTheKeep` no longer asks a lane for
+the dive and no longer pins `diveTo`: a lane asks one thing, that this body's own
+level stands above the floor its water holds it at, and the dive the body drew at
+birth is left alone -- a window that edits the record it is measuring reports its
+own arithmetic. What it reports with that gone is the same verdict as with the
+pin, in water the old rig refused: the lanes are taken at 4-8 m of this lake
+depending on the run, `unplaced` empty, every body wet in 600 of its 600 frames,
+and the five bodies of a run within 2% of the one cruise rate that run prints
+(1.92 m/s per unit of pace in both of them). A body the old rig would have called
+too shallow to dive in swims the ring at its own pace now, and that is the fix
+showing up in the game rather than in a rig.
+
+## 32. A body that swims is never asked what it is swimming round (left standing by 24)
+
+Open, and not yet asked. An animal steers toward its errand at its own turn rate
+and takes the way round that closes on the errand when the *step in front* of it
+is solid; that is the walk, and it is on the record (07 §3.6, "Creatures have no
+pathfinding"). Whether a body hanging under the surface of a lake, metres above the
+bed, reads a solid the same way has never been asked of it. The only probe of it
+is the solid test the ring window runs every fifth frame one metre ahead of each
+body's nose, and what that probe reports across green runs is **0-13** contacts in
+**120** samples, the thing contacted always the lakebed's own stone outcrop in the
+south-east arm of the band, and the bodies carrying on at full speed through it.
+There is no defect on the record -- there is a question nobody has put, and the
+guess that there was a defect was retracted in 24.
+
+Asking it needs a rig of its own: a wall with an errand on the far side of it,
+placed at the height a body floats at rather than on ground, which is what the
+bank and wall steps do for a body on foot. Until it is asked, nothing here should
+be written as though it were known.
 
 ## 25. The sea has ground, and nothing on it (partly shipped)
 

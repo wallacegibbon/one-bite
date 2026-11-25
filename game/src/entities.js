@@ -3536,7 +3536,26 @@
              states -- the ground is a bottom to
              stand on, and the gap there is only the 5 cm its own feet ask for. */
           const bed = fl > gy ? bedFloor(gyH, this.tall) : gyH + 0.05;
-          const target = Math.max(bed, fl - this.diveTo * Math.pow(cyc, 0.4));
+          /* The depth a dive reaches is asked of two things and the shallower of
+             them wins: the depth this body drew at birth (`diveTo`, the animal's
+             own), and the room the column gives -- the distance between the level
+             this animal hangs at and the floor that water holds a body of its
+             shape at, both asked above, of this body and of this column.
+             A dive is a distance an animal covers. Where the column is shallower
+             than the dive its record states, the line below kept asking for metres
+             that are not there, and the body hung at the floor for the rest of
+             every cycle with its legs working against the bed: a body the water
+             is holding up, treading, going nowhere, for most of the time it was
+             diving. The animal's ask and the water's room are two different facts
+             and this is the one place they are read together, which is what the
+             rest of this branch already does about the two ends of the hold.
+             Nothing else changes: where the room is at least the dive asked for
+             this is term for term what it was, and where the animal's own level
+             stands no higher than the ground the room is nil, the ask is worth
+             nothing, and the body stands -- the one-block shelf it wades in, a
+             pool no deeper than the depth its row states. */
+          const room = Math.max(0, fl - bed);
+          const target = Math.max(bed, fl - Math.min(this.diveTo, room) * Math.pow(cyc, 0.4));
           const rate = sp.swimSpeed || sp.speed || 1.5;
           const want = target - this.y;
           const step = Math.max(-rate, Math.min(rate, want * 2.5)) * dt;
@@ -4145,5 +4164,13 @@
      the height its own stroke can carry it to. A row that puts them the other
      way round describes an animal that rests above its own reach. */
   N.surfCeiling = surfCeiling;
+  /* and the one test that decides whether a column of water may hold a swimming
+     body at all -- where an animal is born, where it may be sent, which way it
+     may swim and the height it hangs at. Asked for from outside because the count
+     of how much of a lake is like that has to be a count of what this game
+     accepts, and a census that restates the two-block line from the words in a
+     chapter is a second reading of one law: it is how a probe came to report a
+     shore shelf as water and a body standing in it as a body swimming. */
+  N.waterColumn = waterColumn;
 
 })(window.FRUTARIA = window.FRUTARIA || {});

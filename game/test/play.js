@@ -9481,24 +9481,24 @@ What was measured before any of this was fixed, over 180 frames of walking
        own line for "the water holds this body up rather than being a bottom it
        stands on" (`waterHoldsUp`), and it is nowhere near enough for this
        window: a body the water holds hangs at the depth its row states (`hover`,
-       1.6 m for a frog, measured to its crown) and then works a cycle down to
-       `diveTo` under that -- 1.5-4.0 m further for a frog born in this valley.
-       A lane shallower than that whole reach is a lane where the dive runs into
-       the bottom every cycle, which is the case the water file names -- "a body
-       sliding along the mud with still legs" -- and which reads here as a body
-       whose own speed field says 2.2-2.3 m/s while it makes 0.6-0.8 m/s of
-       ground. Two runs of this suite went red over exactly that: the first body
-       had been placed in 2 m of water, and after the first version of this fix
-       -- which asked for the body's height and its dive and forgot the hang
-       depth, short by a metre and a half for a frog -- a second one was placed in
-       5 m and went red again. So the question is now asked with the game's own
-       three numbers instead of a restatement of them: the level its row says a
-       body of that kind hangs at (`floatLevel`), the lowest point of its own
-       dive cycle (`diveTo` under that level), and the gap it keeps off the bottom
-       when it is told to go down (`bedFloor`). Half a metre of room at the
-       bottom of the stroke is this rig's own: that is where the cycle spends its
-       slowest moment. Same question the `towerWater` step asks of the leg a body
-       swims down, asked here of the lane it swims round. */
+       1.6 m for a frog, measured to its crown) and works a cycle down from
+       there. A body put in water shallower than its own level is a body standing
+       on the bottom of a lake with its legs going through a stroke, and this
+       window measures a swimmer: two runs went red over exactly that, one body
+       covering **4.7 m** in half a minute with its own speed field reading 2.17.
+       What the lane asks, then, is one thing and it is the game's own: that this
+       body's level (`floatLevel`, asked of its own height and its row's hang
+       depth) stands above the floor that water holds a body of its shape at
+       (`bedFloor`). It used to ask a second thing -- that the dive the body drew
+       at birth fitted under that level with half a metre to spare -- because
+       where it did not, the cycle ran into the bed every cycle and the body made
+       no ground; and when a lane could not be found that way the dive itself was
+       pinned to what the water allowed, which is a window rewriting the record it
+       is measuring. The dive is bounded by the room the column gives now
+       (`theDiveAsksTheAnimalAndTheWater`), so a lane that holds the body up is a
+       lane it swims and dives in, and the ask and the pin are gone with it. Same
+       question the `towerWater` step asks of the leg a body swims down, asked
+       here of the lane it swims round. */
     const colFor = (c, x, z) => {
       const fx = Math.floor(x), fz = Math.floor(z);
       const wt = N.waterTop(W, fx, fz, W.h - 1);
@@ -9507,14 +9507,8 @@ What was measured before any of this was fixed, over 180 frames of walking
       const depth = wt + 1 - bed;
       if (depth < 2) return null;
       const hang = N.floatLevel(wt + 1, c.tall, N.hoverOf(c.sp));
-      /* `reach`: the longest dive this column is still water rather than a floor
-         to push against, the game's own numbers turned round. A column is a lane
-         for this body if the dive it drew is shorter than that, and if a body
-         has to be put in a column that is not deep enough for its dive the dive
-         is pinned to this same number -- one law, asked two ways, so the
-         fallback cannot disagree with the test that chose it. */
-      const reach = hang - N.bedFloor(bed, c.tall) - 0.5;
-      return { film: wt + 1, bed, depth, hang, reach, diveable: c.diveTo < reach };
+      const room = hang - N.bedFloor(bed, c.tall);
+      return { film: wt + 1, bed, depth, hang, room, swims: room > 0 };
     };
     const dist = (x, z) => Math.hypot(x - lake[0], z - lake[1]);
     const keep = frogs.map(c => ({ c, x: c.x, y: c.y, z: c.z, yaw: c.yaw, vy: c.vy, t: c.t,
@@ -9535,12 +9529,12 @@ What was measured before any of this was fixed, over 180 frames of walking
        radian either way along the angle, which is nearly three metres of arc at
        that radius -- and a body that still cannot be put in the water is named
        instead of measured, because that is a failure of this rig and not of the
-       ring. Of
-       the places the band offers, the deepest is kept as a last resort and the
-       first the body's own dive clears is taken; over 200 bodies drawn as the
-       game draws them that search found such a lane every time (the probe above
-       says how shallow the rest of the band is). */
-    const unplaced = [], lanes = [], divePinned = [];
+       ring. Of the places the band offers, the deepest is kept as a last resort
+       and the first the water holds a body in is taken; the depth of the lane
+       each body was put in is reported, because the shallow end of this band is
+       where the dive law is now measured against the water rather than against
+       the animal. */
+    const unplaced = [], lanes = [];
     for (let i = 0; i < frogs.length; i++) {
       const c = frogs[i];
       if (!c.orbit) continue;
@@ -9552,27 +9546,19 @@ What was measured before any of this was fixed, over 180 frames of walking
           const q = colFor(c, lake[0] + Math.cos(ang) * r, lake[1] + Math.sin(ang) * r);
           if (!q) continue;
           if (!deepest || q.depth > deepest.depth) { deepest = Object.assign({ r, ang }, q); }
-          if (q.diveable) { at = { r, ang, film: q.film, depth: q.depth }; break; }
+          if (q.swims) { at = { r, ang, film: q.film, depth: q.depth }; break; }
         }
         if (at) break;
       }
       if (!at && deepest) {
-        /* No place in this body's part of the band is water deep enough for the
-           dive it drew at birth. The band is 3 m at its shallowest and the room
-           a dive needs is 6.8 m at the top of what a frog of this valley is
-           born with, so the shallow half of it is in exactly this case; over 200
-           bodies drawn as the game draws them the search below still found a
-           lane every time, so this is a fallback and not the usual path. The
-           window is about pace, and this rig already pins the rest of that birth
-           (its lane, its phase, its cruise), so the dive is pinned to what this
-           water allows -- `reach`, the same number the search above tests, with
-           a quarter of a metre given back so the pinned dive is one that same
-           test says yes to -- and the pin is reported, rather than the body
-           being measured dragging the mud. */
-        const want = c.diveTo;
-        c.diveTo = Math.max(0.5, deepest.reach - 0.25);
-        divePinned.push({ i, from: +want.toFixed(2), to: +c.diveTo.toFixed(2),
-          depth: deepest.depth, room: +deepest.reach.toFixed(2) });
+        /* No place this body can reach along its band is water deep enough to
+           hold it up, so the deepest place the band offers is used and it is
+           measured there. That is a fallback and not a path. What is not done
+           here is rewriting the animal to suit the water: the dive this body drew
+           at birth stays the dive it drew, and the water bounds it -- which is
+           the law now, and the reason this rig stopped pinning it. The first
+           version of this window pinned a dive it could not fit, and a window
+           that edits the record it is measuring reports its own arithmetic. */
         at = { r: deepest.r, ang: deepest.ang, film: deepest.film, depth: deepest.depth };
       }
       if (!at) { unplaced.push({ i, r: c.orbit.r, a: +a.toFixed(2) }); continue; }
@@ -9708,7 +9694,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     const rateMean = rates.reduce((a, b) => a + b, 0) / rates.length;
     const spds = per.map(r => r.meanSpd);
     const res = {
-      seconds: n * 0.05, frogs: frogs.length, unplaced, divePinned,
+      seconds: n * 0.05, frogs: frogs.length, unplaced,
       wetPct: +(100 * wet / n / frogs.length).toFixed(1),
       errPct: +(100 * errIn / n / frogs.length).toFixed(1),
       bodyPct: +(100 * bodyIn / n / frogs.length).toFixed(1),
@@ -9748,6 +9734,186 @@ What was measured before any of this was fixed, over 180 frames of walking
   check('and they do not swim it in step: five bodies given five paces over a fifth of the cruise make five speeds, and every one of them swims the ring at its own pace times one common cruise',
     !!ring.frogs && ring.paces.every(q => q >= 0.85 && q <= 1.25) && ring.paceSpread > 0.25 &&
     ring.spdSpread > 1.15 && ring.rateSpread < 0.15, ring);
+
+  /* How deep an animal dives is asked of two things at once, and this window is
+     about which of the two a body obeys. One is the animal's own: a body of this
+     kind is born with a depth it works down to (`diveTo`, drawn with its hang
+     depth and its cycle rate in the Creature constructor). The other is the
+     column's: the distance between the level the animal's row hangs it at and the
+     floor that water holds a body of its shape at -- both of them the game's own
+     functions, `floatLevel` and `bedFloor`, asked of this body and of this column.
+     The line in entities.js takes the shallower. Where the water gives more room
+     than the animal asked for, the water has no say and the band is the animal's;
+     where it gives less, the body works the room there is. Before that, the ask
+     was the whole of the law and the body hung at the floor for the rest of every
+     cycle with its legs working against the bed -- a body the water was holding
+     up, treading, going nowhere -- and that is what this window keeps out: the
+     frames in which the water holds a body, its stroke is running and its height
+     does not change are counted and bounded to nothing.
+     Four columns are measured, in the same lake, with the same body and the same
+     cycle: the shallowest one whose water holds the body up at all (room less
+     than either ask), one whose room falls between the two asks (so the same
+     column answers one body and refuses another), the deepest the lake offers
+     (room more than either), and a pool no deeper than the level the row states,
+     where the room is nil and the ground is a bottom to stand on. The asks are
+     the two ends of the band the constructor draws from -- `1.5 + Math.random() *
+     2.5`, entities.js -- not two invented numbers; the cycle is set to a rate
+     inside the band the same line draws so that the window is a few cycles long
+     rather than several minutes.
+     The lake is walked once as well, and counted as the one predicate that
+     decides where a swimming body may be put counts it (`waterColumn`), because
+     the claim that the shallow half of a lake is a place where the ask does not
+     fit needs a running count rather than arithmetic written beside the law. */
+  const dive = await step('theDiveAsksTheAnimalAndTheWater', () => {
+    const N = window.FRUTARIA, g = window.game, p = g.player, W = g.world;
+    const zone = N.ZONE_BY_ID.mirrorlake;
+    const frogs = g.creatures.filter(c => c.sp.id === 'frog');
+    if (!frogs.length) return { error: 'no frogs in the valley' };
+    const c = frogs[0];
+    const was = { x: p.x, y: p.y, z: p.z, form: p.form, vital: p.vital, time: g.time };
+    const keep = { x: c.x, y: c.y, z: c.z, yaw: c.yaw, vy: c.vy, t: c.t, phase: c.phase,
+      diveTo: c.diveTo, diveRate: c.diveRate, orbit: c.orbit, state: c.state, tx: c.tx,
+      tz: c.tz, pause: c.pause, climbTo: c.climbTo, climbRate: c.climbRate, speed: c.speed,
+      held: c.held, alarm: c.alarm };
+    // nobody near enough to frighten it: this window is about the water, not the player
+    p.form = null; p.vital = 10; p.x = 4; p.z = 4; p.y = W.h - 2;
+    /* The levels, all of them asked of the game's own functions rather than
+       written out again here: this is the arithmetic the fix is about, and the
+       first version of the probe that found the defect got it wrong by the hang
+       depth. A column is only used if nothing solid stands between its bed and
+       its film, so that the ground the body's own frame reads is the bed this
+       census read -- the sunken tower's brick stands in this lake's water and
+       would answer a different ground. */
+    const cols = [];
+    for (let x = 8; x <= W.w - 8; x++) for (let z = 8; z <= W.d - 8; z++) {
+      if (Math.hypot(x + 0.5 - zone.cx, z + 0.5 - zone.cz) > zone.r) continue;
+      if (N.waterColumn(W, x + 0.5, z + 0.5) < 0) continue;
+      const wt = N.waterTop(W, x, z, W.h - 1), bed = N.groundY(W, x, z, wt);
+      const film = wt + 1;
+      let clear = true;
+      for (let y = bed; y <= film + 1; y++) if (W.solidAt(x, y, z)) { clear = false; break; }
+      if (!clear) continue;
+      const hang = N.floatLevel(film, c.tall, N.hoverOf(c.sp));
+      /* the floor the step itself uses: the gap `bedFloor` leaves a body the water
+         is holding where the animal's own level stands above the ground, and the
+         5 cm its own feet ask where it does not. Asked the same way here or the
+         room counted below is not the room the dive is bounded by. */
+      const floor = hang > bed ? N.bedFloor(bed, c.tall) : bed + 0.05;
+      cols.push({ x: x + 0.5, z: z + 0.5, film, bed, depth: film - bed, hang, floor,
+        room: hang - floor, ceil: N.surfCeiling(film, c.tall) });
+    }
+    const depths = cols.map(q => q.depth).sort((a, b) => a - b);
+    /* the two ends of the band the constructor draws, and the same share of the
+       lake counted at each of them: how much of this water is too shallow even
+       for the least dive the kind draws, and how much for the deepest */
+    const ASKS = [1.5, 4.0];
+    const roomUnder = a => cols.filter(q => q.room < a).length;
+    const census = { zone: zone.id, radius: zone.r, accepted: cols.length,
+      depthMin: depths[0], depthMedian: depths[(depths.length / 2) | 0],
+      depthMax: depths[depths.length - 1],
+      underAsk: ASKS.map(a => ({ ask: a, n: roomUnder(a),
+        pct: +(100 * roomUnder(a) / cols.length).toFixed(1) })),
+      // and the lake's whole room, against the tallest body this kind is: how many
+      // columns leave the animal no room at all, so it stands rather than swims
+      standup: cols.filter(q => q.room <= 0).length };
+    const pick = (f, best) => { const s = cols.filter(f); if (!s.length) return null; s.sort(best); return s[0]; };
+    const chosen = {
+      // the shallowest water in the lake that still holds a body up at all
+      leastRoom: pick(q => q.room > 0, (a, b) => a.room - b.room),
+      // a column whose room falls between the two asks: the same water answers one
+      // body's dive and refuses another's
+      betweenRooms: pick(q => q.room > ASKS[0] && q.room < ASKS[1],
+        (a, b) => Math.abs(a.room - 2.75) - Math.abs(b.room - 2.75)),
+      mostRoom: pick(q => q.room >= ASKS[1], (a, b) => b.room - a.room),
+      // a pool the water holds up but no deeper than the level the row states: the
+      // room is nil, and the ground under it is a ground to stand on
+      noRoom: pick(q => q.room <= 0, (a, b) => b.room - a.room)
+    };
+    const cases = [];
+    for (const key of Object.keys(chosen)) {
+      const q = chosen[key];
+      if (!q) { cases.push({ key, error: 'no such column in this lake' }); continue; }
+      for (const ask of ASKS) {
+        /* the cycle is set, not drawn: a window that measures a law cannot be at
+           the mercy of a random phase, and this rate is inside the band the
+           constructor draws (0.05-0.15 rad/s) */
+        c.diveTo = ask; c.diveRate = 0.1; c.phase = 0; c.t = 0;
+        c.orbit = null; c.state = 'wander'; c.pause = 0; c.vy = 0;
+        c.climbTo = null; c.climbRate = 0; c.alarm = 0;
+        c.x = q.x; c.z = q.z; c.y = q.hang; c.tx = q.x; c.tz = q.z;
+        const cycle = Math.round((Math.PI * 2 / c.diveRate) / 0.05);
+        /* The rig holds this body in one column, because what is measured is a
+           vertical law and a body that drifts is measured in another column. The
+           ground it was about to stand on has to be held with it: an animal at the
+           foot of a bank sets `climbTo` for the step it is asking for, the dive
+           floor is asked of that ground when there is one (it is the same `gyH`
+           the standing branch uses, so a body climbing out of the lake does not
+           dive through the bank it has its front feet on), and a body held in
+           place never finishes the step, so the ground it was climbing onto would
+           stand there for the rest of the window and be the floor of every dive.
+           That is this rig's doing, not the law's. */
+        const pin = () => {
+          c.x = q.x; c.z = q.z; c.tx = q.x; c.tz = q.z; c.alarm = 0;
+          c.climbTo = null; c.climbRate = 0;
+        };
+        // one whole cycle first: measure the cycle, not the frame of placement
+        for (let i = 0; i < cycle; i++) { pin(); c.update(0.05, p, W, g); }
+        let lo = 1e9, hi = -1e9, held = 0, still = 0, stillMax = 0, run = 0, atFloor = 0;
+        let under = 0, over = 0, prev = null;
+        const n = 2 * cycle;                       // two cycles measured
+        for (let i = 0; i < n; i++) {
+          pin(); c.update(0.05, p, W, g);
+          const y = c.y;
+          lo = Math.min(lo, y); hi = Math.max(hi, y);
+          if (c.held) {
+            held++;
+            if (prev !== null && Math.abs(y - prev) < 1e-6) { still++; run++; if (run > stillMax) stillMax = run; }
+            else run = 0;
+          }
+          if (Math.abs(y - q.floor) < 0.01) atFloor++;
+          if (y < q.floor - 1e-6) under++;
+          if (y > q.ceil + 1e-6) over++;
+          prev = y;
+        }
+        // how far below the level its own row states this body actually went
+        const reached = q.hang - lo;
+        cases.push({ key, at: [q.x, q.z], depth: q.depth, hang: +q.hang.toFixed(3),
+          floor: +q.floor.toFixed(3), room: +q.room.toFixed(3), asked: ask,
+          ceiling: +q.ceil.toFixed(3),
+          bandTop: +hi.toFixed(3), bandBottom: +lo.toFixed(3),
+          reached: +reached.toFixed(3), bounded: +Math.min(ask, Math.max(0, q.room)).toFixed(3),
+          heldFrames: held, frames: n, stillFrames: still, stillMax,
+          atFloorFrames: atFloor, underFloorFrames: under, overCeilFrames: over,
+          // the ask is the animal's and the water never rewrites it
+          askLeftAs: c.diveTo === ask });
+      }
+    }
+    Object.assign(c, keep);
+    Object.assign(p, was); g.time = was.time; g.updateEnv();
+    return { tall: +c.tall.toFixed(3), hover: N.hoverOf(c.sp), census, chosen, cases };
+  });
+  check('the lake, counted as the one predicate that decides where a swimming body may live counts it: there are water columns to measure and the room a dive needs falls out of the game\'s own levels, not out of the depth alone',
+    !dive.error && dive.census.accepted > 1000 && dive.census.depthMin >= 2 &&
+    dive.chosen.leastRoom && dive.chosen.betweenRooms &&
+    dive.chosen.mostRoom && dive.chosen.noRoom &&
+    dive.chosen.leastRoom.room < dive.census.underAsk[0].ask &&
+    dive.chosen.betweenRooms.room > dive.census.underAsk[0].ask &&
+    dive.chosen.betweenRooms.room < dive.census.underAsk[1].ask &&
+    dive.chosen.mostRoom.room >= dive.census.underAsk[1].ask &&
+    dive.chosen.noRoom.room <= 0, dive);
+  check('the depth a wild body reaches is the shallower of what it asked for and what the column gives: the ask wins where the water has room to spare and the water wins where it does not, and no body is ever taken through the floor or the film that holds it',
+    !dive.error && dive.cases.length === 8 && dive.cases.every(r => !r.error) &&
+    dive.cases.filter(r => r.room > 0).every(r =>
+      r.reached > r.bounded - 0.06 && r.reached < r.bounded + 0.06 &&
+      r.underFloorFrames === 0 && r.overCeilFrames === 0 && r.askLeftAs), dive);
+  check('and it dives the room rather than treading at the bottom of it: in every column whose water holds the body up the stroke keeps the body moving, and the frames with the hold on, the stroke running and the height not moving are a turn of the cycle and nothing more',
+    !dive.error && dive.cases.filter(r => r.room > 0).every(r =>
+      r.heldFrames === r.frames && r.stillMax <= 2 &&
+      r.stillFrames <= 0.01 * r.heldFrames), dive);
+  check('and where the water gives no room at all the animal stands: the ask is worth nothing there, the water holds nothing up, and the body is at the gap its own feet ask of the ground for the whole window',
+    !dive.error && dive.cases.filter(r => r.room <= 0).every(r =>
+      r.heldFrames === 0 && r.underFloorFrames === 0 && r.overCeilFrames === 0 &&
+      Math.abs(r.bandBottom - r.floor) < 0.01 && r.askLeftAs), dive);
 
   /* 10z. a flock is not a formation. Twelve frogs were put on one lake and every
      one of them swam 30 cm under the surface, at the same instant, for as long as
