@@ -807,10 +807,11 @@ the reading is already there and is asked of the body and not of the column: ove
 **2400** frames at a wall of stone standing from the lake's floor to two cells above
 the top its water gives it, the body is inside a block of that wall in **0** of them
 and the gap between the leading edge of its own box and the face comes down to
-**0.01 m** and stops, with the column under it answering water for **2400** frames of
+**0.01 m**, with the column under it answering water for **2400** frames of
 **2400** and the hold on for all of them. The same body, same errand, wall not
 built: across in **1.8 s** over **12.96 m**, inside nothing, errand given up **0**
-times. The figures and the law are at 03 s3.
+times. The figures and the law are at 03 s3, including the going round of the wall,
+which this rig did not at first find and is opened below as **33**.
 
 What does the reading, and why the guess retracted in 24 stays retracted: the step
 of a body in water asks the ground its own box would be in at the place it is about
@@ -826,9 +827,11 @@ answered.
 
 What the rig did find is a different question, and it is opened as **33**.
 
-## 33. A body the water carries is stopped by a wall in its water and does not go round it (found with the rig that closed 32)
+## 33. A body the water carries is stopped by a wall in its water and does not go round it (closed -- the contour's own decision was recorded, and the side it takes is now kept)
 
-**Open, asked, and not solved.** With the wall of the rig that closed 32 in front of
+**Closed. The mechanism inferred below was the mechanism, and it is fixed; the
+measure that says so is in the step that built the wall.** With the wall of the rig
+that closed 32 in front of
 it -- one cell thick, seven cells long, spanning the whole band the water floats that
 body in, the errand kept **8.5 m** beyond it -- the body covers **214.08 m** of
 ground in the **2400** frames the step watches and **2.32 m** of it toward the
@@ -883,8 +886,52 @@ with feet.
 What it would take to know rather than guess: record the contour's own decision in a
 rig -- of the eight ways, which the ask refused, which was chosen, and what the
 heading was -- at the wall this step already builds. Then the law can be written
-against an answer instead of against a position trace. Nothing was built for it this
-round beyond the rig that closes 32, which is the wall itself.
+against an answer instead of against a position trace.
+
+**Closed, and the guess was the wrong one.** That record was made (`/tmp/walldecide.js`:
+the way a body took is read off its own displacement, since the contour sets the
+position from the way it chose, and the eight ways are asked beside it with the same
+box): at the face the ask refused the way into the wall and the two that lean into
+it, left the way along it open in both directions and the way back open, and the
+contour asked for one of those two in **587** frames and the other in **586**; the
+body stayed inside **0.27 m** of the middle of the wall and its travel along the face
+reversed **1155** times in **1200** frames. The ask was never the problem, and neither
+was the number of ways. An errand that lies dead ahead of a face scores the two ways
+along that face **equal and opposite**, so a decision re-made from scratch every frame
+cancels itself: the step taken is what turns the errand's bearing against the next
+step. The dither is a property of re-deciding, not of what is visible.
+
+The law, in the one contour that ranks the ways about a body (`game/src/entities.js`,
+shared by a walker, a hopper and a body the water is carrying): the side a body has
+begun round a face with is kept. The ways that take it back along its own travel are
+refused, and the refusal is lifted when nothing else is open, so it cannot dead-end;
+the memory (`roundSide`) is spent the frame the body takes its own step, so one wall
+does not steer the next. Measured in the rig that closed 32, same wall, same animal,
+same errand, same two minutes: inside the stone in **0** frames of **2400**, still
+within **0.01 m** of the face while it is level with the wall, its travel along the
+face turned back **3** times rather than **2347**, and it crossed at **5.0 s** against
+the **1.8 s** of the control -- **18.84 m** of ground against **12.96 m**. The wall
+costs it **3.2 s** and **5.9 m**; it does not cost it the errand. The step that built
+the wall now asks all of that (`aBodyTheWaterCarriesIsStoppedByTheStoneStandingInItsWater`),
+and the chapter has the law and the figures (03 s3).
+
+What that left open, in the order worth taking:
+
+- The water branch of the same file -- the contour for a body that cannot leave the
+  water at all (`isAquatic`) -- ranks its own eight ways and keeps no side, so the
+  same cancellation is in it, unmeasured. It cannot be measured in this valley: no row
+  carries `locomotion: water` any more (the lamprey and the lanternfish were cut, and
+  `game/data/creatures.js` says so at its head), so the branch is dead code. Asked
+  when a water row is next built, not before: a claim about a body this valley does
+  not have is the kind of figure this file keeps refusing.
+- The memory is spent by taking a step. It is not spent by being shoved, by a current
+  carrying the body along the face, or by the frame a hop lands: whether any of those
+  ought to reset which side a body is going round -- and whether a body pushed by the
+  water keeps a side the water chose for it -- has not been asked.
+- The turn-bound argument left over from the experiment refused above (a carried body
+  has nothing to push sideways against, so its step direction cannot be changed at the
+  rate a walker's) is still unmeasured against a body with feet. It is not what closed
+  this item, and it is not needed for the rule as shipped.
 
 ## 25. The sea has ground, and nothing on it (partly shipped)
 

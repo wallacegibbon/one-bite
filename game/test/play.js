@@ -9921,19 +9921,17 @@ What was measured before any of this was fixed, over 180 frames of walking
       r.offGround < dive.tall && r.askLeftAs), dive);
 
   /* 10y. A body the water is carrying is stopped by the stone standing in that
-     water. The column of water answers how deep the water is; it does not answer
-     what stands inside it. So a body in the water is asked a second question --
-     its own box, at the place it is about to be and at the nose that reaches a
-     quarter of a metre ahead of it -- and what is measured here is whether that
-     question is real, and whether it is answered by the stone rather than paid for
-     by a column the rig happened to find dry. A wall of the world's own rock is
-     set in the middle of a lane of Mirrorlake, from the lake's floor up past the
-     top the water gives this body, seven cells long, and the errand is kept on the
-     far side of it for two minutes. The control is the same animal on the same
-     errand with the wall not built. The wall is not gone round in that window and
-     that is a separate question, kept in OPEN-ISSUES; what is decided here is that
-     the body is never put inside the stone, and that it is the stone that stops
-     it. (docs/03 s3) */
+     water, and goes round it. The column of water answers how deep the water is;
+     it does not answer what stands inside it. So a body in the water is asked a
+     second question -- its own box, at the place it is about to be and at the nose
+     that reaches a quarter of a metre ahead of it -- and what is measured here is
+     that the question is answered by the stone, that the body is never once inside
+     it, and that the body then takes the way round it on one side instead of
+     spending the window at the face. A wall of the world's own rock is set in the
+     middle of a lane of Mirrorlake, from the lake's floor up past the top the water
+     gives this body, seven cells long, and the errand is kept on the far side of it
+     for two minutes. The control is the same animal on the same errand with the
+     wall not built. (docs/03 s3) */
   const wallLaw = await step('aBodyTheWaterCarriesIsStoppedByTheStoneStandingInItsWater', () => {
     const g = window.game, W = g.world, N = window.FRUTARIA, P = g.player;
     const STONE = 3;                 // the world's own rock: solid wherever it is put
@@ -10004,7 +10002,7 @@ What was measured before any of this was fixed, over 180 frames of walking
       g.herdCentres = Object.assign({}, herdWas);
       g.herdCentres[sp.id] = { x: c.x, z: c.z, n: 1 };
       P.form = null; P.vital = 10; P.x = 4; P.z = 4; P.y = W.h - 2;   // nobody to run from
-      const A = { frames: 0, inside: 0, deep: 0, closestGap: 99, crossed: 0, crossAt: -1,
+      const A = { frames: 0, inside: 0, closestGap: 99, crossed: 0, crossAt: -1,
         path: 0, gained: 0, wetFrames: 0, held: 0, gaveUp: 0, reversals: 0, notClear,
         way: +way.toFixed(2), wallTop: plan.top };
       let px = c.x, pz = c.z, prevDz = 0, start = { x: c.x, z: c.z };
@@ -10022,13 +10020,16 @@ What was measured before any of this was fixed, over 180 frames of walking
             for (let y = Math.floor(c.y); y <= Math.floor(c.y + tall); y++)
               if (W.solidAt(bx, y, bz)) { solid = true; break; }
         if (solid) A.inside++;
-        /* the gap between the leading edge of the box and the face of the wall, on
-           the side the body was put on: negative means the box is past the face.
-           This is the read that says the wall was met and not avoided. */
-        if (plan.top !== null && c.x < wallX) {
+        /* the gap between the leading edge of the box and the face of the wall,
+           asked while the body is level with the band of wall and has not yet come
+           past the face: this is the read that says the wall was met and not
+           avoided. Past the face, and level with the band still, the body has gone
+           round the end of it -- and never once stands inside the stone, which is
+           the read above. */
+        if (plan.top !== null && c.z + c.hl >= z0 && c.z - c.hl <= z1 + 1 &&
+            c.x + c.hw <= wallX) {
           const gap = wallX - (c.x + c.hw);
           if (gap < A.closestGap) A.closestGap = gap;
-          if (-gap > A.deep) A.deep = -gap;
         }
         // the column the body is standing in, asked of the game's own test for it
         if (N.waterColumn(W, c.x, c.z) >= 5) A.wetFrames++;
@@ -10054,10 +10055,13 @@ What was measured before any of this was fixed, over 180 frames of walking
       hl: +made.hl.toFixed(3), rigs };
   });
   check('a body the water is carrying is never inside the stone standing in its water: the wall is asked at the height the body floats at, not only at the floor of the column',
-    !wallLaw.error && wallLaw.rigs.filter((r) => r.wall).every((r) => r.inside === 0 && r.deep === 0), wallLaw);
+    !wallLaw.error && wallLaw.rigs.filter((r) => r.wall).every((r) => r.inside === 0), wallLaw);
   check('and it is the stone that stops it, not a column the rig found dry: the body comes up to the face of the wall with less than five centimetres of its own box between them, and the water under it is there for every frame of the window',
-    !wallLaw.error && wallLaw.rigs.filter((r) => r.wall).every((r) => r.closestGap < 0.05 && r.closestGap >= 0 &&
+    !wallLaw.error && wallLaw.rigs.filter((r) => r.wall).every((r) => r.closestGap < 0.05 &&
       r.wetFrames === r.frames && r.held > 0.9 * r.frames), wallLaw);
+  check('and it goes round that wall on one side and reaches the place it was sent to: the wall costs it the way through and not the errand, and its travel along the face does not turn back on itself',
+    !wallLaw.error && wallLaw.rigs.filter((r) => r.wall).every((r) => r.crossed === 1 && r.reversals <= 20 &&
+      r.crossAt > wallLaw.rigs.filter((q) => !q.wall)[0].crossAt && r.path < 3 * r.way), wallLaw);
   check('and the same animal on the same errand with the wall not built goes straight across it, over ground no more than three times the way to the place',
     !wallLaw.error && wallLaw.rigs.filter((r) => !r.wall).every((r) => r.crossed === 1 &&
       r.path < 3 * r.way && r.gaveUp === 0 && r.inside === 0), wallLaw);

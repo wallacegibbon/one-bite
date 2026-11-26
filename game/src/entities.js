@@ -2290,6 +2290,13 @@
          to raise itself onto a step has to be allowed to finish, or it takes the
          step at the height it had got to and ends up inside the ground. */
       this.climbTo = null; this.climbRate = 0;
+      /* The ninth: which side of a face this body has begun to go round it with,
+         as the direction of the step it chose doing so. Also not a per-frame
+         decision, for the reason the contour that sets it states: an errand dead
+         ahead of a face scores the two ways along that face equal and opposite, so
+         re-choosing between them each frame cancels itself. Spent the frame this
+         body takes its own step instead. */
+      this.roundSide = null;
       /* The backstop a body that cannot get to where it is going is read
          against: where the body stood 120 of its own frames ago. Kept in the
          body's own frames so the read does not depend on the rate the loop
@@ -3179,6 +3186,10 @@
             this.climbTo = null; this.climbRate = 0;
           }
           else if (go === 0) {
+            /* The way ahead was open and this body took its own step along it, so
+               the side it was going round a face with is spent: a memory of one
+               wall must not steer the next one. */
+            this.roundSide = null;
             this.x = mx; this.z = mz;
             /* A step is begun before the face of it. A body that only learns about
                a step when its nose is against the riser has to stop walking to
@@ -3207,6 +3218,11 @@
             } else if (!worth(this.climbTo)) { this.climbTo = null; this.climbRate = 0; }
           }
           else if (go !== null) {
+            /* The obstacle is not in front of the body any more, so the side it
+               was going round it with is spent with this step: a body on an
+               errand keeps its own heading, not a debt to the last wall it
+               passed. */
+            this.roundSide = null;
             /* The step is in front of the body and inside what its body can
                reach. A body that lifts its feet onto a step does that here, at a
                rate, standing in front of it. A body that hops does not: it takes
@@ -3269,7 +3285,7 @@
                                  [0.7071, 0.7071], [0.7071, -0.7071],
                                  [-0.7071, 0.7071], [-0.7071, -0.7071]]
                               : [[1, 0], [-1, 0], [0, 1], [0, -1]];
-            let best = null, bestDot = -2;
+            const open = [];
             for (const [ox, oz] of ways) {
               const nx = this.x + ox * reach;
               const nz = this.z + oz * reach;
@@ -3278,12 +3294,34 @@
                  a step is neither: the way round a bank is the flat ground beside
                  it, and the step it wants is the one it is already facing. */
               if (c === null || (legs && c)) continue;
+              open.push([nx, nz, c, ox, oz]);
+            }
+            /* The side it has begun round is kept. An errand that lies dead ahead
+               of a face scores the two ways along that face equal and opposite, so
+               a body that re-decides between them every frame from that answer
+               cancels itself: measured at a wall one cell thick and seven cells
+               long stood in the middle of Mirrorlake, this contour asked for one
+               way along the face in 587 frames and the other way in 586, the body
+               stayed inside 0.27 m of the middle of the wall, and its travel along
+               the face reversed on itself 1155 times in 1200 frames -- 2.3 m of
+               ground gained toward an errand 8.5 m away over two minutes. A body
+               that has begun round one side of an obstacle goes round that side:
+               the ways that take it back along its own travel are refused, and the
+               refusal is lifted when nothing else is open. */
+            let cands = open;
+            if (this.roundSide) {
+              const keep = open.filter(w => w[3] * this.roundSide[0] + w[4] * this.roundSide[1] >= 0);
+              if (keep.length) cands = keep;
+            }
+            let best = null, bestDot = -2;
+            for (const w of cands) {
               /* going round a step costs less than climbing it, so a step is
                  climbed only when nothing walkable points the way at all */
-              const dot = (ox * bx + oz * bz) / bl - (c ? 0.35 : 0);
-              if (dot > bestDot + 1e-6) { bestDot = dot; best = [nx, nz, c, ox, oz]; }
+              const dot = (w[3] * bx + w[4] * bz) / bl - (w[2] ? 0.35 : 0);
+              if (dot > bestDot + 1e-6) { bestDot = dot; best = w; }
             }
             if (best && bestDot > -0.7) {
+              this.roundSide = [best[3], best[4]];
               if (legs) {
                 /* No ground is taken here; only the heading. The legs give the
                    ground at the next push-off, along this heading.
