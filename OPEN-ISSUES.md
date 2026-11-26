@@ -722,13 +722,35 @@ a **1.5 m** ask and a **4.0 m** ask both reach **0.756**; a **5 m** column, room
 **2.757 m**, where the **1.5 m** ask keeps its own **1.500** and is at the floor
 in **0** frames of **2,514** while the **4.0 m** ask is answered by the floor at
 **2.756**; an **11 m** column, room **8.756 m**, where both asks come out their
-own, **1.500** and **3.999**; and a **2 m** pool, room nil, where the body is held
-up in **0** frames and sits at **13.05** -- the ground and the 5 cm its own feet
-ask -- for the whole window. Under the floor: **0** frames in every case. Over the
-ceiling: **0**. Frames with the hold on, the stroke running and the height not
-changing: **1**, in a run of **1**, which is the cycle turning at the bottom of a
-dive. `diveTo` left exactly as drawn in every case: the water bounds the dive and
-never rewrites the animal.
+own, **1.500** and **3.999**; and a **2 m** pool, room nil, where the ask is worth
+nothing (`reached -0.079`), its lowest point is **13.05** -- the ground and the 5 cm
+its own feet ask -- and the water's hold is on in at most **1** frame of the
+**2,514**. Under the floor: **0** frames in every case. Over the ceiling: **0**.
+Frames with the hold on, the stroke running and the height not changing: **1**, in a
+run of **1**, which is the cycle turning at the bottom of a dive. `diveTo` left
+exactly as drawn in every case: the water bounds the dive and never rewrites the
+animal.
+
+What moved since that was first written down, and why the claim had to change its
+shape: the no-room case was first closed with `heldFrames === 0` and the body "at
+the floor for the whole window". It is not. Asked again, the same column with the
+same asks left the body on the floor for the whole window in two watchings and off
+it in **513** of the **2,514** frames in another, rising **0.125 m** and, in a
+fourth, **0.154 m** -- its own gait, on ground it is standing on, because with no
+room the legs branch is the one that runs. The step does not seed its random
+source, and that part of the window is the animal's own, not the water's; the depth
+figures above (the reach of each ask against the room of each column) are stable to
+the millimetre across watchings, and only the gait of a body standing on the bottom
+is not. So the check no longer asserts a frame count or a zero flag: it asserts the
+depth law (the ask is worth nothing, `reached` under **0.02**), the boundaries
+(under the floor **0**, through the film **0**), the ground (the lowest point is the
+floor the ground states, to **0.01**), and the one thing that distinguishes
+standing from swimming -- that what lifts the body off the ground it stands on is
+less than its own height (**0.429 m** against the **0.154 m** the gait was seen to
+reach). The frame count and the hold flag are still printed, and are quoted as a
+range. Whether that gait should be seeded so the window is bit-for-bit reproducible
+is left open with the other window-shape questions; nothing about the law depends on
+it.
 
 That last sentence is what a rig of one's own is for. The first version of this
 window went red on itself, in the shallow column only, and only sometimes: an
@@ -773,24 +795,96 @@ and the five bodies of a run within 2% of the one cruise rate that run prints
 too shallow to dive in swims the ring at its own pace now, and that is the fix
 showing up in the game rather than in a rig.
 
-## 32. A body that swims is never asked what it is swimming round (left standing by 24)
+## 32. A body that swims is never asked what it is swimming round (left standing by 24; closed -- it is asked, and the reading is the body's own box)
 
-Open, and not yet asked. An animal steers toward its errand at its own turn rate
-and takes the way round that closes on the errand when the *step in front* of it
-is solid; that is the walk, and it is on the record (07 §3.6, "Creatures have no
-pathfinding"). Whether a body hanging under the surface of a lake, metres above the
-bed, reads a solid the same way has never been asked of it. The only probe of it
-is the solid test the ring window runs every fifth frame one metre ahead of each
-body's nose, and what that probe reports across green runs is **0-13** contacts in
-**120** samples, the thing contacted always the lakebed's own stone outcrop in the
-south-east arm of the band, and the bodies carrying on at full speed through it.
-There is no defect on the record -- there is a question nobody has put, and the
-guess that there was a defect was retracted in 24.
+**Closed, and the item's premise was wrong.** It asked whether a body hanging under
+the surface of a lake, metres above the bed, reads a solid at the height it floats
+at, or only the ground at the floor of the column. The rig the item said was needed
+-- a wall with an errand on the far side of it, placed at the height a body floats
+at rather than on ground -- is now a step of the suite,
+`aBodyTheWaterCarriesIsStoppedByTheStoneStandingInItsWater`, and the answer is that
+the reading is already there and is asked of the body and not of the column: over
+**2400** frames at a wall of stone standing from the lake's floor to two cells above
+the top its water gives it, the body is inside a block of that wall in **0** of them
+and the gap between the leading edge of its own box and the face comes down to
+**0.01 m** and stops, with the column under it answering water for **2400** frames of
+**2400** and the hold on for all of them. The same body, same errand, wall not
+built: across in **1.8 s** over **12.96 m**, inside nothing, errand given up **0**
+times. The figures and the law are at 03 s3.
 
-Asking it needs a rig of its own: a wall with an errand on the far side of it,
-placed at the height a body floats at rather than on ground, which is what the
-bank and wall steps do for a body on foot. Until it is asked, nothing here should
-be written as though it were known.
+What does the reading, and why the guess retracted in 24 stays retracted: the step
+of a body in water asks the ground its own box would be in at the place it is about
+to be and at the ground the nose its own body carries is about to stand in
+(`bodyInSolid`, `noseReach` in `game/src/entities.js`), and the way-round branch two
+paragraphs below it is asked the same two questions, because the comment there
+records the case that put them in -- twelve columns at the rim of Starfall Keep
+holding a pocket of the lake's water under sixteen metres of stone, each of them
+answering "open water" while the body's own cell at its hover height was rock, and
+the body carried out of it at 0.1 m a frame onto the rim, where it stayed the rest
+of the day. That is the same wall this item wondered about, and it was already being
+answered.
+
+What the rig did find is a different question, and it is opened as **33**.
+
+## 33. A body the water carries is stopped by a wall in its water and does not go round it (found with the rig that closed 32)
+
+**Open, asked, and not solved.** With the wall of the rig that closed 32 in front of
+it -- one cell thick, seven cells long, spanning the whole band the water floats that
+body in, the errand kept **8.5 m** beyond it -- the body covers **214.08 m** of
+ground in the **2400** frames the step watches and **2.32 m** of it toward the
+errand; its travel along the face turns back on itself in **2347** of those frames,
+and the law that exists for a body making no progress sets its errand to its own
+feet **19** times. It never goes round a wall whose two ends are three cells away.
+The control of the same step, with the wall not built, is across in **1.8 s**.
+
+What has been ruled out, by untracked probes named here (`/tmp/askprobe.js`,
+`/tmp/walltrace.js`, `/tmp/wallprobe.js` -- the last two reproduce the reversal and
+give-up counts the step now also prints):
+
+- **It is not the ground ask.** At the place the body comes to rest -- **0.0092 m**
+  clear of the face by its own box -- four of the eight ways about it contain no
+  solid cell at all, asked with the body's own half-widths and height over
+  `solidAt`: the two along the face and the two away from it. The two toward the
+  face and the two diagonals into it are the only ones the box refuses. So a way
+  along the wall is open and is not taken.
+- **It is not the vertical law.** In a forty-second window of the same rig
+  (**800** frames, **71.3 m** of ground covered) the body's x is fixed at 76.8 from
+  the second second of the window to the last, its z does not move at all at the
+  half-second the trace samples, and its height works the whole band of its dive
+  cycle the whole time (**9.8 to 12.7**) -- the water is holding it and its stroke is
+  running; only its horizontal position does not go anywhere. Its nose is at the
+  stone in **784** of those **800** frames.
+- **The mechanism of the turning back is inferred, not seen.** With the errand
+  straight through the face, the two ways along it close on the errand equally, and
+  the one that wins changes with the drift the last step made -- that is what the
+  reversal count of 2347 in 2400 frames says, and it is what the walking branch's
+  own comment describes when it says of a body at a wall that "the heading was never
+  told to follow it, so a body whose errand lay behind the wall kept its nose on
+  the brick, and when the wall gave it no way it set its errand to its own feet and
+  waited". The contour's own answers -- which of the eight ways its ask refused and
+  which it chose, frame by frame -- are not recorded anywhere, and inferring them
+  from the body's position is inference.
+
+What was tried and refused, so it is not tried again in the same shape: giving that
+body the eight ways instead of the four the grid gives a walker, and refusing it any
+way outside the turn its own `turn` rate allows in one frame -- the body then turns
+toward the best way it can see instead of being put sideways to its own nose, which
+is what a body with no feet to push sideways against must do. The dither stops
+(the path falls from 214 m to 2.3 m) and **nothing else happens**: it still never
+crosses, and it now sits still at the face instead of thrashing along it. Reverted;
+no claim was shipped with it, and the code comment written for it went with it. Two
+things that experiment left unclear, in the order worth taking: the walking branch
+and the swimming branch rank those same eight ways twice over, so a shared reading
+of them is owed either way (**20**'s wall with no way round is the same two
+branches); and the turn-bound argument for a *carried* body rests on its having
+nothing to push sideways against, which this build has never measured against a body
+with feet.
+
+What it would take to know rather than guess: record the contour's own decision in a
+rig -- of the eight ways, which the ask refused, which was chosen, and what the
+heading was -- at the wall this step already builds. Then the law can be written
+against an answer instead of against a position trace. Nothing was built for it this
+round beyond the rig that closes 32, which is the wall itself.
 
 ## 25. The sea has ground, and nothing on it (partly shipped)
 

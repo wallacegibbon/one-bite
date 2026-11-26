@@ -9881,6 +9881,10 @@ What was measured before any of this was fixed, over 180 frames of walking
           floor: +q.floor.toFixed(3), room: +q.room.toFixed(3), asked: ask,
           ceiling: +q.ceil.toFixed(3),
           bandTop: +hi.toFixed(3), bandBottom: +lo.toFixed(3),
+          /* how far off the ground it stands on this body's own cycle lifts it:
+             read at the floor the ground states for it, because that is the
+             ground it is standing on and not a level drawn at birth */
+          offGround: +(hi - q.floor).toFixed(3),
           reached: +reached.toFixed(3), bounded: +Math.min(ask, Math.max(0, q.room)).toFixed(3),
           heldFrames: held, frames: n, stillFrames: still, stillMax,
           atFloorFrames: atFloor, underFloorFrames: under, overCeilFrames: over,
@@ -9910,10 +9914,153 @@ What was measured before any of this was fixed, over 180 frames of walking
     !dive.error && dive.cases.filter(r => r.room > 0).every(r =>
       r.heldFrames === r.frames && r.stillMax <= 2 &&
       r.stillFrames <= 0.01 * r.heldFrames), dive);
-  check('and where the water gives no room at all the animal stands: the ask is worth nothing there, the water holds nothing up, and the body is at the gap its own feet ask of the ground for the whole window',
+  check('and where the water gives no room at all the animal stands on the bottom: the ask is worth nothing there, its lowest point is the ground the ground states for it, it is never through the floor or the film that holds it, and what lifts it off that ground is its own gait and smaller than its own height',
     !dive.error && dive.cases.filter(r => r.room <= 0).every(r =>
-      r.heldFrames === 0 && r.underFloorFrames === 0 && r.overCeilFrames === 0 &&
-      Math.abs(r.bandBottom - r.floor) < 0.01 && r.askLeftAs), dive);
+      r.reached < 0.02 && r.underFloorFrames === 0 && r.overCeilFrames === 0 &&
+      Math.abs(r.bandBottom - r.floor) < 0.01 &&
+      r.offGround < dive.tall && r.askLeftAs), dive);
+
+  /* 10y. A body the water is carrying is stopped by the stone standing in that
+     water. The column of water answers how deep the water is; it does not answer
+     what stands inside it. So a body in the water is asked a second question --
+     its own box, at the place it is about to be and at the nose that reaches a
+     quarter of a metre ahead of it -- and what is measured here is whether that
+     question is real, and whether it is answered by the stone rather than paid for
+     by a column the rig happened to find dry. A wall of the world's own rock is
+     set in the middle of a lane of Mirrorlake, from the lake's floor up past the
+     top the water gives this body, seven cells long, and the errand is kept on the
+     far side of it for two minutes. The control is the same animal on the same
+     errand with the wall not built. The wall is not gone round in that window and
+     that is a separate question, kept in OPEN-ISSUES; what is decided here is that
+     the body is never put inside the stone, and that it is the stone that stops
+     it. (docs/03 s3) */
+  const wallLaw = await step('aBodyTheWaterCarriesIsStoppedByTheStoneStandingInItsWater', () => {
+    const g = window.game, W = g.world, N = window.FRUTARIA, P = g.player;
+    const STONE = 3;                 // the world's own rock: solid wherever it is put
+    const lake = N.ZONE_BY_ID.mirrorlake;
+    // the species this lake is water for, read off the records that say so
+    const species = N.CREATURES.filter((s) => (s.habitat || []).indexOf('mirrorlake') >= 0);
+    if (!species.length) return { error: 'no species the lake is water for' };
+    /* A straight run of it, sixteen columns wide, one floor and one film of water
+       along all sixteen, so the wall stands in water of one depth and the only
+       thing in that water is the wall. Asked of the water and not of the animals:
+       the body each rig makes is made below by the code that makes every body in
+       the game, under a draw seeded here, for the reason the rig over the flock
+       gives -- the numbers of this rig are about one animal's tempo, and a body
+       borrowed from the flock is not the same body in two pages. */
+    let run = null;
+    for (let z = lake.cz - 30; z < lake.cz + 30 && !run; z++) {
+      for (let x = lake.cx - 30; x + 16 < lake.cx + 30 && !run; x++) {
+        let bed = null, film = null, ok = true;
+        for (let d = 0; d < 16; d++) {
+          const wt = N.waterTop(W, x + d, z, W.h - 1);
+          if (wt < 0) { ok = false; break; }
+          const b = N.groundY(W, x + d, z, wt);
+          if (bed === null) { bed = b; film = wt + 1; }
+          else if (b !== bed || wt + 1 !== film) { ok = false; break; }
+        }
+        if (ok && film - bed >= 5) run = { x, z, bed, film };
+      }
+    }
+    if (!run) return { error: 'no straight run of the lake with one floor and one film of water along it' };
+    const sp = species[0];
+    const made = new N.Creature(sp, 4, 4, 4);       // its levels, before any rig body is made
+    const tall = made.tall, hover = N.hoverOf(sp);
+    const floatAt = N.floatLevel(run.film, tall, hover);
+    const ceiling = N.surfCeiling(run.film, tall, hover);
+    const wallX = run.x + 7, z0 = run.z + 4, z1 = z0 + 6;
+    const crowdWas = g.creatures, herdWas = g.herdCentres, timeWas = g.time;
+    const was = { x: P.x, y: P.y, z: P.z, form: P.form, vital: P.vital };
+    const rnd = Math.random;
+    let sd = 0;
+    const seed = (s) => { sd = s; Math.random = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; }; };
+    const rigs = [];
+    for (const plan of [
+      { name: 'no wall at all', top: null },
+      /* the wall spans the whole band the water floats this body in: from the
+         lake's own floor to two cells above the top its own stroke can carry it
+         to, so it is not a wall it could swim over, and seven cells long, so it
+         is not a wall it could go round in the window. */
+      { name: 'stone across the whole band', top: Math.ceil(ceiling) + 2 }]) {
+      const built = [];
+      let notClear = 0;
+      if (plan.top !== null) for (let dz = 0; dz <= 6; dz++) for (let y = run.bed; y <= plan.top; y++) {
+        const prev = W.get(wallX, y, z0 + dz);
+        // the cells of the wall are water down to the lake's floor: if one of them
+        // is already solid the rig is measuring something else
+        if (W.solidAt(wallX, y, z0 + dz) && y > run.bed) notClear++;
+        built.push([wallX, y, z0 + dz, prev]);
+        W.set(wallX, y, z0 + dz, STONE);
+      }
+      seed(5150);
+      const c = new N.Creature(sp, wallX - 2.5, floatAt, z0 + 3);
+      c.orbit = null; c.state = 'wander'; c.pause = 0;   // this rig lays one errand; the ring picks its own
+      const tx = wallX + 6, tz = z0 + 3;
+      const way = Math.hypot(tx - c.x, tz - c.z);
+      /* the valley holds this body and nobody else, and its herd is itself: the
+         middle the herd law pulls toward is otherwise a leftover of whatever the
+         page was doing before the rig started. */
+      g.creatures = [c];
+      g.herdCentres = Object.assign({}, herdWas);
+      g.herdCentres[sp.id] = { x: c.x, z: c.z, n: 1 };
+      P.form = null; P.vital = 10; P.x = 4; P.z = 4; P.y = W.h - 2;   // nobody to run from
+      const A = { frames: 0, inside: 0, deep: 0, closestGap: 99, crossed: 0, crossAt: -1,
+        path: 0, gained: 0, wetFrames: 0, held: 0, gaveUp: 0, reversals: 0, notClear,
+        way: +way.toFixed(2), wallTop: plan.top };
+      let px = c.x, pz = c.z, prevDz = 0, start = { x: c.x, z: c.z };
+      const n = Math.round(120 / 0.05);
+      for (let i = 0; i < n; i++) {
+        c.tx = tx; c.tz = tz;
+        c.update(0.05, P, W, g);
+        A.frames++;
+        /* the body's own box, over the blocks: the same span the frame asks with
+           (`hw`, `hl`, `tall`), asked here with `solidAt` because the ask itself is
+           private to the frame. */
+        let solid = false;
+        for (let bx = Math.floor(c.x - c.hw); bx <= Math.floor(c.x + c.hw) && !solid; bx++)
+          for (let bz = Math.floor(c.z - c.hl); bz <= Math.floor(c.z + c.hl) && !solid; bz++)
+            for (let y = Math.floor(c.y); y <= Math.floor(c.y + tall); y++)
+              if (W.solidAt(bx, y, bz)) { solid = true; break; }
+        if (solid) A.inside++;
+        /* the gap between the leading edge of the box and the face of the wall, on
+           the side the body was put on: negative means the box is past the face.
+           This is the read that says the wall was met and not avoided. */
+        if (plan.top !== null && c.x < wallX) {
+          const gap = wallX - (c.x + c.hw);
+          if (gap < A.closestGap) A.closestGap = gap;
+          if (-gap > A.deep) A.deep = -gap;
+        }
+        // the column the body is standing in, asked of the game's own test for it
+        if (N.waterColumn(W, c.x, c.z) >= 5) A.wetFrames++;
+        if (c.held) A.held++;
+        if (c.tx === c.x && c.tz === c.z) A.gaveUp++;
+        const dz = c.z - pz;
+        if (Math.abs(dz) > 0.004 && prevDz !== 0 && Math.sign(dz) !== Math.sign(prevDz)) A.reversals++;
+        if (Math.abs(dz) > 0.004) prevDz = dz;
+        if (!A.crossed && c.x > wallX + 0.6) { A.crossed = 1; A.crossAt = +((i + 1) * 0.05).toFixed(1); }
+        A.path += Math.hypot(c.x - px, c.z - pz);
+        A.gained = Math.max(A.gained, c.x - start.x);
+        px = c.x; pz = c.z;
+      }
+      A.end = [+c.x.toFixed(2), +c.y.toFixed(2), +c.z.toFixed(2)];
+      built.forEach(([bx, by, bz, prev]) => W.set(bx, by, bz, prev));
+      for (const k of Object.keys(A)) if (typeof A[k] === 'number') A[k] = +A[k].toFixed(3);
+      rigs.push({ name: plan.name, wall: plan.top !== null, ...A });
+      g.creatures = crowdWas; g.herdCentres = herdWas;
+    }
+    Object.assign(P, was); g.time = timeWas; Math.random = rnd;
+    return { run, wallX, z0, z1, sp: sp.id, tall: +tall.toFixed(3), hover,
+      floatAt: +floatAt.toFixed(3), ceiling: +ceiling.toFixed(3), hw: +made.hw.toFixed(3),
+      hl: +made.hl.toFixed(3), rigs };
+  });
+  check('a body the water is carrying is never inside the stone standing in its water: the wall is asked at the height the body floats at, not only at the floor of the column',
+    !wallLaw.error && wallLaw.rigs.filter((r) => r.wall).every((r) => r.inside === 0 && r.deep === 0), wallLaw);
+  check('and it is the stone that stops it, not a column the rig found dry: the body comes up to the face of the wall with less than five centimetres of its own box between them, and the water under it is there for every frame of the window',
+    !wallLaw.error && wallLaw.rigs.filter((r) => r.wall).every((r) => r.closestGap < 0.05 && r.closestGap >= 0 &&
+      r.wetFrames === r.frames && r.held > 0.9 * r.frames), wallLaw);
+  check('and the same animal on the same errand with the wall not built goes straight across it, over ground no more than three times the way to the place',
+    !wallLaw.error && wallLaw.rigs.filter((r) => !r.wall).every((r) => r.crossed === 1 &&
+      r.path < 3 * r.way && r.gaveUp === 0 && r.inside === 0), wallLaw);
 
   /* 10z. a flock is not a formation. Twelve frogs were put on one lake and every
      one of them swam 30 cm under the surface, at the same instant, for as long as
