@@ -933,7 +933,7 @@ What that left open, in the order worth taking:
   rate a walker's) is still unmeasured against a body with feet. It is not what closed
   this item, and it is not needed for the rule as shipped.
 
-## 25. The sea has ground, and nothing on it (partly shipped)
+## 25. The sea has ground, and one kind of it keeps a beach (partly shipped)
 
 **Half shipped.** The rule is in shipped code and the ground it states is
 built, meshed, stood on and asked for again: the sea holds islands, denser near the
@@ -942,7 +942,7 @@ What the decision asked for -- 越靠近中心岛越密集, 越远的地方岛�
 now, not intent: an Archimedean spiral out of (80,80), **7** islands a turn gaining
 **60 m** of radius (**377 m** between turns), a **40 m** pull along each radius (under
 half the turn gap, so two turns cannot trade places), a **24 m** channel kept between
-every foot and this island's shore, five kinds stated only as a foot radius and a
+every foot and this island's shore, six kinds stated only as a foot radius and a
 crown height, and an id that *is* the ordinal along the spiral with the place computed
 from it -- and the inverse question answered too, since `islesNear(x, z)` names the
 islands standing at an address from the address alone. Each island is one pile of
@@ -957,13 +957,13 @@ put on, and `game/test/docs-sync.js` measures the chapter's numbers itself):
 | | |
 |---|---|
 | raised as ground | **70** of 70 ordinals; none cut down for want of room; closest two feet **178.9 m** apart |
-| kinds | **15** sandbars, **16** reefs, **23** thickets, **11** isles, **5** ridges |
+| kinds | **12** sandbars, **12** cays, **14** reefs, **16** thickets, **11** isles, **5** ridges -- six kinds, not five: the sixth is the sand of a bar laid out at a thicket's footprint, added because the sea's sand was asked for a beach (02 §1.2) |
 | per km², by km band | **3.50 / 2.02 / 1.21 / 0.82** -- the gradient the rule exists for |
 | the nearest of them | centre **389 m** from (80,80), **169 m** of open water past this island's water's edge (the measure, and this number, moved with the shore rule: it is taken to where the sea stands now, not to the shore line -- see the body of commit fe8ee39) |
-| how far open sea is from land | **5,088** points sampled on rings to 1.5 km: median **171 m** from a foot, furthest **476 m** -- against the **966 m** one fruit buys out and back |
-| what stands on it | **0** cells of tree, fruit or plant over the **15,421** columns of the nearest footprint big enough to stand on; its materials are the material table's own (grass over soil over sand over the mountain rock the sea floor is paved with) |
+| how far open sea is from land | **5,088** points sampled on rings to 1.5 km: median **169 m** from a foot, furthest **472 m** -- against the **966 m** one fruit buys out and back |
+| what stands on it | **palms and melons**, on the one kind of it that keeps a beach. Over the **15,421** columns of the nearest footprint big enough to stand on (ordinal **4**, a sand cay, **603 m** out, foot **70.1 m**): **271** cells of tree, **92** of fruit and **92** of plant, which are **10** palms standing on its **645** columns of beach and **92** melons on its sand; its ground is the material table's own -- sand from the sea floor it was raised out of up to its own crown, and no soil and no grass, because a cay is sand and not a meadow. Out over all 70 ordinals: **173** palms over **8,497** beach columns on the **12** cays, and **1,680** cells of the sea's one crop fruit (**1,564** on the cays' sand, **116** on the bars' crowns, **0** on the three kinds no fruit names) |
 | what a body does there | stands on it with its feet down in **100%** of 120 frames, walks **13 m** of it outside the authored array with **0** frames falling, and the ground comes back cell for cell the same after **813** chunks were let go |
-| what it costs | **0.7-1.0 µs** a column in open water, **1.2-1.6 µs** where an island stands under it (**0.2-0.4 ms** per 256-column chunk; in-game, over an island's own chunks, **1.17-1.56**); it was **2.7-4.1 µs** before the positions and records were cached, before each island's floor was asked once rather than per column, and before the neighbour window was cut from eight turns of the spiral to the three that can reach a point |
+| what it costs | measured warm on the tree this round closed on, straight out of `fillChunk`: **1.50 µs** a column in open water (400 chunks) and **1.63 µs** where a cay's ground stands (200 chunks of the 12 cays), no chunk over **1.0 ms** -- the palm walk is under a tenth of the work on the ground that carries it. Those two figures are an ad-hoc probe and not a committed test; the figure a committed test holds and fails on is the in-game one, `usPerColumn` in `test/play.js`, bounded at **4** and read at **1.56**, with a chunk of rule and geometry together at **2.2 ms** and **5.0 ms** with the ground rule run through it, against the **16 ms** a frame is. It was **2.7-4.1 µs** before the positions and records were cached, before each island's floor was asked once rather than per column, and before the neighbour window was cut from eight turns of the spiral to the three that can reach a point |
 
 Three findings that belong to the codebase rather than to the map, recorded because
 each one would otherwise be rediscovered:
@@ -979,19 +979,33 @@ each one would otherwise be rediscovered:
   the bug; a body that is *put* there -- a save restored, a lens started out at sea --
   stood on ground that was filled but never meshed. The island rig came back with one
   hole, in the middle, and that is what fixed it.
-- The generator has no path that plants outside the authored square: `tree()` and
-  `bush()` are called only from inside `generate()`. That is the mechanical reason the
-  census above reads zeros, and the reason filling an island's footprint with life is a
-  design job and not a bug to patch.
+- The generator's authored planting has no path outside the authored square: `tree()` and
+  `bush()` are called only from inside `generate()`. That was the mechanical reason the
+  census above read zeros. What stands out there now is grown by a second rule, not by
+  that one: `palmAt`/`palmsOver` in `src/worldgen.js` answer a column by its address, as
+  the ground and the fruit are answered, with no planting pass and no list — which is the
+  shape any further life out there has to take too.
 
 **What is still open, and what deciding it needs.**
 
-- Nothing lives on any of it. There is one fruit in the tables (`frogpear`) and one
-  plant (`cellarseed`), so "different islands grow different things" is a rule with one
-  thing available to fill it; and no animal's placement rule can be asked outside the
-  valley's zones (issue 24 is the same wall). What each kind should carry, and whether a
-  body would ever cross an arm of the sea for it, is the design question -- the ground
-  and the ids are ready for the answer.
+- **One kind of it lives now; the other five are still empty.** Asked for 海龟岛必须更大一些,
+  上面要有椰子树, the sea was given a sixth kind -- a sand cay, a bar's sand laid out at a
+  thicket's footprint -- and palms grow on its strand by the same by-address rule the
+  ground and the fruit are answered by (02 §1.2). What that closed: the animal's ground
+  and its fruit's ground are now the sea's two kinds of sand instead of one, and the
+  census above reads palms and melons rather than zeros. What it did not: there are still
+  two fruits (`frogpear`, `turtlemelon`) and one plant (`cellarseed`) in the tables, so
+  "different islands grow different things" is a rule with two things available to fill
+  it; no animal's placement rule can be asked outside the valley's zones (issue 24 is the
+  same wall); and four of the six kinds still carry nothing. Three things this round left
+  on purpose, recorded so they are not mistaken for oversights: the fruit's `bear: 0.06`
+  was not retuned, so the census of the sea's fruit rose from **152** cells to **1,680**
+  with the cays' **27,040** dry columns -- whether that is too abundant a sea is a
+  judgement about the game and not a failed test; the palms are straight trunks with one
+  row of crown, on cays and nowhere else, because a cay's beach is the only ground the
+  rule can answer today; and the turtle's own rigs are still measured on a **bar** and not
+  on a cay's beach -- `habitat` names the bar first exactly so those figures do not move
+  -- so nobody has yet walked that animal across the sand its palms grow on.
 - A home island for a player's own id is derivable and is **not** built. An id does
   exist -- `game.js` makes it in `init()` (`p-` + `IDEN.idBytes` random base-36
   characters), the save stores it and `load()` restores it, and `stashes[].owner` already

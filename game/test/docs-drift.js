@@ -63,7 +63,7 @@ const DRIFTS = [
   ['02-map-and-scenes.md', '| isle | 70-125 m | 8-14 m | a piece of land that never went under: grass over soil', '| isle | 70-125 m | 8-14 m | a piece of land that never went under: bare sand', 'what a kind that states no pile is made of'],
   ['02-map-and-scenes.md', 'its seven centres actually stand **389-778 m** out', 'its seven centres actually stand **389-798 m** out', 'where the first turn of the spiral actually stands'],
   ['02-map-and-scenes.md', '**70** of 70 ordinals', '**71** of 70 ordinals', 'how many of the spiral\'s ordinals stand as ground'],
-  ['02-map-and-scenes.md', '| kinds | 15 sandbars, 16 reefs', '| kinds | 14 sandbars, 16 reefs', 'what kinds the mix built'],
+  ['02-map-and-scenes.md', '| kinds | 12 sandbars, 12 cays', '| kinds | 13 sandbars, 12 cays', 'what kinds the mix built'],
   ['02-map-and-scenes.md', '**3.50** in the 0-1 km band', '**3.60** in the 0-1 km band', 'the island density gradient the rule exists for'],
   ['02-map-and-scenes.md', 'foot **70 m** — has had its whole footprint (**15,421** columns)', 'foot **70 m** — has had its whole footprint (**15,422** columns)', 'the footprint of the island counted cell by cell'],
   ['02-map-and-scenes.md', 'takes 95% of the contrast off at **231 m**', 'takes 95% of the contrast off at **321 m**', 'the range at which the air gives up its contrast'],
@@ -72,11 +72,18 @@ const DRIFTS = [
   // spread over the bars, and the nearest bar this island has are all stated as
   // counts in the chapter, and every one of them is a number only the world
   // built from data/ can answer
-  ['02-map-and-scenes.md', '**1,233,321** of them, **304,420** standing above the water line', '**1,233,321** of them, **304,421** standing above the water line', 'the crop census: how many columns were walked and how many stand dry'],
-  ['02-map-and-scenes.md', '**2,740** such columns over the **15** bars', '**2,741** such columns over the **15** bars', 'the crop census: the sand bars\' crown and how many of them there are'],
-  ['02-map-and-scenes.md', 'from **2** cells on the least of them (ordinal 51, **47** columns of crown)', 'from **2** cells on the least of them (ordinal 51, **48** columns of crown)', 'the least a bar carries and which bar it is'],
+  ['02-map-and-scenes.md', '**1,286,325** of them, **300,346** standing above the water line', '**1,286,325** of them, **300,347** standing above the water line', 'the crop census: how many columns were walked and how many stand dry'],
+  ['02-map-and-scenes.md', 'the **2,154** dry columns of the **12** bars', 'the **2,155** dry columns of the **12** bars', "the crop census: the bars' dry sand and how many bars there are"],
+  ['02-map-and-scenes.md', 'from **4** cells on the least (a bar, ordinal **1**, **107** columns', 'from **4** cells on the least (a bar, ordinal **1**, **108** columns', 'the least one of the sandy islands carries, and which one it is'],
+  ['02-map-and-scenes.md', 'from **5** on the least of them (ordinal **40**, foot **58.9 m**)', 'from **5** on the least of them (ordinal **40**, foot **59.9 m**)', "the foot of the cay carrying the fewest palms -- the palm census is not just a count"],
   ['02-map-and-scenes.md', 'The nearest island to this one is one of the bars: ordinal **1**, foot **26.5 m**', 'The nearest island to this one is one of the bars: ordinal **2**, foot **26.5 m**', 'which island is the nearest one, and that it is a bar'],
   ['02-map-and-scenes.md', 'it carries **4** of that fruit over **107** columns of', 'it carries **4** of that fruit over **108** columns of', 'what the nearest bar actually carries'],
+  // the fruit chapter states the same census in its own words. It went stale once
+  // already doing that, so its figures are injected here as well as claimed there
+  ['04-fruit-and-transformation.md', 'of all **70** ordinals walked', 'of all **71** ordinals walked', 'how far the melon census reaches'],
+  ['04-fruit-and-transformation.md', '**12** sand cays, **27,040** dry columns, **1,564** melons', '**12** sand cays, **27,041** dry columns, **1,564** melons', 'what the beach-bearing kind of the sea\'s sand bears'],
+  ['04-fruit-and-transformation.md', 'to **232** cells (a cay, ordinal **22**, **3,958** columns)', 'to **233** cells (a cay, ordinal **22**, **3,958** columns)', 'the most one island bears, and which island that is'],
+  ['04-fruit-and-transformation.md', 'this island\'s own authored ground: **0** of it, and **49** cells', 'this island\'s own authored ground: **1** of it, and **49** cells', 'that none of the sea\'s fruit grows on this island, and how much of the other one does'],
   // the turtle row: the same cells the frog row is checked on, and the one row
   // this round added
   ['03-characters-and-creatures.md', '| 1.45 (swim 6.4; no hop at all) |', '| 1.45 (swim 6.5; no hop at all) |', 'the swim speed the turtle row prints'],

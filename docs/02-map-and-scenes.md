@@ -141,15 +141,16 @@ and the arithmetic is an Archimedean spiral out of (80,80):
 - what kind of island it is is stated in three numbers. Two of them are the shape of
   a shore: how far its foot reaches, and how high its crown stands over the water
   line. The third is what the pile is made of, and it was missing until it was
-  measured: with only the height table to go on, **9** of the **15** sandbars in the
-  reach wore grass at their crown and all **16** of its reefs wore grass over soil, so
-  a rock shelf and a hill of earth were the same ground. The mix of kinds changes with
-  the distance — the near turns are sand and reef, the far ones are land.
+  measured: with only the height table to go on, **9** of the **15** sandbars **that
+  mix raised** wore grass at their crown and all **16** of its reefs wore grass over
+  soil, so a rock shelf and a hill of earth were the same ground. The mix of kinds
+  changes with the distance — the near turns are sand and reef, the far ones are land.
 
 | kind | foot radius | crown above the water line | the ground it is |
 |---|---|---|---|
 | sandbar | 22-45 m | 1.2-2.4 m | sand from the floor the sea raised it out of to its crown; bare sand, with a skin of the sea's own sand at the water line |
 | reef | 30-70 m | 2.5-4.5 m | rock from that floor to its crown, with the sea's sand at the water line: a shelf, not a hill of earth |
+| cay | 50-95 m | 2.5-5 m | sand, as a bar is — the same sea laying the same material — but over a foot as wide as the ground that carries woods, and high enough that a band of that sand stays dry and stays at the water line. That band is its beach, and it is the only ground in this world where a palm grows |
 | thicket | 50-95 m | 5-9 m | a piece of land that never went under: grass over soil, as the height table runs it |
 | isle | 70-125 m | 8-14 m | a piece of land that never went under: grass over soil, with a hill on it |
 | ridge | 100-165 m | 14-24 m | a piece of land that never went under: grass over soil, cut the top of; high enough that the material table puts snow on it by its own height rule (a crown above y34), which is why no snow is written anywhere |
@@ -170,25 +171,58 @@ through, while the sea's skin of sand at the water line lies on both of them exa
 it lies on this island's beaches. A kind that states no pile is a piece of land the sea
 never went over, and it takes the height table as it always did.
 
+**The sixth kind is in because the sea's sand was asked to hold a beach.** A bar is a
+heap the sea uncovers at the top of a tide, and it is bare for the same reason it is
+small; asking the word "bar" for a footprint of 90 m would leave the word naming a
+thing it is not, and every sentence about a bare bar with it. A cay is what the same
+sea lays when it has somewhere to put sand that stays: the same sand, the same dome, a
+foot as wide as the ground that carries woods and a crown a few metres over the water
+line — which leaves a ring of that sand both dry and at the water line. That ring is
+the strand the material table already draws, and it is not a number invented for the
+occasion. On it, and nowhere else out there, a palm grows. The rule is the same one
+rule as everything else past the authored square — one question answered by address,
+no planting pass, no grove list, no garden:
+
+- the column's own address is hashed for the chance, exactly as the fruit's is, so the
+  palms a chunk holds are the same palms the next time that chunk is built;
+- the ground decides: the pile over the column has to be a cay's own, that kind's
+  record has to state sand for its pile and its crown, and the column has to be dry
+  ground lying in the band the sea's own sand lies in. A bar's crown is a few metres
+  across and stays under the sea's thumb, so it stays bare — and that is what a bar is;
+- a trunk is 6-9 cells of the same block every other tree in this world is built
+  of, and the crown is one row of leaf above its top, in every column whose centre
+  stands within 2.6 m of that trunk. A chunk is filled one column at a time and no
+  write crosses into the next, so what stands over a column is answered by walking
+  the few centres whose crown could cover it and asking each of them that same
+  question — the same rule by another route, and the same palms every time. The
+  leaf is laid down first and the wood over it: a trunk is solid and stands up
+  through a neighbour's fronds, so two palms growing close keep their own heights
+  and their own crowns;
+- the tree is built of `trunk` and `leaf`, so every body in the game meets it as a
+  tree already: it walks up one, is stopped by one or hops over its crown, and no new
+  rule is anywhere needed for it.
+
 Measured at the seed the game opens with, over the first 70 islands of the spiral
 (which reaches about 4 km out), asked both of the rule and of the built world:
 
 | | |
 |---|---|
 | islands raised | **70** of 70 ordinals; nobody had to be cut down for want of room, the closest two feet came within **178.9 m** of each other |
-| kinds | 15 sandbars, 16 reefs, 23 thickets, 11 isles, 5 ridges |
+| kinds | 12 sandbars, 12 cays, 14 reefs, 16 thickets, 11 isles, 5 ridges |
 | islands per km², by band | **3.50** in the 0-1 km band, **2.02** at 1-2 km, **1.21** at 2-3 km, **0.82** at 3-4 km — the gradient the rule exists for, falling as 1/r |
 | the nearest of them | centre **389 m** from (80,80); **169 m** of open water between this island's water's edge and its foot |
-| how far open sea is from land | sampled on rings out to 1.5 km, the median point of sea is **171 m** from an island's foot and the furthest sampled point is **476 m**: one fruit is **966 m** out and back, so no water in that reach is a crossing a body cannot make |
-| what stands on the nearest ground big enough to stand on | **nothing**. The nearest island with a foot of 40 m or more — ordinal 4, a thicket, **603 m** out, foot **70 m** — has had its whole footprint (**15,421** columns) counted cell by cell: **0** cells of tree, **0** of fruit, **0** of plant. What it does hold: **71,920** cells of water, **64,670** of stone, **51,836** of sand, **43,763** of the mountain rock the sea floor is paved with, **7,386** of soil and **2,462** of grass — the dome the rule states, read back out of ground the game built. That ground is still bare (07 §3.6) |
-| what the sea's own kinds bear | **152 cells** of the one fruit that grows in a *kind of ground* instead of in ground (04 §3). Every column of all 70 islands was walked — **1,233,321** of them, **304,420** standing above the water line — and the fruit answers **152** times, every one on the crown of a sand bar: **2,740** such columns over the **15** bars, and **0** on the 16 reefs, 23 thickets, 11 isles and 5 ridges, whose ground its record does not name. All **15** bars carry some, from **2** cells on the least of them (ordinal 51, **47** columns of crown) to **27** on the most (ordinal 19, **419**). This island's own authored ground holds **0** of it, and **49** cells of the fruit that grows in ground |
+| how far open sea is from land | sampled on rings out to 1.5 km, the median point of sea is **169 m** from an island's foot and the furthest sampled point is **472 m**: one fruit is **966 m** out and back, so no water in that reach is a crossing a body cannot make |
+| what stands on the nearest ground big enough to stand on | **palms**. The nearest island with a foot of 40 m or more — ordinal 4, a sand cay, **603 m** out, foot **70 m** — has had its whole footprint (**15,421** columns) counted cell by cell: **271** cells of tree, **92** of fruit and **92** of plant, which together are **10** palms standing on its **645** columns of beach and **92** melons lying on its sand — a melon is a low plant, so its cells are counted once as fruit and once as plant. What the ground itself holds: **84,475** cells of sand, **80,144** of water, **43,456** of the mountain rock the sea floor is paved with, **26,751** of stone, and **0** of soil and **0** of grass — the sand runs from the floor the sea raised this ground out of up to its own crown, exactly as the kind states it, and the dome the rule states reads back out of the ground the game built |
+| the palms on that beach | **173** of them stand out there, all on the **12** cays and their **8,497** columns of beach, from **5** on the least of them (ordinal **40**, foot **58.9 m**) to **24** on the most (ordinal **26**, foot **74.6 m**). On every other kind of ground the sea raises, the count is **0**: a trunk stands only where the pile over the column is a cay's own sand, and only in the band the sea's own sand lies in. `test/node-smoke.js` walks every column of every island in the reach looking for where a trunk begins, and holds that, the height of every one of them, that no trunk is broken by a neighbour's fronds, and that no leaf stands beyond the crown's stated reach of the trunk it belongs to |
+| what the sea's own kinds bear | **1,680 cells** of the one fruit that grows in a *kind of ground* instead of in ground (04 §3). Every column of all 70 islands was walked — **1,286,325** of them, **300,346** standing above the water line — and the fruit answers **1,680** times, every one on sand of the two kinds its record names: **1,564** cells over the **27,040** dry columns of the **12** cays, and **116** over the **2,154** dry columns of the **12** bars. The three kinds no fruit names answer **0**. Every one of the **24** sandy islands carries some, from **4** cells on the least (a bar, ordinal **1**, **107** columns of crown) to **232** on the most (a cay, ordinal **22**, **3,958**). This island's own authored ground holds **0** of it, and **49** cells of the fruit that grows in ground |
 
 The nearest island to this one is one of the bars: ordinal **1**, foot **26.5 m**,
 centre **389 m** out, and it carries **4** of that fruit over **107** columns of
-crown above the water line. The ground too small to stand on is the right size to
-grow in — a bar's crown is a few metres across, which is why nothing was ever
-standing on it. What the reach holds now is stated in the two chapters it belongs
-to: the animal whose row names that kind of ground, and the lane of water it keeps
+crown above the water line. A bar stays what a bar is: its crown is a few metres
+across, the sea has it in hand, and nothing stands on it. The nearest ground that
+*is* big enough to stand on is 214 m further out, and it is a cay with ten palms on
+its beach. What the reach holds now is stated in the two chapters it belongs to: the
+animal whose row names both those kinds of ground, and the lane of water it keeps
 round this island (03 §3), and the fruit, its clock and what wearing it costs
 (04 §3).
 

@@ -59,7 +59,7 @@ Rows = creatures, columns = player forms. `·` = falls through to `default`.
 | id | 中文 | English | Model | scale | Habitat | Activity | Speed | turn | Alert | Herd | Fruit |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `frog` | 雨蛙 | Mirrorlake Frog | frog | 0.13 | Mirrorlake / Glowglade / Starfall Keep | both | 1.8 (swim 4.6, hop 6.0–7.4) | 0.9 | 12 | 8 | Frog Pear |
-| `turtle` | 海龟 | Sea Turtle | turtle | 0.25 | the sand of a sand bar in the open sea — a kind of ground, not a place | both | 1.45 (swim 6.4; no hop at all) | 0.6 | 16 | 3 | Turtle Melon |
+| `turtle` | 海龟 | Sea Turtle | turtle | 0.25 | the dry sand of a sand bar or of a sand cay in the open sea — kinds of ground, not places | both | 1.45 (swim 6.4; no hop at all) | 0.6 | 16 | 3 | Turtle Melon |
 
 Distribution of the 8 individuals in the valley: frog 5, turtle 3.
 
@@ -108,22 +108,26 @@ at all. Put in the sea at the eight bearings of this island's own shore and sent
 25 m inland, it never once came ashore — the highest ground the column under it
 ever answered for is the sea line itself (**14**), and it stood on dry ground for
 **0** frames of the eight windows. Sent from open water **31 m** out at the bar its
-own fruit grows on, it walks up **2.5 m** onto the crown over **473** frames of
+own fruit grows on, it walks up **2.5 m** onto the crown over **447** frames of
 lift, with the world under its feet for **1,033** of them, and never once an arc.
 That is the animal: it goes along, and the only ground it gets up onto is the sand
 its own record names. It is also why its `speed` is under the frog's — measured at
 **1.44 m/s** against the frog row's **1.8** — flippers over sand being dragging,
 not running — and why its front flippers are carved as the legs it stands on. Its
-`habitat` names a
-**kind of ground** (`sandbar`, a key of `ISLE_TYPES` in `src/worldgen.js`) and not
-a zone, because the claim that row exists to make is the one its fruit's record
-makes with the same word: the ground this animal climbs out onto and the ground its
-fruit grows in are one ground, and `test/node-smoke.js` asks the world whether
-that is still true. That word is now load-bearing in two places rather than one:
-the fruit is planted only on a pile of the kind its own record names (02 §3), and
-the animal's lift is refused on ground of a kind its own record does not name.
-Where it *swims* is said by `orbit`, because a lane of water is a place and a kind
-of ground is not — and `at: 'coast'` is a lane measured as
+`habitat` names
+**kinds of ground** (`sandbar` and `cay`, keys of `ISLE_TYPES` in `src/worldgen.js`)
+and not zones, because the claim that row exists to make is the one its fruit's
+record makes with the same words: the ground this animal climbs out onto and the
+ground its fruit grows in are one ground, and `test/node-smoke.js` asks the world
+whether that is still true. The two kinds it names are the sea's two kinds of sand,
+and it names both because the animal is after the sand and not the size of the heap:
+a bar is a crown a few metres across that the sea has in hand, and a cay is the same
+sand laid wide enough to keep a beach (02 §1.2). Those words are now load-bearing in
+three places rather than one: the fruit is planted only on a pile of the kind its own
+record names (02 §3), the palms of that sand grow only on the kind that states it
+(02 §1.2), and the animal's lift is refused on ground of a kind its own record does
+not name. Where it *swims* is said by `orbit`, because a lane of water is a place and
+a kind of ground is not — and `at: 'coast'` is a lane measured as
 an offset from this island's own shore, resolved at each bearing by
 `shoreWater`, the same rule the map's coast polygon is drawn from. A circle of
 fixed radius round the island's centre would not do: the water's edge on this

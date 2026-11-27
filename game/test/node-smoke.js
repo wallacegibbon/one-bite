@@ -634,11 +634,12 @@ console.log('水方块', water);
      it was asking the world to agree with the number that had just been changed.
      So the claim is held twice: the game's table says what the words say, and the
      cells the world holds are that material. A bar is a heap of sand the sea
-     laid; a reef is a rock it left standing; and three of the kinds state no
+     laid; a cay is the same sand raised wide enough and high enough to keep a
+     beach; a reef is a rock it left standing; and three of the kinds state no
      pile at all -- ground that never went under, so the height table's grass over
      soil over rock is the whole truth about them. */
   const SAYS = { sandbar: { pile: 4, crown: 4 }, reef: { pile: 3, crown: 3 },
-    thicket: null, isle: null, ridge: null };
+    cay: { pile: 4, crown: 4 }, thicket: null, isle: null, ridge: null };
   for (const k of Object.keys(SAYS)) {
     const want = SAYS[k], has = TYPES[k].ground;
     if (want && (!has || has.pile !== want.pile || has.crown !== want.crown))
@@ -776,6 +777,89 @@ console.log('水方块', water);
     `每座沙洲 干柱/结果 ${perBar.map(b => `${b.n}:${b.dry}/${b.crop}`).join(' ')}`,
     `最近沙洲 ${near.n} @${near.at} 脚${near.foot}m 距${near.d}m 结果${near.crop}`,
     `主岛 ${Object.entries(counts).map(([i, c]) => `${i}x${c}`).join(' ')}`,
+    bad.length ? '!! ' + bad.slice(0, 4).join('; ') + `（共 ${bad.length} 处不对）` : 'OK');
+  if (bad.length) process.exitCode = 1;
+}
+
+/* Palms grow on the beach of a sand cay and on no other ground out there. That
+   is a claim about ground, so it is asked of ground: every column of every
+   island in the reach is looked at where a trunk would have to begin -- the
+   first cell above that column's own ground -- and what has to come back is
+   that every trunk found stands on the kind that states sand, on ground that is
+   dry and in the band the sea's own sand lies in, that the trunk is one whole
+   run of the height the rule states with leaves above its top, that every cay
+   carries some, and that no other kind carries one. The crown is asked of the
+   built world too: every leaf cell standing in the row above a trunk's top is
+   looked for the trunk it belongs to -- a trunk whose own top is in that row,
+   standing within the reach the rule states -- and the furthest leaf any trunk
+   owns is printed beside that reach. A crown that fell short of the reach it
+   states is as much a lie as one that went past it, so both are failures. Each
+   cay's own beach is counted beside it, because the chapter prints what stands
+   on one. */
+{
+  const SEA = F.WORLD.sea, ID = F.BLOCK_ID, bad = [];
+  const REACH = 2.6, WALK = Math.ceil(REACH);   // the crown's reach, in metres -- and a metre is a column
+  const perCay = [];
+  let trunks = 0, cayBeach = 0, crownCells = 0, crownFar = 0;
+  for (let n = 1; n <= 70; n++) {
+    const isle = F.isleRecord(n);
+    if (isle.r <= 0) continue;
+    const span = Math.ceil(isle.r), cx = Math.floor(isle.x), cz = Math.floor(isle.z);
+    let mine = 0, mineStrand = 0;
+    const standing = new Map();                 // this island's trunks: the column, and how high its top stands
+    for (let dz = -span; dz <= span; dz++) for (let dx = -span; dx <= span; dx++) {
+      const x = cx + dx, z = cz + dz;
+      if (Math.hypot(x + 0.5 - isle.x, z + 0.5 - isle.z) >= isle.r) continue;
+      const under = F.islandUnder(x, z);
+      if (!under || under.isle.id !== isle.id) continue;
+      const h = F.landHeight(x, z);
+      const onBeach = h > SEA && h <= SEA + 1;
+      if (onBeach) mineStrand++;
+      if (w.get(x, h + 1, z) !== ID.trunk) continue;      // a tree that does not begin at the ground is not standing on it
+      trunks++; mine++;
+      if (isle.type !== 'cay')
+        bad.push(`树 ${x},${z} 长在 ${isle.type} 上，海上只有沙岛的沙滩长棕榈`);
+      if (!onBeach) bad.push(`棕榈 ${x},${z} 脚下的地 y${h} 不在沙滩那一段`);
+      else if (w.get(x, h, z) !== 4) bad.push(`棕榈 ${x},${z} 脚下 y${h} 是 ${w.get(x, h, z)}，不是该岛自己说的沙`);
+      let top = h + 1;
+      for (let y = h + 2; y < F.WORLD.h; y++) { if (w.get(x, y, z) === ID.trunk) top = y; else break; }
+      if (top - h < 6 || top - h > 9) bad.push(`棕榈 ${x},${z} 的干是 ${top - h} 格，棕榈的干是 6-9 格`);
+      if (w.get(x, top + 1, z) !== ID.leaf) bad.push(`棕榈 ${x},${z} 的干顶 y${top + 1} 上没有叶子`);
+      /* One trunk, standing whole. A palm's own crown may not eat the trunk of
+         the palm next to it: the wood goes on up through a neighbour's fronds. */
+      for (let y = top + 2; y < F.WORLD.h; y++)
+        if (w.get(x, y, z) === ID.trunk) { bad.push(`棕榈 ${x},${z} 的干在 y${y} 又出现了：它的干断在 ${top} 上`); break; }
+      standing.set(x + ',' + z, top);
+    }
+    for (const [key, top] of standing) {
+      const at = key.split(','), x = +at[0], z = +at[1], row = top + 1;
+      for (let dz = -WALK; dz <= WALK; dz++) for (let dx = -WALK; dx <= WALK; dx++) {
+        const lx = x + dx, lz = z + dz;
+        if (w.get(lx, row, lz) !== ID.leaf) continue;
+        crownCells++;
+        let own = -1;
+        for (let uz = -WALK; uz <= WALK; uz++) for (let ux = -WALK; ux <= WALK; ux++) {
+          if (standing.get((lx + ux) + ',' + (lz + uz)) !== top) continue;   // only a crown in this row owns this leaf
+          const d = Math.hypot(ux, uz);
+          if (own < 0 || d < own) own = d;
+        }
+        if (own < 0) { bad.push(`叶子 ${lx},${lz} y${row} 离每一棵棕榈都远过 ${REACH} m，树冠没有这么大的`); continue; }
+        if (own > REACH) bad.push(`叶子 ${lx},${lz} y${row} 离自己的干 ${own.toFixed(2)} m，树冠只到 ${REACH} m`);
+        if (own > crownFar) crownFar = own;
+      }
+    }
+    if (isle.type === 'cay') {
+      cayBeach += mineStrand;
+      perCay.push({ n, at: [cx, cz], foot: +isle.r.toFixed(1), beach: mineStrand, palms: mine });
+      if (!mineStrand) bad.push(`沙洲岛 ${n} 没有沙滩：它顶上没有一个地方是干地又在水面那一段`);
+      if (!mine) bad.push(`沙洲岛 ${n} 的沙滩上一棵棕榈也没有`);
+    }
+  }
+  if (!crownCells) bad.push('海上没有一片树冠的叶子：棕榈的树冠没有建出来');
+  else if (crownFar < 2) bad.push(`最远的一片叶子离自己的干只有 ${crownFar.toFixed(2)} m，树冠没有铺到它说的 ${REACH} m`);
+  console.log('外海棕榈', trunks + ' 棵', perCay.length + ' 座沙岛的沙滩共', cayBeach, '柱',
+    `树冠 ${crownCells} 格叶子，最远的一片离自己的干 ${crownFar.toFixed(2)} m（说的是 ${REACH} m）`,
+    perCay.map(c => `${c.n}:${c.beach}柱/${c.palms}棵`).join(' '),
     bad.length ? '!! ' + bad.slice(0, 4).join('; ') + `（共 ${bad.length} 处不对）` : 'OK');
   if (bad.length) process.exitCode = 1;
 }

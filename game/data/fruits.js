@@ -96,9 +96,9 @@
     /* ============ uncommon ============ */
     {
       /* The ground this fruit grows in is named by the world's own word for it,
-         the same word the animal's row uses: `sandbar` is a key of
-         ISLE_TYPES in src/worldgen.js, not a zone. A zone is a place on the
-         island and this is a kind of ground anywhere the sea made one, and the
+         the same words the animal's row uses: `sandbar` and `cay` are keys of
+         ISLE_TYPES in src/worldgen.js, not zones. A zone is a place on the
+         island and these are kinds of ground anywhere the sea made one, and the
          one claim this record exists to make -- the animal's ground and its
          fruit's ground are one ground -- cannot be written twice from two
          different vocabularies. `columnInto` reads it: it already asks which
@@ -114,7 +114,7 @@
          here: node-smoke counts the cells over the 70 ordinals the reach holds
          and prints the total. */
       id: 'turtlemelon', cn: '龟果', en: 'Turtle Melon', rarity: 'uncommon', creature: 'turtle',
-      habitat: ['sandbar'], habitatCn: '沙洲顶上干的沙', habitatEn: 'the dry sand on the crown of a sand bar',
+      habitat: ['sandbar', 'cay'], habitatCn: '沙洲顶上、沙岛沙滩上的干沙', habitatEn: 'the dry sand of a sand bar or of a sand cay',
       bear: 0.06,
       duration: 420,
       form: {

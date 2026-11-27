@@ -19,7 +19,7 @@ Rarity is not a "value tier", it is **two physical parameters**:
 **The backpack is 24 slots** → at most: 24 common / 12 uncommon / 6 rare / 3 epic / **2 legendary**.
 
 The valley now grows **two of these five rungs** — common (the frog pear of the
-reeds) and uncommon (the turtle melon of the sand bars). The ladder stays: it is a
+reeds) and uncommon (the turtle melon of the sea's sand). The ladder stays: it is a
 law of storage, not a shopping list.
 
 One corollary, stated per fruit because the slots are what makes it mean
@@ -80,17 +80,28 @@ water is not a body that kicks one.
 
 | id | English | Form | Duration | Habitat | Key abilities | Cost (body only) |
 |---|---|---|---|---|---|---|
-| `turtlemelon` | Turtle Melon | sea turtle | 420 s | the dry sand on the crown of a sand bar | the animal's own motion — **1.45 m/s** on land, **6.4 m/s** through water, **no launch at all**: a body with no `hop` has no reach, so every riser in the valley is a wall to it (03 §3); it swims the lane off this island's shore and it comes out onto sand, and its skin does not dry — there is no `dryTimer` on this record and no clock running against it on the beach; stealth 0.7, fov 95 | **it does not breathe water: the sea is not a place this body can breathe. it lies at the top of the water, going down is a thing it has to ask for, and the breath down there is counted**; **slow on land: 1.45 m/s, slower than the frog, and this body cannot jump at all**; **too big: a 1.5 m body does not fit through a door or between the trees** |
+| `turtlemelon` | Turtle Melon | sea turtle | 420 s | the dry sand of a sand bar or of a sand cay | the animal's own motion — **1.45 m/s** on land, **6.4 m/s** through water, **no launch at all**: a body with no `hop` has no reach, so every riser in the valley is a wall to it (03 §3); it swims the lane off this island's shore and it comes out onto sand, and its skin does not dry — there is no `dryTimer` on this record and no clock running against it on the beach; stealth 0.7, fov 95 | **it does not breathe water: the sea is not a place this body can breathe. it lies at the top of the water, going down is a thing it has to ask for, and the breath down there is counted**; **slow on land: 1.45 m/s, slower than the frog, and this body cannot jump at all**; **too big: a 1.5 m body does not fit through a door or between the trees** |
 
-**Where it actually grows, measured.** `bear: 0.06` is the chance that one metre
-of a bar's dry sand carries a fruit, hashed on the column's own address so the
-same bar bears the same melons in every fill of its chunks. Over the 70 ordinals
-the reach of this world holds on the default seed: **15 sand bars, 2,740 dry
-columns, 152 melons**, the nearest bar (ordinal 1, foot 26.5 m, 389 m from this
-island's centre) carrying **4** of them, and **0** melons anywhere that is not the
-dry crown of a sand bar — which includes **0** in the cells this island was
-authored from. The frog pear keeps the island and the melon keeps the bars; no
-count here is a rate multiplied out, and `test/node-smoke.js` walks the columns.
+**Where it actually grows, measured.** `bear: 0.06` is the chance that one metre of
+dry sand carries a fruit, hashed on the column's own address so the same ground
+bears the same melons in every fill of its chunks. The record names two kinds of
+ground and both of them are the sea's sand (02 §1.2), so the census is of the whole
+reach: at the seed this game opens with, every column of all **70** ordinals walked.
+
+| | |
+|---|---|
+| the two kinds the record names | **12** sand bars, **2,154** dry columns, **116** melons; **12** sand cays, **27,040** dry columns, **1,564** melons |
+| all of it | **1,680** cells of fruit over **1,286,325** columns, **300,346** of them standing above the water line |
+| the least and the most, per island | **4** cells (a bar, ordinal **1**, **107** columns of crown — the nearest island to this one too: foot **26.5 m**, centre **389 m** out) to **232** cells (a cay, ordinal **22**, **3,958** columns); all **24** sandy islands carry some |
+| where the answer is nothing | the three kinds no fruit names: **0** cells; this island's own authored ground: **0** of it, and **49** cells of the fruit that grows in ground |
+
+A cay carries more of the fruit than a bar because it has more dry sand, not because
+the ground is kinder: the chance is per metre of sand and it is the one number
+written in the record. No figure above is a rate multiplied out —
+`test/node-smoke.js` walks the columns and `test/docs-sync.js` asks these figures of
+the world the data generates. The frog pear keeps this island's reeds and the melon
+keeps the sea's sand; both of them are grown by the ground they are asked about, and
+not planted by a list anywhere.
 
 ## 4. Form ability fields
 

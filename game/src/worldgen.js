@@ -591,17 +591,32 @@
      kind states its pile and its crown as blocks, and `columnInto` lays that
      material from the floor the pile was raised out of to its crown. A kind
      that states no ground is a piece of land that never went under: thicket,
-     isle and ridge take the height table exactly as they always did. */
+     isle and ridge take the height table exactly as they always did.
+     The sixth kind is a sand cay, and it is a kind and not a wider bar because
+     of what the two words name. A bar is a heap the sea uncovers at the top of
+     a tide: it is small because the sea is still working on it, and it is bare
+     for the same reason. Asking that word for a footprint of 90 m would leave
+     the word naming a thing it is not, and every sentence about a bare bar with
+     it. A cay is what the same sea lays when it has somewhere to put sand that
+     stays -- high enough and wide enough to hold a strand the sun dries, which
+     is the ground the palms below grow on. It states its pile and its crown as
+     sand for the same reason a bar does: this is a heap of sand the sea laid,
+     and the height table would otherwise put soil and grass on the top of it. */
   const ISLE_TYPES = {
     sandbar: { r: [22, 45], crest: [1.2, 2.4], ground: { pile: 4, crown: 4 } },
     reef: { r: [30, 70], crest: [2.5, 4.5], ground: { pile: 3, crown: 3 } },
+    cay: { r: [50, 95], crest: [2.5, 5], ground: { pile: 4, crown: 4 } },
     thicket: { r: [50, 95], crest: [5, 9] },
     isle: { r: [70, 125], crest: [8, 14] },
     ridge: { r: [100, 165], crest: [14, 24] }
   };
+  /* The cay is weighted into the near and middle turns and not into the far
+     ones: those first two bands are already stated as shallow sand and reef,
+     and a cay is sand the sea raised out of a shallow floor. The far turns stay
+     land, which is what the gradient was for. */
   const ISLE_MIX = [
-    [['sandbar', 0.34], ['reef', 0.34], ['thicket', 0.22], ['isle', 0.08], ['ridge', 0.02]],
-    [['sandbar', 0.16], ['reef', 0.26], ['thicket', 0.30], ['isle', 0.20], ['ridge', 0.08]],
+    [['sandbar', 0.29], ['reef', 0.29], ['cay', 0.14], ['thicket', 0.19], ['isle', 0.07], ['ridge', 0.02]],
+    [['sandbar', 0.13], ['reef', 0.22], ['cay', 0.16], ['thicket', 0.25], ['isle', 0.17], ['ridge', 0.07]],
     [['sandbar', 0.08], ['reef', 0.18], ['thicket', 0.28], ['isle', 0.30], ['ridge', 0.16]]
   ];
   /* the widest foot any kind states: this is what bounds the search for the
@@ -848,6 +863,65 @@
     }
     return 0;
   }
+  /* A coconut palm. It grows on one ground in this world: the strand of a sand
+     cay. Every question it asks is a question the ground already answers. The
+     pile over the column has to belong to a cay -- the one kind of this sea with
+     a beach that stays, since a bar is under the sea's thumb and bare, which is
+     what makes it a bar. The kind's own record has to state sand for its pile
+     and its crown, so that a palm is standing on the sand this kind is and not
+     on what the height table would have made of the same hill. And the column
+     has to be dry ground lying in the band the sea's own sand lies in: that band
+     is what this world calls a strand, and no number for how far above the water
+     line a beach reaches is invented here.
+     The chance is hashed on the column's address, as the crop's is, so the palms
+     a chunk holds are the same palms the next time that chunk is built. It is
+     asked before the ground because it is the cheap question and the ground is
+     the expensive one: the order changes the cost and not the answer.
+     A palm is not one column wide, and a chunk is filled a column at a time with
+     no write crossing into its neighbour, so what stands over a column is
+     answered by walking the handful of centres whose crown could cover it and
+     asking each of them this same question. That walk is bounded by the crown's
+     own reach: no part of a palm is further than its reach in columns from its
+     trunk. The walk is only made over ground a cay raised -- a palm's crown
+     belongs to the island that grew it, and this is the whole of the work.
+     The trunk is the block every other tree in this world is built of and the
+     crown is leaf, so a palm is a tree to everything that already knows what a
+     tree is: a body walks up one, is stopped by one, or hops over its crown with
+     no new rule anywhere in the game. */
+  const PALM_CHANCE = 0.02, PALM_TRUNK = [6, 9], PALM_REACH = 2.6;
+  function palmAt(x, z) {
+    if (h2(x, z, seed + 1103) >= PALM_CHANCE) return null;
+    const g = groundAt(x, z);
+    const isle = g.pile && g.pile.isle;
+    if (!isle || isle.type !== 'cay') return null;
+    const ground = (ISLE_TYPES[isle.type] || {}).ground;
+    if (!ground || ground.pile !== 4 || ground.crown !== 4) return null;
+    if (g.h <= SEA || g.h > SEA + 1) return null;
+    return { base: g.h,
+      top: g.h + PALM_TRUNK[0] + Math.floor(h2(x, z, seed + 1109) * (PALM_TRUNK[1] - PALM_TRUNK[0] + 1)) };
+  }
+  /* The cells any palm puts over this column, and whether one is standing here.
+     Two lists, because they are two different substances: the trunk rows (only
+     ever the column's own palm) and the leaf of every crown that reaches this
+     column -- one row of leaf at the crown, the fronds starting at the top of a
+     trunk, no further out than the stated reach. The caller lays the leaf down
+     first and the wood over it: a trunk is solid and stands up through a
+     neighbour's foliage, so two palms close together do not break each other. */
+  function palmsOver(x, z) {
+    const out = { here: null, trunk: [], crown: [] };
+    const span = Math.floor(PALM_REACH);   // a part stands within the crown's reach of its trunk; one column further is beyond it
+    for (let dz = -span; dz <= span; dz++) for (let dx = -span; dx <= span; dx++) {
+      const p = palmAt(x + dx, z + dz);
+      if (!p) continue;
+      const d = Math.hypot(dx, dz);
+      if (dx === 0 && dz === 0) {
+        out.here = p;
+        for (let y = p.base + 1; y <= p.top; y++) out.trunk.push(y);
+      }
+      if (d <= PALM_REACH) out.crown.push(p.top + 1);
+    }
+    return out;
+  }
   /* Which liquid an address holds. This is the rule, and it is asked from two
      places: `columnInto`, laying a column out, and `World.liquidRowAt`, which a
      frame asks about the place it is standing at without walking anything. A lake
@@ -881,9 +955,25 @@
        melon on a beach, with no stem and no leaves, because there is nothing out
        there that needs a tree to be grown first. Asked after the ground and the
        water are put down, so it can only ever stand on top of a column this rule
-       has already decided is dry sand. */
-    const crop = cropAt(x, z, g, ground);
+       has already decided is dry sand.
+     * The palm is asked before it, and where both want the same cell the tree
+       has it: a column is either a trunk or the fruit that grew in that sand,
+       never both. The cells a palm puts here come from trunks standing in other
+       columns, so this column's own ground occludes them -- a neighbouring
+       palm's crown stops above the ground it overhangs and does not go through
+       it -- and nothing is ever written above the world. */
+    const palm = (g.pile && g.pile.isle.type === 'cay') ? palmsOver(x, z) : null;
+    const crop = (palm && palm.here) ? 0 : cropAt(x, z, g, ground);
     if (crop) put(x, h + 1, z, crop);
+    /* The crown's leaf first and the wood over it: where two palms stand close,
+       each trunk keeps its own height and its own crown, and one neighbour's
+       fronds never break another's trunk. Nothing is written into the ground it
+       stands in, or above the world. */
+    if (palm) {
+      const ID = N.BLOCK_ID;
+      for (let i = 0; i < palm.crown.length; i++) { const y = palm.crown[i]; if (y > h && y < W.h) put(x, y, z, ID.leaf); }
+      for (let i = 0; i < palm.trunk.length; i++) { const y = palm.trunk[i]; if (y > h && y < W.h) put(x, y, z, ID.trunk); }
+    }
   }
 
   function generate(world, s) {

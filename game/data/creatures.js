@@ -76,15 +76,17 @@
     {
       /* niche: the open water off the island's shore, and the sand it comes out
          onto. The valley's second animal, and the first one the sea holds.
-         `habitat` names a kind of ground and not a place: `sandbar` is a key of
-         ISLE_TYPES in src/worldgen.js. It is the same word the fruit's record
-         uses, and that is the point of writing it here -- the ground this
-         animal climbs onto and the ground its fruit grows in are one ground, and
-         a test can ask the world whether that is still true. What it swims is
-         said by `orbit` below, because a lane of water is a place and a kind of
-         ground is not. */
+         `habitat` names kinds of ground and not a place: `sandbar` and `cay` are
+         keys of ISLE_TYPES in src/worldgen.js. They are the same words the
+         fruit's record uses, and that is the point of writing them here -- the
+         ground this animal climbs onto and the ground its fruit grows in are one
+         ground, and a test can ask the world whether that is still true. A bar
+         and a cay are both sand the sea raised; a cay is the one with a beach
+         that stays, which is why this row names both and not one. What this
+         animal swims is said by `orbit` below, because a lane of water is a
+         place and a kind of ground is not. */
       id: 'turtle', cn: '海龟', en: 'Sea Turtle', model: 'turtle', scale: 0.25,
-      habitat: ['sandbar'], active: 'both',
+      habitat: ['sandbar', 'cay'], active: 'both',
       /* No `hop`, and what that leaves the body with is different for the two
          bodies this record makes. A form with no `hop` has no launch, so its
          `hopReach` in src/entities.js answers 0 and its body has no way up a

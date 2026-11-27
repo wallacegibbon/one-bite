@@ -14760,10 +14760,12 @@ What was measured before any of this was fixed, over 180 frames of walking
      game can answer: that the island is *built* -- streamed and meshed like any
      other ground, standing above the water in cells the world holds, supporting a
      body that walks onto it, and coming back cell for cell when the lens goes
-     away and comes again. And it asks what is *not* there: no tree, no fruit,
-     no animal. An island the player can reach is not yet a place with anything
-     on it, and this step says so in numbers rather than leaving it to be
-     imagined. */
+     away and comes again. And it asks what *is* on it: the nearest ground out
+     there worth standing on is sand the sea raised, its beach carries the palms
+     that grow on that kind of ground, and its dry sand bears the fruit of the
+     animal that climbs onto it. That is the half of this that was an absence
+     until the sea was given a kind of sand big enough to keep a beach, and the
+     step says which it is in numbers rather than leaving it to be imagined. */
   const isle = await step('theOpenSeaHoldsLandAndItIsTheSameLandTwice', () => {
     const g = window.game, N = window.FRUTARIA, W = g.world, R = g.R, p = g.player;
     const was = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, yaw: p.yaw, pitch: p.pitch,
@@ -14833,7 +14835,8 @@ What was measured before any of this was fixed, over 180 frames of walking
        whose crown is seven metres clear of the water line. */
     const topSolid = (x, z) => { for (let y = W.h - 1; y > 0; y--) if (W.solidAt(x, y, z)) return y; return -1; };
     const crownY = topSolid(cx, cz), filmAt = W.liquidSurfaceAt(cx, cz);
-    let wetFoot = 0, dryCrown = 0, trees = 0, fruit = 0, plants = 0;
+    let wetFoot = 0, dryCrown = 0, beach = 0, trees = 0, fruit = 0, plants = 0, palms = 0;
+    let palmColumn = null;
     const materials = {};
     const R2 = Math.round(home.r);
     for (let x = cx - R2; x <= cx + R2; x++) for (let z = cz - R2; z <= cz + R2; z++) {
@@ -14848,6 +14851,13 @@ What was measured before any of this was fixed, over 180 frames of walking
       if (top < 0) continue;
       materials[col[top]] = (materials[col[top]] || 0) + 1;
       if (top > N.WORLD.sea) dryCrown++; else wetFoot++;
+      /* the beach is the band the sea's own sand lies in: dry ground no more than
+         a metre over the water line. It is counted here because it is where the
+         palms of this chapter's new kind stand, and a palm is asked of it below
+         at the one place a trunk has to begin -- the first cell above the ground
+         that column owns. */
+      if (top > N.WORLD.sea && top <= N.WORLD.sea + 1) beach++;
+      if (col[top + 1] === N.BLOCK_ID.trunk) { palms++; if (!palmColumn) palmColumn = [x, z]; }
       for (let y = 1; y < W.h; y++) {
         const b = col[y];
         if (!b) continue;
@@ -14858,7 +14868,7 @@ What was measured before any of this was fixed, over 180 frames of walking
     }
     out.ground = { crownY, film: filmAt, aboveWater: crownY > N.WORLD.sea,
       underTheCeiling: crownY <= N.WORLD.sea + 30, dryCols: dryCrown, wetCols: wetFoot,
-      materials, trees, fruit, microPlants: plants };
+      beach, materials, trees, fruit, palms, palmColumn, microPlants: plants };
 
     /* A body is put on it, and then walks on it. First it stands: the island has
        to hold a body that asks nothing of it. Then it walks, and the honest
@@ -14944,8 +14954,11 @@ What was measured before any of this was fixed, over 180 frames of walking
       usPerColumn: +(fillMs * 1000 / (W.cs * W.cs)).toFixed(2) };
 
     /* and it is the same ground: the lens goes away, the world lets go of every
-       chunk it held, and the island comes back cell for cell */
+       chunk it held, and the island comes back cell for cell. A column where a
+       palm is standing is asked with the rest, because the trees are part of the
+       ground the rule states and not something set out afterwards. */
     const at = [[cx, cz], [cx - R2, cz], [cx, cz - R2], [cx + R2, cz + R2]];
+    if (out.ground.palmColumn) at.push(out.ground.palmColumn);
     const before = at.map(([x, z]) => h32(column(x, z)));
     const dropped = W.unload(R.gl, 0, 0);
     const heldAgain = W.far.size;
@@ -14983,10 +14996,21 @@ What was measured before any of this was fixed, over 180 frames of walking
     !isle.error && isle.walking.outsideTheArray && isle.walking.supported && isle.walking.groundUnderIt > 0 &&
     isle.walking.fellFrames === 0 && isle.walking.movedMetres >= 3 &&
     isle.walking.onFootFrames > isle.walking.frames * 0.6, isle.walking);
-  check('the island is not a place that is remembered: no tree, no fruit stands on it',
-    !isle.error && isle.ground.trees === 0 && isle.ground.fruit === 0, isle.ground);
-  check('the lens goes away and comes back: the island returns cell for cell, every column of it',
-    !isle.error && isle.twice.dropped > 0 && isle.twice.same && isle.twice.left === 0, isle.twice);
+  /* What was asked here used to be an absence: no tree and no fruit stood on any
+     of the sea's ground, and the chapter printed that as the state of the world.
+     The sea's ground now includes a kind whose whole point is a beach that stays,
+     so the same census is asked the other way: on the nearest ground out there
+     worth standing on, the strand the sea's own sand lies in carries palms, and
+     the dry sand of it bears the fruit whose record names that kind of ground.
+     node-smoke holds the same rule over every island of every kind in the reach;
+     what is held here is that the cells the *game* built out of that rule agree,
+     a thousand metres from the authored square, with no planting pass anywhere. */
+  check('and the sea\'s own sand is not bare where it is wide enough to keep a beach: its strand carries palms and its dry sand bears the fruit whose record names that ground',
+    !isle.error && isle.ground.beach > 0 && isle.ground.palms > 0 && isle.ground.trees > 0 &&
+    isle.ground.fruit > 0, isle.ground);
+  check('the lens goes away and comes back: the island returns cell for cell, every column of it, the palm standing on its beach among them',
+    !isle.error && isle.twice.dropped > 0 && isle.twice.same && isle.twice.left === 0 &&
+    isle.twice.columns >= 5, isle.twice);
 
   /* ---- a body walks up out of the sea and onto the island ----
      The complaint was "there's no gentle place: there is no getting up onto the
